@@ -49,13 +49,22 @@
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const err = document.getElementById('err'); err.classList.add('hidden');
-      const r = await fetch('/api/auth/login', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ email: email.value, password: password.value }),
-      });
-      const data = await r.json();
-      if (!r.ok) { err.textContent = data.error || 'Gagal'; err.classList.remove('hidden'); return; }
-      location.href = '/';
+      try {
+        const r = await fetch('/api/auth/login', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value }),
+        });
+        let data;
+        try { data = await r.json(); } catch {
+          err.textContent = 'Respons tidak valid dari server'; err.classList.remove('hidden'); return;
+        }
+        if (!r.ok) { err.textContent = data.error || 'Gagal'; err.classList.remove('hidden'); return; }
+        location.href = '/';
+      } catch (e) {
+        console.error('Login error:', e);
+        err.textContent = 'Gagal terhubung ke server';
+        err.classList.remove('hidden');
+      }
     });
   </script>
 </body>
