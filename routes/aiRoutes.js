@@ -5,34 +5,39 @@ const router = express.Router();
 router.use(requireAuth);
 
 router.post('/ai/suggest-menu', async (req, res) => {
-  if (!process.env.HUGGINGFACE_API_KEY) return res.status(503).json({ error: 'AI tidak dikonfigurasi (set HUGGINGFACE_API_KEY di .env)' });
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI tidak dikonfigurasi (set OPENAI_API_KEY di .env)' });
   const { kategori, catatan } = req.body;
-  const model = process.env.HUGGINGFACE_MODEL || 'HuggingFaceH4/zephyr-7b-alpha';
-  const prompt = `Kamu adalah ahli gizi MBG. Jawab HANYA JSON valid tanpa markdown, tanpa teks lain: {nama_menu, deskripsi, bahan:[{nama,jumlah,satuan}], kandungan_gizi:{kalori,protein,karbohidrat,lemak,serat}, gramasi_total}. Buatkan menu MBG untuk kategori ${kategori}. ${catatan || ''}`;
   try {
-    const r = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
       body: JSON.stringify({
-        inputs: prompt,
-        parameters: { max_new_tokens: 512, return_full_text: false },
-        options: { wait_for_model: true },
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'Anda ahli gizi MBG. Jawab HANYA JSON valid: {nama_menu, deskripsi, bahan:[{nama,jumlah,satuan}], kandungan_gizi:{kalori,protein,karbohidrat,lemak,serat}, gramasi_total}.' },
+          { role: 'user', content: `Buatkan menu MBG untuk kategori ${kategori}. ${catatan || ''}` },
+        ],
+        response_format: { type: 'json_object' },
       }),
     });
+    const data = await r.json();
+    if (data.error) {
+      console.error('OpenAI error:', JSON.stringify(data.error));
+      return res.status(500).json({ error: 'Gagal panggil AI', detail: data.error.message || JSON.stringify(data.error) });
+    }
+    const text = data.choices?.[0]?.message?.content || '{}';
+    res.json({ suggestion: JSON.parse(text) });
+  } catch (e) { 
+    console.error('AI error:', e.message, e.stack); 
+    res.status(500).json({ error: 'Gagal panggil AI', detail: e.message }); 
+  }
+});
     
     const data = await r.json();
     const text = data?.[0]?.generated_text || data?.generated_text || '{}';
     const cleaned = text.replace(/```json?/g, '').replace(/```/g, '').trim();
     res.json({ suggestion: JSON.parse(cleaned) });
-  } catch (e) { 
-    console.error('AI error:', e.message, e.stack); 
-    const errData = e.message || {};
-    const msg = typeof errData === 'object' ? JSON.stringify(errData) : String(errData);
-    res.status(500).json({ error: 'Gagal panggil AI', detail: msg }); 
-  }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Gagal panggil AI' }); }
 });
 
 module.exports = router;
