@@ -1,0 +1,45 @@
+<div class="rounded-xl bg-gradient-to-r from-[#1e40af] to-[#1d4ed8] text-white p-6 mb-6">
+  <div class="text-xs uppercase tracking-wider text-white/70 font-semibold mb-2">Sistem Operasional MBG SaaS</div>
+  <h2 class="text-2xl font-bold mb-1">Selamat datang kembali, <%= user.nama %></h2>
+  <p class="text-white/80 text-sm">Dapur: <b><%= tenant.nama %></b> — Paket <b class="capitalize"><%= tenant.plan %></b></p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white border border-stone-200 rounded-lg p-5">
+    <div class="text-xs uppercase tracking-wider text-stone-500 font-medium">Total Penerima</div>
+    <div class="mono text-2xl mt-2 font-semibold"><%= summary.total_penerima_manfaat %></div>
+    <div class="text-xs text-stone-500 mt-1">Paket Besar: <b><%= summary.paket_besar %></b> • Paket Kecil: <b><%= summary.paket_kecil %></b></div>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-lg p-5">
+    <div class="text-xs uppercase tracking-wider text-stone-500 font-medium">Porsi Diproduksi</div>
+    <div class="mono text-2xl mt-2 font-semibold"><%= summary.total_porsi_diproduksi %></div>
+    <div class="text-xs text-stone-500 mt-1">Akumulasi semua produksi</div>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-lg p-5">
+    <div class="text-xs uppercase tracking-wider text-stone-500 font-medium">Realisasi Budget</div>
+    <div class="mono text-2xl mt-2 font-semibold">Rp <%= summary.total_realisasi.toLocaleString('id-ID') %></div>
+    <div class="text-xs text-stone-500 mt-1">dari Rp <%= summary.total_budget.toLocaleString('id-ID') %></div>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-lg p-5">
+    <div class="text-xs uppercase tracking-wider text-stone-500 font-medium">Stok Menipis</div>
+    <div class="mono text-2xl mt-2 font-semibold"><%= summary.stok_menipis %></div>
+    <div class="text-xs text-stone-500 mt-1"><%= summary.jumlah_bahan_baku %> bahan total</div>
+  </div>
+</div>
+<div class="bg-white border border-stone-200 rounded-lg p-5">
+  <div class="font-bold mb-3">Stok Menipis</div>
+  <% if (summary.low_stock_items && summary.low_stock_items.length > 0) { %>
+    <ul class="space-y-2">
+      <% summary.low_stock_items.forEach(function(it) { %>
+        <li class="flex justify-between border-b border-stone-100 pb-2 last:border-0">
+          <div>
+            <div class="text-sm font-medium"><%= it.nama %></div>
+            <div class="text-xs text-stone-500">Min: <%= it.min %> <%= it.satuan %></div>
+          </div>
+          <div class="mono text-sm text-red-700 font-semibold"><%= it.stok %> <%= it.satuan %></div>
+        </li>
+      <% }); %>
+    </ul>
+  <% } else { %>
+    <div class="text-sm text-stone-400 py-4">Semua stok aman ✓</div>
+  <% } %>
+</div>

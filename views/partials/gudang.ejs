@@ -1,0 +1,10 @@
+<div class="flex flex-wrap justify-end gap-2 mb-4">
+  <button onclick="openStokForm('masuk')" class="border border-blue-300 text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-md text-sm font-medium">↓ Barang Masuk</button>
+  <button onclick="openStokForm('keluar')" class="border border-orange-300 text-orange-700 hover:bg-orange-50 px-4 py-2 rounded-md text-sm font-medium">↑ Barang Keluar</button>
+</div>
+<div class="flex flex-wrap gap-2 mb-4">
+  <button onclick="showGudang('stok')" id="tab-stok" class="px-4 py-2 text-sm font-medium border-b-2 border-[#1e40af]">Stok Saat Ini</button>
+  <button onclick="showGudang('masuk')" id="tab-masuk" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-stone-500">Riwayat Masuk</button>
+  <button onclick="showGudang('keluar')" id="tab-keluar" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-stone-500">Riwayat Keluar</button>
+</div>
+<div id="gudang-content"></div>
