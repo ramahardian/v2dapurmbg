@@ -7,7 +7,7 @@ router.use(requireAuth);
 router.post('/ai/suggest-menu', async (req, res) => {
   if (!process.env.HUGGINGFACE_API_KEY) return res.status(503).json({ error: 'AI tidak dikonfigurasi (set HUGGINGFACE_API_KEY di .env)' });
   const { kategori, catatan } = req.body;
-  const model = process.env.HUGGINGFACE_MODEL || 'HuggingFaceH4/zephyr-7b-beta';
+  const model = process.env.HUGGINGFACE_MODEL || 'google/flan-t5-large';
   const prompt = `Kamu adalah ahli gizi MBG. Jawab HANYA JSON valid tanpa markdown, tanpa teks lain: {nama_menu, deskripsi, bahan:[{nama,jumlah,satuan}], kandungan_gizi:{kalori,protein,karbohidrat,lemak,serat}, gramasi_total}. Buatkan menu MBG untuk kategori ${kategori}. ${catatan || ''}`;
   try {
     const r = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
