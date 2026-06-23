@@ -29,16 +29,21 @@ router.post('/signup', async (req, res) => {
 });
 
 router.post('/login', loginLimiter, async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email & password wajib' });
-  const [rows] = await db.query('SELECT * FROM users WHERE email=?', [email.toLowerCase()]);
-  if (!rows.length) return res.status(401).json({ error: 'Email atau password salah' });
-  const u = rows[0];
-  const ok = await bcrypt.compare(password, u.password_hash);
-  if (!ok) return res.status(401).json({ error: 'Email atau password salah' });
-  const token = sign(u);
-  res.cookie('access_token', token, { httpOnly: true, sameSite: 'lax', maxAge: 8 * 3600 * 1000 });
-  res.json({ user: { id: u.id, tenant_id: u.tenant_id, email: u.email, nama: u.nama, role: u.role } });
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email & password wajib' });
+    const [rows] = await db.query('SELECT * FROM users WHERE email=?', [email.toLowerCase()]);
+    if (!rows.length) return res.status(401).json({ error: 'Email atau password salah' });
+    const u = rows[0];
+    const ok = await bcrypt.compare(password, u.password_hash);
+    if (!ok) return res.status(401).json({ error: 'Email atau password salah' });
+    const token = sign(u);
+    res.cookie('access_token', token, { httpOnly: true, sameSite: 'lax', maxAge: 8 * 3600 * 1000 });
+    res.json({ user: { id: u.id, tenant_id: u.tenant_id, email: u.email, nama: u.nama, role: u.role } });
+  } catch (e) {
+    console.error('Login error:', e);
+    res.status(500).json({ error: 'Gagal login: ' + e.message });
+  }
 });
 
 router.post('/logout', (req, res) => {
