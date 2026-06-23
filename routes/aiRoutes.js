@@ -5,31 +5,84 @@ const router = express.Router();
 router.use(requireAuth);
 
 router.post('/ai/suggest-menu', async (req, res) => {
-  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI tidak dikonfigurasi (set OPENAI_API_KEY di .env)' });
-  const { kategori, catatan } = req.body;
-  try {
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'Anda ahli gizi MBG. Jawab HANYA JSON valid: {nama_menu, deskripsi, bahan:[{nama,jumlah,satuan}], kandungan_gizi:{kalori,protein,karbohidrat,lemak,serat}, gramasi_total}.' },
-          { role: 'user', content: `Buatkan menu MBG untuk kategori ${kategori}. ${catatan || ''}` },
-        ],
-        response_format: { type: 'json_object' },
-      }),
+  if (!process.env.HUGGINGFACE_API_KEY) {
+    return res.status(503).json({
+      error: 'AI tidak dikonfigurasi'
     });
-    const data = await r.json();
-    if (data.error) {
-      console.error('OpenAI error:', JSON.stringify(data.error));
-      return res.status(500).json({ error: 'Gagal panggil AI', detail: data.error.message || JSON.stringify(data.error) });
+  }
+
+  const { kategori, catatan } = req.body;
+
+  try {
+    const prompt = `
+Anda ahli gizi MBG.
+
+Buatkan menu untuk kategori ${kategori}.
+
+${catatan || ''}
+
+Jawab JSON valid:
+
+{
+  "nama_menu": "",
+  "deskripsi": "",
+  "bahan": [
+    {
+      "nama": "",
+      "jumlah": 0,
+      "satuan": ""
     }
-    const text = data.choices?.[0]?.message?.content || '{}';
-    res.json({ suggestion: JSON.parse(text) });
-  } catch (e) {
-    console.error('AI error:', e.message, e.stack);
-    res.status(500).json({ error: 'Gagal panggil AI', detail: e.message });
+  ],
+  "kandungan_gizi": {
+    "kalori": 0,
+    "protein": 0,
+    "karbohidrat": 0,
+    "lemak": 0,
+    "serat": 0
+  },
+  "gramasi_total": 0
+}
+`;
+
+    const response = await fetch(
+      'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: 800,
+            temperature: 0.7
+          }
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    let text = result?.[0]?.generated_text || '';
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) {
+      return res.status(500).json({
+        error: 'AI tidak menghasilkan JSON valid'
+      });
+    }
+
+    res.json({
+      suggestion: JSON.parse(jsonMatch[0])
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: err.message
+    });
   }
 });
 
