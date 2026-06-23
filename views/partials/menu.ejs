@@ -1,0 +1,61 @@
+<div class="flex flex-wrap justify-end gap-2 mb-4">
+  <button id="ai-btn" class="border border-orange-300 text-orange-700 hover:bg-orange-50 px-4 py-2 rounded-md text-sm font-medium">✨ Saran AI</button>
+  <button id="add-menu-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah Menu</button>
+</div>
+<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-stone-50">
+        <tr>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Kategori</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gramasi</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kalori</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Bahan</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (menus && menus.length > 0) { %>
+          <% menus.forEach(function(m) { %>
+            <tr class="border-t border-stone-100">
+              <td class="px-4 py-3 text-sm font-medium whitespace-nowrap"><%= m.nama %></td>
+              <td class="px-4 py-3 text-sm whitespace-nowrap"><%= m.kategori_penerima || '-' %></td>
+              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap"><%= m.gramasi_total %>g</td>
+              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap"><%= m.kalori %> kkal</td>
+              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap"><%= (m.bahan && m.bahan.length) || 0 %></td>
+              <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
+                <button data-menu-id="<%= m.id %>" class="edit-btn text-stone-500 hover:text-stone-900 mr-2">Edit</button>
+                <button data-menu-id="<%= m.id %>" class="delete-btn text-red-600">Hapus</button>
+              </td>
+            </tr>
+          <% }); %>
+        <% } else { %>
+          <tr><td colspan="6" class="text-center py-12 text-stone-400">Belum ada menu</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// Re-attach event handlers after template is rendered
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const menuId = this.getAttribute('data-menu-id');
+      // Fetch menu data and call openMenuForm
+      fetch('/api/menu/' + menuId)
+        .then(r => r.json())
+        .then(menu => openMenuForm(menu));
+    });
+  });
+  
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const menuId = this.getAttribute('data-menu-id');
+      deleteMenu(menuId);
+    });
+  });
+});
+</script>

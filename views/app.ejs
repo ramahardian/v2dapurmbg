@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MBG Kitchen SaaS — Operasional Dapur</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'IBM Plex Sans', sans-serif; background: #FAFAF9; color: #1C1917; }
+    h1,h2,h3 { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.02em; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .sidebar-link { display:flex;align-items:center;gap:.75rem;padding:.5rem .875rem;border-radius:.375rem;font-size:.875rem;color:rgba(255,255,255,.75);cursor:pointer;}
+    .sidebar-link:hover { background: rgba(255,255,255,.08); color: white; }
+    .sidebar-link.active { background: rgba(255,255,255,.14); color: white; }
+    .modal-backdrop { background: rgba(0,0,0,.5); }
+  </style>
+</head>
+<body>
+  <!-- Mobile Header -->
+  <header class="lg:hidden sticky top-0 z-30 border-b border-stone-200 bg-white px-4 py-3 flex items-center gap-3">
+    <button onclick="toggleSidebar()" class="p-2 -ml-2 rounded-md hover:bg-stone-100">
+      <svg class="w-6 h-6 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="font-bold text-lg">Dapur Sukaluyu</div>
+  </header>
+  <div id="app" class="flex min-h-screen">
+    <!-- Overlay for mobile -->
+    <div id="sidebar-overlay" onclick="closeSidebar()" class="fixed inset-0 bg-black/40 z-30 hidden lg:hidden"></div>
+
+    <aside id="sidebar" class="w-[260px] shrink-0 bg-[#1e40af] text-white fixed inset-y-0 left-0 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200 z-40">
+      <div class="px-5 py-5 border-b border-white/10 flex items-center gap-3">
+        <div class="h-9 w-9 rounded-md bg-white/15 flex items-center justify-center font-bold">M</div>
+        <div class="font-bold leading-tight">Sukaluyu</div>
+      </div>
+      <nav id="nav" class="flex-1 overflow-y-auto py-4 px-3 space-y-0.5"></nav>
+      <div class="border-t border-white/10 px-4 py-3 text-sm">
+        <div class="font-medium" id="user-name">—</div>
+        <div class="text-[11px] text-white/60 capitalize" id="user-role">—</div>
+        <button id="logout-btn" class="mt-2 text-white/80 hover:text-white text-sm">↪ Keluar</button>
+      </div>
+    </aside>
+
+    <main class="flex-1 lg:ml-[260px] w-full">
+      <header class="hidden lg:block border-b border-stone-200 bg-white sticky top-0 z-10 px-8 py-5">
+        <h1 id="page-title" class="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <p id="page-sub" class="text-sm text-stone-500 mt-1">Ringkasan operasional dapur</p>
+      </header>
+      <div id="content" class="p-4 lg:p-8"></div>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="fixed inset-0 modal-backdrop hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="px-4 lg:px-6 py-3 lg:py-4 border-b border-stone-200 flex justify-between items-center">
+        <h3 id="modal-title" class="text-base lg:text-lg font-bold"></h3>
+        <button onclick="closeModal()" class="text-stone-400 hover:text-stone-700 text-xl">×</button>
+      </div>
+      <div id="modal-body" class="p-4 lg:p-6 overflow-y-auto flex-1"></div>
+      <div class="px-4 lg:px-6 py-3 border-t border-stone-200 flex justify-end gap-2">
+        <button onclick="closeModal()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded">Batal</button>
+        <button id="modal-save" class="px-4 py-2 text-sm bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded font-medium">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js?v=3"></script>
+</body>
+</html>
