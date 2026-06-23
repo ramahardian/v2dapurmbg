@@ -27,17 +27,10 @@ router.post('/ai/suggest-menu', async (req, res) => {
     }
     const text = data.choices?.[0]?.message?.content || '{}';
     res.json({ suggestion: JSON.parse(text) });
-  } catch (e) { 
-    console.error('AI error:', e.message, e.stack); 
-    res.status(500).json({ error: 'Gagal panggil AI', detail: e.message }); 
+  } catch (e) {
+    console.error('AI error:', e.message, e.stack);
+    res.status(500).json({ error: 'Gagal panggil AI', detail: e.message });
   }
-});
-    
-    const data = await r.json();
-    const text = data?.[0]?.generated_text || data?.generated_text || '{}';
-    const cleaned = text.replace(/```json?/g, '').replace(/```/g, '').trim();
-    res.json({ suggestion: JSON.parse(cleaned) });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Gagal panggil AI' }); }
 });
 
 module.exports = router;
