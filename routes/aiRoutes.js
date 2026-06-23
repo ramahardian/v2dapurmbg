@@ -22,6 +22,7 @@ router.post('/ai/suggest-menu', async (req, res) => {
         options: { wait_for_model: true },
       }),
     });
+    
     const data = await r.json();
     const text = data?.[0]?.generated_text || data?.generated_text || '{}';
     const cleaned = text.replace(/```json?/g, '').replace(/```/g, '').trim();
