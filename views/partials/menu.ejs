@@ -1,51 +1,42 @@
-<div class="flex flex-wrap justify-between gap-2 mb-4">
-  
-   <button id="add-menu-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah Menu</button>
-   <div class="relative">
-     <input type="text" id="search-menu-input" placeholder="Cari nama menu..." 
-       class="pl-10 pr-4 py-2 border border-stone-200 rounded-md text-sm w-48 focus:outline-none focus:border-[#1e40af]">
-     <svg class="absolute left-3 top-2.5 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-     </svg>
-   </div>
+<div class="flex flex-wrap justify-end gap-2 mb-4">
+ 
+  <button id="add-menu-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah Menu</button>
 </div>
-   <div id="pagination-controls" class="flex items-center gap-2 mt-4"></div>
-   </div>
-   <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
-   <div class="overflow-x-auto">
-     <table class="w-full">
-       <thead class="bg-stone-50">
-         <tr>
-           <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
-           <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Kategori</th>
-           <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gramasi</th>
-           <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kalori</th>
-           <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Bahan</th>
-           <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
-         </tr>
-       </thead>
-       <tbody id="menu-table-body">
-         <% if (menus && menus.length > 0) { %>
-           <% menus.forEach(function(m) { %>
-             <tr class="border-t border-stone-100">
-               <td class="px-4 py-3 text-sm font-medium whitespace-nowrap"><%= m.nama %></td>
-               <td class="px-4 py-3 text-sm whitespace-nowrap"><%= m.kategori_penerima || '-' %></td>
-               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap"><%= m.gramasi_total %>g</td>
-               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap"><%= m.kalori %> kkal</td>
-               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap"><%= (m.bahan && m.bahan.length) || 0 %></td>
-               <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                 <button data-menu-id="<%= m.id %>" class="edit-btn text-stone-500 hover:text-stone-900 mr-2">Edit</button>
-                 <button data-menu-id="<%= m.id %>" class="delete-btn text-red-600">Hapus</button>
-               </td>
-             </tr>
-           <% }); %>
-         <% } else { %>
-           <tr><td colspan="6" class="text-center py-12 text-stone-400">Belum ada menu</td></tr>
-         <% } %>
-       </tbody>
-     </table>
-   </div>
- </div>
+<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-stone-50">
+        <tr>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Kategori</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gramasi</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kalori</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Bahan</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (menus && menus.length > 0) { %>
+          <% menus.forEach(function(m) { %>
+            <tr class="border-t border-stone-100">
+              <td class="px-4 py-3 text-sm font-medium whitespace-nowrap"><%= m.nama %></td>
+              <td class="px-4 py-3 text-sm whitespace-nowrap"><%= m.kategori_penerima || '-' %></td>
+              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap"><%= m.gramasi_total %>g</td>
+              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap"><%= m.kalori %> kkal</td>
+              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap"><%= (m.bahan && m.bahan.length) || 0 %></td>
+              <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
+                <button data-menu-id="<%= m.id %>" class="edit-btn text-stone-500 hover:text-stone-900 mr-2">Edit</button>
+                <button data-menu-id="<%= m.id %>" class="delete-btn text-red-600">Hapus</button>
+              </td>
+            </tr>
+          <% }); %>
+        <% } else { %>
+          <tr><td colspan="6" class="text-center py-12 text-stone-400">Belum ada menu</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 <script>
 // Re-attach event handlers after template is rendered
