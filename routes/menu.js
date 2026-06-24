@@ -14,23 +14,81 @@ router.use(requireAuth);
  * GET /menu
  * Mengambil daftar semua menu yang dimiliki oleh tenant yang sedang aktif.
  * Endpoint ini juga mengambil detail bahan baku pembentuk setiap menu.
+ * Mendukung query parameters: search (string), page (number), limit (number)
  */
 router.get('/menu', async (req, res) => {
-  // Mengambil data utama (header) dari tabel menu
-  const [menus] = await db.query('SELECT * FROM menu WHERE tenant_id=? ORDER BY id DESC', [req.user.tenant_id]);
+  const { search, page = 1, limit = 10 } = req.query;
+  const offset = (page - 1) * limit;
   
-  // Looping untuk mengambil komposisi bahan (ingredients) pada masing-masing menu.
-  // Catatan: Pendekatan ini (query di dalam loop) dikenal sebagai N+1 query. 
-  // Untuk data skala besar, lebih optimal menggunakan query JOIN tunggal lalu dikelompokkan di sisi server.
-  for (const m of menus) {
-    const [bahan] = await db.query(
-      `SELECT mb.*, bb.nama, bb.satuan FROM menu_bahan mb JOIN bahan_baku bb ON bb.id=mb.bahan_baku_id WHERE mb.menu_id=?`,
-      [m.id]);
-    // Menyisipkan array bahan baku ke dalam objek menu saat ini
-    m.bahan = bahan;
+  // Build WHERE clause for search
+  let whereClause = 'WHERE m.tenant_id=?';
+  const queryParams = [req.user.tenant_id];
+  
+  if (search) {
+    whereClause += ' AND (m.nama LIKE ? OR m.kategori_penerima LIKE ? OR m.deskripsi LIKE ?)';
+    const searchTerm = `%${search}%`;
+    queryParams.push(searchTerm, searchTerm, searchTerm);
   }
   
-  res.json(menus);
+  // Get total count for pagination
+  const [totalCountResult] = await db.query(
+    `SELECT COUNT(*) as count FROM menu m ${whereClause}`, 
+    queryParams
+  );
+  const totalCount = totalCountResult[0].count;
+  
+  // Get menus with ingredients using a single JOIN query
+  const sql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serata,
+       mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, mb.jumlah
+       FROM menu m
+       LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
+       LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+       ${whereClause}
+       ORDER BY m.id DESC
+       LIMIT ? OFFSET ?`;
+  
+  queryParams.push(limit, offset);
+  const [rows] = await db.query(sql, queryParams);
+  
+  // Group ingredients by menu
+  const menusMap = {};
+  rows.forEach(row => {
+    if (!menusMap[row.id]) {
+      menusMap[row.id] = {
+        id: row.id,
+        nama: row.nama,
+        kategori_penerima: row.kategori_penerima,
+        deskripsi: row.deskripsi,
+        gramasi_total: row.gramasi_total,
+        kalori: row.kalori,
+        protein: row.protein,
+        karbohidrat: row.karbohidrat,
+        lemak: row.lemak,
+        serat: row.serata,
+        bahan: []
+      };
+    }
+    if (row.bahan_baku_id) {
+      menusMap[row.id].bahan.push({
+        bahan_baku_id: row.bahan_baku_id,
+        nama: row.bahan_nama,
+        satuan: row.satuan,
+        jumlah: row.jumlah
+      });
+    }
+  });
+  
+  const menus = Object.values(menusMap);
+  
+  res.json({
+    data: menus,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit)
+    }
+  });
 });
 
 /**
@@ -122,6 +180,43 @@ router.put('/menu/:id', async (req, res) => {
 router.delete('/menu/:id', async (req, res) => {
   await db.query('DELETE FROM menu WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
   res.json({ ok: true });
+});
+
+/**
+ * GET /menu/:id
+ * Mengambil detail menu beserta bahan-bahannya untuk diedit.
+ */
+router.get('/menu/:id', async (req, res) => {
+  const [menus] = await db.query(
+    `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serata,
+       mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, mb.jumlah
+       FROM menu m
+       LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
+       LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+       WHERE m.id=? AND m.tenant_id=?`,
+    [req.params.id, req.user.tenant_id]
+  );
+  if (!menus.length) return res.status(404).json({ error: 'Menu tidak ditemukan' });
+  
+  const m = {
+    id: menus[0].id,
+    nama: menus[0].nama,
+    kategori_penerima: menus[0].kategori_penerima,
+    deskripsi: menus[0].deskripsi,
+    gramasi_total: menus[0].gramasi_total,
+    kalori: menus[0].kalori,
+    protein: menus[0].protein,
+    karbohidrat: menus[0].karbohidrat,
+    lemak: menus[0].lemak,
+    serat: menus[0].serata,
+    bahan: []
+  };
+  menus.forEach(row => {
+    if (row.bahan_baku_id) {
+      m.bahan.push({ bahan_baku_id: row.bahan_baku_id, nama: row.bahan_nama, satuan: row.satuan, jumlah: row.jumlah });
+    }
+  });
+  res.json(m);
 });
 
 module.exports = router;
