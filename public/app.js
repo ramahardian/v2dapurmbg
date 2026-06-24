@@ -326,28 +326,129 @@ function closeModal(id) {
 }
 
 // ===== Menu (custom with bahan) =====
+let menuState = { page: 1, limit: 10, search: '', total: 0, totalPages: 1 };
+
 async function renderMenu() {
   const c = document.getElementById('content');
   c.innerHTML = '<div class="text-stone-400">Memuat...</div>';
   try {
-    const r = await fetch('/api/template/menu', { credentials: 'include' });
+    const params = new URLSearchParams({ page: menuState.page, limit: menuState.limit, search: menuState.search });
+    const r = await fetch('/api/menu?' + params, { credentials: 'include' });
     if (!r.ok) {
       const err = await r.json();
       throw new Error(err.error || 'Gagal memuat menu');
     }
-    c.innerHTML = await r.text();
+    const data = await r.json();
+    menuState = { ...menuState, total: data.pagination.total, totalPages: data.pagination.totalPages };
     
-    // Load bahan data for form
     const bahan = await api.get('/bahan_baku');
     window._bahanBaku = bahan;
     
-    // Attach event handlers for main buttons
-    document.getElementById('add-menu-btn').onclick = () => openMenuForm(null);
-    document.getElementById('ai-btn').onclick = openAIDialog;
+    c.innerHTML = renderMenuHtml(data.data);
+    renderPagination();
+    attachMenuHandlers();
   } catch (err) {
     console.error('Menu error:', err);
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat menu: ${err.message}</div>`;
   }
+}
+
+function renderMenuHtml(menus) {
+  return `<div class="flex flex-wrap justify-between gap-2 mb-4">
+    <div class="flex gap-2">
+      <button id="add-menu-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah Menu</button>
+      <button id="ai-btn" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm font-medium">✨ AI Rekomendasi</button>
+    </div>
+    <div class="relative">
+      <input type="text" id="search-menu-input" placeholder="Cari nama menu..." value="${menuState.search}"
+        class="pl-10 pr-4 py-2 border border-stone-200 rounded-md text-sm w-48 focus:outline-none focus:border-[#1e40af]">
+      <svg class="absolute left-3 top-2.5 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      </svg>
+    </div>
+  </div>
+  <div id="pagination-controls" class="flex items-center gap-2 mt-4"></div>
+  <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-stone-50">
+          <tr>
+            <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Kategori</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gramasi</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kalori</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Bahan</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="menu-table-body">
+          ${menus.length > 0 ? menus.map(m => `
+            <tr class="border-t border-stone-100">
+              <td class="px-4 py-3 text-sm font-medium whitespace-nowrap">${m.nama}</td>
+              <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima || '-'}</td>
+              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.gramasi_total}g</td>
+              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.kalori} kkal</td>
+              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${(m.bahan && m.bahan.length) || 0}</td>
+              <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
+                <button data-menu-id="${m.id}" class="edit-btn text-stone-500 hover:text-stone-900 mr-2">Edit</button>
+                <button data-menu-id="${m.id}" class="delete-btn text-red-600">Hapus</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="6" class="text-center py-12 text-stone-400">Belum ada menu</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function renderPagination() {
+  const wrap = document.getElementById('pagination-controls');
+  if (menuState.totalPages <= 1) { wrap.innerHTML = ''; return; }
+  
+  const pages = [];
+  const maxPages = 5;
+  let start = Math.max(1, menuState.page - Math.floor(maxPages/2));
+  let end = Math.min(menuState.totalPages, start + maxPages - 1);
+  if (end - start + 1 < maxPages) start = Math.max(1, end - maxPages + 1);
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(`<button onclick="goToPage(${i})" class="px-3 py-1 text-sm rounded border ${i === menuState.page ? 'bg-[#1e40af] text-white' : 'border-stone-200 hover:bg-stone-50'}">${i}</button>`);
+  }
+  
+  wrap.innerHTML = `<span class="text-sm text-stone-500">Hal ${menuState.page} dari ${menuState.totalPages}</span>
+    ${menuState.page > 1 ? '<button onclick="goToPage(1)" class="px-2 py-1 text-sm rounded border border-stone-200">≠|</button>' : ''}
+    ${menuState.page > 1 ? '<button onclick="goToPage(' + (menuState.page - 1) + ')" class="px-2 py-1 text-sm rounded border border-stone-200">&laquo;</button>' : ''}
+    ${pages.join('')}
+    ${menuState.page < menuState.totalPages ? '<button onclick="goToPage(' + (menuState.page + 1) + ')" class="px-2 py-1 text-sm rounded border border-stone-200">&raquo;</button>' : ''}
+    ${menuState.page < menuState.totalPages ? '<button onclick="goToPage(' + menuState.totalPages + ')" class="px-2 py-1 text-sm rounded border border-stone-200">>|</button>' : ''}`;
+}
+
+function goToPage(page) {
+  menuState.page = page;
+  renderMenu();
+}
+
+function attachMenuHandlers() {
+  document.getElementById('add-menu-btn').onclick = () => openMenuForm(null);
+  document.getElementById('ai-btn').onclick = openAIDialog;
+  document.getElementById('search-menu-input').oninput = function() {
+    menuState.search = this.value;
+    menuState.page = 1;
+    renderMenu();
+  };
+  document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const menuId = this.getAttribute('data-menu-id');
+      fetch('/api/menu/' + menuId)
+        .then(r => r.json())
+        .then(menu => openMenuForm(menu));
+    });
+  });
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const menuId = this.getAttribute('data-menu-id');
+      deleteMenu(menuId);
+    });
+  });
 }
 
 function openMenuForm(editing) {

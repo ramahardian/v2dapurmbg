@@ -44,26 +44,9 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
-// Menu template
+// Menu template - disabled, using API directly
 router.get('/menu', async (req, res) => {
-  try {
-    // Get menus with ingredients
-    const [menus] = await db.query('SELECT * FROM menu WHERE tenant_id=? ORDER BY id DESC', [req.user.tenant_id]);
-    for (const m of menus) {
-      const [bahan] = await db.query(
-        `SELECT mb.*, bb.nama, bb.satuan FROM menu_bahan mb JOIN bahan_baku bb ON bb.id=mb.bahan_baku_id WHERE mb.menu_id=?`,
-        [m.id]);
-      m.bahan = bahan;
-    }
-    
-    // Get bahan baku for form
-    const [bahan] = await db.query('SELECT * FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
-    
-    res.render('partials/menu', { menus, bahan });
-  } catch (err) {
-    console.error('Menu template error:', err);
-    res.status(500).json({ error: err.message });
-  }
+  res.render('partials/menu', { menus: [], bahan: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 1 }, search: '' });
 });
 
 // Gudang template - only admin and gudang
