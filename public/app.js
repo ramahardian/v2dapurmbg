@@ -355,10 +355,7 @@ async function renderMenu() {
 
 function renderMenuHtml(menus) {
   return `<div class="flex flex-wrap justify-between gap-2 mb-4">
-    <div class="flex gap-2">
-      <button id="add-menu-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah Menu</button>
-      <button id="ai-btn" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm font-medium">✨ AI Rekomendasi</button>
-    </div>
+    <button id="add-menu-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah Menu</button>
     <div class="relative">
       <input type="text" id="search-menu-input" placeholder="Cari nama menu..." value="${menuState.search}"
         class="pl-10 pr-4 py-2 border border-stone-200 rounded-md text-sm w-48 focus:outline-none focus:border-[#1e40af]">
@@ -428,13 +425,16 @@ function goToPage(page) {
 }
 
 function attachMenuHandlers() {
-  document.getElementById('add-menu-btn').onclick = () => openMenuForm(null);
-  document.getElementById('ai-btn').onclick = openAIDialog;
-  document.getElementById('search-menu-input').oninput = function() {
-    menuState.search = this.value;
-    menuState.page = 1;
-    renderMenu();
-  };
+  const addBtn = document.getElementById('add-menu-btn');
+  if (addBtn) addBtn.onclick = () => openMenuForm(null);
+  const searchInput = document.getElementById('search-menu-input');
+  if (searchInput) {
+    searchInput.oninput = function() {
+      menuState.search = this.value;
+      menuState.page = 1;
+      renderMenu();
+    };
+  }
   document.querySelectorAll('.edit-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const menuId = this.getAttribute('data-menu-id');
