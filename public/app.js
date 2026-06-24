@@ -330,6 +330,7 @@ let menuState = { page: 1, limit: 10, search: '', total: 0, totalPages: 1 };
 
 async function renderMenu() {
   const c = document.getElementById('content');
+  if (!c) return;
   c.innerHTML = '<div class="text-stone-400">Memuat...</div>';
   try {
     const params = new URLSearchParams({ page: menuState.page, limit: menuState.limit, search: menuState.search });
@@ -339,13 +340,13 @@ async function renderMenu() {
       throw new Error(err.error || 'Gagal memuat menu');
     }
     const data = await r.json();
-    const pagination = data.pagination || { total: data.length || 0, totalPages: 1 };
-    menuState = { ...menuState, total: pagination.total, totalPages: pagination.totalPages, page: pagination.page || menuState.page };
+    const pagination = data.pagination || { total: data.length || 0, totalPages: 1, page: menuState.page };
+    menuState = { ...menuState, total: pagination.total, totalPages: pagination.totalPages, page: pagination.page };
     
     const bahan = await api.get('/bahan_baku');
     window._bahanBaku = bahan;
     
-    c.innerHTML = renderMenuHtml(Array.isArray(data.data) ? data.data : data);
+    c.innerHTML = renderMenuHtml(Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []));
     renderPagination();
     attachMenuHandlers();
   } catch (err) {
@@ -400,6 +401,7 @@ function renderMenuHtml(menus) {
 
 function renderPagination() {
   const wrap = document.getElementById('pagination-controls');
+  if (!wrap) return;
   if (menuState.totalPages <= 1) { wrap.innerHTML = ''; return; }
   
   const pages = [];
