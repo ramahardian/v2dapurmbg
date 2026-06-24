@@ -335,16 +335,17 @@ async function renderMenu() {
     const params = new URLSearchParams({ page: menuState.page, limit: menuState.limit, search: menuState.search });
     const r = await fetch('/api/menu?' + params, { credentials: 'include' });
     if (!r.ok) {
-      const err = await r.json();
+      const err = await r.json().catch(() => ({}));
       throw new Error(err.error || 'Gagal memuat menu');
     }
     const data = await r.json();
-    menuState = { ...menuState, total: data.pagination.total, totalPages: data.pagination.totalPages };
+    const pagination = data.pagination || { total: data.length || 0, totalPages: 1 };
+    menuState = { ...menuState, total: pagination.total, totalPages: pagination.totalPages, page: pagination.page || menuState.page };
     
     const bahan = await api.get('/bahan_baku');
     window._bahanBaku = bahan;
     
-    c.innerHTML = renderMenuHtml(data.data);
+    c.innerHTML = renderMenuHtml(Array.isArray(data.data) ? data.data : data);
     renderPagination();
     attachMenuHandlers();
   } catch (err) {
