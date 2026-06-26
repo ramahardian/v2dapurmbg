@@ -13,12 +13,14 @@ router.get('/users', async (req, res) => {
     'SELECT id, email, nama, role, foto, created_at FROM users WHERE tenant_id=? ORDER BY id ASC',
     [req.user.tenant_id]
   );
+  require('fs').appendFileSync('/tmp/opencode/debug.log', new Date().toISOString() + ' GET /users returning: ' + JSON.stringify(rows.map(r => ({id:r.id, nama:r.nama, role:r.role}))) + '\n');
   res.json(rows);
 });
 
 // POST /users — tambah user baru
 router.post('/users', async (req, res) => {
   const { email, password, nama, role } = req.body;
+  require('fs').appendFileSync('/tmp/opencode/debug.log', new Date().toISOString() + ' POST /users body: ' + JSON.stringify(req.body) + ' role=' + role + '\n');
   if (!email || !password || !nama) return res.status(400).json({ error: 'Email, password, dan nama wajib' });
   try {
     const hash = await bcrypt.hash(password, 10);
@@ -26,8 +28,10 @@ router.post('/users', async (req, res) => {
       'INSERT INTO users (tenant_id, email, password_hash, nama, role) VALUES (?,?,?,?,?)',
       [req.user.tenant_id, email.toLowerCase(), hash, nama, role || 'produksi']
     );
+    require('fs').appendFileSync('/tmp/opencode/debug.log', new Date().toISOString() + ' INSERT role used: ' + (role || 'produksi') + ' actual stored: ' + role + '\n');
     res.json({ id: u.insertId, email: email.toLowerCase(), nama, role: role || 'produksi' });
   } catch (e) {
+    console.error('Gagal menyimpan user:', e);
     res.status(400).json({ error: e.code === 'ER_DUP_ENTRY' ? 'Email sudah ada' : 'Gagal menyimpan user' });
   }
 });
