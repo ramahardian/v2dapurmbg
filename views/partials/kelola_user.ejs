@@ -1,0 +1,59 @@
+<div class="flex flex-wrap gap-2 mb-4">
+  <button id="btn-tambah-user" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah User</button>
+</div>
+<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-stone-50">
+        <tr>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Email</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Role</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Bergabung</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="user-table-body">
+        <tr><td colspan="5" class="text-center py-12 text-stone-400">Memuat data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="user-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-xl w-full max-w-md animate-alert-in">
+    <div class="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+      <h3 id="user-modal-title" class="font-bold text-base">Tambah User</h3>
+      <button onclick="closeUserModal()" class="text-stone-400 hover:text-stone-600 text-xl leading-none">&times;</button>
+    </div>
+    <div class="p-6 space-y-4">
+      <input id="user-id" type="hidden" />
+      <div>
+        <label class="text-sm font-medium text-stone-700">Nama Lengkap <span class="text-red-500">*</span></label>
+        <input id="user-nama" class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm" placeholder="Nama user" />
+      </div>
+      <div>
+        <label class="text-sm font-medium text-stone-700">Email <span class="text-red-500">*</span></label>
+        <input id="user-email" type="email" class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm" placeholder="user@example.com" />
+      </div>
+      <div>
+        <label class="text-sm font-medium text-stone-700">Password <span class="text-red-500" id="pass-label">*</span></label>
+        <input id="user-password" type="password" class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm" placeholder="Minimal 6 karakter" />
+      </div>
+      <div>
+        <label class="text-sm font-medium text-stone-700">Role</label>
+        <select id="user-role" class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm bg-white">
+          <option value="produksi">Produksi</option>
+          <option value="gudang">Gudang</option>
+          <option value="keuangan">Keuangan</option>
+          <option value="ahli_gizi">Ahli Gizi</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+    </div>
+    <div class="px-6 pb-4 flex justify-end gap-2">
+      <button onclick="closeUserModal()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg font-medium">Batal</button>
+      <button id="btn-simpan-user" class="px-4 py-2 text-sm bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-lg font-medium">Simpan</button>
+    </div>
+  </div>
+</div>

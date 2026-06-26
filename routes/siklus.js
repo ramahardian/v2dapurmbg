@@ -25,6 +25,202 @@ router.get('/siklus', async (req, res) => {
 });
 
 /**
+ * GET /siklus/laporan
+ * Mengambil semua siklus dengan laporan agregat (coverage, rata-rata gizi, dll).
+ */
+router.get('/siklus/laporan', async (req, res) => {
+  const [siklusList] = await db.query(
+    'SELECT * FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
+    [req.user.tenant_id]
+  );
+
+  const result = [];
+  let totalSiklus = 0, totalFilled = 0, totalDays = 0, totalUniqueMenus = 0;
+  const allMenuSet = new Set();
+
+  for (const s of siklusList) {
+    const [items] = await db.query(
+      'SELECT * FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke ASC',
+      [s.id]
+    );
+
+    const totalHari = s.total_hari || items.length || 7;
+    const filledDays = items.filter(it => it.menu_id).length;
+    const coverage = totalHari ? Math.round((filledDays / totalHari) * 100) : 0;
+    const uniqueMenus = new Set(items.filter(it => it.menu_id).map(it => it.menu_id));
+
+    const totals = items.reduce((acc, it) => ({
+      kalori: acc.kalori + Number(it.kalori || 0),
+      protein: acc.protein + Number(it.protein || 0),
+      karbohidrat: acc.karbohidrat + Number(it.karbohidrat || 0),
+      lemak: acc.lemak + Number(it.lemak || 0),
+      serat: acc.serat + Number(it.serat || 0),
+    }), { kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0 });
+
+    const avg = filledDays ? {
+      kalori: Math.round(totals.kalori / filledDays),
+      protein: Math.round(totals.protein / filledDays),
+      karbohidrat: Math.round(totals.karbohidrat / filledDays),
+      lemak: Math.round(totals.lemak / filledDays),
+      serat: Math.round(totals.serat / filledDays),
+    } : { kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0 };
+
+    result.push({ ...s, stats: { totalDays: totalHari, filledDays, coverage, uniqueMenus: uniqueMenus.size, totals, avg } });
+    totalSiklus++;
+    totalFilled += filledDays;
+    totalDays += totalHari;
+    uniqueMenus.forEach(m => allMenuSet.add(m));
+  }
+
+  res.json({
+    siklus: result,
+    ringkasan: {
+      totalSiklus,
+      totalHari: totalDays,
+      totalFilled,
+      totalKosong: totalDays - totalFilled,
+      totalMenuUnik: allMenuSet.size,
+      rataCoverage: totalDays ? Math.round((totalFilled / totalDays) * 100) : 0,
+    }
+  });
+});
+
+/**
+ * GET /siklus/laporan/bahan
+ * Mengambil rincian kebutuhan bahan baku per hari dari semua siklus.
+ * Menggabungkan siklus_menu_item → menu → menu_bahan → bahan_baku.
+ */
+const FIXED_KATEGORI = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
+
+const KATEGORI_MAP = {
+  'TK': 'TK/PAUD',
+  'PAUD': 'TK/PAUD',
+  'SD': 'SD/MI (1-3)',
+  'SMP': 'SMP/MTs, SMA/SMK',
+  'Ibu Hamil': 'Bumil/Busui',
+  'Ibu Menyusui': 'Bumil/Busui',
+  'Balita': 'Balita',
+};
+
+router.get('/siklus/laporan/bahan', async (req, res) => {
+  const [siklusList] = await db.query(
+    'SELECT id, nama, kategori_penerima, jumlah_porsi FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
+    [req.user.tenant_id]
+  );
+
+  const dayRows = [];
+  const dayMap = {};
+
+  for (const s of siklusList) {
+    const [items] = await db.query(
+      `SELECT si.*, m.gramasi_total
+       FROM siklus_menu_item si
+       LEFT JOIN menu m ON m.id = si.menu_id
+       WHERE si.siklus_id=? AND si.menu_id IS NOT NULL
+       ORDER BY si.hari_ke ASC`,
+      [s.id]
+    );
+
+    for (const it of items) {
+      const dayKey = `${s.id}-${it.hari_ke}`;
+      if (!dayMap[dayKey]) {
+        dayMap[dayKey] = {
+          siklus_id: s.id,
+          siklus_nama: s.nama,
+          kategori_db: s.kategori_penerima || '-',
+          hari_ke: it.hari_ke,
+          hari_nama: it.hari_nama,
+          jumlah_porsi: Number(it.jumlah_porsi) || 0,
+          menu_ids: [],
+        };
+      }
+      dayMap[dayKey].menu_ids.push(it.menu_id);
+    }
+  }
+
+  for (const [key, day] of Object.entries(dayMap)) {
+    if (!day.menu_ids.length) continue;
+    const placeholders = day.menu_ids.map(() => '?').join(',');
+    const [bahanRows] = await db.query(
+      `SELECT mb.bahan_baku_id, b.nama as bahan_nama, b.satuan, mb.jumlah, mb.menu_id, m.kategori_penerima
+       FROM menu_bahan mb
+       JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+       JOIN menu m ON m.id = mb.menu_id
+       WHERE mb.menu_id IN (${placeholders})`,
+      day.menu_ids
+    );
+
+    for (const br of bahanRows) {
+      const katDb = br.kategori_penerima || day.kategori_db;
+      const katDisplay = KATEGORI_MAP[katDb] || katDb;
+      dayRows.push({
+        hari_nama: day.hari_nama,
+        hari_ke: day.hari_ke,
+        siklus_id: day.siklus_id,
+        siklus_nama: day.siklus_nama,
+        kategori_db: katDb,
+        kategori: katDisplay,
+        bahan_id: br.bahan_baku_id,
+        bahan_nama: br.bahan_nama,
+        satuan: br.satuan,
+        jumlah: Number(br.jumlah) * day.jumlah_porsi,
+        jumlah_porsi: day.jumlah_porsi,
+        gramasi_total: Number(br.jumlah) * day.jumlah_porsi,
+      });
+    }
+  }
+
+  // Aggregate by (hari_ke, hari_nama, bahan_id, kategori_display)
+  const agg = {};
+  for (const r of dayRows) {
+    const key = `${r.hari_ke}|${r.hari_nama}|${r.bahan_id}|${r.kategori}`;
+    if (!agg[key]) agg[key] = { ...r, jumlah: 0, gramasi_total: 0, jumlah_porsi: 0 };
+    agg[key].jumlah += r.jumlah;
+    agg[key].gramasi_total += r.gramasi_total;
+    agg[key].jumlah_porsi += r.jumlah_porsi;
+  }
+
+  const aggregated = Object.values(agg);
+
+  // Group by hari
+  const byDay = {};
+  for (const r of aggregated) {
+    const dk = `${r.hari_ke}-${r.hari_nama}`;
+    if (!byDay[dk]) byDay[dk] = { hari_ke: r.hari_ke, hari_nama: r.hari_nama, items: [], porsi_per_kat: {} };
+    byDay[dk].items.push(r);
+    byDay[dk].porsi_per_kat[r.kategori] = (byDay[dk].porsi_per_kat[r.kategori] || 0) + r.jumlah_porsi;
+  }
+
+  // Build matrix per day: each row = bahan, columns = fixed kategori
+  const result = [];
+  for (const dk of Object.keys(byDay).sort((a, b) => {
+    const [ka] = a.split('-');
+    const [kb] = b.split('-');
+    return Number(ka) - Number(kb);
+  })) {
+    const day = byDay[dk];
+    const bahanGroup = {};
+    for (const it of day.items) {
+      if (!bahanGroup[it.bahan_nama]) {
+        bahanGroup[it.bahan_nama] = { bahan_nama: it.bahan_nama, satuan: it.satuan, per_kategori: {}, total: 0 };
+      }
+      bahanGroup[it.bahan_nama].per_kategori[it.kategori] = (bahanGroup[it.bahan_nama].per_kategori[it.kategori] || 0) + it.jumlah;
+      bahanGroup[it.bahan_nama].total += it.jumlah;
+    }
+    result.push({
+      hari_ke: day.hari_ke,
+      hari_nama: day.hari_nama,
+      label: day.hari_nama + ', ' + day.hari_ke,
+      bahan: Object.values(bahanGroup),
+      fixed_kategori: FIXED_KATEGORI,
+      porsi_per_kat: day.porsi_per_kat,
+    });
+  }
+
+  res.json({ days: result, fixed_kategori: FIXED_KATEGORI, kategori_map: KATEGORI_MAP });
+});
+
+/**
  * GET /siklus/:id
  * Mengambil detail satu siklus spesifik beserta seluruh item menu di dalamnya.
  */
@@ -55,6 +251,12 @@ router.get('/siklus/:id', async (req, res) => {
  */
 router.post('/siklus', async (req, res) => {
   const { nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, items } = req.body;
+  if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama siklus wajib diisi' });
+  
+  // Cek duplikat nama siklus dalam satu tenant
+  const [existing] = await db.query('SELECT id FROM siklus_menu WHERE nama=? AND tenant_id=?', [nama.trim(), req.user.tenant_id]);
+  if (existing.length) return res.status(409).json({ error: 'Siklus dengan nama "' + nama.trim() + '" sudah ada' });
+  
   const conn = await db.getConnection(); // Pinjam koneksi dari pool untuk transaksi
   
   try {
@@ -98,6 +300,14 @@ router.post('/siklus', async (req, res) => {
  */
 router.put('/siklus/:id', async (req, res) => {
   const { nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, items } = req.body;
+  if (nama !== undefined && (!nama || !nama.trim())) return res.status(400).json({ error: 'Nama siklus wajib diisi' });
+  
+  // Cek duplikat nama saat update (kecuali dirinya sendiri)
+  if (nama !== undefined) {
+    const [existing] = await db.query('SELECT id FROM siklus_menu WHERE nama=? AND tenant_id=? AND id!=?', [nama.trim(), req.user.tenant_id, req.params.id]);
+    if (existing.length) return res.status(409).json({ error: 'Siklus dengan nama "' + nama.trim() + '" sudah ada' });
+  }
+  
   const conn = await db.getConnection();
   
   try {

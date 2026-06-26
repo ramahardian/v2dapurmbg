@@ -1,8 +1,23 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
+const fs = require('fs');
+const path = require('path');
 const db = require('../db');
 const { sign, requireAuth } = require('../middleware/auth');
+
+function saveBase64Foto(base64Data) {
+  if (!base64Data || !base64Data.startsWith('data:image')) return null;
+  const matches = base64Data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);
+  if (!matches) return null;
+  const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+  const buffer = Buffer.from(matches[2], 'base64');
+  const filename = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+  const dir = path.join(__dirname, '..', 'public', 'uploads', 'users');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  return '/uploads/users/' + filename;
+}
 
 const router = express.Router();
 
@@ -15,7 +30,7 @@ router.post('/signup', async (req, res) => {
   try {
     const [exist] = await db.query('SELECT id FROM users WHERE email=?', [email.toLowerCase()]);
     if (exist.length) return res.status(400).json({ error: 'Email sudah terdaftar' });
-    const [t] = await db.query('INSERT INTO tenants (nama, alamat, plan) VALUES (?,?,?)', [nama_tenant, alamat || null, 'free']);
+    const [t] = await db.query('INSERT INTO tenants (nama, alamat) VALUES (?,?)', [nama_tenant, alamat || null]);
     const hash = await bcrypt.hash(password, 10);
     const [u] = await db.query('INSERT INTO users (tenant_id, email, password_hash, nama, role) VALUES (?,?,?,?,?)',
       [t.insertId, email.toLowerCase(), hash, nama, 'admin']);
@@ -52,8 +67,9 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', requireAuth, async (req, res) => {
-  const [t] = await db.query('SELECT id, nama, plan FROM tenants WHERE id=?', [req.user.tenant_id]);
-  res.json({ user: req.user, tenant: t[0] });
+  const [rows] = await db.query('SELECT id, tenant_id, email, nama, role, foto FROM users WHERE id=?', [req.user.id]);
+  const [t] = await db.query('SELECT id, nama FROM tenants WHERE id=?', [req.user.tenant_id]);
+  res.json({ user: rows[0] || null, tenant: t[0] });
 });
 
 // Tambah user (admin tenant only)
@@ -67,6 +83,45 @@ router.post('/users', requireAuth, async (req, res) => {
     res.json({ id: u.insertId, email, nama, role });
   } catch (e) {
     res.status(400).json({ error: e.code === 'ER_DUP_ENTRY' ? 'Email sudah ada' : 'Gagal' });
+  }
+});
+
+// Update profil user saat ini
+router.put('/profile', requireAuth, async (req, res) => {
+  const { nama, email, foto } = req.body;
+  try {
+    if (email && email !== req.user.email) {
+      const [exist] = await db.query('SELECT id FROM users WHERE email=? AND id!=?', [email.toLowerCase(), req.user.id]);
+      if (exist.length) return res.status(400).json({ error: 'Email sudah digunakan' });
+    }
+    const fotoUrl = foto ? saveBase64Foto(foto) : undefined;
+    const sets = ['nama=?', 'email=?'];
+    const vals = [nama || req.user.nama, (email || req.user.email).toLowerCase()];
+    if (fotoUrl) { sets.push('foto=?'); vals.push(fotoUrl); }
+    vals.push(req.user.id, req.user.tenant_id);
+    await db.query(`UPDATE users SET ${sets.join(',')} WHERE id=? AND tenant_id=?`, vals);
+    const updated = { ...req.user, nama: nama || req.user.nama, email: (email || req.user.email).toLowerCase() };
+    if (fotoUrl) updated.foto = fotoUrl;
+    res.json({ ok: true, user: updated });
+  } catch (e) {
+    res.status(500).json({ error: 'Gagal update profil' });
+  }
+});
+
+// Ganti password
+router.put('/password', requireAuth, async (req, res) => {
+  const { password_lama, password_baru } = req.body;
+  if (!password_lama || !password_baru) return res.status(400).json({ error: 'Password lama & baru wajib' });
+  if (password_baru.length < 6) return res.status(400).json({ error: 'Password baru minimal 6 karakter' });
+  try {
+    const [rows] = await db.query('SELECT password_hash FROM users WHERE id=?', [req.user.id]);
+    const ok = await bcrypt.compare(password_lama, rows[0].password_hash);
+    if (!ok) return res.status(400).json({ error: 'Password lama salah' });
+    const hash = await bcrypt.hash(password_baru, 10);
+    await db.query('UPDATE users SET password_hash=? WHERE id=?', [hash, req.user.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Gagal ganti password' });
   }
 });
 

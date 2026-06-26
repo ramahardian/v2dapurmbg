@@ -17,16 +17,17 @@ router.use(requireAuth);
  * Mendukung query parameters: search (string), page (number), limit (number)
  */
 router.get('/menu', async (req, res) => {
-  const { search, page = 1, limit = 10 } = req.query;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
   
   // Build WHERE clause for search
   let whereClause = 'WHERE m.tenant_id=?';
   const queryParams = [req.user.tenant_id];
   
-  if (search) {
+  if (req.query.search) {
     whereClause += ' AND (m.nama LIKE ? OR m.kategori_penerima LIKE ? OR m.deskripsi LIKE ?)';
-    const searchTerm = `%${search}%`;
+    const searchTerm = `%${req.query.search}%`;
     queryParams.push(searchTerm, searchTerm, searchTerm);
   }
   
@@ -38,7 +39,7 @@ router.get('/menu', async (req, res) => {
   const totalCount = totalCountResult[0].count;
   
   // Get menus with ingredients using a single JOIN query
-  const sql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serata,
+  const sql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat,
        mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, mb.jumlah
        FROM menu m
        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
@@ -47,7 +48,7 @@ router.get('/menu', async (req, res) => {
        ORDER BY m.id DESC
        LIMIT ? OFFSET ?`;
   
-  queryParams.push(limit, offset);
+  queryParams.push(Number(limit), Number(offset));
   const [rows] = await db.query(sql, queryParams);
   
   // Group ingredients by menu
@@ -64,7 +65,7 @@ router.get('/menu', async (req, res) => {
         protein: row.protein,
         karbohidrat: row.karbohidrat,
         lemak: row.lemak,
-        serat: row.serata,
+        serat: row.serat,
         bahan: []
       };
     }
@@ -98,6 +99,13 @@ router.get('/menu', async (req, res) => {
  */
 router.post('/menu', async (req, res) => {
   const { nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat, bahan } = req.body;
+  
+  if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama menu wajib diisi' });
+  
+  // Cek duplikat nama menu dalam satu tenant
+  const [existing] = await db.query('SELECT id FROM menu WHERE nama=? AND tenant_id=?', [nama.trim(), req.user.tenant_id]);
+  if (existing.length) return res.status(409).json({ error: 'Menu dengan nama "' + nama.trim() + '" sudah ada' });
+  
   const conn = await db.getConnection(); // Mengambil koneksi database dari pool
   
   try {
@@ -141,6 +149,15 @@ router.put('/menu/:id', async (req, res) => {
   try {
     await conn.beginTransaction();
     const f = req.body;
+    
+    if (!f.nama || !f.nama.trim()) return res.status(400).json({ error: 'Nama menu wajib diisi' });
+    
+    // Cek duplikat nama (kecuali dirinya sendiri)
+    const [existing] = await conn.query('SELECT id FROM menu WHERE nama=? AND tenant_id=? AND id!=?', [f.nama.trim(), req.user.tenant_id, req.params.id]);
+    if (existing.length) {
+      await conn.rollback();
+      return res.status(409).json({ error: 'Menu dengan nama "' + f.nama.trim() + '" sudah ada' });
+    }
     
     // 1. Update data header menu sesuai ID dan kepemilikan tenant
     await conn.query(
@@ -188,7 +205,7 @@ router.delete('/menu/:id', async (req, res) => {
  */
 router.get('/menu/:id', async (req, res) => {
   const [menus] = await db.query(
-    `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serata,
+    `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat,
        mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, mb.jumlah
        FROM menu m
        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
@@ -208,7 +225,7 @@ router.get('/menu/:id', async (req, res) => {
     protein: menus[0].protein,
     karbohidrat: menus[0].karbohidrat,
     lemak: menus[0].lemak,
-    serat: menus[0].serata,
+    serat: menus[0].serat,
     bahan: []
   };
   menus.forEach(row => {

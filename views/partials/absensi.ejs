@@ -1,23 +1,25 @@
-<div class="flex flex-wrap gap-2 mb-4">
-  <select id="abs-filter-karyawan" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
-    <option value="">Semua Karyawan</option>
-  </select>
-  <select id="abs-filter-bulan" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
-    <option value="">Semua Bulan</option>
-    <option value="1">Januari</option><option value="2">Februari</option><option value="3">Maret</option>
-    <option value="4">April</option><option value="5">Mei</option><option value="6">Juni</option>
-    <option value="7">Juli</option><option value="8">Agustus</option><option value="9">September</option>
-    <option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option>
-  </select>
-  <select id="abs-filter-tahun" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
-    <option value="">Semua Tahun</option>
-  </select>
-  <select id="abs-filter-status" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
-    <option value="">Semua Status</option>
-    <option>Hadir</option><option>Sakit</option><option>Izin</option><option>Cuti</option><option>Alpha</option>
-  </select>
-  <button onclick="loadAbsensi()" class="px-4 py-2 border border-stone-200 rounded-md text-sm">Filter</button>
-  <button onclick="openAbsensiForm()" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium ml-auto">+ Input Absensi</button>
+<div class="mb-4 space-y-2">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+    <select id="abs-filter-karyawan" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
+      <option value="">Semua Karyawan</option>
+    </select>
+    <div class="relative">
+      <span class="absolute -top-2 left-2 bg-white px-1 text-xs text-stone-500">Dari</span>
+      <input id="abs-filter-tanggal-awal" type="date" class="h-10 px-3 border border-stone-200 rounded-md text-sm w-full" />
+    </div>
+    <div class="relative">
+      <span class="absolute -top-2 left-2 bg-white px-1 text-xs text-stone-500">Sampai</span>
+      <input id="abs-filter-tanggal-akhir" type="date" class="h-10 px-3 border border-stone-200 rounded-md text-sm w-full" />
+    </div>
+    <select id="abs-filter-status" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
+      <option value="">Semua Status</option>
+      <option>Hadir</option><option>Sakit</option><option>Izin</option><option>Cuti</option><option>Alpha</option>
+    </select>
+    <div class="flex gap-2">
+      <button onclick="loadAbsensi()" class="flex-1 px-4 py-2 border border-stone-200 rounded-md text-sm whitespace-nowrap hover:bg-stone-50">Filter</button>
+      <button onclick="openAbsensiForm()" class="flex-1 bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap">+ Input</button>
+    </div>
+  </div>
 </div>
 <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
   <div class="overflow-x-auto">
@@ -40,13 +42,14 @@
     </table>
   </div>
 </div>
+<div id="absensi-pagination" class="flex items-center justify-between mt-3 text-sm text-stone-500"></div>
 <div id="absensi-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
   <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-    <div class="px-6 py-4 border-b border-stone-200 flex justify-between items-center">
+    <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-stone-200 flex justify-between items-center">
       <h3 id="absensi-modal-title" class="text-base font-bold">Input Absensi</h3>
       <button onclick="closeModal('absensi-modal')" class="text-stone-400 hover:text-stone-700 text-xl">×</button>
     </div>
-    <div class="p-6 overflow-y-auto flex-1">
+    <div class="p-4 sm:p-6 overflow-y-auto flex-1">
       <form id="absensi-form" class="space-y-4">
         <input type="hidden" id="absensi-id" />
         <div>
@@ -63,7 +66,7 @@
             <option>Hadir</option><option>Sakit</option><option>Izin</option><option>Cuti</option><option>Alpha</option>
           </select>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
             <label class="text-sm text-stone-700">Jam Masuk</label>
             <input id="absensi-masuk" type="time" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" />
@@ -79,7 +82,7 @@
         </div>
       </form>
     </div>
-    <div class="px-6 py-3 border-t border-stone-200 flex justify-end gap-2">
+    <div class="px-4 sm:px-6 py-3 border-t border-stone-200 flex justify-end gap-2">
       <button onclick="closeModal('absensi-modal')" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded">Batal</button>
       <button id="absensi-save" class="px-4 py-2 text-sm bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded font-medium">Simpan</button>
     </div>

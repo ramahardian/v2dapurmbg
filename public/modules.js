@@ -1,11 +1,11 @@
 // Navigation groups for sidebar
 const NAV_GROUPS = [
   { items: ['dashboard'] },
-  { label: 'Operasional', items: ['penerima-manfaat', 'menu', 'bahan-baku', 'gudang', 'produksi', 'distribusi'] },
+  { label: 'Operasional', items: ['penerima-manfaat', 'bahan-baku', 'gudang', 'produksi', 'distribusi'] },
   { label: 'Pembelian', items: ['supplier', 'pembelian', 'penerimaan'] },
   { label: 'Akuntansi', items: ['budgeting', 'kas-bank', 'laporan'] },
   { label: 'SDM', items: ['karyawan', 'absensi', 'payroll'] },
-  { label: 'Ahli Gizi', items: ['hpp', 'siklus'] },
+  { label: 'Ahli Gizi', items: ['menu', 'hpp', 'siklus'] },
 ];
 
 // Modules definition

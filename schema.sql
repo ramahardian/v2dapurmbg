@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS users (
   role ENUM('admin','ahli_gizi','gudang','keuangan','produksi') DEFAULT 'produksi',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-  INDEX idx_email (email)
+  INDEX idx_email (email),
+  INDEX idx_users_tenant (tenant_id)
 ) ENGINE=InnoDB;
 
 -- Penerima Manfaat
@@ -148,7 +149,9 @@ CREATE TABLE IF NOT EXISTS stok_masuk (
   catatan TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-  FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id)
+  FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id),
+  INDEX idx_stok_masuk_tanggal (tenant_id, tanggal),
+  INDEX idx_stok_masuk_bahan (bahan_baku_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS stok_keluar (
@@ -161,7 +164,9 @@ CREATE TABLE IF NOT EXISTS stok_keluar (
   catatan TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-  FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id)
+  FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id),
+  INDEX idx_stok_keluar_tanggal (tenant_id, tanggal),
+  INDEX idx_stok_keluar_bahan (bahan_baku_id)
 ) ENGINE=InnoDB;
 
 -- Produksi & Distribusi
@@ -225,7 +230,9 @@ CREATE TABLE IF NOT EXISTS kas_bank (
   jumlah DECIMAL(15,2) NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-  INDEX idx_tenant (tenant_id)
+  INDEX idx_tenant (tenant_id),
+  INDEX idx_kas_tipe (tenant_id, tipe),
+  INDEX idx_kas_tanggal (tenant_id, tanggal)
 ) ENGINE=InnoDB;
 
 -- Siklus Menu (untuk ahli gizi)
@@ -260,6 +267,8 @@ CREATE TABLE IF NOT EXISTS siklus_menu_item (
   INDEX idx_siklus (siklus_id)
 ) ENGINE=InnoDB;
 
+-- Tambah kolom nutrisi ke bahan_baku (dijalankan oleh migrate.js dengan pengecekan)
+
 -- Karyawan
 CREATE TABLE IF NOT EXISTS karyawan (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -271,6 +280,10 @@ CREATE TABLE IF NOT EXISTS karyawan (
   gaji_pokok DECIMAL(15,2) DEFAULT 0,
   status ENUM('Aktif','Cuti','Resign') DEFAULT 'Aktif',
   tanggal_masuk DATE,
+  email VARCHAR(150),
+  phone VARCHAR(50),
+  address TEXT,
+  photo VARCHAR(255),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   INDEX idx_tenant (tenant_id)
@@ -290,8 +303,46 @@ CREATE TABLE IF NOT EXISTS absensi (
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   FOREIGN KEY (karyawan_id) REFERENCES karyawan(id) ON DELETE CASCADE,
   INDEX idx_tenant (tenant_id),
-  INDEX idx_karyawan (karyawan_id)
+  INDEX idx_karyawan (karyawan_id),
+  INDEX idx_absensi_tanggal (tenant_id, tanggal)
 ) ENGINE=InnoDB;
+
+-- Shift (jadwal kerja per divisi)
+CREATE TABLE IF NOT EXISTS shift (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  nama VARCHAR(100) NOT NULL,
+  departemen VARCHAR(100) NOT NULL,
+  jam_masuk TIME NOT NULL,
+  jam_keluar TIME NOT NULL,
+  warna VARCHAR(7) DEFAULT '#3B82F6',
+  is_active TINYINT(1) DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  INDEX idx_tenant (tenant_id)
+) ENGINE=InnoDB;
+
+-- Jadwal Karyawan (penugasan shift per periode)
+CREATE TABLE IF NOT EXISTS jadwal_karyawan (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  karyawan_id INT NOT NULL,
+  shift_id INT NOT NULL,
+  tanggal_mulai DATE NOT NULL,
+  tanggal_selesai DATE,
+  hari_kerja VARCHAR(50) DEFAULT '1,2,3,4,5,6,7',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  FOREIGN KEY (karyawan_id) REFERENCES karyawan(id) ON DELETE CASCADE,
+  FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
+  INDEX idx_tenant (tenant_id),
+  INDEX idx_karyawan (karyawan_id),
+  INDEX idx_jadwal_shift (shift_id),
+  INDEX idx_jadwal_tanggal (tenant_id, tanggal_mulai)
+) ENGINE=InnoDB;
+
+-- Alter absensi: tambah kolom shift_id (jika belum ada)
+-- Note: MySQL tidak mendukung IF NOT EXISTS untuk ADD COLUMN, gunakan query terpisah jika perlu
 
 -- Payroll
 CREATE TABLE IF NOT EXISTS payroll (
@@ -309,5 +360,16 @@ CREATE TABLE IF NOT EXISTS payroll (
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   FOREIGN KEY (karyawan_id) REFERENCES karyawan(id) ON DELETE CASCADE,
   INDEX idx_tenant (tenant_id),
-  INDEX idx_karyawan (karyawan_id)
+  INDEX idx_karyawan (karyawan_id),
+  INDEX idx_payroll_periode (tenant_id, tahun, bulan)
+) ENGINE=InnoDB;
+
+-- Divisi
+CREATE TABLE IF NOT EXISTS divisi (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  nama VARCHAR(100) NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  INDEX idx_tenant (tenant_id)
 ) ENGINE=InnoDB;
