@@ -1,0 +1,15 @@
+<div class="flex flex-wrap justify-between gap-2 mb-4">
+  <div class="relative">
+    <input type="text" id="bahan-search" placeholder="Cari bahan..." value=""
+      class="pl-10 pr-4 py-2 border border-stone-200 rounded-md text-sm w-48 focus:outline-none focus:border-[#1e40af]">
+    <svg class="absolute left-3 top-2.5 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+    </svg>
+  </div>
+  <div class="flex gap-2">
+    <button id="add-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah</button>
+    <button onclick="exportBahanBakuXlsx()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium">Export XLSX</button>
+  </div>
+</div>
+<div id="table-wrap" class="bg-white border border-stone-200 rounded-lg overflow-hidden"></div>
+<div id="bahan-pagination" class="flex items-center justify-between mt-4"></div>

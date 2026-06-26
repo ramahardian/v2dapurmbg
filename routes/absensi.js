@@ -7,21 +7,31 @@ router.use(requireAuth);
 router.use(requireRole('admin', 'keuangan'));
 
 router.get('/absensi', async (req, res) => {
-  const { karyawan_id, bulan, tahun, status } = req.query;
-  let sql = `SELECT a.*, k.nama as nama_karyawan, k.jabatan, k.departemen FROM absensi a
-    JOIN karyawan k ON k.id=a.karyawan_id WHERE a.tenant_id=?`;
+  const { karyawan_id, tanggal_awal, tanggal_akhir, status, page = '1', limit = '50' } = req.query;
+  const pageNum = Math.max(1, parseInt(page));
+  const limitNum = Math.min(500, Math.max(1, parseInt(limit)));
+  const offset = (pageNum - 1) * limitNum;
+  let where = 'WHERE a.tenant_id=?';
   const params = [req.user.tenant_id];
-  if (karyawan_id) { sql += ` AND a.karyawan_id=?`; params.push(karyawan_id); }
-  if (bulan) { sql += ` AND MONTH(a.tanggal)=?`; params.push(bulan); }
-  if (tahun) { sql += ` AND YEAR(a.tanggal)=?`; params.push(tahun); }
-  if (status) { sql += ` AND a.status=?`; params.push(status); }
-  sql += ` ORDER BY a.tanggal DESC, k.nama ASC`;
-  const [rows] = await db.query(sql, params);
-  res.json(rows);
+  if (karyawan_id) { where += ` AND a.karyawan_id=?`; params.push(karyawan_id); }
+  if (tanggal_awal) { where += ` AND a.tanggal >= ?`; params.push(tanggal_awal); }
+  if (tanggal_akhir) { where += ` AND a.tanggal <= ?`; params.push(tanggal_akhir); }
+  if (status) { where += ` AND a.status=?`; params.push(status); }
+  const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM absensi a ${where}`, params);
+  const [rows] = await db.query(
+    `SELECT a.*, k.nama as nama_karyawan, j.name as jabatan, k.departemen FROM absensi a
+     JOIN karyawan k ON k.id=a.karyawan_id
+     LEFT JOIN jabatan j ON j.id=k.jabatan_id ${where}
+     ORDER BY a.tanggal DESC, k.nama ASC LIMIT ? OFFSET ?`,
+    [...params, limitNum, offset]
+  );
+  res.json({ data: rows, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
 });
 
 router.post('/absensi', async (req, res) => {
   const { karyawan_id, tanggal, status, jam_masuk, jam_keluar, keterangan } = req.body;
+  if (!karyawan_id) return res.status(400).json({ error: 'Karyawan wajib dipilih' });
+  if (!tanggal) return res.status(400).json({ error: 'Tanggal wajib diisi' });
   const [r] = await db.query(
     `INSERT INTO absensi (tenant_id, karyawan_id, tanggal, status, jam_masuk, jam_keluar, keterangan) VALUES (?,?,?,?,?,?,?)`,
     [req.user.tenant_id, karyawan_id, tanggal, status || 'Hadir', jam_masuk || null, jam_keluar || null, keterangan || null]

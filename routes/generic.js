@@ -16,7 +16,7 @@ router.use(requireAuth);
  */
 const TABLES = {
   penerima_manfaat: ['nama_kelompok', 'paket_besar', 'paket_kecil', 'lokasi', 'keterangan'],
-  bahan_baku: ['kode', 'nama', 'kategori', 'satuan', 'harga_satuan', 'stok_saat_ini', 'stok_minimum'],
+  bahan_baku: ['kode', 'nama', 'kategori', 'satuan', 'harga_satuan', 'stok_saat_ini', 'stok_minimum', 'kalori', 'protein', 'karbohidrat', 'lemak', 'serat'],
   supplier: ['nama', 'kategori_supply', 'kontak_person', 'telepon', 'email', 'alamat', 'npwp'],
   purchase_order: ['no_po', 'tanggal', 'supplier_id', 'supplier_nama', 'item', 'total_nilai', 'status', 'catatan'],
   penerimaan_barang: ['no_dokumen', 'tanggal_terima', 'supplier_nama', 'ref_po', 'item', 'total_nilai', 'status_qc', 'catatan'],
@@ -24,6 +24,49 @@ const TABLES = {
   distribusi: ['tanggal_distribusi', 'titik_distribusi', 'kategori_penerima', 'jumlah_porsi', 'kurir', 'status', 'catatan'],
   budget: ['periode', 'kategori_penerima', 'jumlah_penerima', 'harga_per_porsi', 'biaya_operasional', 'total_budget', 'realisasi', 'catatan'],
   kas_bank: ['tanggal', 'no_transaksi', 'tipe', 'kategori', 'akun', 'deskripsi', 'jumlah'],
+  divisi: ['nama'],
+};
+
+/**
+ * Field yang wajib diisi (NOT NULL di database).
+ * Digunakan agar input kosong tidak lolos ke query INSERT.
+ */
+const REQUIRED_FIELDS = {
+  penerima_manfaat: ['nama_kelompok'],
+  bahan_baku: ['nama', 'satuan'],
+  supplier: ['nama'],
+  purchase_order: ['no_po', 'tanggal'],
+  penerimaan_barang: ['no_dokumen', 'tanggal_terima'],
+  produksi: ['tanggal_produksi'],
+  distribusi: ['tanggal_distribusi'],
+  budget: ['periode'],
+  kas_bank: ['tanggal', 'tipe', 'jumlah'],
+  divisi: ['nama'],
+};
+
+/**
+ * Field yang harus unik per-tenant (cek duplikat sebelum insert).
+ * Format: { nama_tabel: { field_db: 'label_untuk_pesan_error' } }
+ */
+const UNIQUE_FIELDS = {
+  penerima_manfaat: { nama_kelompok: 'Nama Kelompok' },
+  bahan_baku: { nama: 'Nama Bahan' },
+  supplier: { nama: 'Nama Supplier' },
+};
+
+/**
+ * Field yang bisa dicari (search) per tabel.
+ */
+const SEARCHABLE_FIELDS = {
+  penerima_manfaat: ['nama_kelompok', 'lokasi'],
+  bahan_baku: ['nama', 'kode', 'kategori'],
+  supplier: ['nama', 'kategori_supply', 'kontak_person'],
+  purchase_order: ['no_po', 'supplier_nama', 'status'],
+  penerimaan_barang: ['no_dokumen', 'supplier_nama', 'status_qc'],
+  produksi: ['menu_nama', 'kategori_penerima', 'status'],
+  distribusi: ['titik_distribusi', 'kategori_penerima', 'status', 'kurir'],
+  budget: ['periode', 'kategori_penerima'],
+  kas_bank: ['tipe', 'kategori', 'akun', 'deskripsi', 'no_transaksi'],
 };
 
 /**
@@ -74,7 +117,7 @@ for (const table of Object.keys(TABLES)) {
   // Role restrictions for specific tables
   const tableRoles = {
     penerima_manfaat: ['admin', 'keuangan'],
-    bahan_baku: ['admin', 'keuangan', 'gudang'],
+    bahan_baku: ['admin', 'keuangan', 'gudang', 'ahli_gizi'],
     stok_masuk: ['admin', 'keuangan', 'gudang'],
     stok_keluar: ['admin', 'keuangan', 'gudang']
   };
@@ -83,14 +126,71 @@ for (const table of Object.keys(TABLES)) {
   
   // 1. READ ALL (GET /nama_tabel)
   router.get(`/${table}`, roleMiddleware, async (req, res) => {
-    // Selalu filter berdasarkan tenant_id untuk keamanan data
-    const [rows] = await db.query(`SELECT * FROM ${table} WHERE tenant_id=? ORDER BY id DESC`, [req.user.tenant_id]);
-    res.json(rows);
+    const { search, page, limit } = req.query;
+    const searchable = SEARCHABLE_FIELDS[table] || [];
+    
+    let whereClause = 'WHERE tenant_id=?';
+    const params = [req.user.tenant_id];
+    
+    // Search: filter berdasarkan kolom yang sudah ditentukan
+    if (search && searchable.length) {
+      const conditions = searchable.map(f => `${f} LIKE ?`);
+      whereClause += ` AND (${conditions.join(' OR ')})`;
+      searchable.forEach(() => params.push(`%${search}%`));
+    }
+    
+    // Hitung total sebelum pagination
+    const [countResult] = await db.query(`SELECT COUNT(*) as count FROM ${table} ${whereClause}`, params);
+    const total = countResult[0].count;
+    
+    // Pagination
+    if (page && limit) {
+      const pageNum = parseInt(page);
+      const limitNum = parseInt(limit);
+      const offset = (pageNum - 1) * limitNum;
+      
+      const [rows] = await db.query(
+        `SELECT * FROM ${table} ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
+        [...params, limitNum, offset]
+      );
+      
+      res.json({
+        data: rows,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum)
+        }
+      });
+    } else {
+      // Tanpa pagination: return array biasa (backward compatible)
+      const [rows] = await db.query(`SELECT * FROM ${table} ${whereClause} ORDER BY id DESC`, params);
+      res.json(rows);
+    }
   });
   
   // 2. CREATE (POST /nama_tabel)
   router.post(`/${table}`, roleMiddleware, async (req, res) => {
     try {
+      // Validasi field wajib sebelum menyimpan
+      const required = REQUIRED_FIELDS[table] || [];
+      const missing = required.filter(f => !req.body[f] || (typeof req.body[f] === 'string' && !req.body[f].trim()));
+      if (missing.length) {
+        return res.status(400).json({ error: `Field wajib harus diisi: ${missing.join(', ')}` });
+      }
+      
+      // Cek duplikat field unik per-tenant
+      const uniqueFields = UNIQUE_FIELDS[table] || {};
+      for (const [field, label] of Object.entries(uniqueFields)) {
+        if (req.body[field]) {
+          const [dupe] = await db.query(`SELECT id FROM ${table} WHERE ${field}=? AND tenant_id=?`, [req.body[field].trim(), req.user.tenant_id]);
+          if (dupe.length) {
+            return res.status(409).json({ error: `${label} "${req.body[field].trim()}" sudah ada` });
+          }
+        }
+      }
+      
       // Panggil helper untuk merakit query INSERT
       const { sql, vals } = buildInsert(table, req.body, req.user.tenant_id);
       const [r] = await db.query(sql, vals);
@@ -134,5 +234,15 @@ for (const table of Object.keys(TABLES)) {
   });
   
 }
+
+// Endpoint: total penerima manfaat per kategori
+router.get('/penerima_manfaat/total', async (req, res) => {
+  const { kategori } = req.query;
+  let sql = 'SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=?';
+  const params = [req.user.tenant_id];
+  if (kategori) { sql += ' AND (nama_kelompok LIKE ? OR lokasi LIKE ?)'; const s = `%${kategori}%`; params.push(s, s); }
+  const [[row]] = await db.query(sql, params);
+  res.json({ total: Number(row.total) });
+});
 
 module.exports = router;

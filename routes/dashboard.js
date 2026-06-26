@@ -37,13 +37,18 @@ router.get('/dashboard/summary', async (req, res) => {
   );
   
   // 4. Pengecekan Persediaan (Gudang)
-  // Menarik seluruh data bahan baku untuk menghitung total item dan mencari stok yang menipis.
-  const [bb] = await db.query('SELECT * FROM bahan_baku WHERE tenant_id=?', [t]);
+  // Gunakan aggregate query di database, bukan filter di Node.js
+  const [[countBahan]] = await db.query('SELECT COUNT(*) AS total FROM bahan_baku WHERE tenant_id=?', [t]);
+  const [low] = await db.query(
+    'SELECT nama, stok_saat_ini AS stok, stok_minimum AS `min`, satuan FROM bahan_baku WHERE tenant_id=? AND stok_saat_ini < stok_minimum LIMIT 5', 
+    [t]
+  );
+  const [[stk]] = await db.query(
+    'SELECT COUNT(*) AS count FROM bahan_baku WHERE tenant_id=? AND stok_saat_ini < stok_minimum', 
+    [t]
+  );
   
-  // Melakukan filter di level Node.js: mencari item yang stok saat ini kurang dari batas minimum (reorder point)
-  const low = bb.filter(b => Number(b.stok_saat_ini) < Number(b.stok_minimum));
-  
-  // 5. Susun dan kirimkan respons JSON untuk dikonsumsi oleh UI Dashboard
+  // 5. Susun dan kirimkan respons JSON
   res.json({
     total_penerima_manfaat: Number(pm.total),
     paket_besar: Number(pm.paket_besar),
@@ -53,17 +58,17 @@ router.get('/dashboard/summary', async (req, res) => {
     // Status Anggaran
     total_budget: Number(bd.tb),
     total_realisasi: Number(bd.tr),
-    selisih_budget: Number(bd.tb) - Number(bd.tr), // Sisa anggaran yang belum terserap
+    selisih_budget: Number(bd.tb) - Number(bd.tr),
     
     // Status Gudang
-    jumlah_bahan_baku: bb.length, // Total variasi bahan di gudang
-    stok_menipis: low.length, // Indikator badge (angka merah) untuk alert stok menipis
+    jumlah_bahan_baku: Number(countBahan.total),
+    stok_menipis: Number(stk.count),
     
-    // Ambil maksimal 5 item pertama yang stoknya menipis untuk ditampilkan di tabel/list mini dashboard
-    low_stock_items: low.slice(0, 5).map(b => ({ 
+    // Ambil maksimal 5 item yang stoknya menipis
+    low_stock_items: low.map(b => ({ 
       nama: b.nama, 
-      stok: b.stok_saat_ini, 
-      min: b.stok_minimum, 
+      stok: b.stok, 
+      min: b.min, 
       satuan: b.satuan 
     })),
   });
@@ -71,14 +76,3 @@ router.get('/dashboard/summary', async (req, res) => {
 
 module.exports = router;
 
-/* * CATATAN OPTIMASI:
- * Pada baris pengecekan persediaan: `const [bb] = await db.query('SELECT * FROM bahan_baku WHERE tenant_id=?', [t]);`
- * Menarik SELURUH data bahan baku (SELECT *) hanya untuk menghitung total dan memfilter stok menipis 
- * bisa menjadi lambat jika tenant tersebut memiliki ribuan item bahan baku.
- * * Alternatif yang lebih cepat (beban ada di Database, bukan RAM server):
- * 1. Query Total Bahan: 
- * SELECT COUNT(*) as total_item FROM bahan_baku WHERE tenant_id=?
- * 2. Query Stok Menipis (Hanya tarik yang kurang dari minimum dengan LIMIT):
- * SELECT nama, stok_saat_ini, stok_minimum, satuan FROM bahan_baku 
- * WHERE tenant_id=? AND stok_saat_ini < stok_minimum LIMIT 5
- */

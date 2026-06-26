@@ -1,0 +1,64 @@
+<div class="flex flex-wrap justify-between gap-2 mb-4">
+  <div class="flex gap-2">
+    <button id="add-shift-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Shift Baru</button>
+    <button id="add-jadwal-btn" class="border border-stone-300 hover:bg-stone-100 px-4 py-2 rounded-md text-sm font-medium">+ Atur Jadwal</button>
+  </div>
+  <select id="shift-filter-departemen" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
+    <option value="">Semua Departemen</option>
+    <% jabatanList.forEach(j => { %>
+      <option value="<%= j.name %>"><%= j.name %></option>
+    <% }) %>
+  </select>
+</div>
+
+<!-- Tabel Master Shift -->
+<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6">
+  <div class="px-4 py-3 bg-stone-50 border-b border-stone-200 font-semibold text-sm flex items-center gap-2">
+    <svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Master Shift per Divisi
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-stone-50">
+        <tr>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Departemen</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Nama Shift</th>
+          <th class="text-center px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Jam Masuk</th>
+          <th class="text-center px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Jam Keluar</th>
+          <th class="text-center px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Status</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="shift-table-body">
+        <% if (shifts.length) { %>
+          <% shifts.forEach(s => { %>
+            <tr class="border-t border-stone-100">
+              <td class="px-4 py-3 text-sm"><span class="px-2 py-0.5 rounded text-xs font-medium" style="background:<%= s.warna %>20;color:<%= s.warna %>"><%= s.departemen %></span></td>
+              <td class="px-4 py-3 text-sm font-medium"><%= s.nama %></td>
+              <td class="px-4 py-3 text-sm text-center mono"><%= s.jam_masuk.slice(0,5) %></td>
+              <td class="px-4 py-3 text-sm text-center mono"><%= s.jam_keluar.slice(0,5) %></td>
+              <td class="px-4 py-3 text-sm text-center"><span class="text-xs px-2 py-0.5 rounded <%= s.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500' %>"><%= s.is_active ? 'Aktif' : 'Nonaktif' %></span></td>
+              <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
+                <button onclick="editShift(<%= s.id %>)" class="text-stone-500 hover:text-stone-900 mr-2">Edit</button>
+                <button onclick="deleteShift(<%= s.id %>)" class="text-red-600 hover:text-red-800">Hapus</button>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr><td colspan="6" class="text-center py-12 text-stone-400">Belum ada shift. Klik "+ Shift Baru" untuk mulai.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Tabel Jadwal Karyawan -->
+<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
+  <div class="px-4 py-3 bg-stone-50 border-b border-stone-200 font-semibold text-sm flex items-center gap-2">
+    <svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Jadwal Karyawan
+  </div>
+  <div id="jadwal-content">
+    <div class="text-center py-12 text-stone-400">Memuat jadwal...</div>
+  </div>
+</div>

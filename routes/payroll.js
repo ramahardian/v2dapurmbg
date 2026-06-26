@@ -8,8 +8,9 @@ router.use(requireRole('admin', 'keuangan'));
 
 router.get('/payroll', async (req, res) => {
   const { karyawan_id, bulan, tahun, status } = req.query;
-  let sql = `SELECT p.*, k.nama as nama_karyawan, k.jabatan, k.departemen FROM payroll p
-    JOIN karyawan k ON k.id=p.karyawan_id WHERE p.tenant_id=?`;
+  let sql = `SELECT p.*, k.nama as nama_karyawan, j.name as jabatan, k.departemen FROM payroll p
+    JOIN karyawan k ON k.id=p.karyawan_id
+    LEFT JOIN jabatan j ON j.id=k.jabatan_id WHERE p.tenant_id=?`;
   const params = [req.user.tenant_id];
   if (karyawan_id) { sql += ` AND p.karyawan_id=?`; params.push(karyawan_id); }
   if (bulan) { sql += ` AND p.bulan=?`; params.push(bulan); }
@@ -22,6 +23,9 @@ router.get('/payroll', async (req, res) => {
 
 router.post('/payroll', async (req, res) => {
   const { karyawan_id, bulan, tahun, gaji_pokok, tunjangan, potongan, status } = req.body;
+  if (!karyawan_id) return res.status(400).json({ error: 'Karyawan wajib dipilih' });
+  if (!bulan || bulan < 1 || bulan > 12) return res.status(400).json({ error: 'Bulan tidak valid (1-12)' });
+  if (!tahun || tahun < 2000) return res.status(400).json({ error: 'Tahun tidak valid' });
   const total_gaji = (Number(gaji_pokok) || 0) + (Number(tunjangan) || 0) - (Number(potongan) || 0);
   const [r] = await db.query(
     `INSERT INTO payroll (tenant_id, karyawan_id, bulan, tahun, gaji_pokok, tunjangan, potongan, total_gaji, status) VALUES (?,?,?,?,?,?,?,?,?)`,

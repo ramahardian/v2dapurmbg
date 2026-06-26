@@ -3,69 +3,247 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MBG Kitchen SaaS — Operasional Dapur</title>
+  <title>Dapur Sukaluyu</title>
+  <link rel="preconnect" href="https://cdn.tailwindcss.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
   <style>
     
-    body { font-family: 'IBM Plex Sans', sans-serif; background: #FAFAF9; color: #1C1917; }
+    :root { --bg-body: #FAFAF9; --bg-card: #fff; --bg-sidebar: #fff; --text-body: #1C1917; --border: #e7e5e4; --bg-sidebar-hover: rgba(0,0,0,.05); --bg-sidebar-active: rgba(0,0,0,.08); --bg-header: #fff; }
+    html.dark { --bg-body: #0c0a09; --bg-card: #44403c; --bg-sidebar: #1c1917; --text-body: #e7e5e4; --border: #57534e; --bg-sidebar-hover: rgba(255,255,255,.06); --bg-sidebar-active: rgba(255,255,255,.1); --bg-header: #1c1917; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text-body); }
     h1,h2,h3 { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.02em; }
     .mono { font-family: 'JetBrains Mono', monospace; }
-    .sidebar-link { display:flex;align-items:center;gap:.75rem;padding:.5rem .875rem;border-radius:.375rem;font-size:.875rem;color:rgba(255,255,255,.75);cursor:pointer;}
-    .sidebar-link:hover { background: rgba(255,255,255,.08); color: white; }
-    .sidebar-link.active { background: rgba(255,255,255,.14); color: white; }
-    .modal-backdrop { background: rgba(0,0,0,.5); }
+    .sidebar-link { display:flex;align-items:center;gap:.75rem;padding:.5rem .875rem;border-radius:.375rem;font-size:.875rem;color:var(--text-body);cursor:pointer;white-space:nowrap;overflow:hidden;opacity:.7;transition:opacity .15s,background .15s;}
+    .sidebar-link:hover { background: var(--bg-sidebar-hover); opacity:1; }
+    .sidebar-link.active { background: var(--bg-sidebar-active); opacity:1; }
+    .sidebar-link .nav-label { transition: opacity .15s; }
+    #sidebar.collapsed { width: 64px; }
+    #sidebar.collapsed .sidebar-link { justify-content:center;padding:.5rem;gap:0; }
+    #sidebar.collapsed .sidebar-link .nav-label,
+    #sidebar.collapsed .nav-group-label { opacity:0;width:0;display:none; }
+    #sidebar.collapsed .sidebar-logo-text,
+    #sidebar.collapsed .user-info-text,
+    #sidebar.collapsed .sidebar-toggle-label { display:none; }
+    #sidebar.collapsed .sidebar-logo-wrap { justify-content:center;padding:.5rem; }
+    #sidebar.collapsed .user-area { display:flex;justify-content:center;padding:.25rem; }
+    #sidebar.collapsed .logout-text { display:none; }
+    #sidebar.collapsed .logout-icon { display:inline !important; }
+    #sidebar .sidebar-toggle { transition: transform .2s; }
+    #sidebar.collapsed .sidebar-toggle { display:none; }
+    #app.sidebar-collapsed main { margin-left:64px; }
+    @media (max-width:1023px) { #sidebar.collapsed { width:260px; } #sidebar.collapsed .sidebar-link { justify-content:flex-start;padding:.5rem .875rem;gap:.75rem; } #sidebar.collapsed .sidebar-link .nav-label, #sidebar.collapsed .nav-group-label { opacity:1;width:auto;display:block; } #sidebar.collapsed .sidebar-logo-text, #sidebar.collapsed .user-info-text { display:block; } #sidebar.collapsed .sidebar-logo-wrap { justify-content:flex-start;padding:.5rem 1.25rem; } #sidebar.collapsed .user-area { display:flex;justify-content:flex-start;padding:0; } #sidebar.collapsed .logout-text { display:inline; } #app.sidebar-collapsed main { margin-left:0; } }
+    .modal-content { background: var(--bg-body); border: 1px solid var(--border); }
+    .modal-backdrop, [class*="bg-black/"] { background: rgba(0,0,0,.5); }
+    html.dark .modal-backdrop, html.dark [class*="bg-black/"] { background: rgba(0,0,0,.7); }
+    @keyframes alert-in {
+      from { opacity: 0; transform: scale(0.9) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-alert-in { animation: alert-in 0.2s ease-out; }
   </style>
 </head>
 <body>
   <!-- Mobile Header -->
-  <header class="lg:hidden sticky top-0 z-30 border-b border-stone-200 bg-white px-4 py-3 flex items-center gap-3">
-    <button onclick="toggleSidebar()" class="p-2 -ml-2 rounded-md hover:bg-stone-100">
-      <svg class="w-6 h-6 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+  <header class="lg:hidden sticky top-0 z-30 px-4 py-3 flex items-center gap-3" style="background:var(--bg-header);border-bottom:1px solid var(--border)">
+    <button onclick="toggleSidebar()" class="p-2 -ml-2 rounded-md" style="color:var(--text-body)">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
-    <div class="font-bold text-lg">Dapur Sukaluyu</div>
+    <div class="font-bold text-lg flex-1" style="color:var(--text-body)">Dapur Sukaluyu</div>
+    <button id="dark-toggle-mobile" onclick="toggleDarkMode()" class="p-2 rounded-lg" style="color:var(--text-body)" title="Mode Gelap/Terang">
+      <svg class="sun-icon-mobile w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      <svg class="moon-icon-mobile w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+    </button>
   </header>
   <div id="app" class="flex min-h-screen">
     <!-- Overlay for mobile -->
     <div id="sidebar-overlay" onclick="closeSidebar()" class="fixed inset-0 bg-black/40 z-30 hidden lg:hidden"></div>
 
-    <aside id="sidebar" class="w-[260px] shrink-0 bg-[#1e40af] text-white fixed inset-y-0 left-0 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200 z-40">
-      <div class="px-5 py-5 border-b border-white/10 flex items-center gap-3">
-        <div class="h-9 w-9 rounded-md bg-white/15 flex items-center justify-center font-bold">M</div>
-        <div class="font-bold leading-tight">Sukaluyu</div>
+    <aside id="sidebar" class="w-[260px] shrink-0 fixed inset-y-0 left-0 flex flex-col transform -translate-x-full lg:translate-x-0 transition-all duration-200 z-40" style="background:var(--bg-sidebar);color:var(--text-body);border-right:1px solid var(--border)">
+      <div class="sidebar-logo-wrap flex items-center gap-3 px-5 py-5 cursor-pointer" onclick="expandSidebar()" style="border-bottom:1px solid var(--border)">
+        <div class="h-9 w-9 rounded-md flex items-center justify-center font-bold shrink-0" style="background:var(--border);color:var(--text-body)">M</div>
+        <span class="sidebar-logo-text font-bold leading-tight truncate">Sukaluyu</span>
       </div>
       <nav id="nav" class="flex-1 overflow-y-auto py-4 px-3 space-y-0.5"></nav>
-      <div class="border-t border-white/10 px-4 py-3 text-sm">
-        <div class="font-medium" id="user-name">—</div>
-        <div class="text-[11px] text-white/60 capitalize" id="user-role">—</div>
-        <button id="logout-btn" class="mt-2 text-white/80 hover:text-white text-sm">↪ Keluar</button>
+      <div style="border-top:1px solid var(--border)" class="px-4 py-3 text-sm">
+        <a href="/akun" data-key="akun" onclick="closeSidebar()" class="user-area flex items-center gap-3 mb-2 rounded-lg px-2 -mx-2 py-2 transition-colors" title="Akun Saya" style="color:var(--text-body)">
+          <div id="user-avatar" class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden" style="background:var(--border);color:var(--text-body)">—</div>
+          <div class="user-info-text min-w-0">
+            <div class="font-medium truncate" id="user-name">—</div>
+            <div class="text-[11px] capitalize truncate" id="user-role" style="opacity:.6">—</div>
+          </div>
+        </a>
+        <div class="flex items-center gap-1">
+          <button id="logout-btn" class="flex-1 text-left text-sm py-1.5 px-2 rounded flex items-center" style="color:var(--text-body);opacity:.65">
+            <span class="logout-text">↪ Keluar</span>
+            <span class="hidden logout-icon w-5 text-center">↪</span>
+          </button>
+          <button id="sidebar-toggle" onclick="toggleSidebarCollapse()" class="sidebar-toggle p-1.5 rounded hidden lg:block" style="color:var(--text-body);opacity:.5" title="Ciutkan sidebar">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+          </button>
+        </div>
       </div>
     </aside>
 
-    <main class="flex-1 lg:ml-[260px] w-full">
-      <header class="hidden lg:block border-b border-stone-200 bg-white sticky top-0 z-10 px-8 py-5">
-        <h1 id="page-title" class="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p id="page-sub" class="text-sm text-stone-500 mt-1">Ringkasan operasional dapur</p>
+    <main id="main-content" class="flex-1 lg:ml-[260px] w-full min-w-0">
+      <header class="hidden lg:flex items-center justify-between sticky top-0 z-10 px-8 py-4" style="background:var(--bg-header);border-bottom:1px solid var(--border)">
+        <div>
+          <h1 id="page-title" class="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p id="page-sub" class="text-sm mt-1" style="opacity:.6">Ringkasan operasional dapur</p>
+        </div>
+        <button id="dark-toggle" onclick="toggleDarkMode()" class="p-2 rounded-lg" style="color:var(--text-body)" title="Mode Gelap/Terang">
+          <svg id="sun-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <svg id="moon-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        </button>
       </header>
-      <div id="content" class="p-4 lg:p-8"></div>
+      <div id="content" class="p-4 lg:p-8 min-w-0"></div>
     </main>
   </div>
 
   <!-- Modal -->
   <div id="modal" class="fixed inset-0 modal-backdrop hidden items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-      <div class="px-4 lg:px-6 py-3 lg:py-4 border-b border-stone-200 flex justify-between items-center">
+    <div class="modal-content rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center" style="border-bottom:1px solid var(--border)">
         <h3 id="modal-title" class="text-base lg:text-lg font-bold"></h3>
-        <button onclick="closeModal()" class="text-stone-400 hover:text-stone-700 text-xl">×</button>
+        <button onclick="closeModal()" class="text-xl" style="opacity:.5">×</button>
       </div>
       <div id="modal-body" class="p-4 lg:p-6 overflow-y-auto flex-1"></div>
-      <div class="px-4 lg:px-6 py-3 border-t border-stone-200 flex justify-end gap-2">
-        <button onclick="closeModal()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded">Batal</button>
+      <div class="px-4 lg:px-6 py-3 flex justify-end gap-2" style="border-top:1px solid var(--border)">
+        <button onclick="closeModal()" class="px-4 py-2 text-sm btn-ghost rounded">Batal</button>
         <button id="modal-save" class="px-4 py-2 text-sm bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded font-medium">Simpan</button>
       </div>
     </div>
   </div>
 
-  <script src="/app.js?v=3"></script>
+  <!-- Toast container -->
+  <div id="toast-container" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+  <style>
+    .toast { background:var(--bg-card);color:var(--text-body);border:1px solid var(--border); }
+    .btn-ghost { color:var(--text-body); }
+    .btn-ghost:hover { background:var(--bg-sidebar-hover); }
+    html.dark body { background:var(--bg-body);color:var(--text-body); }
+    html.dark table.w-full,
+    html.dark [class*="bg-white"] { background:var(--bg-card);color:var(--text-body); }
+    html.dark [class*="border-stone"] { border-color:var(--border) !important; }
+    html.dark thead { background:var(--bg-sidebar); }
+    html.dark th { color:var(--text-body); }
+    html.dark tr[class*="border-stone"] { border-color:var(--border); }
+    html.dark .text-stone-400,
+    html.dark .text-stone-500,
+    html.dark .text-stone-600,
+    html.dark .text-stone-700,
+    html.dark .text-stone-800,
+    html.dark .text-stone-900 { color:var(--text-body); }
+    html.dark [class*="bg-stone-50"] { background:#292524; }
+    html.dark [class*="bg-stone-100"] { background:#44403c; }
+    html.dark [class*="hover:bg-stone-50"]:hover { background:#292524; }
+    html.dark [class*="hover:bg-stone-100"]:hover,
+    html.dark [class*="hover:bg-stone-200"]:hover { background:#44403c; }
+    html.dark .shadow-sm,
+    html.dark .shadow { box-shadow:0 1px 3px rgba(0,0,0,.3); }
+    html.dark .shadow-lg,
+    html.dark .shadow-xl { box-shadow:0 4px 16px rgba(0,0,0,.4); }
+    input, select, textarea { background:var(--bg-card);color:var(--text-body);border-color:var(--border); }
+    html.dark input, html.dark select, html.dark textarea { background:#1c1917; border-color:#57534e; }
+    html.dark input:focus, html.dark select:focus, html.dark textarea:focus { border-color:#a8a29e; }
+    html.dark [class*="bg-blue-50"],
+    html.dark [class*="bg-blue-100"] { background:#1e3a5f; }
+    html.dark [class*="bg-emerald-50"],
+    html.dark [class*="bg-emerald-100"] { background:#064e3b; }
+    html.dark [class*="bg-amber-50"],
+    html.dark [class*="bg-amber-100"] { background:#451a03; }
+    html.dark [class*="bg-orange-50"],
+    html.dark [class*="bg-orange-100"] { background:#431407; }
+    html.dark [class*="bg-violet-50"],
+    html.dark [class*="bg-violet-100"] { background:#2e1065; }
+    html.dark [class*="bg-cyan-50"],
+    html.dark [class*="bg-cyan-100"] { background:#164e63; }
+    html.dark [class*="bg-rose-50"],
+    html.dark [class*="bg-rose-100"] { background:#4c0519; }
+    html.dark [class*="bg-red-50"],
+    html.dark [class*="bg-red-100"] { background:#450a0a; }
+    html.dark [class*="bg-green-50"],
+    html.dark [class*="bg-green-100"] { background:#064e3b; }
+    html.dark [class*="hover:bg-blue-200"]:hover,
+    html.dark [class*="hover:bg-emerald-200"]:hover,
+    html.dark [class*="hover:bg-amber-200"]:hover,
+    html.dark [class*="hover:bg-violet-200"]:hover,
+    html.dark [class*="hover:bg-cyan-200"]:hover,
+    html.dark [class*="hover:bg-rose-200"]:hover { opacity:.8; }
+    html.dark [class*="text-blue"] { color:#93c5fd; }
+    html.dark [class*="text-emerald"] { color:#6ee7b7; }
+    html.dark [class*="text-amber"] { color:#fcd34d; }
+    html.dark [class*="text-orange"] { color:#fdba74; }
+    html.dark [class*="text-violet"] { color:#c4b5fd; }
+    html.dark [class*="text-cyan"] { color:#67e8f9; }
+    html.dark [class*="text-rose"] { color:#fda4af; }
+    html.dark [class*="text-red"] { color:#fca5a5; }
+    html.dark [class*="text-green"] { color:#86efac; }
+    html.dark [class*="text-\[#1e40af\]"] { color:#93c5fd; }
+    html.dark [class*="bg-gradient"] { background: linear-gradient(135deg, #292524, #44403c) !important; }
+    html.dark [class*="bg-gradient"] [class*="bg-white"] { background: #44403c !important; }
+    html.dark [class*="bg-gradient"] [class*="bg-white"]:hover { background: #57534e !important; }
+    html.dark [class*="bg-gradient"] .text-\[#1e40af\] { color: #e7e5e4 !important; }
+  </style>
+
+  <!-- Alert Modal -->
+  <div id="alert-modal" class="fixed inset-0 modal-backdrop hidden items-center justify-center z-[60] p-4">
+    <div class="alert-content rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-alert-in">
+      <div class="p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div id="alert-icon" class="w-10 h-10 rounded-full flex items-center justify-center shrink-0">
+            <svg id="alert-svg" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/>
+            </svg>
+          </div>
+          <h3 id="alert-title" class="text-base font-bold">Perhatian</h3>
+        </div>
+        <p id="alert-message" class="text-sm ml-13" style="opacity:.7"></p>
+      </div>
+      <div class="px-6 pb-4 flex justify-end">
+        <button id="alert-ok" class="px-5 py-2 text-sm font-medium text-white rounded-lg transition-colors">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="confirm-modal" class="fixed inset-0 modal-backdrop hidden items-center justify-center z-50 p-4">
+    <div class="confirm-content rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+      <div class="p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div id="confirm-icon" class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          </div>
+          <h3 id="confirm-title" class="text-base font-bold">Konfirmasi</h3>
+        </div>
+        <p id="confirm-message" class="text-sm ml-13" style="opacity:.7"></p>
+      </div>
+      <div class="px-6 pb-4 flex justify-end gap-2">
+        <button id="confirm-cancel" class="px-4 py-2 text-sm btn-ghost rounded-lg font-medium">Batal</button>
+        <button id="confirm-ok" class="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="/modul/utilitas.js?v=1"></script>
+  <script src="/modul/crud.js?v=1"></script>
+  <script src="/modul/beranda.js?v=1"></script>
+  <script src="/modul/menu.js?v=1"></script>
+  <script src="/modul/bahan-baku.js?v=1"></script>
+  <script src="/modul/gudang.js?v=1"></script>
+  <script src="/modul/hpp.js?v=1"></script>
+  <script src="/modul/laporan.js?v=1"></script>
+  <script src="/modul/siklus.js?v=1"></script>
+  <script src="/modul/karyawan.js?v=1"></script>
+  <script src="/modul/absensi.js?v=1"></script>
+  <script src="/modul/penggajian.js?v=1"></script>
+  <script src="/modul/jadwal.js?v=1"></script>
+  <script src="/modul/akun.js?v=1"></script>
+  <script src="/modul/kelola-user.js?v=1"></script>
+  <script src="/modul/definisi.js?v=1"></script>
+  <script src="/modul/inti.js?v=1"></script>
 </body>
 </html>

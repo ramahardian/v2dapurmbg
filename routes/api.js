@@ -12,9 +12,15 @@ const siklusRoutes = require('./siklus');
 const karyawanRoutes = require('./karyawan');
 const absensiRoutes = require('./absensi');
 const payrollRoutes = require('./payroll');
+const shiftRoutes = require('./shift');
+const userRoutes = require('./users');
 const templateRoutes = require('./template');
+const bahanBakuRoutes = require('./bahanBaku');
 
 router.use(genericRoutes);
+router.use(bahanBakuRoutes);
+router.use(shiftRoutes);
+router.use(userRoutes);
 router.use(menuRoutes);
 router.use(stockRoutes);
 router.use(dashboardRoutes);
