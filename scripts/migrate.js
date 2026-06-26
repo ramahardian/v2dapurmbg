@@ -81,6 +81,16 @@ require('dotenv').config();
     } catch (e) {
       console.log('  (skip migrasi kolom foto)', e.message);
     }
+    // Perbaiki kolom photo di tabel users jika ada dan NOT NULL (legacy)
+    try {
+      const [photoCol] = await conn.query("SELECT COLUMN_NAME, IS_NULLABLE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'photo' AND IS_NULLABLE = 'NO' AND COLUMN_DEFAULT IS NULL");
+      if (photoCol.length) {
+        await conn.query("ALTER TABLE users MODIFY COLUMN photo VARCHAR(100) DEFAULT NULL");
+        console.log('✓ Migrasi users: perbaiki kolom photo → nullable');
+      }
+    } catch (e) {
+      console.log('  (skip perbaikan kolom photo)', e.message);
+    }
     console.log('✓ Schema berhasil dibuat');
     await conn.end();
 
