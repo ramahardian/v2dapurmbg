@@ -39,6 +39,7 @@
     .modal-content { background: var(--bg-body); border: 1px solid var(--border); }
     .modal-backdrop, [class*="bg-black/"] { background: rgba(0,0,0,.5); }
     html.dark .modal-backdrop, html.dark [class*="bg-black/"] { background: rgba(0,0,0,.7); }
+
     @keyframes alert-in {
       from { opacity: 0; transform: scale(0.9) translateY(10px); }
       to { opacity: 1; transform: scale(1) translateY(0); }
@@ -190,7 +191,7 @@
   </style>
 
   <!-- Alert Modal -->
-  <div id="alert-modal" class="fixed inset-0 modal-backdrop hidden items-center justify-center z-[60] p-4">
+  <div id="alert-modal" class="fixed inset-0 hidden items-center justify-center z-[60] p-4">
     <div class="alert-content rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-alert-in">
       <div class="p-6">
         <div class="flex items-center gap-3 mb-3">
