@@ -36,7 +36,7 @@ router.post('/signup', async (req, res) => {
       [t.insertId, email.toLowerCase(), hash, nama, 'admin']);
     const user = { id: u.insertId, tenant_id: t.insertId, email: email.toLowerCase(), nama, role: 'admin' };
     const token = sign(user);
-    res.cookie('access_token', token, { httpOnly: true, sameSite: 'lax', maxAge: 8 * 3600 * 1000 });
+    res.cookie('access_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 8 * 3600 * 1000, path: '/' });
     res.json({ user, tenant_id: t.insertId });
   } catch (e) {
     console.error(e); res.status(500).json({ error: 'Gagal mendaftar' });
@@ -53,7 +53,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     const ok = await bcrypt.compare(password, u.password_hash);
     if (!ok) return res.status(401).json({ error: 'Email atau password salah' });
     const token = sign(u);
-    res.cookie('access_token', token, { httpOnly: true, sameSite: 'lax', maxAge: 8 * 3600 * 1000 });
+    res.cookie('access_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 8 * 3600 * 1000, path: '/' });
     res.json({ user: { id: u.id, tenant_id: u.tenant_id, email: u.email, nama: u.nama, role: u.role, foto: u.foto } });
   } catch (e) {
     console.error('Login error:', e);
