@@ -151,6 +151,7 @@ async function renderSiklusLaporan(id) {
           <div class="text-xs text-stone-500 mt-1">Status: <b class="capitalize">${siklus.status}</b> • Kategori: <b>${siklus.kategori_penerima || 'Semua'}</b></div>
         </div>
         <div class="flex gap-2">
+          <button onclick="hitungSpSiklus(${id})" class="px-3 py-1.5 text-sm border border-emerald-300 bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Hitung SP</button>
           <button onclick="exportSiklusLaporan(${id})" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> CSV</button>
           <button onclick="window.print()" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print</button>
           <button onclick="loadSiklusDetail(${id})" class="px-3 py-1.5 text-sm text-stone-500 hover:text-stone-900">Kembali</button>
@@ -236,6 +237,59 @@ async function renderSiklusLaporan(id) {
       </div>
     </div>`;
   window['_laporanSiklus_'+id] = { items, siklus, stats };
+}
+
+async function hitungSpSiklus(id) {
+  var wrap = document.getElementById('siklus-detail');
+  try {
+    var result = await api.post('/sp/hitung-kebutuhan', { siklus_ids: [id] });
+    var items = result.items || [];
+    if (!items.length) {
+      showToast('Tidak ada bahan untuk dihitung', 'warning');
+      return;
+    }
+    var totalKg = result.total_kebutuhan_kg || '0.00';
+    var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mt-4">' +
+      '<div class="px-5 py-3 font-bold border-b border-stone-200 flex justify-between items-center">' +
+        '<span>Perhitungan Kebutuhan Bahan (SP)</span>' +
+        '<span class="text-sm font-normal text-stone-500">Total: <span class="mono font-bold text-emerald-700">' + totalKg + ' kg</span></span>' +
+      '</div>' +
+      '<div class="overflow-x-auto"><table class="w-full">' +
+      '<thead class="bg-stone-50"><tr>' +
+        '<th class="text-left px-4 py-3 text-xs font-semibold uppercase">Bahan</th>' +
+        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kat. SP</th>' +
+        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">SP</th>' +
+        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">1 SP (g)</th>' +
+        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Berat Bersih (g)</th>' +
+        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">BDD</th>' +
+        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Berat Kotor (g)</th>' +
+        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Total (g)</th>' +
+        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kebutuhan (kg)</th>' +
+      '</tr></thead><tbody>' +
+      items.map(function(b) {
+        return '<tr class="border-t border-stone-100">' +
+          '<td class="px-4 py-3 text-sm font-medium">' + b.nama + '</td>' +
+          '<td class="px-4 py-3 text-sm text-right">' + (b.kategori_sp || '-') + '</td>' +
+          '<td class="px-4 py-3 text-sm text-right mono">' + (b.sp_value != null ? b.sp_value : '-') + '</td>' +
+          '<td class="px-4 py-3 text-sm text-right mono">' + b.berat_1_sp + '</td>' +
+          '<td class="px-4 py-3 text-sm text-right mono">' + b.berat_bersih + '</td>' +
+          '<td class="px-4 py-3 text-sm text-right mono">' + b.persen_bdd + '%</td>' +
+          '<td class="px-4 py-3 text-sm text-right mono">' + b.berat_kotor + '</td>' +
+          '<td class="px-4 py-3 text-sm text-right mono">' + fmtNum(b.total_berat_kotor) + '</td>' +
+          '<td class="px-4 py-3 text-sm text-right mono font-bold">' + b.kebutuhan_kg + '</td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table></div></div>';
+    // Append after existing content
+    var existing = wrap.querySelector('.bg-white.border-stone-200.rounded-lg.p-5');
+    if (existing) {
+      existing.insertAdjacentHTML('afterend', html);
+    } else {
+      wrap.innerHTML += html;
+    }
+  } catch (e) {
+    showToast('Gagal hitung SP: ' + e.message, 'error');
+  }
 }
 
 function exportSiklusLaporan(id) {
@@ -475,6 +529,105 @@ async function preloadMenus() {
     var result = await api.get('/menu');
     window._menuCache = Array.isArray(result) ? result : (result.data || []);
   } catch { window._menuCache = []; }
+}
+
+// ===== Standar SP =====
+var SP_GROUPS = [
+  { label: 'Balita & PAUD', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>', color: 'bg-cyan-50 border-cyan-200', jenjangs: ['Balita', 'TK/PAUD'] },
+  { label: 'SD', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>', color: 'bg-blue-50 border-blue-200', jenjangs: ['SD 1-3', 'SD 4-6'] },
+  { label: 'SMP & SMA', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.42a6 6 0 01.84 3.42V16l-7 4-7-4v-2a6 6 0 01.84-3.42L12 14z"/></svg>', color: 'bg-violet-50 border-violet-200', jenjangs: ['SMP', 'SMA'] },
+  { label: 'Ibu Hamil & Menyusui', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4a4 4 0 100 8 4 4 0 000-8z"/><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><path d="M18 9c0 3.314-2.686 6-6 6"/><path d="M22 12a8 8 0 01-8 8"/></svg>', color: 'bg-rose-50 border-rose-200', jenjangs: ['Ibu Hamil', 'Ibu Menyusui'] },
+];
+
+async function renderStandarSp() {
+  var c = document.getElementById('content');
+  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
+  try {
+    var data = await api.get('/sp/standar');
+    var jenjangs = {};
+    data.forEach(function(r) {
+      if (!jenjangs[r.jenjang]) jenjangs[r.jenjang] = {};
+      jenjangs[r.jenjang][r.kategori_sp] = r;
+    });
+    var kats = ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
+    var katLabels = {
+      'Karbohidrat': { label: 'Karbohidrat', color: 'text-amber-700 bg-amber-50' },
+      'Protein Hewani': { label: 'Protein Hewani', color: 'text-red-700 bg-red-50' },
+      'Protein Nabati': { label: 'Protein Nabati', color: 'text-emerald-700 bg-emerald-50' },
+      'Sayur': { label: 'Sayur', color: 'text-green-700 bg-green-50' },
+      'Buah': { label: 'Buah', color: 'text-orange-700 bg-orange-50' },
+      'Susu': { label: 'Susu', color: 'text-blue-700 bg-blue-50' },
+      'Minyak': { label: 'Minyak', color: 'text-yellow-700 bg-yellow-50' },
+    };
+
+    var html = '<div class="space-y-6">';
+    html += '<div class="flex flex-wrap items-center justify-between gap-2">';
+    html += '<div><h2 class="text-xl font-bold">Standar Satuan Penukar (SP)</h2><p class="text-sm text-stone-500">Nilai SP berdasarkan jenjang penerima — edit langsung di tabel</p></div>';
+    html += '<button onclick="saveStandarSp()" class="px-5 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-colors"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Simpan Perubahan</button>';
+    html += '</div>';
+
+    SP_GROUPS.forEach(function(group) {
+      html += '<div class="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">';
+      html += '<div class="' + group.color + ' px-5 py-3 border-b flex items-center gap-2">';
+      html += '<span class="text-lg">' + group.icon + '</span>';
+      html += '<span class="font-bold text-sm">' + group.label + '</span>';
+      html += '</div>';
+      html += '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-stone-50"><tr>';
+      html += '<th class="text-left px-4 py-3 text-xs font-semibold uppercase text-stone-600 w-28">Jenjang</th>';
+      kats.forEach(function(k) {
+        var kl = katLabels[k] || { label: k, color: '' };
+        html += '<th class="text-center px-2 py-3 text-xs font-semibold uppercase"><span class="inline-block px-2 py-0.5 rounded ' + kl.color + '">' + kl.label + '</span></th>';
+      });
+      html += '</tr></thead><tbody>';
+
+      group.jenjangs.forEach(function(j) {
+        var row = jenjangs[j] || {};
+        html += '<tr class="border-t border-stone-100 hover:bg-stone-50/50 transition-colors">';
+        html += '<td class="px-4 py-3 text-sm font-medium text-stone-800">' + j + '</td>';
+        kats.forEach(function(k) {
+          var val = row[k];
+          if (!val) {
+            html += '<td class="px-2 py-3 text-sm text-center text-stone-300">—</td>';
+          } else {
+            html += '<td class="px-2 py-3 text-sm text-center"><input type="number" step="0.25" value="' + val.sp_value + '" data-id="' + val.id + '" class="sp-input w-20 h-10 px-2 border border-stone-200 rounded-lg text-sm mono text-center focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></td>';
+          }
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody></table></div></div>';
+    });
+
+    html += '<div class="text-xs text-stone-400 text-center pb-4">Nilai SP adalah Standar Satuan Penukar — setiap bahan pangan memiliki berat 1 SP yang ditentukan di master Bahan Baku</div>';
+    html += '</div>';
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat: ' + e.message + '</div>';
+  }
+}
+
+async function saveStandarSp() {
+  var inputs = document.querySelectorAll('.sp-input');
+  var btn = document.querySelector('button[onclick*="saveStandarSp"]');
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Menyimpan...'; btn.classList.add('opacity-60'); }
+  var updates = [];
+  inputs.forEach(function(inp) {
+    var id = inp.getAttribute('data-id');
+    var val = parseFloat(inp.value);
+    if (id && !isNaN(val)) updates.push(api.put('/sp/standar/' + id, { sp_value: val }));
+  });
+  if (!updates.length) {
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Simpan Perubahan'; btn.classList.remove('opacity-60'); }
+    return showToast('Tidak ada perubahan', 'warning');
+  }
+  try {
+    await Promise.all(updates);
+    showToast('Standar SP berhasil diperbarui', 'success');
+    renderStandarSp();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Simpan Perubahan'; btn.classList.remove('opacity-60'); }
+    showToast('Gagal menyimpan: ' + e.message, 'error');
+  }
 }
 
 // ===== Karyawan =====

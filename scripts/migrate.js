@@ -101,6 +101,47 @@ require('dotenv').config();
     } catch (e) {
       console.log('  (skip perbaikan kolom photo)', e.message);
     }
+    // Migrasi kolom SP di bahan_baku
+    try {
+      const [spCols] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'kategori_sp'");
+      if (!spCols.length) {
+        await conn.query("ALTER TABLE bahan_baku ADD COLUMN kategori_sp ENUM('Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak') NULL AFTER kategori, ADD COLUMN berat_1_sp DECIMAL(10,2) DEFAULT 0 AFTER kategori_sp, ADD COLUMN persen_bdd DECIMAL(5,1) DEFAULT 100 AFTER berat_1_sp");
+        console.log('✓ Migrasi bahan_baku: tambah kolom SP (kategori_sp, berat_1_sp, persen_bdd)');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi SP bahan_baku)', e.message);
+    }
+    // Buat tabel standar_sp jika belum ada
+    try {
+      await conn.query(`CREATE TABLE IF NOT EXISTS standar_sp (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        jenjang VARCHAR(50) NOT NULL,
+        kategori_sp VARCHAR(50) NOT NULL,
+        sp_value DECIMAL(5,2) NOT NULL,
+        UNIQUE KEY uk_jenjang_kategori (jenjang, kategori_sp)
+      ) ENGINE=InnoDB`);
+      // Seed data standar_sp
+      await conn.query(`INSERT IGNORE INTO standar_sp (jenjang, kategori_sp, sp_value) VALUES
+        ('Ibu Hamil', 'Karbohidrat', 2.5), ('Ibu Hamil', 'Protein Hewani', 2), ('Ibu Hamil', 'Protein Nabati', 1),
+        ('Ibu Hamil', 'Sayur', 1), ('Ibu Hamil', 'Buah', 1), ('Ibu Hamil', 'Susu', 1), ('Ibu Hamil', 'Minyak', 1.5),
+        ('Ibu Menyusui', 'Karbohidrat', 2.5), ('Ibu Menyusui', 'Protein Hewani', 2), ('Ibu Menyusui', 'Protein Nabati', 1),
+        ('Ibu Menyusui', 'Sayur', 1), ('Ibu Menyusui', 'Buah', 1), ('Ibu Menyusui', 'Susu', 1), ('Ibu Menyusui', 'Minyak', 1.5),
+        ('Balita', 'Karbohidrat', 0.8), ('Balita', 'Protein Hewani', 1), ('Balita', 'Protein Nabati', 0.25),
+        ('Balita', 'Sayur', 0.25), ('Balita', 'Buah', 1), ('Balita', 'Susu', 1), ('Balita', 'Minyak', 1),
+        ('TK/PAUD', 'Karbohidrat', 0.8), ('TK/PAUD', 'Protein Hewani', 1), ('TK/PAUD', 'Protein Nabati', 0.25),
+        ('TK/PAUD', 'Sayur', 0.25), ('TK/PAUD', 'Buah', 1), ('TK/PAUD', 'Susu', 1), ('TK/PAUD', 'Minyak', 1),
+        ('SD 1-3', 'Karbohidrat', 1), ('SD 1-3', 'Protein Hewani', 1), ('SD 1-3', 'Protein Nabati', 0.25),
+        ('SD 1-3', 'Sayur', 0.25), ('SD 1-3', 'Buah', 1), ('SD 1-3', 'Susu', 1), ('SD 1-3', 'Minyak', 1),
+        ('SD 4-6', 'Karbohidrat', 1.75), ('SD 4-6', 'Protein Hewani', 1.5), ('SD 4-6', 'Protein Nabati', 0.5),
+        ('SD 4-6', 'Sayur', 0.5), ('SD 4-6', 'Buah', 1), ('SD 4-6', 'Susu', 1), ('SD 4-6', 'Minyak', 1.5),
+        ('SMP', 'Karbohidrat', 2), ('SMP', 'Protein Hewani', 1.5), ('SMP', 'Protein Nabati', 1),
+        ('SMP', 'Sayur', 0.5), ('SMP', 'Buah', 1), ('SMP', 'Susu', 1), ('SMP', 'Minyak', 1.5),
+        ('SMA', 'Karbohidrat', 2), ('SMA', 'Protein Hewani', 2), ('SMA', 'Protein Nabati', 1),
+        ('SMA', 'Sayur', 1), ('SMA', 'Buah', 1), ('SMA', 'Susu', 1), ('SMA', 'Minyak', 1.5)`);
+      console.log('✓ Migrasi standar_sp: tabel dan seed data');
+    } catch (e) {
+      console.log('  (skip migrasi standar_sp)', e.message);
+    }
     console.log('✓ Schema berhasil dibuat');
     await conn.end();
 

@@ -19,8 +19,11 @@ const BAHAN_BAKU_CRUD_BASE = {
     { k: 'karbohidrat', l: 'Karbohidrat (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
     { k: 'lemak', l: 'Lemak (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
     { k: 'serat', l: 'Serat (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
+    { k: 'kategori_sp', l: 'Kategori SP', type: 'select', opts: ['','Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'], group: 'info' },
+    { k: 'berat_1_sp', l: 'Berat 1 SP (gram)', type: 'number', fmt: 'num', group: 'info' },
+    { k: 'persen_bdd', l: 'BDD (%)', type: 'number', fmt: 'num', group: 'info' },
   ],
-  cols: ['nama','kategori','satuan','harga_satuan','stok_saat_ini','kalori','protein']
+  cols: ['nama','kategori','kategori_sp','berat_1_sp','persen_bdd','satuan','harga_satuan','stok_saat_ini']
 };
 
 const NUTRISI_FIELDS = ['kalori','protein','karbohidrat','lemak','serat'];
