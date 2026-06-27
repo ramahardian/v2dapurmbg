@@ -1,19 +1,24 @@
 // ===== Bahan Baku (custom with sync, search, pagination & nutrisi) =====
 const BAHAN_BAKU_CRUD_BASE = {
   endpoint: '/bahan_baku',
+  groups: [
+    { key: 'info', label: 'Informasi Dasar', cols: 2 },
+    { key: 'harga_stok', label: 'Harga & Stok', cols: 2 },
+    { key: 'nutrisi', label: 'Informasi Nutrisi', cols: 2 },
+  ],
   fields: [
-    { k: 'kode', l: 'Kode SKU' },
-    { k: 'nama', l: 'Nama Bahan', req: true },
-    { k: 'kategori', l: 'Kategori', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Bumbu','Lainnya'] },
-    { k: 'satuan', l: 'Satuan (kg/gr/liter)', req: true },
-    { k: 'harga_satuan', l: 'Harga Satuan (IDR)', type: 'number', fmt: 'idr' },
-    { k: 'stok_saat_ini', l: 'Stok Saat Ini', type: 'number', fmt: 'num' },
-    { k: 'stok_minimum', l: 'Stok Minimum', type: 'number', fmt: 'num' },
-    { k: 'kalori', l: 'Kalori (kkal)', type: 'number', fmt: 'num' },
-    { k: 'protein', l: 'Protein (g)', type: 'number', fmt: 'num' },
-    { k: 'karbohidrat', l: 'Karbohidrat (g)', type: 'number', fmt: 'num' },
-    { k: 'lemak', l: 'Lemak (g)', type: 'number', fmt: 'num' },
-    { k: 'serat', l: 'Serat (g)', type: 'number', fmt: 'num' },
+    { k: 'kode', l: 'Kode SKU', group: 'info' },
+    { k: 'nama', l: 'Nama Bahan', req: true, group: 'info' },
+    { k: 'kategori', l: 'Kategori', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Bumbu','Lainnya'], group: 'info' },
+    { k: 'satuan', l: 'Satuan (kg/gr/liter)', req: true, group: 'info' },
+    { k: 'harga_satuan', l: 'Harga Satuan (IDR)', type: 'number', fmt: 'idr', group: 'harga_stok' },
+    { k: 'stok_saat_ini', l: 'Stok Saat Ini', type: 'number', fmt: 'num', group: 'harga_stok' },
+    { k: 'stok_minimum', l: 'Stok Minimum', type: 'number', fmt: 'num', group: 'harga_stok' },
+    { k: 'kalori', l: 'Kalori (kkal)', type: 'number', fmt: 'num', group: 'nutrisi' },
+    { k: 'protein', l: 'Protein (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
+    { k: 'karbohidrat', l: 'Karbohidrat (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
+    { k: 'lemak', l: 'Lemak (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
+    { k: 'serat', l: 'Serat (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
   ],
   cols: ['nama','kategori','satuan','harga_satuan','stok_saat_ini','kalori','protein']
 };
