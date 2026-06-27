@@ -9,7 +9,7 @@ const MODULES = {
       { k: 'keterangan', l: 'Keterangan', type: 'textarea' },
     ], cols: ['nama_kelompok','paket_besar','paket_kecil','lokasi'] }
   },
-  'bahan-baku': { title: 'Bahan Baku', sub: 'Master bahan baku, harga, & nutrisi', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><polyline points="11 12 8 17 3 17 3 14 6 9 10 9"/><path d="M15.27 14.55 21 19.8"/><path d="m21 19.8-5.73-3.25"/><path d="M3 17V9l6-3.5"/></svg>', render: renderBahanBaku },
+  'bahan-baku': { title: 'Bahan Baku', sub: 'Master bahan baku, harga, & nutrisi', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>', render: renderBahanBaku },
 
   menu: { title: 'Menu & Gizi', sub: 'Resep MBG, gramasi & kandungan gizi', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>', render: renderMenu },
   gudang: { title: 'Gudang & Persediaan', sub: 'Stok, barang masuk, & barang keluar', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><path d="M12 6v12"/></svg>', render: renderGudang },
@@ -46,16 +46,7 @@ const MODULES = {
       { k: 'alamat', l: 'Alamat', type: 'textarea' }, { k: 'npwp', l: 'NPWP' },
     ], cols: ['nama','kategori_supply','kontak_person','telepon'] }
   },
-  pembelian: { title: 'Pembelian — PR & PO', sub: 'Purchase Request → Purchase Order → Invoice', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
-    crud: { endpoint: '/purchase_order', fields: [
-      { k: 'no_po', l: 'Nomor PO', req: true }, { k: 'tanggal', l: 'Tanggal', type: 'date', req: true },
-      { k: 'supplier_nama', l: 'Supplier' },
-      { k: 'item', l: 'Daftar Item', type: 'textarea' },
-      { k: 'total_nilai', l: 'Total Nilai (IDR)', type: 'number', fmt: 'idr' },
-      { k: 'status', l: 'Status', type: 'select', opts: ['Draft','Disetujui','Dikirim','Diterima','Dibayar'] },
-      { k: 'catatan', l: 'Catatan', type: 'textarea' },
-    ], cols: ['no_po','tanggal','supplier_nama','total_nilai','status'] }
-  },
+  pembelian: { title: 'Pembelian — PR & PO', sub: 'Purchase Request → Purchase Order → Invoice', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>', render: renderPembelian },
   penerimaan: { title: 'Penerimaan Barang', sub: 'Barang masuk dari supplier', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
     crud: { endpoint: '/penerimaan_barang', fields: [
       { k: 'no_dokumen', l: 'No Dokumen', req: true }, { k: 'tanggal_terima', l: 'Tanggal Terima', type: 'date', req: true },

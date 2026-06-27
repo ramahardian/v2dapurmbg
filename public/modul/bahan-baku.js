@@ -98,7 +98,16 @@ function renderBahanBakuTable(rows) {
       const f = fields.fields.find(x => x.k === k);
       const v = r[k];
       let cell = v == null || v === '' ? '-' : v;
-      if (f?.fmt === 'idr') cell = `<span class="mono">${fmtIDR(v)}</span>`;
+      if (f?.fmt === 'idr') {
+        cell = `<span class="mono">${fmtIDR(v)}</span>`;
+        if (k === 'harga_satuan' && r.harga_sebelumnya > 0) {
+          const prev = Number(r.harga_sebelumnya);
+          const curr = Number(v);
+          if (curr > prev) cell += ` <span class="text-green-600 text-xs">▲</span>`;
+          else if (curr < prev) cell += ` <span class="text-red-600 text-xs">▼</span>`;
+          else cell += ` <span class="text-stone-400 text-xs">—</span>`;
+        }
+      }
       else if (f?.fmt === 'num') cell = `<span class="mono">${fmtNum(v)}</span>`;
       else if (f?.type === 'date') cell = fmtDate(v);
       return `<td class="px-4 py-3 text-sm">${cell}</td>`;

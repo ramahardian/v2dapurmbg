@@ -32,5 +32,7 @@ router.use(karyawanRoutes);
 router.use(absensiRoutes);
 router.use(payrollRoutes);
 router.use('/template', templateRoutes);
+router.use(require('./purchase_order'));
+router.use(require('./laporan_reports'));
 
 module.exports = router;

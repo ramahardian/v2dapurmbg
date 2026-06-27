@@ -15,7 +15,7 @@ router.post('/ai/suggest-menu', async (req, res) => {
 
   try {
     const prompt = `
-Anda ahli gizi MBG.
+Anda ahli gizi.
 
 Buatkan menu untuk kategori ${kategori}.
 

@@ -13,6 +13,7 @@
     
     :root { --bg-body: #FAFAF9; --bg-card: #fff; --bg-sidebar: #fff; --text-body: #1C1917; --border: #e7e5e4; --bg-sidebar-hover: rgba(0,0,0,.05); --bg-sidebar-active: rgba(0,0,0,.08); --bg-header: #fff; }
     html.dark { --bg-body: #0c0a09; --bg-card: #44403c; --bg-sidebar: #1c1917; --text-body: #e7e5e4; --border: #57534e; --bg-sidebar-hover: rgba(255,255,255,.06); --bg-sidebar-active: rgba(255,255,255,.1); --bg-header: #1c1917; }
+    html.dark .sidebar-logo-wrap img { background: #fff !important; }
     body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text-body); }
     h1,h2,h3 { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.02em; }
     .mono { font-family: 'JetBrains Mono', monospace; }
@@ -63,8 +64,8 @@
 
     <aside id="sidebar" class="w-[260px] shrink-0 fixed inset-y-0 left-0 flex flex-col transform -translate-x-full lg:translate-x-0 transition-all duration-200 z-40" style="background:var(--bg-sidebar);color:var(--text-body);border-right:1px solid var(--border)">
       <div class="sidebar-logo-wrap flex items-center gap-3 px-5 py-5 cursor-pointer" onclick="expandSidebar()" style="border-bottom:1px solid var(--border)">
-        <div class="h-9 w-9 rounded-md flex items-center justify-center font-bold shrink-0" style="background:var(--border);color:var(--text-body)">M</div>
-        <span class="sidebar-logo-text font-bold leading-tight truncate">Sukaluyu</span>
+        <img src="/asset/logo.png" alt="Dapur Sukaluyu" class="h-9 w-9 rounded-md shrink-0 object-contain" style="background:var(--border)" />
+        <span class="sidebar-logo-text font-bold leading-tight truncate">Dapur Sukaluyu</span>
       </div>
       <nav id="nav" class="flex-1 overflow-y-auto py-4 px-3 space-y-0.5"></nav>
       <div style="border-top:1px solid var(--border)" class="px-4 py-3 text-sm">
@@ -228,22 +229,6 @@
   </div>
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <script src="/modul/utilitas.js?v=1"></script>
-  <script src="/modul/crud.js?v=1"></script>
-  <script src="/modul/beranda.js?v=1"></script>
-  <script src="/modul/menu.js?v=1"></script>
-  <script src="/modul/bahan-baku.js?v=1"></script>
-  <script src="/modul/gudang.js?v=1"></script>
-  <script src="/modul/hpp.js?v=1"></script>
-  <script src="/modul/laporan.js?v=1"></script>
-  <script src="/modul/siklus.js?v=1"></script>
-  <script src="/modul/karyawan.js?v=1"></script>
-  <script src="/modul/absensi.js?v=1"></script>
-  <script src="/modul/penggajian.js?v=1"></script>
-  <script src="/modul/jadwal.js?v=1"></script>
-  <script src="/modul/akun.js?v=1"></script>
-  <script src="/modul/kelola-user.js?v=1"></script>
-  <script src="/modul/definisi.js?v=1"></script>
-  <script src="/modul/inti.js?v=1"></script>
+  <script src="/dist/app.min.js"></script>
 </body>
 </html>

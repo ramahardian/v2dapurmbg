@@ -32,9 +32,11 @@ router.post('/bahan-baku/sync', requireRole('admin', 'ahli_gizi'), async (req, r
       const kode = `EXT-${item.id}`;
 
       if (existing.length) {
+        const [[cur]] = await db.query('SELECT harga_satuan FROM bahan_baku WHERE id=?', [existing[0].id]);
+        const oldPrice = cur && Number(cur.harga_satuan) !== harga ? cur.harga_satuan : 0;
         await db.query(
-          `UPDATE bahan_baku SET kode=?, kategori=?, satuan=?, harga_satuan=?, stok_saat_ini=? WHERE id=? AND tenant_id=?`,
-          [kode, kategori, satuan, harga, stok, existing[0].id, req.user.tenant_id]
+          `UPDATE bahan_baku SET kode=?, kategori=?, satuan=?, harga_satuan=?, harga_sebelumnya=?, stok_saat_ini=? WHERE id=? AND tenant_id=?`,
+          [kode, kategori, satuan, harga, oldPrice, stok, existing[0].id, req.user.tenant_id]
         );
         updated++;
       } else {
