@@ -3,6 +3,7 @@ const express = require('express');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
 const app = express();
@@ -24,8 +25,20 @@ app.use('/api', apiRoutes);
 // Pages (server-rendered shell, client-side fetch untuk data)
 app.get('/login', (req, res) => res.render('login'));
 app.get('/signup', (req, res) => res.render('signup'));
-app.get('/', (req, res) => res.render('app'));
-app.get(/^\/(?!api).*/, (req, res) => res.render('app'));
+
+function requirePageAuth(req, res, next) {
+  const token = req.cookies?.access_token;
+  if (!token) return res.redirect('/login');
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    return res.redirect('/login');
+  }
+}
+
+app.get('/', requirePageAuth, (req, res) => res.render('app'));
+app.get(/^\/(?!api).*/, requirePageAuth, (req, res) => res.render('app'));
 
 process.on('unhandledRejection', (err) => console.error('Unhandled Rejection:', err));
 app.use((err, req, res, next) => {

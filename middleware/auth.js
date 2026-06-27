@@ -14,7 +14,7 @@ async function requireAuth(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Tidak terautentikasi' });
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const [rows] = await db.query('SELECT id, tenant_id, email, nama, role FROM users WHERE id=?', [payload.uid]);
+    const [rows] = await db.query('SELECT id, tenant_id, email, nama, role, foto FROM users WHERE id=?', [payload.uid]);
     if (!rows.length) return res.status(401).json({ error: 'User tidak ditemukan' });
     const user = rows[0];
     req.user = user;
