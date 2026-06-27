@@ -142,7 +142,7 @@ router.get('/siklus/laporan/bahan', async (req, res) => {
     if (!day.menu_ids.length) continue;
     const placeholders = day.menu_ids.map(() => '?').join(',');
     const [bahanRows] = await db.query(
-      `SELECT mb.bahan_baku_id, b.nama as bahan_nama, b.satuan, mb.jumlah, mb.menu_id, m.kategori_penerima
+      `SELECT mb.bahan_baku_id, b.nama as bahan_nama, b.satuan, b.persen_bdd, mb.jumlah, mb.menu_id, m.kategori_penerima
        FROM menu_bahan mb
        JOIN bahan_baku b ON b.id = mb.bahan_baku_id
        JOIN menu m ON m.id = mb.menu_id
@@ -153,6 +153,10 @@ router.get('/siklus/laporan/bahan', async (req, res) => {
     for (const br of bahanRows) {
       const katDb = br.kategori_penerima || day.kategori_db;
       const katDisplay = KATEGORI_MAP[katDb] || katDb;
+      // Koreksi BDD: berat_kotor = round(berat_bersih / (bdd/100))
+      const beratBersih = Number(br.jumlah) * day.jumlah_porsi;
+      const bdd = Number(br.persen_bdd) || 100;
+      const beratKotor = bdd > 0 ? Math.round(beratBersih / (bdd / 100)) : beratBersih;
       dayRows.push({
         hari_nama: day.hari_nama,
         hari_ke: day.hari_ke,
@@ -163,9 +167,9 @@ router.get('/siklus/laporan/bahan', async (req, res) => {
         bahan_id: br.bahan_baku_id,
         bahan_nama: br.bahan_nama,
         satuan: br.satuan,
-        jumlah: Number(br.jumlah) * day.jumlah_porsi,
+        jumlah: beratKotor,
         jumlah_porsi: day.jumlah_porsi,
-        gramasi_total: Number(br.jumlah) * day.jumlah_porsi,
+        gramasi_total: beratKotor,
       });
     }
   }

@@ -44,7 +44,7 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
     const mph = menuIds.map(() => '?').join(',');
     const [bahanRows] = await db.query(
       `SELECT mb.bahan_baku_id, b.nama as bahan_nama, b.satuan, b.harga_satuan,
-              mb.jumlah, mb.menu_id, m.kategori_penerima
+              b.persen_bdd, mb.jumlah, mb.menu_id, m.kategori_penerima
        FROM menu_bahan mb
        JOIN bahan_baku b ON b.id = mb.bahan_baku_id
        JOIN menu m ON m.id = mb.menu_id
@@ -65,9 +65,13 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
       if (!porsi) continue;
       const key = br.bahan_baku_id;
       if (!agg[key]) {
-        agg[key] = { bahan_baku_id: br.bahan_baku_id, bahan_nama: br.bahan_nama, satuan: br.satuan, harga_satuan: Number(br.harga_satuan) || 0, total_qty: 0 };
+        agg[key] = { bahan_baku_id: br.bahan_baku_id, bahan_nama: br.bahan_nama, satuan: br.satuan, persen_bdd: Number(br.persen_bdd) || 100, harga_satuan: Number(br.harga_satuan) || 0, total_qty: 0 };
       }
-      agg[key].total_qty += Number(br.jumlah) * porsi;
+      // Koreksi BDD: berat_kotor = round(berat_bersih / (bdd/100))
+      const beratBersih = Number(br.jumlah) * porsi;
+      const bdd = Number(br.persen_bdd) || 100;
+      const beratKotor = bdd > 0 ? Math.round(beratBersih / (bdd / 100)) : beratBersih;
+      agg[key].total_qty += beratKotor;
     }
 
     const items = Object.values(agg).map(b => {

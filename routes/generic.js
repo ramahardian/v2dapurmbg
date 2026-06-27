@@ -16,7 +16,7 @@ router.use(requireAuth);
  */
 const TABLES = {
   penerima_manfaat: ['nama_kelompok', 'paket_besar', 'paket_kecil', 'lokasi', 'keterangan'],
-  bahan_baku: ['kode', 'nama', 'kategori', 'satuan', 'harga_satuan', 'harga_sebelumnya', 'stok_saat_ini', 'stok_minimum', 'kalori', 'protein', 'karbohidrat', 'lemak', 'serat'],
+  bahan_baku: ['kode', 'nama', 'kategori', 'kategori_sp', 'berat_1_sp', 'persen_bdd', 'satuan', 'harga_satuan', 'harga_sebelumnya', 'stok_saat_ini', 'stok_minimum', 'kalori', 'protein', 'karbohidrat', 'lemak', 'serat'],
   supplier: ['nama', 'kategori_supply', 'kontak_person', 'telepon', 'email', 'alamat', 'npwp'],
   purchase_order: ['no_po', 'tanggal', 'supplier_id', 'supplier_nama', 'item', 'total_nilai', 'status', 'catatan'],
   penerimaan_barang: ['no_dokumen', 'tanggal_terima', 'supplier_nama', 'ref_po', 'item', 'total_nilai', 'status_qc', 'catatan'],

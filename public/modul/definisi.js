@@ -79,6 +79,7 @@ const MODULES = {
   hpp: { title: 'HPP per Porsi', sub: 'Bahan + Tenaga Kerja + Overhead = HPP', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10.01"/><line x1="12" y1="10" x2="12" y2="10.01"/><line x1="16" y1="10" x2="16" y2="10.01"/><line x1="8" y1="14" x2="8" y2="14.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="16" y1="14" x2="16" y2="14.01"/><line x1="8" y1="18" x2="8" y2="18.01"/><line x1="12" y1="18" x2="12" y2="18.01"/><line x1="16" y1="18" x2="16" y2="18.01"/></svg>', render: renderHPP },
   laporan: { title: 'Laporan', sub: 'Budget, Persediaan, Distribusi & Keuangan + Export CSV', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>', render: renderLaporan },
   siklus: { title: 'Siklus Menu', sub: 'Rencana menu berulang — untuk ahli gizi', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>', render: renderSiklus },
+  'panduan-ahli-gizi': { title: 'Panduan Ahli Gizi', sub: 'Alur kerja dari SP hingga kebutuhan bahan', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', render: renderPanduanAhliGizi },
   akun: { title: 'Akun Saya', sub: 'Kelola profil & kata sandi', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>', render: renderAkun },
   'kelola-user': { title: 'Kelola User', sub: 'Atur akun pengguna', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', render: renderKelolaUser },
   karyawan: { title: 'Karyawan', sub: 'Data master karyawan', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', render: renderKaryawan },
@@ -92,6 +93,7 @@ const MODULES = {
       { k: 'shift_id', l: 'Shift ID', type: 'number' },
     ], cols: ['name', 'description'] }
   },
+  'standar-sp': { title: 'Standar SP', sub: 'Standar Satuan Penukar per jenjang', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/></svg>', render: renderStandarSp },
 };
 
 const NAV_GROUPS = [
@@ -100,7 +102,7 @@ const NAV_GROUPS = [
   { label: 'Pembelian', items: ['supplier', 'pembelian', 'penerimaan'] },
   { label: 'Akuntansi', items: ['budgeting', 'kas-bank', 'laporan'] },
   { label: 'SDM', items: ['karyawan', 'absensi', 'payroll', 'shift', 'divisi'] },
-  { label: 'Ahli Gizi', items: ['menu', 'hpp', 'siklus'] },
+  { label: 'Ahli Gizi', items: ['menu', 'hpp', 'siklus', 'standar-sp', 'panduan-ahli-gizi'] },
   { label: 'Pengaturan', items: ['kelola-user'] },
 ];
 

@@ -170,7 +170,7 @@ function openMenuForm(editing) {
       protein: +document.getElementById('m-protein').value || 0,
       karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
       lemak: +document.getElementById('m-lemak').value || 0,
-      bahan: window._menuBahan.filter(b => b.bahan_baku_id && b.jumlah),
+      bahan: window._menuBahan.filter(b => b.bahan_baku_id && (b.jumlah || b.kategori_sp)),
     };
     if (editing) await api.put('/menu/' + editing.id, payload);
     else await api.post('/menu', payload);
@@ -186,20 +186,42 @@ function updateBahan(i, k, v) {
   if (k === 'bahan_baku_id') {
     const bb = (window._bahanBaku || []).find(b => b.id == v);
     window._menuBahan[i].satuan = bb ? bb.satuan : '';
+    window._menuBahan[i].kategori_sp = bb ? bb.kategori_sp : '';
+    window._menuBahan[i].berat_1_sp = bb ? (+bb.berat_1_sp || 0) : 0;
+    window._menuBahan[i].persen_bdd = bb ? (+bb.persen_bdd || 100) : 100;
+    // Auto-calculate jumlah from SP if menu has kategori_penerima and bahan has SP data
+    if (bb && bb.kategori_sp && bb.berat_1_sp > 0) {
+      var katPenerima = document.getElementById('m-kategori')?.value;
+      if (katPenerima) {
+        window._menuBahan[i].jumlah = +bb.berat_1_sp;
+        // We'll set a placeholder; the actual SP value will be calculated on the server
+      }
+    }
     renderBahanList();
   }
 }
 function renderBahanList() {
-  document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => `
-    <div class="grid grid-cols-12 gap-1.5 items-center">
-      <select onchange="updateBahan(${i}, 'bahan_baku_id', this.value)" class="col-span-5 h-9 px-2 border border-stone-200 rounded-md text-sm">
-        <option value="">— Pilih —</option>
-        ${window._bahanBaku.map(bb => `<option value="${bb.id}" ${b.bahan_baku_id == bb.id ? 'selected' : ''}>${bb.nama}</option>`).join('')}
-      </select>
-      <input type="text" value="${b.satuan || ''}" readonly class="col-span-2 h-9 px-2 border border-stone-200 rounded-md text-sm bg-stone-50 text-stone-500" placeholder="unit" />
-      <input type="number" value="${b.jumlah}" onchange="updateBahan(${i}, 'jumlah', this.value)" placeholder="Jumlah" class="col-span-4 h-9 px-2 border border-stone-200 rounded-md text-sm mono" />
-      <button type="button" onclick="removeBahanRow(${i})" class="col-span-1 text-red-600 text-center py-2">×</button>
-    </div>`).join('');
+  var mKat = document.getElementById('m-kategori')?.value || '';
+  document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
+    var bb = (window._bahanBaku || []).find(x => x.id == b.bahan_baku_id);
+    var spInfo = '';
+    if (bb && bb.kategori_sp && bb.berat_1_sp > 0) {
+      spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">' + bb.kategori_sp + ' · 1SP=' + bb.berat_1_sp + 'g · BDD=' + bb.persen_bdd + '%</div>';
+      if (!b.jumlah && bb.berat_1_sp > 0) {
+        window._menuBahan[i].jumlah = +bb.berat_1_sp;
+      }
+    }
+    return '<div class="grid grid-cols-12 gap-1.5 items-center">' +
+      '<select onchange="updateBahan(' + i + ', \'bahan_baku_id\', this.value)" class="col-span-5 h-9 px-2 border border-stone-200 rounded-md text-sm">' +
+        '<option value="">— Pilih —</option>' +
+        window._bahanBaku.map(function(x) { return '<option value="' + x.id + '" ' + (b.bahan_baku_id == x.id ? 'selected' : '') + '>' + x.nama + '</option>'; }).join('') +
+      '</select>' +
+      '<input type="text" value="' + (b.satuan || '') + '" readonly class="col-span-1 h-9 px-2 border border-stone-200 rounded-md text-sm bg-stone-50 text-stone-500" placeholder="unit" />' +
+      '<input type="number" value="' + (b.jumlah || '') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" placeholder="gram" class="col-span-3 h-9 px-2 border border-stone-200 rounded-md text-sm mono" />' +
+      (spInfo || '<div class="col-span-2"></div>') +
+      '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2">×</button>' +
+    '</div>';
+  }).join('');
 }
 async function deleteMenu(id) { if (!await showConfirm('Hapus menu?')) return; await api.del('/menu/' + id); renderMenu(); }
 
