@@ -6,7 +6,6 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(requireAuth);
-router.use(requireRole('admin', 'keuangan'));
 
 function saveBase64Photo(base64Data) {
   if (!base64Data || !base64Data.startsWith('data:image')) return base64Data || null;
@@ -22,7 +21,7 @@ function saveBase64Photo(base64Data) {
   } catch { return null; }
 }
 
-router.get('/karyawan', async (req, res) => {
+router.get('/karyawan', requireRole('admin', 'keuangan'), async (req, res) => {
   try {
     const { status, departemen, jabatan, search, page, limit } = req.query;
     let where = ' WHERE 1=1';
@@ -62,7 +61,7 @@ router.get('/karyawan', async (req, res) => {
   }
 });
 
-router.post('/karyawan', async (req, res) => {
+router.post('/karyawan', requireRole('admin', 'keuangan'), async (req, res) => {
   try {
     const { nama, nik, jabatan_id, departemen, gaji_pokok, status, tanggal_masuk, email, phone, address, photo } = req.body;
     if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama karyawan wajib diisi' });
@@ -83,7 +82,7 @@ router.post('/karyawan', async (req, res) => {
   }
 });
 
-router.put('/karyawan/:id', async (req, res) => {
+router.put('/karyawan/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   try {
     const { nama, nik, jabatan_id, departemen, gaji_pokok, status, tanggal_masuk, email, phone, address, photo } = req.body;
     if (nama !== undefined && (!nama || !nama.trim())) return res.status(400).json({ error: 'Nama karyawan wajib diisi' });
@@ -116,7 +115,7 @@ router.put('/karyawan/:id', async (req, res) => {
   }
 });
 
-router.delete('/karyawan/:id', async (req, res) => {
+router.delete('/karyawan/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   try {
     await db.query(`DELETE FROM karyawan WHERE id=?`, [req.params.id]);
     res.json({ ok: true });
@@ -126,17 +125,17 @@ router.delete('/karyawan/:id', async (req, res) => {
   }
 });
 
-router.get('/departemen', async (req, res) => {
+router.get('/departemen', requireRole('admin', 'keuangan'), async (req, res) => {
   const [rows] = await db.query(`SELECT DISTINCT departemen FROM karyawan WHERE departemen IS NOT NULL ORDER BY departemen`);
   res.json(rows.map(r => r.departemen));
 });
 
-router.get('/jabatan', async (req, res) => {
+router.get('/jabatan', requireRole('admin', 'keuangan'), async (req, res) => {
   const [rows] = await db.query(`SELECT * FROM jabatan ORDER BY id`);
   res.json(rows);
 });
 
-router.post('/jabatan', async (req, res) => {
+router.post('/jabatan', requireRole('admin', 'keuangan'), async (req, res) => {
   const { name, description, shift_id } = req.body;
   if (!name || !name.trim()) return res.status(400).json({ error: 'Nama jabatan wajib diisi' });
   const [r] = await db.query('INSERT INTO jabatan (name, description, shift_id) VALUES (?,?,?)', [name.trim(), description || null, shift_id || null]);
@@ -144,7 +143,7 @@ router.post('/jabatan', async (req, res) => {
   res.json(rows[0]);
 });
 
-router.put('/jabatan/:id', async (req, res) => {
+router.put('/jabatan/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   const { name, description, shift_id } = req.body;
   const sets = []; const vals = [];
   if (name !== undefined) { sets.push('name=?'); vals.push(name); }
@@ -157,7 +156,7 @@ router.put('/jabatan/:id', async (req, res) => {
   res.json(rows[0]);
 });
 
-router.delete('/jabatan/:id', async (req, res) => {
+router.delete('/jabatan/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   await db.query('DELETE FROM jabatan WHERE id=?', [req.params.id]);
   res.json({ ok: true });
 });

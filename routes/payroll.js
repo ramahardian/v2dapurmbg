@@ -4,9 +4,8 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(requireAuth);
-router.use(requireRole('admin', 'keuangan'));
 
-router.get('/payroll', async (req, res) => {
+router.get('/payroll', requireRole('admin', 'keuangan'), async (req, res) => {
   const { karyawan_id, bulan, tahun, status } = req.query;
   let sql = `SELECT p.*, k.nama as nama_karyawan, j.name as jabatan, k.departemen FROM payroll p
     JOIN karyawan k ON k.id=p.karyawan_id
@@ -21,7 +20,7 @@ router.get('/payroll', async (req, res) => {
   res.json(rows);
 });
 
-router.post('/payroll', async (req, res) => {
+router.post('/payroll', requireRole('admin', 'keuangan'), async (req, res) => {
   const { karyawan_id, bulan, tahun, gaji_pokok, tunjangan, potongan, status } = req.body;
   if (!karyawan_id) return res.status(400).json({ error: 'Karyawan wajib dipilih' });
   if (!bulan || bulan < 1 || bulan > 12) return res.status(400).json({ error: 'Bulan tidak valid (1-12)' });
@@ -35,7 +34,7 @@ router.post('/payroll', async (req, res) => {
   res.json(rows[0]);
 });
 
-router.put('/payroll/:id', async (req, res) => {
+router.put('/payroll/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   const { gaji_pokok, tunjangan, potongan, total_gaji, status } = req.body;
   const sets = []; const vals = [];
   if (gaji_pokok !== undefined) { sets.push('gaji_pokok=?'); vals.push(gaji_pokok); }
@@ -52,7 +51,7 @@ router.put('/payroll/:id', async (req, res) => {
   res.json(rows[0]);
 });
 
-router.delete('/payroll/:id', async (req, res) => {
+router.delete('/payroll/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   await db.query(`DELETE FROM payroll WHERE id=? AND tenant_id=?`, [req.params.id, req.user.tenant_id]);
   res.json({ ok: true });
 });

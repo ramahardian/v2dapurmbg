@@ -5,10 +5,9 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(requireAuth);
-router.use(requireRole('admin'));
 
 // GET /users — daftar semua user dalam satu tenant
-router.get('/users', async (req, res) => {
+router.get('/users', requireRole('admin'), async (req, res) => {
   const [rows] = await db.query(
     'SELECT id, email, nama, role, foto, created_at FROM users WHERE tenant_id=? ORDER BY id ASC',
     [req.user.tenant_id]
@@ -18,7 +17,7 @@ router.get('/users', async (req, res) => {
 });
 
 // POST /users — tambah user baru
-router.post('/users', async (req, res) => {
+router.post('/users', requireRole('admin'), async (req, res) => {
   const { email, password, nama, role } = req.body;
   require('fs').appendFileSync('/tmp/opencode/debug.log', new Date().toISOString() + ' POST /users body: ' + JSON.stringify(req.body) + ' role=' + role + '\n');
   if (!email || !password || !nama) return res.status(400).json({ error: 'Email, password, dan nama wajib' });
@@ -37,7 +36,7 @@ router.post('/users', async (req, res) => {
 });
 
 // PUT /users/:id — update user
-router.put('/users/:id', async (req, res) => {
+router.put('/users/:id', requireRole('admin'), async (req, res) => {
   const { email, password, nama, role } = req.body;
   try {
     if (email) {
@@ -60,7 +59,7 @@ router.put('/users/:id', async (req, res) => {
 });
 
 // DELETE /users/:id — hapus user (cegah hapus diri sendiri)
-router.delete('/users/:id', async (req, res) => {
+router.delete('/users/:id', requireRole('admin'), async (req, res) => {
   if (Number(req.params.id) === req.user.id) return res.status(400).json({ error: 'Tidak bisa menghapus akun sendiri' });
   await db.query('DELETE FROM users WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
   res.json({ ok: true });

@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../db');
 const { sign, requireAuth } = require('../middleware/auth');
-
+//rama
 function saveBase64Foto(base64Data) {
   if (!base64Data || !base64Data.startsWith('data:image')) return null;
   const matches = base64Data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);

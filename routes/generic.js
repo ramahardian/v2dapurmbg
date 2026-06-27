@@ -118,12 +118,15 @@ for (const table of Object.keys(TABLES)) {
   const tableRoles = {
     penerima_manfaat: ['admin', 'keuangan'],
     bahan_baku: ['admin', 'keuangan', 'gudang', 'ahli_gizi'],
+    supplier: ['admin', 'keuangan'],
+    purchase_order: ['admin', 'keuangan'],
+    penerimaan_barang: ['admin', 'keuangan'],
     stok_masuk: ['admin', 'keuangan', 'gudang'],
     stok_keluar: ['admin', 'keuangan', 'gudang']
   };
   
   const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (req, res, next) => next();
-  
+    
   // 1. READ ALL (GET /nama_tabel)
   router.get(`/${table}`, roleMiddleware, async (req, res) => {
     const { search, page, limit } = req.query;

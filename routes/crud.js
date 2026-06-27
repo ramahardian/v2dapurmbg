@@ -98,7 +98,6 @@ function buildUpdate(table, body) {
   }
   return { sql: `SET ${sets.join(',')}`, vals };
 }
-
 /**
  * Factory Function: Membuat dan Mengembalikan Router CRUD
  * Membungkus logika router ke dalam fungsi membuat kode lebih bersih saat di-mount di app utama (misal: app.use('/api', createCrudRouter())).

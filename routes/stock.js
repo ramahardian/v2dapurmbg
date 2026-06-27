@@ -4,10 +4,9 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(requireAuth);
-router.use(requireRole('admin', 'gudang'));
 
 for (const [endpoint, sign] of [['stok_masuk', 1], ['stok_keluar', -1]]) {
-  router.get(`/${endpoint}`, async (req, res) => {
+  router.get(`/${endpoint}`, requireRole('admin', 'gudang'), async (req, res) => {
     const { search, page, limit } = req.query;
     let whereClause = 'WHERE s.tenant_id=?';
     const params = [req.user.tenant_id];
@@ -36,7 +35,7 @@ for (const [endpoint, sign] of [['stok_masuk', 1], ['stok_keluar', -1]]) {
        JOIN bahan_baku bb ON bb.id=s.bahan_baku_id ${whereClause} ORDER BY s.id DESC`, params);
     res.json(rows);
   });
-  router.post(`/${endpoint}`, async (req, res) => {
+  router.post(`/${endpoint}`, requireRole('admin', 'gudang'), async (req, res) => {
     const { tanggal, bahan_baku_id, jumlah, sumber, tujuan, catatan } = req.body;
     if (!tanggal) return res.status(400).json({ error: 'Tanggal wajib diisi' });
     if (!bahan_baku_id) return res.status(400).json({ error: 'Bahan baku wajib dipilih' });
