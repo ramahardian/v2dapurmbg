@@ -28,6 +28,21 @@ async function renderMenu() {
   }
 }
 
+const KATEGORI_COLORS = {
+  'Ibu Hamil': 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300',
+  'Ibu Menyusui': 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  'Balita': 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+  'PAUD': 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  'TK': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
+  'SD': 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  'SMP': 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+};
+
+function kategoriBadge(kat) {
+  const cls = KATEGORI_COLORS[kat] || 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300';
+  return `<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}">${kat}</span>`;
+}
+
 function renderMenuHtml(menus) {
   return `<div class="flex flex-wrap justify-between gap-2 mb-4">
     <button id="add-menu-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah Menu</button>
@@ -56,7 +71,7 @@ function renderMenuHtml(menus) {
           ${menus.length > 0 ? menus.map(m => `
             <tr class="border-t border-stone-100">
               <td class="px-4 py-3 text-sm font-medium truncate max-w-[180px]" title="${m.nama}">${m.nama}</td>
-              <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima || '-'}</td>
+              <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.gramasi_total}g</td>
               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.kalori} kkal</td>
               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${(m.bahan && m.bahan.length) || 0}</td>

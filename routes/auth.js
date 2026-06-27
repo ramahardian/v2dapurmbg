@@ -54,7 +54,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Email atau password salah' });
     const token = sign(u);
     res.cookie('access_token', token, { httpOnly: true, sameSite: 'lax', maxAge: 8 * 3600 * 1000 });
-    res.json({ user: { id: u.id, tenant_id: u.tenant_id, email: u.email, nama: u.nama, role: u.role } });
+    res.json({ user: { id: u.id, tenant_id: u.tenant_id, email: u.email, nama: u.nama, role: u.role, foto: u.foto } });
   } catch (e) {
     console.error('Login error:', e);
     res.status(500).json({ error: 'Gagal login: ' + e.message });
@@ -94,14 +94,20 @@ router.put('/profile', requireAuth, async (req, res) => {
       const [exist] = await db.query('SELECT id FROM users WHERE email=? AND id!=?', [email.toLowerCase(), req.user.id]);
       if (exist.length) return res.status(400).json({ error: 'Email sudah digunakan' });
     }
-    const fotoUrl = foto ? saveBase64Foto(foto) : undefined;
     const sets = ['nama=?', 'email=?'];
     const vals = [nama || req.user.nama, (email || req.user.email).toLowerCase()];
-    if (fotoUrl) { sets.push('foto=?'); vals.push(fotoUrl); }
+    let fotoUrl;
+    if (foto === 'hapus') {
+      sets.push('foto=NULL');
+    } else {
+      fotoUrl = foto ? saveBase64Foto(foto) : undefined;
+      if (fotoUrl) { sets.push('foto=?'); vals.push(fotoUrl); }
+    }
     vals.push(req.user.id, req.user.tenant_id);
     await db.query(`UPDATE users SET ${sets.join(',')} WHERE id=? AND tenant_id=?`, vals);
     const updated = { ...req.user, nama: nama || req.user.nama, email: (email || req.user.email).toLowerCase() };
-    if (fotoUrl) updated.foto = fotoUrl;
+    if (foto === 'hapus') updated.foto = null;
+    else if (fotoUrl) updated.foto = fotoUrl;
     res.json({ ok: true, user: updated });
   } catch (e) {
     res.status(500).json({ error: 'Gagal update profil' });
