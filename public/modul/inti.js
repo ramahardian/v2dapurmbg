@@ -21,6 +21,8 @@ async function init() {
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSidebar(); });
     document.getElementById('logout-btn').onclick = async () => { await api.post('/auth/logout', {}); location.href = '/login'; };
+    document.getElementById('modal-close-btn').onclick = () => closeModal();
+    document.getElementById('modal-cancel-btn').onclick = () => closeModal();
   } catch { location.href = '/login'; }
 }
 

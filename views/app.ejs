@@ -109,11 +109,11 @@
     <div class="modal-content rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
       <div class="px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center" style="border-bottom:1px solid var(--border)">
         <h3 id="modal-title" class="text-base lg:text-lg font-bold"></h3>
-        <button onclick="closeModal()" class="text-xl" style="opacity:.5">×</button>
+        <button id="modal-close-btn" class="text-xl" style="opacity:.5">×</button>
       </div>
       <div id="modal-body" class="p-4 lg:p-6 overflow-y-auto flex-1"></div>
       <div class="px-4 lg:px-6 py-3 flex justify-end gap-2" style="border-top:1px solid var(--border)">
-        <button onclick="closeModal()" class="px-4 py-2 text-sm btn-ghost rounded">Batal</button>
+        <button id="modal-cancel-btn" class="px-4 py-2 text-sm btn-ghost rounded">Batal</button>
         <button id="modal-save" class="px-4 py-2 text-sm bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded font-medium">Simpan</button>
       </div>
     </div>
@@ -215,7 +215,7 @@
 
   <!-- Confirm Modal -->
   <div id="confirm-modal" class="fixed inset-0 modal-backdrop hidden items-center justify-center z-50 p-4">
-    <div class="confirm-content rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+    <div class="confirm-content rounded-xl shadow-xl w-full max-w-sm overflow-hidden" style="background:var(--bg-card)">
       <div class="p-6">
         <div class="flex items-center gap-3 mb-3">
           <div id="confirm-icon" class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">

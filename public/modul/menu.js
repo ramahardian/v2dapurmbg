@@ -29,18 +29,18 @@ async function renderMenu() {
 }
 
 const KATEGORI_COLORS = {
-  'Ibu Hamil': 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300',
-  'Ibu Menyusui': 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-  'Balita': 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
-  'PAUD': 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-  'TK': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
-  'SD': 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
-  'SMP': 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+  'Ibu Hamil': { bg: '#be123c' },
+  'Ibu Menyusui': { bg: '#6d28d9' },
+  'Balita': { bg: '#0e7490' },
+  'PAUD': { bg: '#047857' },
+  'TK': { bg: '#b45309' },
+  'SD': { bg: '#c2410c' },
+  'SMP': { bg: '#1d4ed8' },
 };
 
 function kategoriBadge(kat) {
-  const cls = KATEGORI_COLORS[kat] || 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300';
-  return `<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}">${kat}</span>`;
+  const c = KATEGORI_COLORS[kat] || { bg: '#78716c' };
+  return `<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style="background:${c.bg};">${kat}</span>`;
 }
 
 function renderMenuHtml(menus) {
