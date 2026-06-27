@@ -33,4 +33,4 @@ app.use((err, req, res, next) => {
   if (res.headersSent) return;
   res.status(500).json({ error: err.message || 'Internal server error' });
 });
-app.listen(PORT, () => console.log(`MBG Kitchen SaaS berjalan di http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Dapur Sukaluyu berjalan di http://localhost:${PORT}`));

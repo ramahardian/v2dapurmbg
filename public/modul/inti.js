@@ -46,7 +46,7 @@ function renderNav() {
     return (g.label ? `<div class="nav-group-label px-3 pt-4 pb-1.5 text-[10px] uppercase tracking-wider font-semibold" style="opacity:.4">${g.label}</div>` : '') +
     visibleItems.map(key => {
       const m = MODULES[key];
-      return `<a href="/${key}" data-key="${key}" class="sidebar-link" onclick="closeSidebar()" title="${m.title}"><span class="text-base w-5 text-center shrink-0">${m.icon}</span><span class="nav-label">${m.title}</span></a>`;
+      return `<a href="/${key}" data-key="${key}" class="sidebar-link" onclick="closeSidebar()" title="${m.title}"><span class="text-base w-5 text-center shrink-0">${m.icon}</span><span class="nav-label truncate">${m.title}</span></a>`;
     }).join('');
   }).join('');
 }
@@ -81,7 +81,7 @@ function route() {
   }
   
   document.querySelectorAll('.sidebar-link').forEach(a => a.classList.toggle('active', a.dataset.key === key));
-  document.title = m.title + ' — MBG Kitchen';
+  document.title = m.title + ' — Dapur Sukaluyu';
   document.getElementById('page-title').textContent = m.title;
   document.getElementById('page-sub').textContent = m.sub;
   if (key === 'karyawan' && location.search) {

@@ -16,7 +16,7 @@ router.use(requireAuth);
  */
 const TABLES = {
   penerima_manfaat: ['nama_kelompok', 'paket_besar', 'paket_kecil', 'lokasi', 'keterangan'],
-  bahan_baku: ['kode', 'nama', 'kategori', 'satuan', 'harga_satuan', 'stok_saat_ini', 'stok_minimum', 'kalori', 'protein', 'karbohidrat', 'lemak', 'serat'],
+  bahan_baku: ['kode', 'nama', 'kategori', 'satuan', 'harga_satuan', 'harga_sebelumnya', 'stok_saat_ini', 'stok_minimum', 'kalori', 'protein', 'karbohidrat', 'lemak', 'serat'],
   supplier: ['nama', 'kategori_supply', 'kontak_person', 'telepon', 'email', 'alamat', 'npwp'],
   purchase_order: ['no_po', 'tanggal', 'supplier_id', 'supplier_nama', 'item', 'total_nilai', 'status', 'catatan'],
   penerimaan_barang: ['no_dokumen', 'tanggal_terima', 'supplier_nama', 'ref_po', 'item', 'total_nilai', 'status_qc', 'catatan'],
@@ -210,6 +210,13 @@ for (const table of Object.keys(TABLES)) {
   // 3. UPDATE (PUT /nama_tabel/:id)
   router.put(`/${table}/:id`, roleMiddleware, async (req, res) => {
     try {
+      // Track perubahan harga bahan_baku
+      if (table === 'bahan_baku' && req.body.harga_satuan !== undefined) {
+        const [[cur]] = await db.query('SELECT harga_satuan FROM bahan_baku WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
+        if (cur && Number(cur.harga_satuan) !== Number(req.body.harga_satuan)) {
+          req.body.harga_sebelumnya = cur.harga_satuan;
+        }
+      }
       // Panggil helper untuk merakit klausa SET pada query UPDATE
       const { sql, vals } = buildUpdate(table, req.body);
       

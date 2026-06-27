@@ -1,17 +1,24 @@
 <div class="flex justify-end mb-3">
-  <button onclick="lapExport()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5">
+  <button onclick="lapExport()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-[11px] font-medium flex items-center gap-1.5">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     Export XLSX
   </button>
 </div>
 <div class="overflow-x-auto -mx-4 sm:mx-0 mb-4">
   <div class="flex px-4 sm:px-0 min-w-max sm:min-w-0 border-b border-stone-200" style="gap:2px">
-    <button onclick="showLap('budget')" id="lt-budget" class="px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border border-b-0 border-stone-200 bg-white text-blue-600 -mb-px relative z-[2] shadow-sm">Budget vs Realisasi</button>
-    <button onclick="showLap('rab')" id="lt-rab" class="px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border border-b-0 border-stone-200 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 -mb-px">RAB</button>
-    <button onclick="showLap('persediaan')" id="lt-persediaan" class="px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border border-b-0 border-stone-200 bg-amber-100 text-amber-700 hover:bg-amber-200 -mb-px">Persediaan</button>
-    <button onclick="showLap('distribusi')" id="lt-distribusi" class="px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border border-b-0 border-stone-200 bg-violet-100 text-violet-700 hover:bg-violet-200 -mb-px">Distribusi</button>
-    <button onclick="showLap('keuangan')" id="lt-keuangan" class="px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border border-b-0 border-stone-200 bg-cyan-100 text-cyan-700 hover:bg-cyan-200 -mb-px">Keuangan</button>
-    <button onclick="showLap('siklus')" id="lt-siklus" class="px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border border-b-0 border-stone-200 bg-rose-100 text-rose-700 hover:bg-rose-200 -mb-px">Siklus Menu</button>
+    <button onclick="showLap('budget')" id="lt-budget" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-white text-blue-600 -mb-px relative z-[2] shadow-sm">Budget vs Realisasi</button>
+    <button onclick="showLap('rab')" id="lt-rab" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 -mb-px">RAB</button>
+    <button onclick="showLap('persediaan')" id="lt-persediaan" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-amber-100 text-amber-700 hover:bg-amber-200 -mb-px">Persediaan</button>
+    <button onclick="showLap('distribusi')" id="lt-distribusi" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-violet-100 text-violet-700 hover:bg-violet-200 -mb-px">Distribusi</button>
+    <button onclick="showLap('keuangan')" id="lt-keuangan" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-cyan-100 text-cyan-700 hover:bg-cyan-200 -mb-px">Keuangan</button>
+    <button onclick="showLap('siklus')" id="lt-siklus" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-rose-100 text-rose-700 hover:bg-rose-200 -mb-px">Siklus Menu</button>
+    <button onclick="showLap('pembelian')" id="lt-pembelian" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 -mb-px">Pembelian</button>
+    <button onclick="showLap('penerimaan')" id="lt-penerimaan" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-teal-100 text-teal-700 hover:bg-teal-200 -mb-px">Penerimaan</button>
+    <button onclick="showLap('mutasi')" id="lt-mutasi" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-orange-100 text-orange-700 hover:bg-orange-200 -mb-px">Mutasi Stok</button>
+    <button onclick="showLap('produksi')" id="lt-produksi" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-lime-100 text-lime-700 hover:bg-lime-200 -mb-px">Produksi</button>
+    <button onclick="showLap('payroll')" id="lt-payroll" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-pink-100 text-pink-700 hover:bg-pink-200 -mb-px">Payroll</button>
+    <button onclick="showLap('laba-rugi')" id="lt-laba-rugi" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 -mb-px">Laba/Rugi</button>
+    <button onclick="showLap('hpp')" id="lt-hpp" class="px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 bg-gray-100 text-gray-700 hover:bg-gray-200 -mb-px">HPP Menu</button>
   </div>
 </div>
 <div id="lap-content"></div>

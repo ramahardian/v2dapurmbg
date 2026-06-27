@@ -81,6 +81,16 @@ require('dotenv').config();
     } catch (e) {
       console.log('  (skip migrasi kolom foto)', e.message);
     }
+    // Migrasi kolom harga_sebelumnya di bahan_baku
+    try {
+      const [hs] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'harga_sebelumnya'");
+      if (!hs.length) {
+        await conn.query("ALTER TABLE bahan_baku ADD COLUMN harga_sebelumnya DECIMAL(15,2) DEFAULT 0 AFTER harga_satuan");
+        console.log('✓ Migrasi bahan_baku: tambah kolom harga_sebelumnya');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi harga_sebelumnya)', e.message);
+    }
     // Perbaiki kolom photo di tabel users jika ada dan NOT NULL (legacy)
     try {
       const [photoCol] = await conn.query("SELECT COLUMN_NAME, IS_NULLABLE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'photo' AND IS_NULLABLE = 'NO' AND COLUMN_DEFAULT IS NULL");
@@ -98,10 +108,10 @@ require('dotenv').config();
     const [tExist] = await db.query('SELECT id FROM tenants LIMIT 1');
     if (!tExist.length) {
       const [t] = await db.query('INSERT INTO tenants (nama, plan) VALUES (?, ?)',
-        [process.env.ADMIN_TENANT_NAME || 'Dapur Pusat MBG', 'enterprise']);
+        [process.env.ADMIN_TENANT_NAME || 'Dapur Sukaluyu', 'enterprise']);
       const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 10);
       await db.query('INSERT INTO users (tenant_id, email, password_hash, nama, role) VALUES (?,?,?,?,?)',
-        [t.insertId, (process.env.ADMIN_EMAIL || 'admin@mbg.id').toLowerCase(), hash, 'Administrator', 'admin']);
+        [t.insertId, (process.env.ADMIN_EMAIL || 'admin@sukaluyu.id').toLowerCase(), hash, 'Administrator', 'admin']);
       console.log(`✓ Admin seeded: ${process.env.ADMIN_EMAIL} / ${process.env.ADMIN_PASSWORD}`);
     } else {
       console.log('✓ Tenant sudah ada, skip seed');

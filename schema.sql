@@ -1,12 +1,12 @@
 -- ===========================================
--- MBG Kitchen SaaS — MySQL Schema
+-- Dapur Sukaluyu — MySQL Schema
 -- Multi-tenant: setiap data discope per tenant_id (dapur)
 -- ===========================================
 
 CREATE DATABASE IF NOT EXISTS mbg_kitchen CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE mbg_kitchen;
 
--- Tenants (dapur / unit MBG)
+-- Tenants (dapur / unit)
 CREATE TABLE IF NOT EXISTS tenants (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nama VARCHAR(150) NOT NULL,
@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS bahan_baku (
   kategori VARCHAR(100),
   satuan VARCHAR(20) NOT NULL,
   harga_satuan DECIMAL(15,2) DEFAULT 0,
+  harga_sebelumnya DECIMAL(15,2) DEFAULT 0,
   stok_saat_ini DECIMAL(15,3) DEFAULT 0,
   stok_minimum DECIMAL(15,3) DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

@@ -29,11 +29,18 @@ async function showLap(tab) {
     distribusi: { active: 'bg-white text-violet-600 shadow-sm', inactive: 'bg-violet-100 text-violet-700 hover:bg-violet-200' },
     keuangan: { active: 'bg-white text-cyan-600 shadow-sm', inactive: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200' },
     siklus: { active: 'bg-white text-rose-600 shadow-sm', inactive: 'bg-rose-100 text-rose-700 hover:bg-rose-200' },
+    pembelian: { active: 'bg-white text-indigo-600 shadow-sm', inactive: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' },
+    penerimaan: { active: 'bg-white text-teal-600 shadow-sm', inactive: 'bg-teal-100 text-teal-700 hover:bg-teal-200' },
+    mutasi: { active: 'bg-white text-orange-600 shadow-sm', inactive: 'bg-orange-100 text-orange-700 hover:bg-orange-200' },
+    produksi: { active: 'bg-white text-lime-600 shadow-sm', inactive: 'bg-lime-100 text-lime-700 hover:bg-lime-200' },
+    payroll: { active: 'bg-white text-pink-600 shadow-sm', inactive: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
+    'laba-rugi': { active: 'bg-white text-yellow-600 shadow-sm', inactive: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' },
+    hpp: { active: 'bg-white text-gray-600 shadow-sm', inactive: 'bg-gray-100 text-gray-700 hover:bg-gray-200' },
   };
-  ['budget','rab','persediaan','distribusi','keuangan','siklus'].forEach(t => {
+  ['budget','rab','persediaan','distribusi','keuangan','siklus','pembelian','penerimaan','mutasi','produksi','payroll','laba-rugi','hpp'].forEach(t => {
     const el = document.getElementById('lt-'+t);
     const c = tabColors[t];
-    const base = 'px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border border-b-0 border-stone-200 -mb-px';
+    const base = 'px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 -mb-px';
     const extra = t === tab ? ' relative z-[2]' : '';
     el.className = base + ' ' + (t === tab ? c.active : c.inactive) + extra;
   });
@@ -120,6 +127,93 @@ async function showLap(tab) {
         </button>
       </div>
       <div id="siklus-bahan-table"></div>`;
+    } else if (tab === 'pembelian') {
+      const r = await api.get('/laporan/pembelian');
+      const rows = r.rows || [];
+      window._lapData = { tab, rows, headers: ['No PO','Tanggal','Supplier','Total','Status'], fields: ['no_po','tanggal','supplier_nama','total_nilai','status'],
+        fmt: rows.map(d => [d.no_po, fmtDate(d.tanggal), d.supplier_nama||'-', fmtIDR(d.total_nilai), d.status]) };
+      window['_export_pembelian'] = { data: rows, fields: ['no_po','tanggal','supplier_nama','total_nilai','status'] };
+      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
+        ${statCard('Total PO', fmtNum(r.stats.total_po), '', 'bg-indigo-50')}
+        ${statCard('Draft', fmtNum(r.stats.draft), '', 'bg-stone-50')}
+        ${statCard('Disetujui', fmtNum(r.stats.disetujui), '', 'bg-blue-50')}
+        ${statCard('Diterima', fmtNum(r.stats.diterima), '', 'bg-emerald-50')}
+        ${statCard('Total Nilai', fmtIDR(r.stats.total_nilai), '', 'bg-indigo-50')}
+      </div>`;
+    } else if (tab === 'penerimaan') {
+      const r = await api.get('/laporan/penerimaan');
+      const rows = r.rows || [];
+      window._lapData = { tab, rows, headers: ['No Dokumen','Tanggal','Supplier','Ref PO','Nilai','QC'], fields: ['no_dokumen','tanggal_terima','supplier_nama','ref_po','total_nilai','status_qc'],
+        fmt: rows.map(d => [d.no_dokumen, fmtDate(d.tanggal_terima), d.supplier_nama||'-', d.ref_po||'-', fmtIDR(d.total_nilai), d.status_qc]) };
+      window['_export_penerimaan'] = { data: rows, fields: ['no_dokumen','tanggal_terima','supplier_nama','ref_po','total_nilai','status_qc'] };
+      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
+        ${statCard('Total', fmtNum(r.stats.total), '', 'bg-teal-50')}
+        ${statCard('Lolos QC', fmtNum(r.stats.lolos), '', 'bg-emerald-50')}
+        ${statCard('Retur', fmtNum(r.stats.retur), '', 'bg-orange-50')}
+        ${statCard('Total Nilai', fmtIDR(r.stats.total_nilai), '', 'bg-teal-50')}
+      </div>`;
+    } else if (tab === 'mutasi') {
+      const r = await api.get('/laporan/mutasi-stok');
+      const rows = r.rows || [];
+      window._lapData = { tab, rows, headers: ['Tanggal','Jenis','Bahan','Jumlah','Satuan','Keterangan'], fields: ['tanggal','jenis','bahan_nama','jumlah','satuan','keterangan'],
+        fmt: rows.map(d => [fmtDate(d.tanggal), `<span class="${d.jenis==='Masuk'?'text-green-600':'text-red-600'} font-medium">${d.jenis}</span>`, d.bahan_nama, fmtNum(d.jumlah), d.satuan, d.keterangan||'-']) };
+      window['_export_mutasi'] = { data: rows, fields: ['tanggal','jenis','bahan_nama','jumlah','satuan','keterangan'] };
+      const totalMasuk = Number(r.stats.total_masuk).toFixed(2);
+      const totalKeluar = Number(r.stats.total_keluar).toFixed(2);
+      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
+        ${statCard('Total Masuk', totalMasuk, r.stats.count_masuk + ' transaksi', 'bg-emerald-50')}
+        ${statCard('Total Keluar', totalKeluar, r.stats.count_keluar + ' transaksi', 'bg-orange-50')}
+        ${statCard('Selisih', (totalMasuk - totalKeluar).toFixed(2), '', 'bg-blue-50')}
+      </div>`;
+    } else if (tab === 'produksi') {
+      const r = await api.get('/laporan/produksi');
+      const rows = r.rows || [];
+      window._lapData = { tab, rows, headers: ['Tanggal','Menu','Kategori','Porsi','Status'], fields: ['tanggal_produksi','menu_nama','kategori_penerima','jumlah_porsi','status'],
+        fmt: rows.map(d => [fmtDate(d.tanggal_produksi), d.menu_nama, d.kategori_penerima||'-', fmtNum(d.jumlah_porsi), d.status]) };
+      window['_export_produksi'] = { data: rows, fields: ['tanggal_produksi','menu_nama','kategori_penerima','jumlah_porsi','status'] };
+      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
+        ${statCard('Total Produksi', fmtNum(r.stats.total), 'kali', 'bg-lime-50')}
+        ${statCard('Total Porsi', fmtNum(r.stats.total_porsi), 'porsi', 'bg-blue-50')}
+        ${statCard('Diproduksi', fmtNum(r.stats.diproduksi), '', 'bg-emerald-50')}
+        ${statCard('Selesai', fmtNum(r.stats.selesai), '', 'bg-stone-50')}
+      </div>`;
+    } else if (tab === 'payroll') {
+      const r = await api.get('/laporan/payroll');
+      const rows = r.rows || [];
+      window._lapData = { tab, rows, headers: ['Periode','Karyawan','Jabatan','Gaji Pokok','Tunjangan','Potongan','Total Gaji','Status'], fields: ['periode','karyawan_nama','jabatan','gaji_pokok','tunjangan','potongan','total_gaji','status'],
+        fmt: rows.map(d => [d.periode, d.karyawan_nama, d.jabatan||'-', fmtIDR(d.gaji_pokok), fmtIDR(d.tunjangan), fmtIDR(d.potongan), fmtIDR(d.total_gaji), d.status]) };
+      window['_export_payroll'] = { data: rows, fields: ['periode','karyawan_nama','jabatan','gaji_pokok','tunjangan','potongan','total_gaji','status'] };
+      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
+        ${statCard('Total Karyawan', fmtNum(r.stats.total_karyawan), 'data gaji', 'bg-pink-50')}
+        ${statCard('Total Gaji', fmtIDR(r.stats.total_gaji), r.stats.periode_count + ' periode', 'bg-blue-50')}
+        ${statCard('Rata-rata', fmtIDR(r.stats.total_karyawan ? Math.round(r.stats.total_gaji / r.stats.total_karyawan) : 0), '/karyawan', 'bg-violet-50')}
+      </div>`;
+    } else if (tab === 'laba-rugi') {
+      const r = await api.get('/laporan/laba-rugi');
+      const rows = r.rows || [];
+      window._lapData = { tab, rows, headers: ['Periode','Pendapatan','Biaya','Laba/Rugi'], fields: ['periode','pendapatan','biaya'],
+        fmt: rows.map(d => {
+          const laba = d.pendapatan - d.biaya;
+          return [d.periode, fmtIDR(d.pendapatan), fmtIDR(d.biaya), `<span class="${laba>=0?'text-green-600':'text-red-600'} font-medium mono">${fmtIDR(laba)}</span>`];
+        }) };
+      window['_export_laba_rugi'] = { data: rows, fields: ['periode','pendapatan','biaya'] };
+      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
+        ${statCard('Total Pendapatan', fmtIDR(r.totalPendapatan), '', 'bg-emerald-50')}
+        ${statCard('Total Biaya', fmtIDR(r.totalBiayaAll), 'termasuk gaji & PO', 'bg-orange-50')}
+        ${statCard('Biaya Gaji', fmtIDR(r.totalGaji), '', 'bg-pink-50')}
+        ${statCard('Laba/Rugi', `<span class="${r.labaRugi>=0?'text-green-600':'text-red-600'}">${fmtIDR(r.labaRugi)}</span>`, '', 'bg-blue-50')}
+      </div>`;
+    } else if (tab === 'hpp') {
+      const r = await api.get('/laporan/hpp');
+      const rows = r.rows || [];
+      window._lapData = { tab, rows, headers: ['Menu','Kategori','Gramasi','Biaya Bahan','HPP/Porsi'], fields: ['nama','kategori_penerima','gramasi_total','total_biaya_bahan','hpp_per_porsi'],
+        fmt: rows.map(d => [d.nama, d.kategori_penerima||'-', d.gramasi_total + 'g', fmtIDR(d.total_biaya_bahan), fmtIDR(d.hpp_per_porsi)]) };
+      window['_export_hpp'] = { data: rows, fields: ['nama','kategori_penerima','gramasi_total','total_biaya_bahan','hpp_per_porsi'] };
+      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
+        ${statCard('Total Menu', fmtNum(r.stats.total_menu), '', 'bg-gray-50')}
+        ${statCard('Rata-rata HPP', fmtIDR(r.stats.rata_hpp), '/porsi', 'bg-blue-50')}
+        ${statCard('Total Biaya Bahan', fmtIDR(r.stats.total_biaya), '', 'bg-amber-50')}
+      </div>`;
     } else {
       const d = await api.get('/laporan/keuangan');
       const rows = d.transaksi || [];

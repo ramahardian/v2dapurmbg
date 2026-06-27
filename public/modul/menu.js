@@ -55,7 +55,7 @@ function renderMenuHtml(menus) {
         <tbody id="menu-table-body">
           ${menus.length > 0 ? menus.map(m => `
             <tr class="border-t border-stone-100">
-              <td class="px-4 py-3 text-sm font-medium whitespace-nowrap">${m.nama}</td>
+              <td class="px-4 py-3 text-sm font-medium truncate max-w-[180px]" title="${m.nama}">${m.nama}</td>
               <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima || '-'}</td>
               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.gramasi_total}g</td>
               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.kalori} kkal</td>

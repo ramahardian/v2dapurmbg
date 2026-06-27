@@ -1,5 +1,5 @@
 // ============================================================
-// MBG Kitchen — Frontend SPA
+// Dapur Sukaluyu — Frontend SPA
 // Semua kode telah dipecah ke public/modul/ untuk maintainability.
 // Lihat views/app.ejs untuk urutan loading script.
 // ============================================================
