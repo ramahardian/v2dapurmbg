@@ -4,12 +4,11 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(requireAuth);
-router.use(requireRole('admin', 'keuangan'));
 
 // ===== SHIFT MASTER =====
 
 // GET /shift — all shifts for tenant
-router.get('/shift', async (req, res) => {
+router.get('/shift', requireRole('admin', 'keuangan'), async (req, res) => {
   const { departemen } = req.query;
   let sql = `SELECT * FROM shift WHERE tenant_id=?`;
   const params = [req.user.tenant_id];
@@ -20,7 +19,7 @@ router.get('/shift', async (req, res) => {
 });
 
 // POST /shift
-router.post('/shift', async (req, res) => {
+router.post('/shift', requireRole('admin', 'keuangan'), async (req, res) => {
   const { nama, departemen, jam_masuk, jam_keluar, warna } = req.body;
   if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama shift wajib diisi' });
   if (!departemen || !departemen.trim()) return res.status(400).json({ error: 'Departemen wajib diisi' });
@@ -34,7 +33,7 @@ router.post('/shift', async (req, res) => {
 });
 
 // PUT /shift/:id
-router.put('/shift/:id', async (req, res) => {
+router.put('/shift/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   const { nama, departemen, jam_masuk, jam_keluar, warna, is_active } = req.body;
   const sets = []; const vals = [];
   if (nama !== undefined) { sets.push('nama=?'); vals.push(nama); }
@@ -51,7 +50,7 @@ router.put('/shift/:id', async (req, res) => {
 });
 
 // DELETE /shift/:id
-router.delete('/shift/:id', async (req, res) => {
+router.delete('/shift/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   await db.query(`DELETE FROM shift WHERE id=? AND tenant_id=?`, [req.params.id, req.user.tenant_id]);
   res.json({ ok: true });
 });
@@ -59,7 +58,7 @@ router.delete('/shift/:id', async (req, res) => {
 // ===== JADWAL KARYAWAN =====
 
 // GET /jadwal — schedule assignments, optional filter by karyawan_id or tanggal
-router.get('/jadwal', async (req, res) => {
+router.get('/jadwal', requireRole('admin', 'keuangan'), async (req, res) => {
   const { karyawan_id, tanggal, departemen } = req.query;
   let sql = `SELECT jk.*, s.nama as shift_nama, s.departemen as shift_departemen,
     s.jam_masuk, s.jam_keluar, s.warna, k.nama as nama_karyawan, j.name as jabatan
@@ -78,7 +77,7 @@ router.get('/jadwal', async (req, res) => {
 });
 
 // GET /jadwal/:id
-router.get('/jadwal/:id', async (req, res) => {
+router.get('/jadwal/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   const [rows] = await db.query(
     `SELECT jk.*, s.nama as shift_nama, s.departemen, s.jam_masuk, s.jam_keluar, s.warna, k.nama as nama_karyawan
      FROM jadwal_karyawan jk
@@ -92,7 +91,7 @@ router.get('/jadwal/:id', async (req, res) => {
 });
 
 // POST /jadwal
-router.post('/jadwal', async (req, res) => {
+router.post('/jadwal', requireRole('admin', 'keuangan'), async (req, res) => {
   const { karyawan_id, shift_id, tanggal_mulai, tanggal_selesai, hari_kerja } = req.body;
   if (!karyawan_id) return res.status(400).json({ error: 'Karyawan wajib dipilih' });
   if (!shift_id) return res.status(400).json({ error: 'Shift wajib dipilih' });
@@ -108,7 +107,7 @@ router.post('/jadwal', async (req, res) => {
 });
 
 // PUT /jadwal/:id
-router.put('/jadwal/:id', async (req, res) => {
+router.put('/jadwal/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   const { karyawan_id, shift_id, tanggal_mulai, tanggal_selesai, hari_kerja } = req.body;
   const sets = []; const vals = [];
   if (karyawan_id !== undefined) { sets.push('karyawan_id=?'); vals.push(karyawan_id); }
@@ -125,7 +124,7 @@ router.put('/jadwal/:id', async (req, res) => {
 });
 
 // DELETE /jadwal/:id
-router.delete('/jadwal/:id', async (req, res) => {
+router.delete('/jadwal/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   await db.query(`DELETE FROM jadwal_karyawan WHERE id=? AND tenant_id=?`, [req.params.id, req.user.tenant_id]);
   res.json({ ok: true });
 });

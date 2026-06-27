@@ -4,9 +4,8 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(requireAuth);
-router.use(requireRole('admin', 'keuangan'));
 
-router.get('/absensi', async (req, res) => {
+router.get('/absensi', requireRole('admin', 'keuangan'), async (req, res) => {
   const { karyawan_id, tanggal_awal, tanggal_akhir, status, page = '1', limit = '50' } = req.query;
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(500, Math.max(1, parseInt(limit)));
@@ -28,7 +27,7 @@ router.get('/absensi', async (req, res) => {
   res.json({ data: rows, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
 });
 
-router.post('/absensi', async (req, res) => {
+router.post('/absensi', requireRole('admin', 'keuangan'), async (req, res) => {
   const { karyawan_id, tanggal, status, jam_masuk, jam_keluar, keterangan } = req.body;
   if (!karyawan_id) return res.status(400).json({ error: 'Karyawan wajib dipilih' });
   if (!tanggal) return res.status(400).json({ error: 'Tanggal wajib diisi' });
@@ -40,7 +39,7 @@ router.post('/absensi', async (req, res) => {
   res.json(rows[0]);
 });
 
-router.put('/absensi/:id', async (req, res) => {
+router.put('/absensi/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   const { status, jam_masuk, jam_keluar, keterangan } = req.body;
   const sets = []; const vals = [];
   if (status !== undefined) { sets.push('status=?'); vals.push(status); }
@@ -54,7 +53,7 @@ router.put('/absensi/:id', async (req, res) => {
   res.json(rows[0]);
 });
 
-router.delete('/absensi/:id', async (req, res) => {
+router.delete('/absensi/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   await db.query(`DELETE FROM absensi WHERE id=? AND tenant_id=?`, [req.params.id, req.user.tenant_id]);
   res.json({ ok: true });
 });
