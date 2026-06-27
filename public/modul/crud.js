@@ -66,22 +66,53 @@ async function exportBahanBakuXlsx() {
   XLSX.writeFile(wb, 'bahan_baku.xlsx');
 }
 
+function renderField(f, editing) {
+  if (f.type === 'hidden') {
+    return `<input type="hidden" id="f-${f.k}" value="${editing?.[f.k] || ''}" />`;
+  }
+  const ro = f.readOnly;
+  const roCls = ro ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : '';
+  const val = editing?.[f.k];
+  let input;
+  if (f.type === 'select') {
+    input = `<select id="f-${f.k}" ${ro ? 'disabled' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm ${roCls}">
+      <option value="">— Pilih —</option>${f.opts.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
+    </select>`;
+  } else if (f.type === 'select-api') {
+    input = `<select id="f-${f.k}" ${ro ? 'disabled' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm ${roCls}"><option value="">— Memuat data... —</option></select>`;
+  } else if (f.type === 'textarea') {
+    input = `<textarea id="f-${f.k}" rows="2" ${ro ? 'readonly' : ''} class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md text-sm ${roCls}">${val || ''}</textarea>`;
+  } else {
+    const itype = f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text';
+    const ival = val != null ? (f.type === 'date' ? String(val).slice(0,10) : val) : '';
+    input = `<input id="f-${f.k}" type="${itype}" value="${ival}" ${ro ? 'readonly' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm ${f.type === 'number' ? 'mono' : ''} ${roCls}" />`;
+  }
+  return `<div class="${f.type === 'hidden' ? '' : 'mb-3'}"><label class="text-sm text-stone-700">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>${input}</div>`;
+}
+
 function openForm(cfg, editing) {
   const title = (editing ? 'Edit ' : 'Tambah ') + MODULES[(location.pathname || '/dashboard').slice(1)].title;
   document.getElementById('modal-title').textContent = title;
   const body = document.getElementById('modal-body');
 
   const apiSelects = cfg.fields.filter(f => f.type === 'select-api');
-  body.innerHTML = cfg.fields.map(f => f.type === 'hidden' ? `<input type="hidden" id="f-${f.k}" value="${editing?.[f.k] || ''}" />`
-    : `
-    <div class="mb-3"><label class="text-sm text-stone-700">${f.l}${f.req ? ' *' : ''}</label>
-    ${f.type === 'select' ? `<select id="f-${f.k}" ${f.readOnly ? 'disabled' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md ${f.readOnly ? 'bg-stone-100 text-stone-500' : ''}">
-      <option value="">— Pilih —</option>${f.opts.map(o => `<option value="${o}" ${editing?.[f.k] === o ? 'selected' : ''}>${o}</option>`).join('')}
-    </select>`
-    : f.type === 'select-api' ? `<select id="f-${f.k}" ${f.readOnly ? 'disabled' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md ${f.readOnly ? 'bg-stone-100 text-stone-500' : ''}"><option value="">— Memuat data... —</option></select>`
-    : f.type === 'textarea' ? `<textarea id="f-${f.k}" rows="2" ${f.readOnly ? 'readonly' : ''} class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md ${f.readOnly ? 'bg-stone-100 text-stone-500' : ''}">${editing?.[f.k] || ''}</textarea>`
-    : `<input id="f-${f.k}" type="${f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'}" value="${editing?.[f.k] != null ? (f.type === 'date' ? String(editing[f.k]).slice(0,10) : editing[f.k]) : ''}" ${f.readOnly ? 'readonly' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md ${f.type === 'number' ? 'mono' : ''} ${f.readOnly ? 'bg-stone-100 text-stone-500' : ''}" />`}
-    </div>`).join('');
+
+  if (cfg.groups && Array.isArray(cfg.groups)) {
+    let html = '';
+    cfg.groups.forEach(g => {
+      const gFields = cfg.fields.filter(f => f.group === g.key && f.type !== 'hidden');
+      if (!gFields.length) return;
+      html += `<div class="mb-6">
+        <h4 class="text-sm font-semibold text-stone-700 mb-3 pb-2" style="border-bottom:1px solid var(--border)">${g.label}</h4>
+        <div class="grid grid-cols-1 ${g.cols === 2 ? 'md:grid-cols-2' : ''} gap-x-4 gap-y-1">`;
+      gFields.forEach(f => { html += renderField(f, editing); });
+      html += `</div></div>`;
+    });
+    cfg.fields.filter(f => f.type === 'hidden').forEach(f => { html += renderField(f, editing); });
+    body.innerHTML = html;
+  } else {
+    body.innerHTML = cfg.fields.map(f => renderField(f, editing)).join('');
+  }
 
   apiSelects.forEach(f => {
     const sel = document.getElementById('f-' + f.k);
@@ -109,7 +140,6 @@ function openForm(cfg, editing) {
   });
 
   document.getElementById('modal-save').onclick = async () => {
-    // Validasi required fields
     var rules = cfg.fields.filter(function(f) { return f.req; }).map(function(f) {
       return { id: 'f-' + f.k, label: f.l, type: (f.type === 'select' || f.type === 'select-api') ? 'select' : (f.type === 'number' ? 'number' : 'text') };
     });
