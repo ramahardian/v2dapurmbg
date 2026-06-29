@@ -116,7 +116,7 @@ for (const table of Object.keys(TABLES)) {
   
   // Role restrictions for specific tables
   const tableRoles = {
-    budget: ['admin', 'keuangan'],
+    budget: ['admin', 'keuangan', 'ahli_gizi'],
     kas_bank: ['admin', 'keuangan'],
     penerima_manfaat: ['admin', 'keuangan'],
     bahan_baku: ['admin', 'keuangan', 'gudang', 'ahli_gizi'],
@@ -180,6 +180,9 @@ for (const table of Object.keys(TABLES)) {
   // 2. CREATE (POST /nama_tabel)
   router.post(`/${table}`, roleMiddleware, async (req, res) => {
     try {
+      if (table === 'bahan_baku' && req.user.role === 'ahli_gizi') {
+        delete req.body.harga_satuan; delete req.body.harga_sebelumnya;
+      }
       // Validasi field wajib sebelum menyimpan
       const required = REQUIRED_FIELDS[table] || [];
       const missing = required.filter(f => !req.body[f] || (typeof req.body[f] === 'string' && !req.body[f].trim()));
@@ -214,6 +217,9 @@ for (const table of Object.keys(TABLES)) {
   // 3. UPDATE (PUT /nama_tabel/:id)
   router.put(`/${table}/:id`, roleMiddleware, async (req, res) => {
     try {
+      if (table === 'bahan_baku' && req.user.role === 'ahli_gizi') {
+        delete req.body.harga_satuan; delete req.body.harga_sebelumnya;
+      }
       // Track perubahan harga bahan_baku
       if (table === 'bahan_baku' && req.body.harga_satuan !== undefined) {
         const [[cur]] = await db.query('SELECT harga_satuan FROM bahan_baku WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);

@@ -163,6 +163,9 @@ function createCrudRouter() {
     // CREATE
     router.post(`/${table}`, roleMiddleware, async (req, res) => {
       try {
+        if (table === 'bahan_baku' && req.user.role === 'ahli_gizi') {
+          delete req.body.harga_satuan; delete req.body.harga_sebelumnya;
+        }
         // Validasi field wajib sebelum menyimpan
         const required = REQUIRED_FIELDS[table] || [];
         const missing = required.filter(f => !req.body[f] || (typeof req.body[f] === 'string' && !req.body[f].trim()));
@@ -195,6 +198,9 @@ function createCrudRouter() {
     // UPDATE
     router.put(`/${table}/:id`, roleMiddleware, async (req, res) => {
       try {
+        if (table === 'bahan_baku' && req.user.role === 'ahli_gizi') {
+          delete req.body.harga_satuan; delete req.body.harga_sebelumnya;
+        }
         const { sql, vals } = buildUpdate(table, req.body);
         if (!vals.length) return res.status(400).json({ error: 'Tidak ada perubahan' });
         
