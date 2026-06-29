@@ -92,7 +92,7 @@ router.get('/hpp', requireRole('admin', 'ahli_gizi'), async (req, res) => {
 });
 
 // Laporan template
-router.get('/laporan', (req, res) => {
+router.get('/laporan', requireRole('admin', 'keuangan', 'ahli_gizi'), (req, res) => {
   res.render('partials/laporan', {}, (err, html) => {
     if (err) {
       console.error('Laporan template error:', err);

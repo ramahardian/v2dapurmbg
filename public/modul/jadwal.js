@@ -9,6 +9,7 @@ async function renderShift() {
     reloadJadwal();
   } catch (err) {
     console.error('Shift error:', err);
+    if (err.message.includes('Akses ditolak') || err.message.includes('Forbidden')) return showAccessDenied();
     c.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat shift: ' + err.message + '</div>';
   }
 }

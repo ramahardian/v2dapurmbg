@@ -10,34 +10,28 @@ async function renderLaporan() {
       throw new Error(err.error || 'Gagal memuat laporan');
     }
     c.innerHTML = await r.text();
-    showLap('budget');
+    showLap('siklus');
   } catch (err) {
     console.error('Laporan error:', err);
+    if (err.message.includes('Akses ditolak') || err.message.includes('Forbidden')) return showAccessDenied();
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
   }
 }
+const LAP_TABS = ['siklus', 'hpp', 'persediaan', 'produksi', 'distribusi'];
 const LAP_PAGE_SIZE = 10;
-let lapState = { tab: 'budget', page: 1 };
+let lapState = { tab: 'siklus', page: 1 };
 
 async function showLap(tab) {
   lapState.tab = tab;
   lapState.page = 1;
   const tabColors = {
-    budget: { active: 'bg-white text-blue-600 shadow-sm', inactive: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
-    rab: { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
     persediaan: { active: 'bg-white text-amber-600 shadow-sm', inactive: 'bg-amber-100 text-amber-700 hover:bg-amber-200' },
     distribusi: { active: 'bg-white text-violet-600 shadow-sm', inactive: 'bg-violet-100 text-violet-700 hover:bg-violet-200' },
-    keuangan: { active: 'bg-white text-cyan-600 shadow-sm', inactive: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200' },
     siklus: { active: 'bg-white text-rose-600 shadow-sm', inactive: 'bg-rose-100 text-rose-700 hover:bg-rose-200' },
-    pembelian: { active: 'bg-white text-indigo-600 shadow-sm', inactive: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' },
-    penerimaan: { active: 'bg-white text-teal-600 shadow-sm', inactive: 'bg-teal-100 text-teal-700 hover:bg-teal-200' },
-    mutasi: { active: 'bg-white text-orange-600 shadow-sm', inactive: 'bg-orange-100 text-orange-700 hover:bg-orange-200' },
     produksi: { active: 'bg-white text-lime-600 shadow-sm', inactive: 'bg-lime-100 text-lime-700 hover:bg-lime-200' },
-    payroll: { active: 'bg-white text-pink-600 shadow-sm', inactive: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
-    'laba-rugi': { active: 'bg-white text-yellow-600 shadow-sm', inactive: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' },
     hpp: { active: 'bg-white text-gray-600 shadow-sm', inactive: 'bg-gray-100 text-gray-700 hover:bg-gray-200' },
   };
-  ['budget','rab','persediaan','distribusi','keuangan','siklus','pembelian','penerimaan','mutasi','produksi','payroll','laba-rugi','hpp'].forEach(t => {
+  LAP_TABS.forEach(t => {
     const el = document.getElementById('lt-'+t);
     const c = tabColors[t];
     const base = 'px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 -mb-px';

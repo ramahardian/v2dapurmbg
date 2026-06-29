@@ -116,7 +116,9 @@ function createCrudRouter() {
       penerima_manfaat: ['admin', 'keuangan'],
       bahan_baku: ['admin', 'keuangan', 'gudang', 'ahli_gizi'],
       stok_masuk: ['admin', 'keuangan', 'gudang'],
-      stok_keluar: ['admin', 'keuangan', 'gudang']
+      stok_keluar: ['admin', 'keuangan', 'gudang'],
+      produksi: ['admin', 'produksi', 'gudang', 'keuangan'],
+      distribusi: ['admin', 'produksi', 'gudang', 'keuangan']
     };
     
     const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (req, res, next) => next();

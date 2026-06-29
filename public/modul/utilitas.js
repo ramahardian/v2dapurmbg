@@ -103,4 +103,17 @@ function closeSidebar() {
   ov.classList.add('hidden');
 }
 
+function showAccessDenied(msg) {
+  const c = document.getElementById('content');
+  c.innerHTML = `<div class="flex flex-col items-center justify-center py-24 text-stone-400">
+    <svg class="w-20 h-20 mb-6 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+      <path d="M7 11V7a5 5 0 0110 0v4"/>
+      <circle cx="12" cy="16" r="1.5"/>
+      <line x1="12" y1="16" x2="12" y2="13"/>
+    </svg>
+    <div class="text-lg font-semibold text-stone-500 mb-1">Akses Ditolak</div>
+    <p class="text-sm text-center max-w-xs">${msg || 'Anda tidak memiliki izin untuk mengakses halaman ini.'}</p>
+  </div>`;
+}
 // ===== Modules definition =====
