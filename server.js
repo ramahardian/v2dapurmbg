@@ -63,8 +63,9 @@ function requirePageAuth(req, res, next) {
   }
 }
 
-app.get('/', requirePageAuth, (req, res) => res.render('app'));
-app.get(/^\/(?!api).*/, requirePageAuth, (req, res) => res.render('app'));
+const distVer = (() => { try { return require('fs').statSync(path.join(__dirname, 'public', 'dist', 'app.min.js')).mtimeMs; } catch { return Date.now(); } })();
+app.get('/', requirePageAuth, (req, res) => res.render('app', { distVer }));
+app.get(/^\/(?!api).*/, requirePageAuth, (req, res) => res.render('app', { distVer }));
 
 process.on('unhandledRejection', (err) => console.error('Unhandled Rejection:', err));
 app.use((err, req, res, next) => {
