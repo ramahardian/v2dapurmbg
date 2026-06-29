@@ -116,13 +116,17 @@ for (const table of Object.keys(TABLES)) {
   
   // Role restrictions for specific tables
   const tableRoles = {
+    budget: ['admin', 'keuangan'],
+    kas_bank: ['admin', 'keuangan'],
     penerima_manfaat: ['admin', 'keuangan'],
     bahan_baku: ['admin', 'keuangan', 'gudang', 'ahli_gizi'],
     supplier: ['admin', 'keuangan'],
     purchase_order: ['admin', 'keuangan'],
     penerimaan_barang: ['admin', 'keuangan'],
     stok_masuk: ['admin', 'keuangan', 'gudang'],
-    stok_keluar: ['admin', 'keuangan', 'gudang']
+    stok_keluar: ['admin', 'keuangan', 'gudang'],
+    produksi: ['admin', 'produksi', 'gudang', 'keuangan', 'ahli_gizi'],
+    distribusi: ['admin', 'produksi', 'gudang', 'keuangan', 'ahli_gizi']
   };
   
   const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (req, res, next) => next();

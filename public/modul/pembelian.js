@@ -1,3 +1,7 @@
+let _poEditing = null;
+let _poItems = [];
+let _bahanBakuList = [];
+
 async function renderPembelian() {
   const cfg = {
     endpoint: '/purchase_order',
@@ -15,6 +19,8 @@ async function renderPembelian() {
 
   await renderCrud(cfg);
 
+  document.getElementById('add-btn').onclick = () => openPembelianForm(null);
+
   const toolbar = document.querySelector('#content > div:first-child');
   if (!toolbar) return;
   const group = document.createElement('div');
@@ -28,6 +34,181 @@ async function renderPembelian() {
   toolbar.insertBefore(group, toolbar.firstChild);
   group.appendChild(btn);
   if (addBtn) group.appendChild(addBtn);
+
+  const wrap = document.getElementById('table-wrap');
+  if (wrap) {
+    const origRender = wrap.innerHTML;
+    const obs = new MutationObserver(() => {
+      wrap.querySelectorAll('[onclick*="editRow"]').forEach(el => {
+        const m = el.getAttribute('onclick').match(/editRow\((.+?), (.+?)\)/);
+        if (m) {
+          el.removeAttribute('onclick');
+          const row = JSON.parse(m[2]);
+          el.addEventListener('click', () => openPembelianForm(row));
+        }
+      });
+    });
+    obs.observe(wrap, { childList: true, subtree: true });
+  }
+}
+
+async function openPembelianForm(editing) {
+  _poEditing = editing;
+  try {
+    const data = await api.get('/bahan_baku');
+    _bahanBakuList = Array.isArray(data) ? data : (data.data || []);
+  } catch (e) {
+    _bahanBakuList = [];
+  }
+
+  const now = new Date();
+  const tgl = now.toISOString().slice(0, 10);
+  const nomor = 'PO-' + tgl.replace(/-/g, '') + '-' + Date.now().toString().slice(-4);
+
+  let items = [];
+  if (editing && editing.item) {
+    try { items = JSON.parse(editing.item); } catch { items = []; }
+  }
+
+  document.getElementById('modal-title').textContent = editing ? 'Edit Purchase Order' : 'Tambah Purchase Order';
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm text-stone-700">Nomor PO <span class="text-red-500">*</span></label>
+          <input id="po-no_po" value="${editing ? editing.no_po : nomor}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+        </div>
+        <div>
+          <label class="text-sm text-stone-700">Tanggal <span class="text-red-500">*</span></label>
+          <input id="po-tanggal" type="date" value="${editing ? editing.tanggal : tgl}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="text-sm text-stone-700">Supplier</label>
+        <input id="po-supplier_nama" value="${editing ? (editing.supplier_nama || '') : ''}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+      </div>
+      <div>
+        <label class="text-sm text-stone-700 font-medium">Daftar Item</label>
+        <div id="po-items-list" class="mt-1 space-y-1"></div>
+        <button onclick="addPoItemRow()" class="mt-2 text-sm text-[#1e40af] hover:underline">+ Tambah Item</button>
+      </div>
+      <div class="flex items-center justify-between border-t border-stone-200 pt-3">
+        <span class="text-sm font-semibold">Total: <span id="po-total-display" class="mono">Rp 0</span></span>
+        <input type="hidden" id="po-item-json" value='${JSON.stringify(items)}'>
+        <input type="hidden" id="po-total_nilai" value="0">
+      </div>
+      <div>
+        <label class="text-sm text-stone-700">Status</label>
+        <select id="po-status" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+          <option>Draft</option><option ${editing && editing.status === 'Disetujui' ? 'selected' : ''}>Disetujui</option>
+          <option ${editing && editing.status === 'Dikirim' ? 'selected' : ''}>Dikirim</option>
+          <option ${editing && editing.status === 'Diterima' ? 'selected' : ''}>Diterima</option>
+          <option ${editing && editing.status === 'Dibayar' ? 'selected' : ''}>Dibayar</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-sm text-stone-700">Catatan</label>
+        <textarea id="po-catatan" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md text-sm" rows="2">${editing ? (editing.catatan || '') : ''}</textarea>
+      </div>
+    </div>`;
+
+  renderPoItems(items);
+
+  document.getElementById('modal-save').style.display = '';
+  document.getElementById('modal-save').onclick = savePembelian;
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modal').classList.add('flex');
+}
+
+function renderPoItems(items) {
+  _poItems = items;
+  const wrap = document.getElementById('po-items-list');
+  if (!items.length) {
+    wrap.innerHTML = '<div class="text-sm text-stone-400 py-2">Belum ada item. Klik "+ Tambah Item" untuk mulai.</div>';
+    updatePoTotal();
+    return;
+  }
+  wrap.innerHTML = items.map((item, i) => `
+    <div class="flex gap-2 items-start bg-stone-50 rounded-lg p-2">
+      <select onchange="updatePoItem(${i}, 'bahan_baku_id', this.value)" class="flex-1 h-10 px-3 border border-stone-200 rounded-md text-sm">
+        <option value="">— Pilih Bahan —</option>
+        ${_bahanBakuList.map(b => {
+          const isNew = b.created_at && (Date.now() - new Date(b.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
+          const sel = Number(b.id) === Number(item.bahan_baku_id) ? 'selected' : '';
+          return `<option value="${b.id}" ${sel}>${b.nama}${isNew ? ' 🆕' : ''}${b.harga_satuan ? ' @ ' + fmtIDR(b.harga_satuan) : ''}</option>`;
+        }).join('')}
+      </select>
+      <input type="number" step="0.001" value="${item.qty || ''}" placeholder="Qty"
+        onchange="updatePoItem(${i}, 'qty', this.value)"
+        class="w-24 h-10 px-3 border border-stone-200 rounded-md text-sm mono">
+      <span class="h-10 leading-10 text-sm text-stone-500 shrink-0">${item.satuan || ''}</span>
+      <span class="h-10 leading-10 text-sm text-right mono w-28 shrink-0">${item.subtotal ? fmtIDR(item.subtotal) : ''}</span>
+      <button onclick="removePoItem(${i})" class="h-10 px-2 text-red-600 hover:bg-red-50 rounded" title="Hapus">×</button>
+    </div>
+  `).join('');
+  updatePoTotal();
+}
+
+function addPoItemRow() {
+  _poItems.push({ bahan_baku_id: '', qty: '', subtotal: 0, satuan: '' });
+  renderPoItems(_poItems);
+}
+
+function removePoItem(idx) {
+  _poItems.splice(idx, 1);
+  renderPoItems(_poItems);
+}
+
+function updatePoItem(idx, field, value) {
+  _poItems[idx][field] = value;
+  const b = _bahanBakuList.find(x => Number(x.id) === Number(_poItems[idx].bahan_baku_id));
+  if (b) {
+    _poItems[idx].satuan = b.satuan || '';
+    _poItems[idx].subtotal = (Number(_poItems[idx].qty) || 0) * (Number(b.harga_satuan) || 0);
+  }
+  renderPoItems(_poItems);
+}
+
+function updatePoTotal() {
+  const total = _poItems.reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
+  document.getElementById('po-total-display').textContent = fmtIDR(total);
+  document.getElementById('po-total_nilai').value = total;
+}
+
+function savePembelian() {
+  const no_po = document.getElementById('po-no_po').value.trim();
+  const tanggal = document.getElementById('po-tanggal').value;
+  if (!no_po || !tanggal) { showAlert('Nomor PO dan Tanggal wajib diisi', 'warning'); return; }
+  if (!_poItems.length) { showAlert('Minimal satu item harus ditambahkan', 'warning'); return; }
+
+  const total = _poItems.reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
+  const payload = {
+    no_po,
+    tanggal,
+    supplier_nama: document.getElementById('po-supplier_nama').value.trim(),
+    item: JSON.stringify(_poItems.map(i => ({
+      bahan_baku_id: i.bahan_baku_id,
+      nama: _bahanBakuList.find(b => Number(b.id) === Number(i.bahan_baku_id))?.nama || '',
+      qty: Number(i.qty) || 0,
+      satuan: i.satuan,
+      harga: Number(_bahanBakuList.find(b => Number(b.id) === Number(i.bahan_baku_id))?.harga_satuan || 0),
+      subtotal: Number(i.subtotal) || 0,
+    }))),
+    total_nilai: total,
+    status: document.getElementById('po-status').value,
+    catatan: document.getElementById('po-catatan').value.trim(),
+  };
+
+  const isEdit = !!_poEditing;
+  const req = isEdit ? api.put('/purchase_order/' + _poEditing.id, payload) : api.post('/purchase_order', payload);
+  req.then(() => {
+    closeModal();
+    renderPembelian();
+    showToast('PO berhasil ' + (isEdit ? 'diupdate' : 'dibuat'));
+  }).catch(e => {
+    showAlert('Gagal: ' + (e.message || 'Terjadi kesalahan'), 'error');
+  });
 }
 
 async function openSiklusPicker() {
@@ -123,14 +304,18 @@ async function generatePOFromSiklus() {
       const supplier = document.getElementById('po-supplier').value;
       const tgl = new Date().toISOString().slice(0, 10);
       const nomor = 'PO-' + tgl.replace(/-/g, '') + '-' + Date.now().toString().slice(-4);
-      const itemText = result.items.map(i =>
-        `${i.bahan_nama}: kebutuhan ${i.total_qty} ${i.satuan} (buffer 10%: ${i.buffer_10} ${i.satuan}) @ ${fmtIDR(i.harga_satuan)} = ${fmtIDR(i.estimated_subtotal)}`
-      ).join('\n');
+      const items = result.items.map(i => ({
+        nama: i.bahan_nama,
+        qty: i.buffer_10,
+        satuan: i.satuan,
+        harga: i.harga_satuan,
+        subtotal: i.estimated_subtotal,
+      }));
 
       try {
         await api.post('/purchase_order', {
           no_po: nomor, tanggal: tgl, supplier_nama: supplier,
-          item: itemText, total_nilai: result.total_estimated,
+          item: JSON.stringify(items), total_nilai: result.total_estimated,
           status: 'Draft', catatan: 'Dibuat dari siklus: ' + result.siklus_refs.join(', '),
         });
         closeModal();

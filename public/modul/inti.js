@@ -32,13 +32,19 @@ function renderNav() {
   const isAdminOrKeuangan = userRole === 'admin' || userRole === 'keuangan';
   const isAdminOrGudang = userRole === 'admin' || userRole === 'gudang';
   const isAdminOrAhliGizi = userRole === 'admin' || userRole === 'ahli_gizi';
+  const isAdminOrKeuanganOrGudang = userRole === 'admin' || userRole === 'keuangan' || userRole === 'gudang';
+  const isAdminOrProduksi = userRole === 'admin' || userRole === 'produksi' || userRole === 'gudang' || userRole === 'keuangan';
 
   nav.innerHTML = NAV_GROUPS.map(g => {
     const visibleItems = g.items.filter(key => {
       if (key === 'menu' || key === 'hpp' || key === 'siklus') return isAdminOrAhliGizi;
       if (key === 'gudang') return isAdminOrGudang;
+      if (key === 'budgeting' || key === 'kas-bank') return isAdminOrKeuangan;
+      if (key === 'laporan') return isAdminOrKeuangan || isAdminOrAhliGizi;
       if (key === 'penerima-manfaat') return isAdminOrKeuangan;
-      if (key === 'karyawan' || key === 'absensi' || key === 'payroll') return isAdminOrKeuangan;
+      if (key === 'karyawan' || key === 'absensi' || key === 'payroll' || key === 'shift' || key === 'divisi') return isAdminOrKeuangan;
+      if (key === 'supplier' || key === 'pembelian' || key === 'penerimaan') return isAdminOrKeuanganOrGudang;
+      if (key === 'produksi' || key === 'distribusi') return isAdminOrProduksi;
       if (key === 'kelola-user') return userRole === 'admin';
       return true;
     });
@@ -67,19 +73,35 @@ function route() {
   const isAdminOrKeuangan = userRole === 'admin' || userRole === 'keuangan';
   const isAdminOrGudang = userRole === 'admin' || userRole === 'gudang';
   const isAdminOrAhliGizi = userRole === 'admin' || userRole === 'ahli_gizi';
+  const isAdminOrKeuanganOrGudang = userRole === 'admin' || userRole === 'keuangan' || userRole === 'gudang';
+  const isAdminOrProduksi = userRole === 'admin' || userRole === 'produksi' || userRole === 'gudang' || userRole === 'keuangan';
   
   if ((key === 'menu' || key === 'hpp' || key === 'siklus') && !isAdminOrAhliGizi) {
     showAlert('Akses ditolak', 'error'); navigate('dashboard'); return;
   }
+  if ((key === 'budgeting' || key === 'kas-bank') && !isAdminOrKeuangan) {
+    return showAccessDenied();
+  }
+  if (key === 'laporan' && !isAdminOrKeuangan && !isAdminOrAhliGizi) {
+    return showAccessDenied();
+  }
+  if ((key === 'shift' || key === 'jadwal' || key === 'divisi') && !isAdminOrKeuangan) {
+    return showAccessDenied();
+  }
   if ((key === 'gudang' || key === 'penerima-manfaat') && !isAdminOrKeuangan && !isAdminOrGudang) {
-    showAlert('Akses ditolak: Anda tidak memiliki izin.', 'error'); navigate('dashboard'); return;
-
+    return showAccessDenied();
   }
   if ((key === 'karyawan' || key === 'absensi' || key === 'payroll') && !isAdminOrKeuangan) {
-    showAlert('Akses ditolak: Anda tidak memiliki izin.', 'error'); navigate('dashboard'); return;
+    return showAccessDenied();
+  }
+  if ((key === 'supplier' || key === 'pembelian' || key === 'penerimaan') && !isAdminOrKeuanganOrGudang) {
+    return showAccessDenied();
+  }
+  if ((key === 'produksi' || key === 'distribusi') && !isAdminOrProduksi) {
+    return showAccessDenied();
   }
   if (key === 'kelola-user' && userRole !== 'admin') {
-    showAlert('Akses ditolak: Hanya admin.', 'error'); navigate('dashboard'); return;
+    return showAccessDenied();
   }
   
   document.querySelectorAll('.sidebar-link').forEach(a => a.classList.toggle('active', a.dataset.key === key));
