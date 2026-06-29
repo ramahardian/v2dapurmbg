@@ -8,7 +8,19 @@ async function renderAbsensi() {
       throw new Error(err.error || 'Gagal memuat absensi');
     }
     c.innerHTML = await r.text();
-    await loadKaryawanOptions();
+    try {
+      const karyawanData = await api.get('/karyawan?status=Aktif');
+      const list = Array.isArray(karyawanData) ? karyawanData : [];
+      const opts = '<option value="">Semua Karyawan</option>' +
+        list.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+      const absFilter = document.getElementById('abs-filter-karyawan');
+      if (absFilter) absFilter.innerHTML = opts;
+      const absForm = document.getElementById('absensi-karyawan');
+      if (absForm) absForm.innerHTML = '<option value="">— Pilih —</option>' +
+        list.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+    } catch (e) {
+      console.error('Gagal load karyawan:', e);
+    }
     const now = new Date();
     const ta = document.getElementById('abs-filter-tanggal-awal');
     const tb = document.getElementById('abs-filter-tanggal-akhir');
@@ -17,11 +29,9 @@ async function renderAbsensi() {
       if (!tb.value) tb.value = now.toISOString().slice(0, 10);
     }
     document.getElementById('absensi-save') && (document.getElementById('absensi-save').onclick = saveAbsensi);
-    // Set filter karyawan if coming from karyawan page
     if (window._absenFilterKaryawanId) {
       const sel = document.getElementById('abs-filter-karyawan');
       if (sel) {
-        // Wait for options to load, then set value
         const check = setInterval(() => {
           if (sel.options.length > 1) {
             sel.value = window._absenFilterKaryawanId;
