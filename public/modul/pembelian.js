@@ -37,7 +37,6 @@ async function renderPembelian() {
 
   const wrap = document.getElementById('table-wrap');
   if (wrap) {
-    const origRender = wrap.innerHTML;
     const obs = new MutationObserver(() => {
       wrap.querySelectorAll('[onclick*="editRow"]').forEach(el => {
         const m = el.getAttribute('onclick').match(/editRow\((.+?), (.+?)\)/);
@@ -47,8 +46,66 @@ async function renderPembelian() {
           el.addEventListener('click', () => openPembelianForm(row));
         }
       });
+      wrap.querySelectorAll('[onclick*="deleteRow"]').forEach(el => {
+        const m = el.getAttribute('onclick').match(/deleteRow\("(.+?)", (.+?),/);
+        if (m) {
+          const rowData = window._crudRows?.find(r => r.id === parseInt(m[2]));
+          if (!rowData) return;
+          const tr = el.closest('tr');
+          if (!tr || tr.querySelector('[data-kirim-btn]')) return;
+          const action = el.parentNode;
+          const kirim = document.createElement('button');
+          kirim.className = 'text-emerald-600 hover:text-emerald-800 p-1.5 inline-flex items-center';
+          kirim.title = 'Kirim ke Koperasi';
+          kirim.dataset.kirimBtn = '1';
+          kirim.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>';
+          kirim.addEventListener('click', () => kirimKeKoperasi(rowData));
+          action.insertBefore(kirim, el);
+        }
+      });
     });
     obs.observe(wrap, { childList: true, subtree: true });
+  }
+}
+
+async function kirimKeKoperasi(po) {
+  let id_unit_dapur = localStorage.getItem('koperasi_id_unit_dapur');
+  if (!id_unit_dapur) {
+    id_unit_dapur = prompt('Masukkan ID Unit Dapur di sistem Koperasi:');
+    if (!id_unit_dapur) return;
+    localStorage.setItem('koperasi_id_unit_dapur', id_unit_dapur);
+  }
+
+  let items = [];
+  try { items = JSON.parse(po.item); } catch { items = []; }
+  if (!items.length) { showAlert('PO tidak memiliki item', 'warning'); return; }
+
+  const payload = {
+    id_unit_dapur: Number(id_unit_dapur),
+    supplier_name: po.supplier_nama || '',
+    purchase_date: po.tanggal,
+    items: items.map(i => ({
+      name: i.nama || '',
+      qty: Number(i.qty) || 0,
+      unit: i.satuan || '',
+      price: Number(i.harga || i.subtotal || 0),
+    })),
+    notes: 'PO: ' + po.no_po + (po.catatan ? ' — ' + po.catatan : ''),
+  };
+
+  try {
+    const r = await fetch('https://koperasi.mealify.id/api/pesanan_dapur.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await r.json();
+    if (result.success) {
+      showToast('PO berhasil dikirim ke koperasi. Kode: ' + (result.data?.kode_pesanan || '-'), 'success');
+    } else {
+      showAlert('Gagal: ' + (result.message || 'Respons tidak valid'), 'error');
+    }
+  } catch (e) {
+    showAlert('Gagal terhubung ke koperasi: ' + e.message, 'error');
   }
 }
 
