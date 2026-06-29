@@ -51,7 +51,7 @@ function showGudang(tab) {
     const el = document.getElementById('tab-'+t);
     const c = tabColors[t];
     const base = 'px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border border-b-0 border-stone-200 -mb-px';
-    const extra = t === tab ? ' relative z-10' : '';
+    const extra = t === tab ? ' relative z-[2]' : '';
     if (el) el.className = base + ' ' + (t === tab ? c.active : c.inactive) + extra;
   });
   loadGudang();
