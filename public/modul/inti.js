@@ -37,13 +37,13 @@ function renderNav() {
 
   nav.innerHTML = NAV_GROUPS.map(g => {
     const visibleItems = g.items.filter(key => {
-      if (key === 'menu' || key === 'hpp' || key === 'siklus') return isAdminOrAhliGizi;
+      if (key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'panduan-ahli-gizi') return isAdminOrAhliGizi;
       if (key === 'gudang') return isAdminOrGudang;
       if (key === 'budgeting' || key === 'kas-bank') return isAdminOrKeuangan;
       if (key === 'laporan') return isAdminOrKeuangan || isAdminOrAhliGizi;
       if (key === 'penerima-manfaat') return isAdminOrKeuangan;
       if (key === 'karyawan' || key === 'absensi' || key === 'payroll' || key === 'shift' || key === 'divisi') return isAdminOrKeuangan;
-      if (key === 'supplier' || key === 'pembelian' || key === 'penerimaan') return isAdminOrKeuanganOrGudang;
+      if (key === 'supplier' || key === 'pembelian' || key === 'penerimaan') return isAdminOrKeuanganOrGudang || userRole === 'ahli_gizi';
       if (key === 'produksi' || key === 'distribusi') return isAdminOrProduksi;
       if (key === 'kelola-user') return userRole === 'admin';
       return true;
@@ -76,7 +76,7 @@ function route() {
   const isAdminOrKeuanganOrGudang = userRole === 'admin' || userRole === 'keuangan' || userRole === 'gudang';
   const isAdminOrProduksi = userRole === 'admin' || userRole === 'produksi' || userRole === 'gudang' || userRole === 'keuangan';
   
-  if ((key === 'menu' || key === 'hpp' || key === 'siklus') && !isAdminOrAhliGizi) {
+  if ((key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'panduan-ahli-gizi') && !isAdminOrAhliGizi) {
     showAlert('Akses ditolak', 'error'); navigate('dashboard'); return;
   }
   if ((key === 'budgeting' || key === 'kas-bank') && !isAdminOrKeuangan) {
@@ -94,7 +94,7 @@ function route() {
   if ((key === 'karyawan' || key === 'absensi' || key === 'payroll') && !isAdminOrKeuangan) {
     return showAccessDenied();
   }
-  if ((key === 'supplier' || key === 'pembelian' || key === 'penerimaan') && !isAdminOrKeuanganOrGudang) {
+  if ((key === 'supplier' || key === 'pembelian' || key === 'penerimaan') && !isAdminOrKeuanganOrGudang && userRole !== 'ahli_gizi') {
     return showAccessDenied();
   }
   if ((key === 'produksi' || key === 'distribusi') && !isAdminOrProduksi) {
