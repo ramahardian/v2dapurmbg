@@ -105,4 +105,3 @@ const NAV_GROUPS = [
   { label: 'Ahli Gizi', items: ['menu', 'hpp', 'siklus', 'standar-sp', 'panduan-ahli-gizi'] },
   { label: 'Pengaturan', items: ['kelola-user'] },
 ];
-
