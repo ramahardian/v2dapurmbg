@@ -34,9 +34,9 @@ function getBahanCrud() {
       ...BAHAN_BAKU_CRUD_BASE,
       fields: BAHAN_BAKU_CRUD_BASE.fields.map(f => ({
         ...f,
-        readOnly: !NUTRISI_FIELDS.includes(f.k),
+        readOnly: f.k === 'harga_satuan',
       })),
-      cols: BAHAN_BAKU_CRUD_BASE.cols,
+      cols: BAHAN_BAKU_CRUD_BASE.cols.filter(k => k !== 'harga_satuan'),
     };
   }
   return BAHAN_BAKU_CRUD_BASE;
@@ -59,9 +59,6 @@ async function renderBahanBaku() {
     return;
   }
 
-  const isAhliGizi = currentUser?.role === 'ahli_gizi';
-
-  document.getElementById('add-btn').style.display = isAhliGizi ? 'none' : '';
   document.getElementById('add-btn').onclick = () => openForm(getBahanCrud(), null);
 
   const searchInput = document.getElementById('bahan-search');
