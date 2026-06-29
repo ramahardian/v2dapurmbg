@@ -43,7 +43,9 @@ function renderNav() {
       if (key === 'laporan') return isAdminOrKeuangan || isAdminOrAhliGizi;
       if (key === 'penerima-manfaat') return isAdminOrKeuangan;
       if (key === 'karyawan' || key === 'absensi' || key === 'payroll' || key === 'shift' || key === 'divisi') return isAdminOrKeuangan;
-      if (key === 'supplier' || key === 'pembelian' || key === 'penerimaan') return isAdminOrKeuanganOrGudang || userRole === 'ahli_gizi';
+      if (key === 'supplier') return isAdminOrKeuanganOrGudang;
+      if (key === 'pembelian') return isAdminOrKeuanganOrGudang || userRole === 'ahli_gizi';
+      if (key === 'penerimaan') return isAdminOrKeuanganOrGudang;
       if (key === 'produksi' || key === 'distribusi') return isAdminOrProduksi;
       if (key === 'kelola-user') return userRole === 'admin';
       return true;
@@ -94,7 +96,13 @@ function route() {
   if ((key === 'karyawan' || key === 'absensi' || key === 'payroll') && !isAdminOrKeuangan) {
     return showAccessDenied();
   }
-  if ((key === 'supplier' || key === 'pembelian' || key === 'penerimaan') && !isAdminOrKeuanganOrGudang && userRole !== 'ahli_gizi') {
+  if (key === 'supplier' && !isAdminOrKeuanganOrGudang) {
+    return showAccessDenied();
+  }
+  if (key === 'pembelian' && !isAdminOrKeuanganOrGudang && userRole !== 'ahli_gizi') {
+    return showAccessDenied();
+  }
+  if (key === 'penerimaan' && !isAdminOrKeuanganOrGudang) {
     return showAccessDenied();
   }
   if ((key === 'produksi' || key === 'distribusi') && !isAdminOrProduksi) {
