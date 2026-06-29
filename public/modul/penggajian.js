@@ -214,11 +214,15 @@ async function loadKaryawanOptions() {
   try {
     const rows = await api.get('/karyawan?status=Aktif');
     karyawanOptions = Array.isArray(rows) ? rows : [];
-    const sel = document.getElementById('pay-filter-karyawan');
-    if (sel) {
-      sel.innerHTML = '<option value="">Semua Karyawan</option>' +
-        karyawanOptions.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
-    }
+    const opts = '<option value="">Semua Karyawan</option>' +
+      karyawanOptions.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+    const paySel = document.getElementById('pay-filter-karyawan');
+    if (paySel) paySel.innerHTML = opts;
+    const absSel = document.getElementById('abs-filter-karyawan');
+    if (absSel) absSel.innerHTML = opts;
+    const absFormSel = document.getElementById('absensi-karyawan');
+    if (absFormSel) absFormSel.innerHTML = '<option value="">— Pilih —</option>' +
+      karyawanOptions.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
   } catch (e) {
     console.error('loadKaryawanOptions error:', e);
     karyawanOptions = [];
@@ -277,7 +281,8 @@ function openAbsensiForm(a) {
   document.getElementById('absensi-keterangan').value = a ? a.keterangan || '' : '';
   document.getElementById('absensi-modal-title').textContent = a ? 'Edit Absensi' : 'Input Absensi';
   const sel = document.getElementById('absensi-karyawan');
-  sel.innerHTML = (karyawanOptions || []).map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+  sel.innerHTML = '<option value="">— Pilih —</option>' +
+    (karyawanOptions || []).map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
   document.getElementById('absensi-modal').classList.remove('hidden');
   document.getElementById('absensi-modal').classList.add('flex');
 }
