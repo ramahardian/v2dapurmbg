@@ -1,6 +1,6 @@
 async function renderKaryawan() {
   const c = document.getElementById('content');
-  c.innerHTML = '<div class="animate-pulse space-y-3 p-4 sm:p-6"><div class="h-8 bg-stone-200 rounded w-1/3"></div><div class="h-4 bg-stone-100 rounded w-full"></div><div class="h-4 bg-stone-100 rounded w-5/6"></div><div class="h-4 bg-stone-100 rounded w-4/5"></div><div class="h-4 bg-stone-100 rounded w-3/4"></div><div class="h-4 bg-stone-100 rounded w-11/12"></div><div class="h-4 bg-stone-100 rounded w-2/3"></div></div>';
+  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
     const r = await fetch('/api/template/karyawan', { credentials: 'include' });
     if (!r.ok) {
