@@ -115,20 +115,7 @@ router.get('/laporan/laba-rugi', async (req, res) => {
   const rows = Object.values(periodMap).sort((a, b) => b.periode.localeCompare(a.periode));
   const totalPendapatan = rows.reduce((s, r) => s + r.pendapatan, 0);
   const totalBiaya = rows.reduce((s, r) => s + r.biaya, 0);
-  // Tambah biaya gaji
-  const [gaji] = await db.query(
-    `SELECT COALESCE(SUM(total_gaji),0) as total FROM payroll WHERE tenant_id=? AND status='Dibayar'`,
-    [req.user.tenant_id]
-  );
-  const totalGaji = Number(gaji[0]?.total || 0);
-  // Tambah biaya pembelian (PO yang Dibayar)
-  const [pembelian] = await db.query(
-    `SELECT COALESCE(SUM(total_nilai),0) as total FROM purchase_order WHERE tenant_id=? AND status='Dibayar'`,
-    [req.user.tenant_id]
-  );
-  const totalPembelian = Number(pembelian[0]?.total || 0);
-  const totalBiayaAll = totalBiaya + totalGaji + totalPembelian;
-  res.json({ rows, totalPendapatan, totalBiayaAll, totalGaji, totalPembelian, labaRugi: totalPendapatan - totalBiayaAll });
+  res.json({ rows, totalPendapatan, totalBiayaAll: totalBiaya, labaRugi: totalPendapatan - totalBiaya });
 });
 
 // 7. HPP per Menu

@@ -13,6 +13,7 @@ async function renderCrud(cfg) {
     </div>
     <div class="flex gap-2">
       ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="border border-emerald-400 text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-md text-sm font-medium">${cfg.sync.label}</button>` : ''}
+      ${cfg.extraButtons ? cfg.extraButtons.map(b => `<button onclick="${b.onclick}" class="${b.cls || 'border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium'}">${b.label}</button>`).join('') : ''}
       <button onclick="exportXlsx()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium">Export XLSX</button>
     </div>
   </div>
@@ -357,4 +358,27 @@ function closeModal(id) {
   
   var m = document.getElementById(id || 'modal');
   if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+}
+
+// Recalculate budget realisasi from actual transactions
+async function recalculateRealisasi() {
+  if (!await showConfirm('Hitung ulang realisasi budget dari transaksi kas bank?', 'Ya, Hitung')) return;
+  try {
+    const r = await api.post('/budget/recalculate-realisasi');
+    showAlert(`Berhasil: ${r.updated} budget diupdate dari ${r.total_periode} periode`, 'success');
+    if (typeof reloadCrud === 'function' && _crudCfg) reloadCrud(_crudCfg);
+  } catch (e) {
+    showAlert('Gagal: ' + e.message, 'error');
+  }
+}
+
+// Backfill journal entries for existing paid PO & Payroll
+async function backfillJournal() {
+  if (!await showConfirm('Buat entry kas_bank untuk PO & Payroll yang sudah Dibayar sebelumnya?', 'Ya, Backfill')) return;
+  try {
+    const r = await api.post('/keuangan/backfill-journal');
+    showAlert(`Berhasil: ${r.created} entry kas_bank dibuat`, 'success');
+  } catch (e) {
+    showAlert('Gagal: ' + e.message, 'error');
+  }
 }

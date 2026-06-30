@@ -217,10 +217,9 @@ async function showLap(tab) {
           return [d.periode, fmtIDR(d.pendapatan), fmtIDR(d.biaya), `<span class="${laba>=0?'text-green-600':'text-red-600'} font-medium mono">${fmtIDR(laba)}</span>`];
         }) };
       window['_export_laba_rugi'] = { data: rows, fields: ['periode','pendapatan','biaya'] };
-      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
+      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
         ${statCard('Total Pendapatan', fmtIDR(r.totalPendapatan), '', 'bg-emerald-50')}
-        ${statCard('Total Biaya', fmtIDR(r.totalBiayaAll), 'termasuk gaji & PO', 'bg-orange-50')}
-        ${statCard('Biaya Gaji', fmtIDR(r.totalGaji), '', 'bg-pink-50')}
+        ${statCard('Total Biaya', fmtIDR(r.totalBiayaAll), 'dari kas bank', 'bg-orange-50')}
         ${statCard('Laba/Rugi', `<span class="${r.labaRugi>=0?'text-green-600':'text-red-600'}">${fmtIDR(r.labaRugi)}</span>`, '', 'bg-blue-50')}
       </div>`;
     } else if (tab === 'hpp') {
