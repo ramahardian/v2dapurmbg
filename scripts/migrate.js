@@ -142,6 +142,50 @@ require('dotenv').config();
     } catch (e) {
       console.log('  (skip migrasi standar_sp)', e.message);
     }
+    // Migrasi kolom gizi sp_referensi_bahan
+    try {
+      const [giziCols] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sp_referensi_bahan' AND COLUMN_NAME = 'energi'");
+      if (!giziCols.length) {
+        await conn.query("ALTER TABLE sp_referensi_bahan ADD COLUMN energi DECIMAL(8,2) DEFAULT NULL AFTER berat_kotor, ADD COLUMN protein DECIMAL(8,2) DEFAULT NULL AFTER energi, ADD COLUMN lemak DECIMAL(8,2) DEFAULT NULL AFTER protein, ADD COLUMN karbohidrat DECIMAL(8,2) DEFAULT NULL AFTER lemak, ADD COLUMN serat DECIMAL(8,2) DEFAULT NULL AFTER karbohidrat");
+        console.log('✓ Migrasi sp_referensi_bahan: tambah kolom gizi (energi, protein, lemak, karbohidrat, serat)');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi gizi sp_referensi_bahan)', e.message);
+    }
+    // Seed sp_referensi_bahan untuk tenant_id = 1 jika masih kosong
+    try {
+      const [[{cnt}]] = await conn.query("SELECT COUNT(*) as cnt FROM sp_referensi_bahan WHERE tenant_id=1");
+      if (cnt === 0) {
+        const seedSql = fs.readFileSync(path.join(__dirname, '..', 'seed_sp_referensi_bahan.sql'), 'utf8');
+        const insertPart = seedSql.split('INSERT IGNORE')[1];
+        if (insertPart) {
+          await conn.query('INSERT IGNORE ' + insertPart);
+          console.log('✓ Seed sp_referensi_bahan: data dimasukkan untuk tenant_id=1');
+        }
+      }
+    } catch (e) {
+      console.log('  (skip seed sp_referensi_bahan)', e.message);
+    }
+    // Copy seed sp_referensi_bahan ke tenant lain yang belum punya data
+    try {
+      const [missingTenants] = await conn.query(
+        "SELECT t.id FROM tenants t LEFT JOIN sp_referensi_bahan s ON s.tenant_id = t.id WHERE s.id IS NULL"
+      );
+      if (missingTenants.length) {
+        const [seedRows] = await conn.query("SELECT nama, kategori, berat_bersih, bdd_persen, berat_kotor FROM sp_referensi_bahan WHERE tenant_id=1");
+        for (const t of missingTenants) {
+          for (const row of seedRows) {
+            await conn.query(
+              "INSERT IGNORE INTO sp_referensi_bahan (tenant_id, nama, kategori, berat_bersih, bdd_persen, berat_kotor) VALUES (?,?,?,?,?,?)",
+              [t.id, row.nama, row.kategori, row.berat_bersih, row.bdd_persen, row.berat_kotor]
+            );
+          }
+          console.log(`  ✓ Seed sp_referensi_bahan untuk tenant id=${t.id}`);
+        }
+      }
+    } catch (e) {
+      console.log('  (skip copy seed sp_referensi_bahan ke tenant lain)', e.message);
+    }
     console.log('✓ Schema berhasil dibuat');
     await conn.end();
 
