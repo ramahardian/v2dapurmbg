@@ -268,4 +268,43 @@ router.get('/menu/:id', async (req, res) => {
   res.json(m);
 });
 
+// Hitung ulang nutrisi semua menu berdasarkan bahan_baku terkini
+router.post('/menu/recalculate-nutrisi', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    const [menus] = await db.query('SELECT id FROM menu WHERE tenant_id=?', [tenantId]);
+    let recalculated = 0;
+    for (const menu of menus) {
+      const [bahan] = await db.query(
+        `SELECT mb.jumlah, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
+         FROM menu_bahan mb
+         JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+         WHERE mb.menu_id=?`,
+        [menu.id]
+      );
+      let gramasi = 0, kalori = 0, protein = 0, karbohidrat = 0, lemak = 0, serat = 0;
+      for (const b of bahan) {
+        const jml = Number(b.jumlah) || 0;
+        gramasi += jml;
+        kalori += jml / 100 * (Number(b.kalori) || 0);
+        protein += jml / 100 * (Number(b.protein) || 0);
+        karbohidrat += jml / 100 * (Number(b.karbohidrat) || 0);
+        lemak += jml / 100 * (Number(b.lemak) || 0);
+        serat += jml / 100 * (Number(b.serat) || 0);
+      }
+      await db.query(
+        `UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?`,
+        [Math.round(gramasi * 10) / 10, Math.round(kalori * 10) / 10, Math.round(protein * 10) / 10,
+         Math.round(karbohidrat * 10) / 10, Math.round(lemak * 10) / 10, Math.round(serat * 10) / 10,
+         menu.id, tenantId]
+      );
+      recalculated++;
+    }
+    res.json({ ok: true, recalculated, total: menus.length });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Gagal recalculate' });
+  }
+});
+
 module.exports = router;

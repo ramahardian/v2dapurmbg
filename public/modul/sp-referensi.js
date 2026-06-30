@@ -2,6 +2,7 @@
 const CRUD_SP_REF = {
   endpoint: '/sp_referensi_bahan',
   title: 'Referensi SP Bahan',
+  sync: { endpoint: '/sp_referensi_bahan/sync-bahan-baku', label: 'Sync ke Bahan Baku', confirm: 'Perbarui nutrisi bahan baku dari data SP referensi?' },
   fields: [
     { k: 'nama', l: 'Nama Bahan (SP)', req: true },
     { k: 'kategori', l: 'Kategori SP', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'] },

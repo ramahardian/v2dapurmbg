@@ -46,12 +46,15 @@ function kategoriBadge(kat) {
 function renderMenuHtml(menus) {
   return `<div class="flex flex-wrap justify-between gap-2 mb-4">
     <button id="add-menu-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah Menu</button>
-    <div class="relative">
-      <input type="text" id="search-menu-input" placeholder="Cari nama menu..." value="${menuState.search}"
-        class="pl-10 pr-4 py-2 border border-stone-200 rounded-md text-sm w-48 focus:outline-none focus:border-[#1e40af]">
-      <svg class="absolute left-3 top-2.5 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-      </svg>
+    <div class="flex gap-2">
+      <button id="recalc-nutrisi-btn" onclick="recalcNutrisiMenu()" class="border border-emerald-400 text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-md text-sm font-medium">Hitung Ulang Nutrisi</button>
+      <div class="relative">
+        <input type="text" id="search-menu-input" placeholder="Cari nama menu..." value="${menuState.search}"
+          class="pl-10 pr-4 py-2 border border-stone-200 rounded-md text-sm w-48 focus:outline-none focus:border-[#1e40af]">
+        <svg class="absolute left-3 top-2.5 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+      </div>
     </div>
   </div>
   <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
@@ -244,6 +247,17 @@ function renderBahanList() {
   }).join('');
 }
 async function deleteMenu(id) { if (!await showConfirm('Hapus menu?')) return; await api.del('/menu/' + id); renderMenu(); }
+
+async function recalcNutrisiMenu() {
+  if (!await showConfirm('Hitung ulang nutrisi semua menu berdasarkan bahan baku terkini?', 'Ya, Hitung')) return;
+  try {
+    var res = await api.post('/menu/recalculate-nutrisi', {});
+    showToast(res.recalculated + ' menu diperbarui dari ' + res.total, 'success');
+    renderMenu();
+  } catch (e) {
+    showAlert(e.message || 'Gagal', 'error');
+  }
+}
 
 function openAIDialog() {
   document.getElementById('modal-title').textContent = '✨ Saran Menu AI';

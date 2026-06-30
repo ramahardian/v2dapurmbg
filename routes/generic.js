@@ -260,6 +260,39 @@ for (const table of Object.keys(TABLES)) {
   
 }
 
+// Sync nutrisi sp_referensi_bahan → bahan_baku
+router.post('/sp_referensi_bahan/sync-bahan-baku', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    const [spRefs] = await db.query('SELECT * FROM sp_referensi_bahan WHERE tenant_id=?', [tenantId]);
+    let updated = 0;
+    for (const ref of spRefs) {
+      const [bahan] = await db.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [tenantId, ref.nama]);
+      if (!bahan.length) continue;
+      const updates = {};
+      if (ref.kategori != null) updates.kategori_sp = ref.kategori;
+      if (ref.berat_bersih != null) updates.berat_1_sp = ref.berat_bersih;
+      if (ref.bdd_persen != null) updates.persen_bdd = Math.round(ref.bdd_persen * 100);
+      if (ref.energi != null) updates.kalori = ref.energi;
+      if (ref.protein != null) updates.protein = ref.protein;
+      if (ref.karbohidrat != null) updates.karbohidrat = ref.karbohidrat;
+      if (ref.lemak != null) updates.lemak = ref.lemak;
+      if (ref.serat != null) updates.serat = ref.serat;
+      if (Object.keys(updates).length) {
+        const sets = Object.keys(updates).map(k => `${k}=?`).join(',');
+        const vals = Object.values(updates);
+        vals.push(bahan[0].id, tenantId);
+        await db.query(`UPDATE bahan_baku ${sets} WHERE id=? AND tenant_id=?`, vals);
+        updated++;
+      }
+    }
+    res.json({ ok: true, updated, total: spRefs.length });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Gagal sync' });
+  }
+});
+
 // Endpoint: total penerima manfaat per kategori
 router.get('/penerima_manfaat/total', async (req, res) => {
   const { kategori } = req.query;
