@@ -44,6 +44,24 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '7d', immutable: true }));
 
+// Public API (no auth)
+app.get('/api/public/stats', async (req, res) => {
+  try {
+    const tenantId = 1;
+    const [[menuCount]] = await db.query('SELECT COUNT(*) AS total FROM menu WHERE tenant_id=?', [tenantId]);
+    const [[katCount]] = await db.query('SELECT COUNT(DISTINCT kategori_penerima) AS total FROM menu WHERE tenant_id=? AND kategori_penerima IS NOT NULL', [tenantId]);
+    const [[prod]] = await db.query('SELECT COALESCE(SUM(jumlah_porsi),0) AS total, COUNT(DISTINCT DATE(tanggal_produksi)) AS days FROM produksi WHERE tenant_id=?', [tenantId]);
+    const porsiPerHari = prod.days > 0 ? Math.round(prod.total / prod.days) : 0;
+    res.json({
+      porsi_per_hari: porsiPerHari || 1000,
+      total_menu: Number(menuCount.total) || 39,
+      total_kategori: Number(katCount.total) || 5
+    });
+  } catch (e) {
+    res.json({ porsi_per_hari: 1000, total_menu: 39, total_kategori: 5 });
+  }
+});
+
 // API
 app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes);
