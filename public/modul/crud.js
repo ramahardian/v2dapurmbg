@@ -54,6 +54,7 @@ async function reloadCrud(cfg) {
       let cell = v == null || v === '' ? '-' : v;
       if (f?.fmt === 'idr') cell = `<span class="mono">${fmtIDR(v)}</span>`;
       else if (f?.fmt === 'num') cell = `<span class="mono">${fmtNum(v)}</span>`;
+      else if (f?.fmt === 'pct') cell = `<span class="mono">${Math.round(v * 100)}</span>%`;
       else if (f?.type === 'date') cell = fmtDate(v);
       return `<td class="px-4 py-3 text-sm">${cell}</td>`;
     }).join('')}
@@ -131,7 +132,8 @@ function renderField(f, editing) {
     input = `<textarea id="f-${f.k}" rows="2" ${ro ? 'readonly' : ''} class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md text-sm ${roCls}">${val || ''}</textarea>`;
   } else {
     const itype = f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text';
-    const ival = val != null ? (f.type === 'date' ? String(val).slice(0,10) : val) : '';
+    let ival = val != null ? (f.type === 'date' ? String(val).slice(0,10) : val) : '';
+    if (f.fmt === 'pct' && val != null) ival = Math.round(val * 100);
     input = `<input id="f-${f.k}" type="${itype}" value="${ival}" ${ro ? 'readonly' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm ${f.type === 'number' ? 'mono' : ''} ${roCls}" />`;
   }
   return `<div class="${f.type === 'hidden' ? '' : 'mb-3'}"><label class="text-sm text-stone-700">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>${input}</div>`;
@@ -192,7 +194,12 @@ function openForm(cfg, editing) {
     });
     if (!validateForm(rules)) return;
     const payload = {};
-    cfg.fields.forEach(f => { const v = document.getElementById('f-' + f.k).value; payload[f.k] = f.type === 'number' ? Number(v) || 0 : v; });
+    cfg.fields.forEach(f => {
+      const v = document.getElementById('f-' + f.k).value;
+      let val = f.type === 'number' ? Number(v) || 0 : v;
+      if (f.fmt === 'pct') val = val / 100;
+      payload[f.k] = val;
+    });
     if (editing) await api.put(cfg.endpoint + '/' + editing.id, payload);
     else await api.post(cfg.endpoint, payload);
     closeModal(); reloadCrud(cfg);

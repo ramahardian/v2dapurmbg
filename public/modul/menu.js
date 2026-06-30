@@ -159,6 +159,7 @@ function openMenuForm(editing) {
     </div>`;
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, jumlah: b.jumlah }));
   renderBahanList();
+  hitungNutrisi();
   document.getElementById('modal-save').onclick = async () => {
     if (!validateForm([{ id: 'm-nama', label: 'Nama Menu' }])) return;
     const payload = {
@@ -179,8 +180,27 @@ function openMenuForm(editing) {
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
 }
-function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '' }); renderBahanList(); }
-function removeBahanRow(i) { window._menuBahan.splice(i, 1); renderBahanList(); }
+function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '' }); renderBahanList(); hitungNutrisi(); }
+function removeBahanRow(i) { window._menuBahan.splice(i, 1); renderBahanList(); hitungNutrisi(); }
+function hitungNutrisi() {
+  var totalGramasi = 0, totalKalori = 0, totalProtein = 0, totalKarbo = 0, totalLemak = 0;
+  (window._menuBahan || []).forEach(function(b) {
+    if (!b.bahan_baku_id || !b.jumlah) return;
+    var bb = (window._bahanBaku || []).find(function(x) { return x.id == b.bahan_baku_id; });
+    if (!bb) return;
+    var jml = +b.jumlah || 0;
+    totalGramasi += jml;
+    totalKalori += jml / 100 * (+bb.kalori || 0);
+    totalProtein += jml / 100 * (+bb.protein || 0);
+    totalKarbo += jml / 100 * (+bb.karbohidrat || 0);
+    totalLemak += jml / 100 * (+bb.lemak || 0);
+  });
+  ['gramasi_total','kalori','protein','karbohidrat','lemak'].forEach(function(k) {
+    var el = document.getElementById('m-' + k);
+    if (el) el.value = Math.round(({gramasi_total: totalGramasi, kalori: totalKalori, protein: totalProtein, karbohidrat: totalKarbo, lemak: totalLemak}[k]) * 100) / 100;
+  });
+}
+
 function updateBahan(i, k, v) {
   window._menuBahan[i][k] = k === 'jumlah' ? +v : v;
   if (k === 'bahan_baku_id') {
@@ -194,11 +214,11 @@ function updateBahan(i, k, v) {
       var katPenerima = document.getElementById('m-kategori')?.value;
       if (katPenerima) {
         window._menuBahan[i].jumlah = +bb.berat_1_sp;
-        // We'll set a placeholder; the actual SP value will be calculated on the server
       }
     }
     renderBahanList();
   }
+  hitungNutrisi();
 }
 function renderBahanList() {
   var mKat = document.getElementById('m-kategori')?.value || '';
