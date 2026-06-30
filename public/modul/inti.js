@@ -37,7 +37,7 @@ function renderNav() {
 
   nav.innerHTML = NAV_GROUPS.map(g => {
     const visibleItems = g.items.filter(key => {
-      if (key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'panduan-ahli-gizi') return isAdminOrAhliGizi;
+      if (key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'sp-referensi' || key === 'panduan-ahli-gizi') return isAdminOrAhliGizi;
       if (key === 'gudang') return isAdminOrGudang;
       if (key === 'budgeting' || key === 'kas-bank') return isAdminOrKeuangan;
       if (key === 'laporan') return isAdminOrKeuangan || isAdminOrAhliGizi;
@@ -78,7 +78,7 @@ function route() {
   const isAdminOrKeuanganOrGudang = userRole === 'admin' || userRole === 'keuangan' || userRole === 'gudang';
   const isAdminOrProduksi = userRole === 'admin' || userRole === 'produksi' || userRole === 'gudang' || userRole === 'keuangan';
   
-  if ((key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'panduan-ahli-gizi') && !isAdminOrAhliGizi) {
+  if ((key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'sp-referensi' || key === 'panduan-ahli-gizi') && !isAdminOrAhliGizi) {
     showAlert('Akses ditolak', 'error'); navigate('dashboard'); return;
   }
   if ((key === 'budgeting' || key === 'kas-bank') && !isAdminOrKeuangan) {

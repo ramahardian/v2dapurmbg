@@ -19,6 +19,7 @@ const FILES = [
   'akun.js',
   'kelola-user.js',
   'pembelian.js',
+  'sp-referensi.js',
   'panduan.js',
   'definisi.js',
   'inti.js',

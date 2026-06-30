@@ -94,6 +94,7 @@ const MODULES = {
     ], cols: ['name', 'description'] }
   },
   'standar-sp': { title: 'Standar SP', sub: 'Standar Satuan Penukar per jenjang', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/></svg>', render: renderStandarSp },
+  'sp-referensi': { title: 'Referensi SP Bahan', sub: 'Master data SP per bahan pangan', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 2v4h4"/><path d="M21 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="12" y1="9" x2="12" y2="15"/></svg>', crud: CRUD_SP_REF },
 };
 
 const NAV_GROUPS = [
@@ -102,6 +103,6 @@ const NAV_GROUPS = [
   { label: 'Pembelian', items: ['supplier', 'pembelian', 'penerimaan'] },
   { label: 'Akuntansi', items: ['budgeting', 'kas-bank', 'laporan'] },
   { label: 'SDM', items: ['karyawan', 'absensi', 'payroll', 'shift', 'divisi'] },
-  { label: 'Ahli Gizi', items: ['menu', 'hpp', 'siklus', 'standar-sp', 'panduan-ahli-gizi'] },
+  { label: 'Ahli Gizi', items: ['menu', 'hpp', 'siklus', 'standar-sp', 'sp-referensi', 'panduan-ahli-gizi'] },
   { label: 'Pengaturan', items: ['kelola-user'] },
 ];
