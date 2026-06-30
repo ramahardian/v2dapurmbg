@@ -53,7 +53,7 @@ async function reloadCrud(cfg) {
       const v = r[k];
       let cell = v == null || v === '' ? '-' : v;
       if (f?.fmt === 'idr') cell = `<span class="mono">${fmtIDR(v)}</span>`;
-      else if (f?.fmt === 'num') cell = `<span class="mono">${fmtNum(v)}</span>`;
+      else if (f?.fmt === 'num') cell = `<span class="mono">${f.decimals != null ? Number(v).toFixed(f.decimals) : fmtNum(v)}</span>`;
       else if (f?.fmt === 'pct') cell = `<span class="mono">${Math.round(v * 100)}</span>%`;
       else if (f?.type === 'date') cell = fmtDate(v);
       return `<td class="px-4 py-3 text-sm">${cell}</td>`;
@@ -134,6 +134,7 @@ function renderField(f, editing) {
     const itype = f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text';
     let ival = val != null ? (f.type === 'date' ? String(val).slice(0,10) : val) : '';
     if (f.fmt === 'pct' && val != null) ival = Math.round(val * 100);
+    if (f.fmt === 'num' && f.decimals != null && val != null) ival = Number(val).toFixed(f.decimals);
     input = `<input id="f-${f.k}" type="${itype}" value="${ival}" ${ro ? 'readonly' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm ${f.type === 'number' ? 'mono' : ''} ${roCls}" />`;
   }
   return `<div class="${f.type === 'hidden' ? '' : 'mb-3'}"><label class="text-sm text-stone-700">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>${input}</div>`;
@@ -186,6 +187,27 @@ function openForm(cfg, editing) {
         }
       };
     });
+  });
+
+  // Auto-calc fields (e.g. berat_kotor = berat_bersih / bdd_persen)
+  cfg.fields.filter(function(f) { return f.calc; }).forEach(function(f) {
+    var target = document.getElementById('f-' + f.k);
+    if (!target) return;
+    var srcDefs = (f.calc.from || []).map(function(src) {
+      var el = document.getElementById('f-' + src);
+      var def = cfg.fields.find(function(x) { return x.k === src; });
+      return { el: el, isPct: def && def.fmt === 'pct' };
+    }).filter(function(s) { return s.el; });
+    if (srcDefs.length < 2) return;
+    var dec = f.decimals != null ? f.decimals : 2;
+    function updateCalc() {
+      var a = parseFloat(srcDefs[0].el.value) || 0;
+      var b = parseFloat(srcDefs[1].el.value) || 0;
+      if (srcDefs[1].isPct) b = b / 100;
+      target.value = b !== 0 ? (a / b).toFixed(dec) : '0';
+    }
+    srcDefs.forEach(function(s) { s.el.addEventListener('input', updateCalc); });
+    updateCalc();
   });
 
   document.getElementById('modal-save').onclick = async () => {
