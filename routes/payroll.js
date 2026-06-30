@@ -48,6 +48,24 @@ router.put('/payroll/:id', requireRole('admin', 'keuangan'), async (req, res) =>
   vals.push(req.params.id, req.user.tenant_id);
   await db.query(`UPDATE payroll SET ${sets.join(',')} WHERE id=? AND tenant_id=?`, vals);
   const [rows] = await db.query(`SELECT p.*, k.nama as nama_karyawan FROM payroll p JOIN karyawan k ON k.id=p.karyawan_id WHERE p.id=?`, [req.params.id]);
+
+  // Auto-journal: Payroll Dibayar → kas_bank
+  if (status === 'Dibayar' && rows.length) {
+    const p = rows[0];
+    const [existing] = await db.query(
+      'SELECT id FROM kas_bank WHERE tenant_id=? AND no_transaksi=? AND tipe="keluar"',
+      [req.user.tenant_id, `PAY/${p.id}`]
+    );
+    if (!existing.length) {
+      await db.query(
+        `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, deskripsi, jumlah)
+         VALUES (?, CURDATE(), ?, 'keluar', 'Gaji', 'Kas', ?, ?)`,
+        [req.user.tenant_id, `PAY/${p.id}`,
+         `Pembayaran Gaji - ${p.nama_karyawan} (${p.bulan}/${p.tahun})`, p.total_gaji]
+      );
+    }
+  }
+
   res.json(rows[0]);
 });
 

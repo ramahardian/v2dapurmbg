@@ -244,6 +244,24 @@ for (const table of Object.keys(TABLES)) {
       
       // Ambil data terbaru setelah di-update
       const [rows] = await db.query(`SELECT * FROM ${table} WHERE id=?`, [req.params.id]);
+
+      // Auto-journal: PO Dibayar → kas_bank
+      if (table === 'purchase_order' && req.body.status === 'Dibayar' && rows.length) {
+        const po = rows[0];
+        const [existing] = await db.query(
+          'SELECT id FROM kas_bank WHERE tenant_id=? AND no_transaksi=? AND tipe="keluar"',
+          [req.user.tenant_id, po.no_po]
+        );
+        if (!existing.length) {
+          await db.query(
+            `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, deskripsi, jumlah)
+             VALUES (?, ?, ?, 'keluar', 'Pembayaran Supplier', 'Kas', ?, ?)`,
+            [req.user.tenant_id, po.tanggal || new Date(), po.no_po,
+             `Pembayaran PO#${po.no_po} - ${po.supplier_nama || ''}`, po.total_nilai]
+          );
+        }
+      }
+
       res.json(rows[0]);
     } catch (e) { 
       console.error(e); 
@@ -301,6 +319,110 @@ router.get('/penerima_manfaat/total', async (req, res) => {
   if (kategori) { sql += ' AND (nama_kelompok LIKE ? OR lokasi LIKE ?)'; const s = `%${kategori}%`; params.push(s, s); }
   const [[row]] = await db.query(sql, params);
   res.json({ total: Number(row.total) });
+});
+
+// 6. Budget Recalculation - update realisasi from actual transactions
+router.post('/budget/recalculate-realisasi', requireRole('admin', 'keuangan'), async (req, res) => {
+  try {
+    const t = req.user.tenant_id;
+    // Ambil semua budget entries per tenant
+    const [budgets] = await db.query('SELECT * FROM budget WHERE tenant_id=? ORDER BY periode', [t]);
+    // Hitung total kas_bank keluar per periode
+    const [kasKeluar] = await db.query(
+      `SELECT DATE_FORMAT(tanggal,'%Y-%m') as periode, SUM(jumlah) as total
+       FROM kas_bank WHERE tenant_id=? AND tipe='keluar' GROUP BY periode`,
+      [t]
+    );
+    const kasMap = {};
+    for (const k of kasKeluar) kasMap[k.periode] = Number(k.total);
+
+    // Group budget by periode
+    const perPeriode = {};
+    for (const b of budgets) {
+      if (!perPeriode[b.periode]) perPeriode[b.periode] = [];
+      perPeriode[b.periode].push(b);
+    }
+
+    let updated = 0;
+    for (const [periode, entries] of Object.entries(perPeriode)) {
+      const totalKas = kasMap[periode] || 0;
+      if (totalKas <= 0) continue;
+      const totalBudget = entries.reduce((s, e) => s + Number(e.total_budget), 0);
+      if (totalBudget <= 0) {
+        // Equal distribution if no budget set
+        const share = totalKas / entries.length;
+        for (const e of entries) {
+          await db.query('UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?', [share, e.id, t]);
+          updated++;
+        }
+      } else {
+        for (const e of entries) {
+          const share = totalKas * (Number(e.total_budget) / totalBudget);
+          await db.query('UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?', [share, e.id, t]);
+          updated++;
+        }
+      }
+    }
+    res.json({ ok: true, updated, total_periode: Object.keys(perPeriode).length });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Gagal recalculate realisasi' });
+  }
+});
+
+// 7. Backfill: buat kas_bank entries untuk PO & Payroll yang sudah Dibayar sebelumnya
+router.post('/keuangan/backfill-journal', requireRole('admin', 'keuangan'), async (req, res) => {
+  try {
+    const t = req.user.tenant_id;
+    let created = 0;
+
+    // Backfill PO yang Dibayar
+    const [pos] = await db.query(
+      'SELECT * FROM purchase_order WHERE tenant_id=? AND status="Dibayar"', [t]
+    );
+    for (const po of pos) {
+      const [existing] = await db.query(
+        'SELECT id FROM kas_bank WHERE tenant_id=? AND no_transaksi=? AND tipe="keluar"',
+        [t, po.no_po]
+      );
+      if (!existing.length) {
+        await db.query(
+          `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, deskripsi, jumlah)
+           VALUES (?, ?, ?, 'keluar', 'Pembayaran Supplier', 'Kas', ?, ?)`,
+          [t, po.tanggal || new Date(), po.no_po,
+           `Pembayaran PO#${po.no_po} - ${po.supplier_nama || ''}`, po.total_nilai]
+        );
+        created++;
+      }
+    }
+
+    // Backfill Payroll yang Dibayar
+    const [payrolls] = await db.query(
+      `SELECT p.*, k.nama as nama_karyawan FROM payroll p
+       JOIN karyawan k ON k.id=p.karyawan_id
+       WHERE p.tenant_id=? AND p.status="Dibayar"`, [t]
+    );
+    for (const p of payrolls) {
+      const [existing] = await db.query(
+        'SELECT id FROM kas_bank WHERE tenant_id=? AND no_transaksi=? AND tipe="keluar"',
+        [t, `PAY/${p.id}`]
+      );
+      if (!existing.length) {
+        await db.query(
+          `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, deskripsi, jumlah)
+           VALUES (?, CURDATE(), ?, 'keluar', 'Gaji', 'Kas', ?, ?)`,
+          [t, `PAY/${p.id}`,
+           `Pembayaran Gaji - ${p.nama_karyawan} (${p.bulan}/${p.tahun})`, p.total_gaji]
+        );
+        created++;
+      }
+    }
+
+    res.json({ ok: true, created });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Gagal backfill' });
+  }
 });
 
 module.exports = router;

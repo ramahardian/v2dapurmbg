@@ -64,7 +64,11 @@ const MODULES = {
       { k: 'biaya_operasional', l: 'Biaya Operasional (IDR)', type: 'number', fmt: 'idr' },
       { k: 'total_budget', l: 'Total Budget (IDR)', type: 'number', fmt: 'idr', req: true },
       { k: 'realisasi', l: 'Realisasi (IDR)', type: 'number', fmt: 'idr' },
-    ], cols: ['periode','kategori_penerima','jumlah_penerima','harga_per_porsi','total_budget','realisasi'] }
+    ], cols: ['periode','kategori_penerima','jumlah_penerima','harga_per_porsi','total_budget','realisasi'],
+    extraButtons: [
+      { label: 'Hitung Ulang Realisasi', onclick: 'recalculateRealisasi()', cls: 'border border-blue-400 text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-md text-sm font-medium' },
+      { label: 'Backfill Jurnal', onclick: 'backfillJournal()', cls: 'border border-amber-400 text-amber-700 hover:bg-amber-50 px-4 py-2 rounded-md text-sm font-medium' },
+    ] }
   },
   'kas-bank': { title: 'Kas & Bank', sub: 'Penerimaan dana, pembayaran supplier & biaya operasional', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
     crud: { endpoint: '/kas_bank', fields: [
