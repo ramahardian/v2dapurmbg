@@ -17,7 +17,7 @@ async function renderLaporan() {
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
   }
 }
-const LAP_TABS = ['siklus', 'hpp', 'persediaan', 'produksi', 'distribusi', 'rab'];
+const LAP_TABS = ['siklus', 'hpp', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan'];
 const LAP_PAGE_SIZE = 10;
 let lapState = { tab: 'siklus', page: 1 };
 
@@ -31,6 +31,7 @@ async function showLap(tab) {
     produksi: { active: 'bg-white text-lime-600 shadow-sm', inactive: 'bg-lime-100 text-lime-700 hover:bg-lime-200' },
     hpp: { active: 'bg-white text-gray-600 shadow-sm', inactive: 'bg-gray-100 text-gray-700 hover:bg-gray-200' },
     rab: { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
+    'rab-bulanan': { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
   };
   LAP_TABS.forEach(t => {
     const el = document.getElementById('lt-'+t);
@@ -89,7 +90,31 @@ async function showLap(tab) {
         ${statCard('Biaya Operasional', fmtIDR(totalBiayaOp), biayaCount + ' item', 'bg-stone-50')}
         ${statCard('Total Penerima', fmtNum(totalPenerima), 'manfaat', 'bg-violet-50')}
       </div>`;
-    } else if (tab === 'siklus') {
+    } else if (tab === 'rab-bulanan') {
+      const r = await api.get('/laporan/rab-bulanan');
+      const rows = r.rows || [];
+      window._lapData = { tab, rows,
+        headers: ['Periode','Item','Penerima','Rata Harga/Porsi','Biaya Operasional','Total Budget','Realisasi','Selisih','Capaian'],
+        fields: ['periode','item_count','total_penerima','rata_harga_per_porsi','total_biaya_operasional','total_budget','total_realisasi'],
+        fmt: rows.map(b => {
+          const budget = Number(b.total_budget);
+          const realisasi = Number(b.total_realisasi);
+          const selisih = budget - realisasi;
+          const capaian = budget > 0 ? (realisasi / budget * 100).toFixed(1) + '%' : '-';
+          return [b.periode, fmtNum(b.item_count), fmtNum(b.total_penerima), fmtIDR(b.rata_harga_per_porsi),
+            fmtIDR(b.total_biaya_operasional), fmtIDR(budget), fmtIDR(realisasi), fmtIDR(selisih), capaian];
+        })
+      };
+      window['_export_rab_bulanan'] = { data: rows, fields: ['periode','item_count','total_penerima','rata_harga_per_porsi','total_biaya_operasional','total_budget','total_realisasi'] };
+      const s = r.stats;
+      const selisihTotal = s.total_budget - s.total_realisasi;
+      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
+        ${statCard('Total Periode', fmtNum(s.total_periode), 'bulan anggaran', 'bg-emerald-50')}
+        ${statCard('Total Budget', fmtIDR(s.total_budget), '', 'bg-blue-50')}
+        ${statCard('Total Realisasi', fmtIDR(s.total_realisasi), s.total_periode > 0 ? (s.total_realisasi/s.total_budget*100).toFixed(1)+'% terserap' : '', 'bg-orange-50')}
+        ${statCard('Selisih Total', fmtIDR(selisihTotal), selisihTotal >= 0 ? 'surplus' : 'defisit', selisihTotal >= 0 ? 'bg-emerald-50' : 'bg-red-50')}
+        ${statCard('Rata-rata Capaian', s.rata_capaian.toFixed(1)+'%', 'per periode', 'bg-violet-50')}
+      </div>`;
       const [lapRes, bahanRes] = await Promise.all([
         api.get('/siklus/laporan'),
         api.get('/siklus/laporan/bahan'),
