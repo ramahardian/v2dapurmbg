@@ -151,4 +151,35 @@ router.get('/laporan/hpp', async (req, res) => {
   res.json({ rows, stats: { total_menu: rows.length, rata_hpp: rataHPP, total_biaya: rows.reduce((s, r) => s + Number(r.total_biaya_bahan), 0) } });
 });
 
+// 8. RAB Bulanan (agregat per periode)
+router.get('/laporan/rab-bulanan', async (req, res) => {
+  const [rows] = await db.query(
+    `SELECT periode,
+            COUNT(*) as item_count,
+            SUM(jumlah_penerima) as total_penerima,
+            AVG(harga_per_porsi) as rata_harga_per_porsi,
+            SUM(biaya_operasional) as total_biaya_operasional,
+            SUM(total_budget) as total_budget,
+            SUM(realisasi) as total_realisasi
+     FROM budget
+     WHERE tenant_id=?
+     GROUP BY periode
+     ORDER BY periode DESC`,
+    [req.user.tenant_id]
+  );
+  const stats = {
+    total_periode: rows.length,
+    total_budget: rows.reduce((s, r) => s + Number(r.total_budget), 0),
+    total_realisasi: rows.reduce((s, r) => s + Number(r.total_realisasi), 0),
+    total_penerima: rows.reduce((s, r) => s + Number(r.total_penerima), 0),
+    rata_capaian: rows.length > 0
+      ? rows.reduce((s, r) => {
+          const b = Number(r.total_budget);
+          return s + (b > 0 ? Number(r.total_realisasi) / b * 100 : 0);
+        }, 0) / rows.length
+      : 0,
+  };
+  res.json({ rows, stats });
+});
+
 module.exports = router;
