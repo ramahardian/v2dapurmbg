@@ -1,0 +1,18 @@
+// ===== SP Referensi Bahan =====
+const CRUD_SP_REF = {
+  endpoint: '/sp_referensi_bahan',
+  title: 'Referensi SP Bahan',
+  fields: [
+    { k: 'nama', l: 'Nama Bahan (SP)', req: true },
+    { k: 'kategori', l: 'Kategori SP', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'] },
+    { k: 'berat_bersih', l: 'Berat Bersih (gram)', type: 'number', fmt: 'num' },
+    { k: 'bdd_persen', l: 'BDD (0–1)', type: 'number', fmt: 'num', step: '0.01' },
+    { k: 'berat_kotor', l: 'Berat Kotor (gram)', type: 'number', fmt: 'num' },
+    { k: 'energi', l: 'Energi (kkal)', type: 'number', fmt: 'num' },
+    { k: 'protein', l: 'Protein (g)', type: 'number', fmt: 'num' },
+    { k: 'lemak', l: 'Lemak (g)', type: 'number', fmt: 'num' },
+    { k: 'karbohidrat', l: 'Karbohidrat (g)', type: 'number', fmt: 'num' },
+    { k: 'serat', l: 'Serat (g)', type: 'number', fmt: 'num' },
+  ],
+  cols: ['nama', 'kategori', 'berat_bersih', 'bdd_persen', 'berat_kotor', 'energi', 'protein', 'lemak', 'karbohidrat', 'serat'],
+};

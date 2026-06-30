@@ -47,7 +47,7 @@ function openUserForm(id) {
   document.getElementById('user-nama').value = '';
   document.getElementById('user-email').value = '';
   document.getElementById('user-password').value = '';
-  document.getElementById('user-role').value = 'produksi';
+  document.getElementById('user-role-select').value = 'produksi';
   var passLabel = document.getElementById('pass-label');
   if (id) {
     passLabel.textContent = '(kosongkan jika tidak diganti)';
@@ -57,7 +57,7 @@ function openUserForm(id) {
       if (!u) return;
       document.getElementById('user-nama').value = u.nama;
       document.getElementById('user-email').value = u.email;
-      document.getElementById('user-role').value = u.role;
+      document.getElementById('user-role-select').value = u.role;
     });
   } else {
     passLabel.textContent = '*';
@@ -76,7 +76,7 @@ async function simpanUser() {
   var nama = document.getElementById('user-nama').value.trim();
   var email = document.getElementById('user-email').value.trim();
   var password = document.getElementById('user-password').value;
-  var role = document.getElementById('user-role').value;
+  var role = document.getElementById('user-role-select').value;
   if (!nama) return showAlert('Nama wajib diisi', 'warning');
   if (!email) return showAlert('Email wajib diisi', 'warning');
   if (!id && (!password || password.length < 6)) return showAlert('Password minimal 6 karakter', 'warning');

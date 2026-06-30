@@ -25,6 +25,7 @@ const TABLES = {
   budget: ['periode', 'kategori_penerima', 'jumlah_penerima', 'harga_per_porsi', 'biaya_operasional', 'total_budget', 'realisasi', 'catatan'],
   kas_bank: ['tanggal', 'no_transaksi', 'tipe', 'kategori', 'akun', 'deskripsi', 'jumlah'],
   divisi: ['nama'],
+  sp_referensi_bahan: ['nama', 'kategori', 'berat_bersih', 'bdd_persen', 'berat_kotor', 'energi', 'protein', 'lemak', 'karbohidrat', 'serat'],
 };
 
 /**
@@ -42,6 +43,7 @@ const REQUIRED_FIELDS = {
   budget: ['periode'],
   kas_bank: ['tanggal', 'tipe', 'jumlah'],
   divisi: ['nama'],
+  sp_referensi_bahan: ['nama', 'berat_bersih'],
 };
 
 /**
@@ -52,6 +54,7 @@ const UNIQUE_FIELDS = {
   penerima_manfaat: { nama_kelompok: 'Nama Kelompok' },
   bahan_baku: { nama: 'Nama Bahan' },
   supplier: { nama: 'Nama Supplier' },
+  sp_referensi_bahan: { nama: 'Nama Bahan' },
 };
 
 /**
@@ -67,6 +70,7 @@ const SEARCHABLE_FIELDS = {
   distribusi: ['titik_distribusi', 'kategori_penerima', 'status', 'kurir'],
   budget: ['periode', 'kategori_penerima'],
   kas_bank: ['tipe', 'kategori', 'akun', 'deskripsi', 'no_transaksi'],
+  sp_referensi_bahan: ['nama', 'kategori'],
 };
 
 /**
@@ -99,7 +103,7 @@ function buildUpdate(table, body) {
   const vals = [];
   
   for (const k of allowed) {
-    if (body[k] !== undefined) { 
+    if (body[k] !== undefined && body[k] !== '') { 
       sets.push(`${k}=?`); 
       vals.push(body[k]); 
     }
@@ -126,7 +130,8 @@ for (const table of Object.keys(TABLES)) {
     stok_masuk: ['admin', 'keuangan', 'gudang'],
     stok_keluar: ['admin', 'keuangan', 'gudang'],
     produksi: ['admin', 'produksi', 'gudang', 'keuangan', 'ahli_gizi'],
-    distribusi: ['admin', 'produksi', 'gudang', 'keuangan', 'ahli_gizi']
+    distribusi: ['admin', 'produksi', 'gudang', 'keuangan', 'ahli_gizi'],
+    sp_referensi_bahan: ['admin', 'ahli_gizi']
   };
   
   const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (req, res, next) => next();

@@ -1,20 +1,51 @@
 // ===== Generic CRUD =====
 let _crudCfg = null;
+let _crudState = { page: 1, limit: 25, search: '', total: 0, totalPages: 1 };
 
 async function renderCrud(cfg) {
   _crudCfg = cfg;
+  _crudState = { page: 1, limit: 25, search: '', total: 0, totalPages: 1 };
   const c = document.getElementById('content');
-  c.innerHTML = `<div class="flex flex-wrap justify-between mb-4"><button id="add-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah</button><button onclick="exportXlsx()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium">Export XLSX</button></div>
-    <div id="table-wrap" class="bg-white border border-stone-200 rounded-lg overflow-hidden"></div>`;
+  c.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+    <div class="flex items-center gap-2">
+      <input id="crud-search" placeholder="Cari..." class="h-10 px-3 border border-stone-200 rounded-md text-sm w-48">
+      <button id="add-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah</button>
+    </div>
+    <button onclick="exportXlsx()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium">Export XLSX</button>
+  </div>
+  <div id="table-wrap" class="bg-white border border-stone-200 rounded-lg overflow-hidden"></div>
+  <div id="crud-pagination" class="flex items-center justify-between mt-3"></div>`;
   document.getElementById('add-btn').onclick = () => openForm(cfg, null);
+
+  const searchInput = document.getElementById('crud-search');
+  let debounceTimer;
+  searchInput.oninput = function() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      _crudState.search = this.value;
+      _crudState.page = 1;
+      reloadCrud(cfg);
+    }, 300);
+  };
+
   await reloadCrud(cfg);
 }
 
 async function reloadCrud(cfg) {
-  const rows = await api.get(cfg.endpoint);
+  const params = new URLSearchParams({ page: _crudState.page, limit: _crudState.limit, search: _crudState.search });
+  const res = await api.get(cfg.endpoint + '?' + params);
+  const rows = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+  const pagination = res.pagination || { total: rows.length, totalPages: 1, page: 1 };
+  _crudState = { ..._crudState, total: pagination.total, totalPages: pagination.totalPages, page: pagination.page };
   window._crudRows = rows;
+
   const w = document.getElementById('table-wrap');
-  if (!rows.length) { w.innerHTML = '<div class="p-12 text-center text-stone-400"><svg class="w-16 h-16 mx-auto mb-4 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div>Belum ada data</div><div class="text-sm mt-1 text-stone-400">Klik "Tambah" untuk mulai.</div></div>'; return; }
+  if (!rows.length) {
+    w.innerHTML = '<div class="p-12 text-center text-stone-400"><svg class="w-16 h-16 mx-auto mb-4 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div>Belum ada data</div><div class="text-sm mt-1 text-stone-400">Klik "Tambah" untuk mulai.</div></div>';
+    document.getElementById('crud-pagination').innerHTML = '';
+    return;
+  }
+
   const headers = cfg.cols.map(k => `<th class="text-left px-4 py-3 text-xs font-semibold text-stone-600 uppercase">${cfg.fields.find(f => f.k === k)?.l || k}</th>`).join('');
   const body = rows.map(r => `<tr class="border-t border-stone-100">
     ${cfg.cols.map(k => {
@@ -31,6 +62,22 @@ async function reloadCrud(cfg) {
       <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "\\'")})' class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
     </td></tr>`).join('');
   w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead class="bg-stone-50"><tr>${headers}<th class="px-4 py-3 text-right text-xs font-semibold text-stone-600 uppercase">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
+
+  renderCrudPagination();
+}
+
+function renderCrudPagination() {
+  const wrap = document.getElementById('crud-pagination');
+  const { page, totalPages, total } = _crudState;
+  if (totalPages <= 1) { wrap.innerHTML = total > 0 ? `<span class="text-sm text-stone-400">${total} data</span>` : ''; return; }
+  const prev = page > 1 ? `<button onclick="crudGoToPage(${page - 1})" class="px-2 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Prev</button>` : '';
+  const next = page < totalPages ? `<button onclick="crudGoToPage(${page + 1})" class="px-2 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Next</button>` : '';
+  wrap.innerHTML = `<span class="text-sm text-stone-500">${total} data — Hal ${page} dari ${totalPages}</span><div class="flex gap-2">${prev}${next}</div>`;
+}
+
+function crudGoToPage(p) {
+  _crudState.page = p;
+  reloadCrud(_crudCfg);
 }
 
 function editRow(cfg, row) { openForm(cfg, row); }
