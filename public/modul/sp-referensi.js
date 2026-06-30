@@ -6,7 +6,7 @@ const CRUD_SP_REF = {
     { k: 'nama', l: 'Nama Bahan (SP)', req: true },
     { k: 'kategori', l: 'Kategori SP', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'] },
     { k: 'berat_bersih', l: 'Berat Bersih (gram)', type: 'number', fmt: 'num' },
-    { k: 'bdd_persen', l: 'BDD (0–1)', type: 'number', fmt: 'num', step: '0.01' },
+    { k: 'bdd_persen', l: 'BDD (%)', type: 'number', fmt: 'pct', step: '1' },
     { k: 'berat_kotor', l: 'Berat Kotor (gram)', type: 'number', fmt: 'num' },
     { k: 'energi', l: 'Energi (kkal)', type: 'number', fmt: 'num' },
     { k: 'protein', l: 'Protein (g)', type: 'number', fmt: 'num' },
