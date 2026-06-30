@@ -11,7 +11,10 @@ async function renderCrud(cfg) {
       <input id="crud-search" placeholder="Cari..." class="h-10 px-3 border border-stone-200 rounded-md text-sm w-48">
       <button id="add-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah</button>
     </div>
-    <button onclick="exportXlsx()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium">Export XLSX</button>
+    <div class="flex gap-2">
+      ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="border border-emerald-400 text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-md text-sm font-medium">${cfg.sync.label}</button>` : ''}
+      <button onclick="exportXlsx()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium">Export XLSX</button>
+    </div>
   </div>
   <div id="table-wrap" class="bg-white border border-stone-200 rounded-lg overflow-hidden"></div>
   <div id="crud-pagination" class="flex items-center justify-between mt-3"></div>`;
@@ -85,6 +88,19 @@ function editRow(cfg, row) { openForm(cfg, row); }
 async function deleteRow(endpoint, id, cfg) {
   if (!await showConfirm('Hapus data ini?')) return;
   await api.del(endpoint + '/' + id); reloadCrud(cfg);
+}
+
+async function syncCrudData() {
+  const cfg = _crudCfg;
+  if (!cfg || !cfg.sync) return;
+  if (!await showConfirm(cfg.sync.confirm || 'Sync data ini?', 'Ya, Sync')) return;
+  try {
+    const res = await api.post(cfg.sync.endpoint, {});
+    showToast(`${res.updated || res.recalculated} data diperbarui dari ${res.total}`, 'success');
+    reloadCrud(cfg);
+  } catch (e) {
+    showAlert(e.message || 'Gagal sync', 'error');
+  }
 }
 
 function exportXlsx() {
@@ -229,11 +245,13 @@ function openForm(cfg, editing) {
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
 }
-function showConfirm(msg) {
+function showConfirm(msg, okLabel) {
   return new Promise((resolve) => {
     const modal = document.getElementById('confirm-modal');
     document.getElementById('confirm-message').textContent = msg;
-    document.getElementById('confirm-ok').onclick = () => {
+    var okBtn = document.getElementById('confirm-ok');
+    okBtn.textContent = okLabel || 'Hapus';
+    okBtn.onclick = () => {
       modal.classList.add('hidden');
       modal.classList.remove('flex');
       resolve(true);
