@@ -1,6 +1,47 @@
 // ===== Siklus Menu =====
 const HARI_OPTIONS = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
 
+const KAT_SP_ORDER = ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
+const KAT_SP_LABELS = {
+  'Karbohidrat': { label: 'Karbohidrat', color: 'text-amber-700 bg-amber-50' },
+  'Protein Hewani': { label: 'Protein Hewani', color: 'text-red-700 bg-red-50' },
+  'Protein Nabati': { label: 'Protein Nabati', color: 'text-emerald-700 bg-emerald-50' },
+  'Sayur': { label: 'Sayur', color: 'text-green-700 bg-green-50' },
+  'Buah': { label: 'Buah', color: 'text-orange-700 bg-orange-50' },
+  'Susu': { label: 'Susu', color: 'text-blue-700 bg-blue-50' },
+  'Minyak': { label: 'Minyak', color: 'text-yellow-700 bg-yellow-50' },
+};
+
+async function getMenuKategoriBreakdown(menuId) {
+  if (!menuId) return null;
+  try {
+    const menu = await api.get('/menu/' + menuId);
+    const groups = {};
+    for (const b of (menu.bahan || [])) {
+      const kat = b.kategori_sp || 'Lainnya';
+      if (!groups[kat]) groups[kat] = [];
+      groups[kat].push(b);
+    }
+    return groups;
+  } catch { return null; }
+}
+
+function renderKategoriBreakdown(groups) {
+  if (!groups) return '';
+  const total = Object.keys(groups).reduce((s, k) => s + groups[k].length, 0);
+  if (!total) return '';
+  let html = '<div class="mt-1.5 space-y-0.5 bg-stone-50 rounded-lg p-2 border border-stone-100">';
+  for (const kat of KAT_SP_ORDER) {
+    const items = groups[kat];
+    if (!items || !items.length) continue;
+    const lbl = KAT_SP_LABELS[kat] || { label: kat, color: 'text-stone-700 bg-stone-50' };
+    const names = items.map(b => b.nama + (b.jumlah ? ' ' + b.jumlah + 'g' : '')).join(', ');
+    html += '<div class="flex items-center gap-1.5 text-[11px] leading-tight"><span class="inline-block px-1.5 py-0.5 rounded font-medium whitespace-nowrap ' + lbl.color + '">' + lbl.label + '</span><span class="text-stone-500 truncate">' + names + '</span></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
 async function renderSiklus() {
   const c = document.getElementById('content');
   c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
@@ -74,12 +115,22 @@ async function reloadSiklusList() {
     return;
   }
 
-  wrap.innerHTML = list.map(s => {
+  var selectAllHtml = '<div class="col-span-full flex items-center gap-3 py-1">' +
+    '<label class="flex items-center gap-2 text-sm text-stone-500 cursor-pointer">' +
+      '<input type="checkbox" id="siklus-select-all" onchange="toggleSelectAll(this)" class="w-4 h-4 rounded border-stone-300 text-[#1e40af] focus:ring-[#1e40af]/30">' +
+      'Pilih Semua' +
+    '</label>' +
+  '</div>';
+
+  wrap.innerHTML = selectAllHtml + list.map(s => {
     const statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-600';
     const menuCount = (s.items || []).filter(it => it.menu_id).length;
-    return `<div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-lg hover:border-stone-300 transition-all duration-200 cursor-pointer group" onclick="loadSiklusDetail(${s.id})">
+    return `<div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-lg hover:border-stone-300 transition-all duration-200 group">
       <div class="flex justify-between items-start mb-3">
-        <div class="font-semibold text-sm text-stone-800 group-hover:text-[#1e40af] transition-colors">${s.nama}</div>
+        <div class="flex items-center gap-3 min-w-0">
+          <input type="checkbox" value="${s.id}" onchange="updateSelectedCount()" onclick="event.stopPropagation()" class="siklus-checkbox w-4 h-4 rounded border-stone-300 text-[#1e40af] focus:ring-[#1e40af]/30 shrink-0">
+          <div class="font-semibold text-sm text-stone-800 group-hover:text-[#1e40af] transition-colors cursor-pointer" onclick="loadSiklusDetail(${s.id})">${s.nama}</div>
+        </div>
         <span class="text-[10px] px-2.5 py-1 rounded-full font-medium ${statusColor} capitalize">${s.status}</span>
       </div>
       <div class="flex items-center gap-4 text-xs text-stone-500 mb-3">
@@ -125,17 +176,29 @@ async function loadSiklusDetail(id) {
             <div class="text-xs font-semibold uppercase text-stone-500 mb-2">Hari ${it.hari_ke} — ${it.hari_nama}</div>
             <div class="font-bold text-sm mb-1">${it.menu_nama || '<span class="text-stone-400">Belum diisi</span>'}</div>
             <div class="text-xs text-stone-500 mb-2">${fmtNum(it.jumlah_porsi)} porsi</div>
-            ${it.menu_nama ? `<div class="grid grid-cols-3 gap-1 text-[10px]">
+            ${it.menu_nama ? `<div class="grid grid-cols-3 gap-1 text-[10px] mb-2">
               <div class="bg-stone-50 rounded p-1 text-center"><div class="text-stone-400">Kal</div><div class=\"mono font-semibold\">${fmtNum(it.kalori)}</div></div>
               <div class="bg-stone-50 rounded p-1 text-center"><div class="text-stone-400">Prot</div><div class=\"mono font-semibold\">${fmtNum(it.protein)}</div></div>
               <div class="bg-stone-50 rounded p-1 text-center"><div class="text-stone-400">Karb</div><div class=\"mono font-semibold\">${fmtNum(it.karbohidrat)}</div></div>
               <div class="bg-stone-50 rounded p-1 text-center"><div class="text-stone-400">Lem</div><div class=\"mono font-semibold\">${fmtNum(it.lemak)}</div></div>
               <div class="bg-stone-50 rounded p-1 text-center"><div class="text-stone-400">Ser</div><div class=\"mono font-semibold\">${fmtNum(it.serat)}</div></div>
             </div>` : ''}
+            <div id="sk-dtl-bd-${it.hari_ke}" class="text-[10px] text-stone-400 animate-pulse">Memuat kategori...</div>
           </div>`;
         }).join('')}
       </div>
     </div>`;
+  // Load category breakdown for each day
+  for (const it of data.items) {
+    if (it.menu_id) {
+      const groups = await getMenuKategoriBreakdown(it.menu_id);
+      const el = document.getElementById('sk-dtl-bd-' + it.hari_ke);
+      if (el) el.innerHTML = renderKategoriBreakdown(groups) || '<div class="text-stone-400 text-[10px]">Tidak ada data bahan</div>';
+    } else {
+      const el = document.getElementById('sk-dtl-bd-' + it.hari_ke);
+      if (el) el.innerHTML = '';
+    }
+  }
 }
 
 async function renderSiklusLaporan(id) {
@@ -230,12 +293,28 @@ async function renderSiklusLaporan(id) {
                 <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.karbohidrat)}</td>
                 <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.lemak)}</td>
                 <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.serat)}</td>
-              </tr>`).join('')}
+              </tr>
+              ${it.menu_id ? `<tr class="bg-stone-50/50">
+                <td colspan="8" class="px-4 py-2">
+                  <div id="sk-lap-bd-${id}-${it.hari_ke}" class="text-[10px] text-stone-400 animate-pulse">Memuat kategori...</div>
+                </td>
+              </tr>` : ''}`).join('')}
             </tbody>
           </table>
         </div>
       </div>
     </div>`;
+  // Load category breakdown for each day in laporan
+  for (const it of items) {
+    if (it.menu_id) {
+      const groups = await getMenuKategoriBreakdown(it.menu_id);
+      const el = document.getElementById('sk-lap-bd-' + id + '-' + it.hari_ke);
+      if (el) el.innerHTML = renderKategoriBreakdown(groups) || '<div class="text-stone-400 text-[10px]">Tidak ada data bahan</div>';
+    } else {
+      const el = document.getElementById('sk-lap-bd-' + id + '-' + it.hari_ke);
+      if (el) el.innerHTML = '';
+    }
+  }
   window['_laporanSiklus_'+id] = { items, siklus, stats };
 }
 
@@ -323,6 +402,41 @@ async function deleteSiklus(id) {
   await api.del('/siklus/' + id);
   document.getElementById('siklus-detail').innerHTML = '';
   reloadSiklusList();
+}
+
+function toggleSelectAll(master) {
+  document.querySelectorAll('.siklus-checkbox').forEach(cb => cb.checked = master.checked);
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  var checked = document.querySelectorAll('.siklus-checkbox:checked').length;
+  var btn = document.getElementById('siklus-delete-selected');
+  var countEl = document.getElementById('siklus-selected-count');
+  if (!btn || !countEl) return;
+  if (checked > 0) {
+    btn.classList.remove('hidden');
+    btn.classList.add('inline-flex');
+    countEl.textContent = checked;
+  } else {
+    btn.classList.add('hidden');
+    btn.classList.remove('inline-flex');
+  }
+}
+
+async function deleteSelectedSiklus() {
+  var checked = document.querySelectorAll('.siklus-checkbox:checked');
+  var ids = Array.from(checked).map(cb => parseInt(cb.value)).filter(id => !isNaN(id));
+  if (!ids.length) return showAlert('Pilih siklus yang akan dihapus', 'warning');
+  if (!await showConfirm('Hapus ' + ids.length + ' siklus terpilih? Semua item di dalamnya akan terhapus.')) return;
+  try {
+    await api.post('/siklus/bulk-delete', { ids });
+    document.getElementById('siklus-detail').innerHTML = '';
+    showToast(ids.length + ' siklus berhasil dihapus', 'success');
+    reloadSiklusList();
+  } catch (e) {
+    showToast('Gagal menghapus: ' + (e.message || 'Unknown error'), 'error');
+  }
 }
 
 async function editSiklus(id) {
@@ -494,12 +608,21 @@ function renderSiklusFormItems() {
     h += '<div class="w-20 shrink-0"><input id="sk-porsi-' + i + '" type="number" value="' + (it.jumlah_porsi || defaultPorsi || '') + '" min="0" placeholder="Porsi" class="w-full h-10 px-2 border border-stone-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>';
     h += '<button id="sk-clear-' + i + '" class="w-8 h-8 rounded-lg flex items-center justify-center text-stone-400 hover:text-red-500 hover:bg-red-50 transition-all ' + (hasMenu ? '' : 'invisible') + '">×</button>';
     h += '</div>';
+    h += '<div id="sk-bd-' + i + '" class="ml-10"></div>';
   });
   list.innerHTML = h;
 
   items.forEach(function(it, i) {
     var select = document.getElementById('sk-menu-' + i);
     if (select && it.menu_id) select.value = it.menu_id;
+
+    // Show breakdown if menu is pre-selected
+    if (it.menu_id) {
+      getMenuKategoriBreakdown(it.menu_id).then(function(g) {
+        var el = document.getElementById('sk-bd-' + i);
+        if (el) el.innerHTML = renderKategoriBreakdown(g);
+      });
+    }
 
     var clearBtn = document.getElementById('sk-clear-' + i);
     if (clearBtn) {
@@ -517,6 +640,14 @@ function renderSiklusFormItems() {
         var clearBtn2 = document.getElementById('sk-clear-' + i);
         if (clearBtn2) {
           clearBtn2.className = 'w-8 h-8 rounded-lg flex items-center justify-center text-stone-400 hover:text-red-500 hover:bg-red-50 transition-all ' + (this.value ? '' : 'invisible');
+        }
+        // Show category breakdown
+        var bdEl = document.getElementById('sk-bd-' + i);
+        if (bdEl) {
+          bdEl.innerHTML = '<div class="text-[10px] text-stone-400 animate-pulse">Memuat...</div>';
+          getMenuKategoriBreakdown(this.value).then(function(g) {
+            bdEl.innerHTML = renderKategoriBreakdown(g);
+          });
         }
       };
     }

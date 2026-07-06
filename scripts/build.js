@@ -19,8 +19,11 @@ const FILES = [
   'akun.js',
   'kelola-user.js',
   'pembelian.js',
+  'bp-operasional.js',
   'sp-referensi.js',
   'panduan.js',
+  'kebutuhan-pangan.js',
+  'bdd-kalkulator.js',
   'definisi.js',
   'inti.js',
 ];

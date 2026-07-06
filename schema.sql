@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   alamat TEXT,
   plan ENUM('free','pro','enterprise') DEFAULT 'free',
   is_active TINYINT(1) DEFAULT 1,
+  saldo_awal DECIMAL(15,2) DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -54,6 +55,7 @@ CREATE TABLE IF NOT EXISTS bahan_baku (
   kategori_sp ENUM('Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak') NULL,
   berat_1_sp DECIMAL(10,2) DEFAULT 0,
   persen_bdd DECIMAL(5,1) DEFAULT 100,
+  berat_per_satuan DECIMAL(10,2) DEFAULT 0 COMMENT 'Berat 1 satuan dalam gram (misal 1 pcs = 50g)',
   satuan VARCHAR(20) NOT NULL,
   harga_satuan DECIMAL(15,2) DEFAULT 0,
   harga_sebelumnya DECIMAL(15,2) DEFAULT 0,
@@ -230,6 +232,7 @@ CREATE TABLE IF NOT EXISTS kas_bank (
   tipe ENUM('masuk','keluar') NOT NULL,
   kategori VARCHAR(100),
   akun VARCHAR(100),
+  akun_id INT,
   deskripsi TEXT,
   jumlah DECIMAL(15,2) NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -366,6 +369,21 @@ CREATE TABLE IF NOT EXISTS payroll (
   INDEX idx_tenant (tenant_id),
   INDEX idx_karyawan (karyawan_id),
   INDEX idx_payroll_periode (tenant_id, tahun, bulan)
+) ENGINE=InnoDB;
+
+-- Kode Akun (Chart of Accounts)
+CREATE TABLE IF NOT EXISTS akun (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  kode VARCHAR(10) NOT NULL,
+  nama VARCHAR(200) NOT NULL,
+  bp VARCHAR(50) NOT NULL COMMENT 'Buku Pembantu: BP Kas, BP Jenis Dana',
+  tipe ENUM('Manual','Otomatis') DEFAULT 'Manual',
+  is_active TINYINT(1) DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  INDEX idx_tenant (tenant_id),
+  UNIQUE KEY uk_kode_tenant (kode, tenant_id)
 ) ENGINE=InnoDB;
 
 -- Divisi

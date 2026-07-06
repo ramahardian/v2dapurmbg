@@ -45,7 +45,12 @@ function kategoriBadge(kat) {
 
 function renderMenuHtml(menus) {
   return `<div class="flex flex-wrap justify-between gap-2 mb-4">
-    <button id="add-menu-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah Menu</button>
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="add-menu-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah Menu</button>
+      <button id="menu-delete-selected" onclick="deleteSelectedMenu()" class="hidden px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md items-center gap-1.5">
+        Hapus Terpilih <span id="menu-selected-count" class="font-bold">0</span>
+      </button>
+    </div>
     <div class="flex gap-2">
       <button id="recalc-nutrisi-btn" onclick="recalcNutrisiMenu()" class="border border-emerald-400 text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-md text-sm font-medium">Hitung Ulang Nutrisi</button>
       <div class="relative">
@@ -62,6 +67,9 @@ function renderMenuHtml(menus) {
       <table class="w-full">
         <thead class="bg-stone-50">
           <tr>
+            <th class="text-left px-4 py-3 text-xs font-semibold uppercase w-10">
+              <input type="checkbox" id="menu-select-all" onchange="toggleSelectAllMenu(this)" class="w-4 h-4 rounded border-stone-300 text-[#1e40af] focus:ring-[#1e40af]/30">
+            </th>
             <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
             <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Kategori</th>
             <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gramasi</th>
@@ -73,6 +81,9 @@ function renderMenuHtml(menus) {
         <tbody id="menu-table-body">
           ${menus.length > 0 ? menus.map(m => `
             <tr class="border-t border-stone-100">
+              <td class="px-4 py-3 text-sm">
+                <input type="checkbox" value="${m.id}" onchange="updateSelectedMenuCount()" class="menu-checkbox w-4 h-4 rounded border-stone-300 text-[#1e40af] focus:ring-[#1e40af]/30">
+              </td>
               <td class="px-4 py-3 text-sm font-medium truncate max-w-[180px]" title="${m.nama}">${m.nama}</td>
               <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.gramasi_total}g</td>
@@ -82,7 +93,7 @@ function renderMenuHtml(menus) {
                 <button data-menu-id="${m.id}" class="edit-btn text-stone-500 hover:text-stone-900 mr-2" title="Edit"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                 <button data-menu-id="${m.id}" class="delete-btn text-red-600 hover:text-red-800" title="Hapus"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
               </td>
-            </tr>`).join('') : '<tr><td colspan="6" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><div>Belum ada menu</div></td></tr>'}
+            </tr>`).join('') : '<tr><td colspan="7" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><div>Belum ada menu</div></td></tr>'}
         </tbody>
       </table>
     </div>
@@ -160,7 +171,7 @@ function openMenuForm(editing) {
       </div>
       <div id="bahan-list" class="space-y-2"></div>
     </div>`;
-  window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, jumlah: b.jumlah }));
+  window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, jumlah: b.jumlah, berat_per_satuan: b.berat_per_satuan || 0 }));
   renderBahanList();
   hitungNutrisi();
   document.getElementById('modal-save').onclick = async () => {
@@ -185,6 +196,14 @@ function openMenuForm(editing) {
 }
 function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '' }); renderBahanList(); hitungNutrisi(); }
 function removeBahanRow(i) { window._menuBahan.splice(i, 1); renderBahanList(); hitungNutrisi(); }
+function gramasiKeGram(jml, satuan, beratPerSatuan) {
+  var s = (satuan || '').toLowerCase();
+  if (s === 'kg' || s === 'kilogram') return jml * 1000;
+  if (s === 'g' || s === 'gram' || s === 'gr') return jml;
+  if (beratPerSatuan > 0) return jml * beratPerSatuan;
+  return jml;
+}
+
 function hitungNutrisi() {
   var totalGramasi = 0, totalKalori = 0, totalProtein = 0, totalKarbo = 0, totalLemak = 0;
   (window._menuBahan || []).forEach(function(b) {
@@ -192,11 +211,12 @@ function hitungNutrisi() {
     var bb = (window._bahanBaku || []).find(function(x) { return x.id == b.bahan_baku_id; });
     if (!bb) return;
     var jml = +b.jumlah || 0;
-    totalGramasi += jml;
-    totalKalori += jml / 100 * (+bb.kalori || 0);
-    totalProtein += jml / 100 * (+bb.protein || 0);
-    totalKarbo += jml / 100 * (+bb.karbohidrat || 0);
-    totalLemak += jml / 100 * (+bb.lemak || 0);
+    var gram = gramasiKeGram(jml, bb.satuan, +bb.berat_per_satuan || 0);
+    totalGramasi += gram;
+    totalKalori += gram / 100 * (+bb.kalori || 0);
+    totalProtein += gram / 100 * (+bb.protein || 0);
+    totalKarbo += gram / 100 * (+bb.karbohidrat || 0);
+    totalLemak += gram / 100 * (+bb.lemak || 0);
   });
   ['gramasi_total','kalori','protein','karbohidrat','lemak'].forEach(function(k) {
     var el = document.getElementById('m-' + k);
@@ -212,11 +232,14 @@ function updateBahan(i, k, v) {
     window._menuBahan[i].kategori_sp = bb ? bb.kategori_sp : '';
     window._menuBahan[i].berat_1_sp = bb ? (+bb.berat_1_sp || 0) : 0;
     window._menuBahan[i].persen_bdd = bb ? (+bb.persen_bdd || 100) : 100;
-    // Auto-calculate jumlah from SP if menu has kategori_penerima and bahan has SP data
-    if (bb && bb.kategori_sp && bb.berat_1_sp > 0) {
+    window._menuBahan[i].berat_per_satuan = bb ? (+bb.berat_per_satuan || 0) : 0;
+    // Auto-calculate jumlah from SP/berat_per_satuan
+    if (bb) {
       var katPenerima = document.getElementById('m-kategori')?.value;
-      if (katPenerima) {
+      if (bb.kategori_sp && bb.berat_1_sp > 0 && katPenerima) {
         window._menuBahan[i].jumlah = +bb.berat_1_sp;
+      } else if (+bb.berat_per_satuan > 0 && !window._menuBahan[i].jumlah) {
+        window._menuBahan[i].jumlah = +bb.berat_per_satuan;
       }
     }
     renderBahanList();
@@ -225,28 +248,78 @@ function updateBahan(i, k, v) {
 }
 function renderBahanList() {
   var mKat = document.getElementById('m-kategori')?.value || '';
+  var datalistId = 'dl-bahan-' + Date.now();
   document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
     var bb = (window._bahanBaku || []).find(x => x.id == b.bahan_baku_id);
     var spInfo = '';
     if (bb && bb.kategori_sp && bb.berat_1_sp > 0) {
-      spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">' + bb.kategori_sp + ' · 1SP=' + bb.berat_1_sp + 'g · BDD=' + bb.persen_bdd + '%</div>';
+      var extras = [];
+      extras.push('1SP=' + bb.berat_1_sp + 'g');
+      if (+bb.berat_per_satuan > 0) extras.push('1' + bb.satuan + '=' + bb.berat_per_satuan + 'g');
+      spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">' + bb.kategori_sp + ' · ' + extras.join(' · ') + ' · BDD=' + bb.persen_bdd + '%</div>';
       if (!b.jumlah && bb.berat_1_sp > 0) {
         window._menuBahan[i].jumlah = +bb.berat_1_sp;
       }
+    } else if (bb && +bb.berat_per_satuan > 0) {
+      spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">1 ' + bb.satuan + ' = ' + bb.berat_per_satuan + 'g</div>';
     }
     return '<div class="grid grid-cols-12 gap-1.5 items-center">' +
-      '<select onchange="updateBahan(' + i + ', \'bahan_baku_id\', this.value)" class="col-span-5 h-9 px-2 border border-stone-200 rounded-md text-sm">' +
-        '<option value="">— Pilih —</option>' +
-        window._bahanBaku.map(function(x) { return '<option value="' + x.id + '" ' + (b.bahan_baku_id == x.id ? 'selected' : '') + '>' + x.nama + '</option>'; }).join('') +
-      '</select>' +
+      '<div class="col-span-5 relative">' +
+        '<input list="dl-' + i + '" value="' + (bb ? bb.nama : '') + '" placeholder="Cari bahan..." oninput="onBahanInput(' + i + ', this)" onfocus="this.select()" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
+        '<datalist id="dl-' + i + '">' +
+          window._bahanBaku.map(function(x) { return '<option value="' + x.nama + '" data-id="' + x.id + '"></option>'; }).join('') +
+        '</datalist>' +
+      '</div>' +
       '<input type="text" value="' + (b.satuan || '') + '" readonly class="col-span-1 h-9 px-2 border border-stone-200 rounded-md text-sm bg-stone-50 text-stone-500" placeholder="unit" />' +
-      '<input type="number" value="' + (b.jumlah || '') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" placeholder="gram" class="col-span-3 h-9 px-2 border border-stone-200 rounded-md text-sm mono" />' +
+      '<input type="number" value="' + (b.jumlah || '') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" placeholder="' + (bb ? bb.satuan : 'gram') + '" class="col-span-3 h-9 px-2 border border-stone-200 rounded-md text-sm mono" />' +
       (spInfo || '<div class="col-span-2"></div>') +
       '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2">×</button>' +
     '</div>';
   }).join('');
 }
+
+function onBahanInput(i, el) {
+  var val = el.value;
+  var bahan = (window._bahanBaku || []).find(function(x) { return x.nama === val; });
+  if (bahan) {
+    updateBahan(i, 'bahan_baku_id', bahan.id);
+  } else if (val === '') {
+    updateBahan(i, 'bahan_baku_id', '');
+  }
+}
 async function deleteMenu(id) { if (!await showConfirm('Hapus menu?')) return; await api.del('/menu/' + id); renderMenu(); }
+
+function toggleSelectAllMenu(master) {
+  document.querySelectorAll('.menu-checkbox').forEach(cb => cb.checked = master.checked);
+  updateSelectedMenuCount();
+}
+function updateSelectedMenuCount() {
+  var checked = document.querySelectorAll('.menu-checkbox:checked').length;
+  var btn = document.getElementById('menu-delete-selected');
+  var countEl = document.getElementById('menu-selected-count');
+  if (!btn || !countEl) return;
+  if (checked > 0) {
+    btn.classList.remove('hidden');
+    btn.classList.add('inline-flex');
+    countEl.textContent = checked;
+  } else {
+    btn.classList.add('hidden');
+    btn.classList.remove('inline-flex');
+  }
+}
+async function deleteSelectedMenu() {
+  var checked = document.querySelectorAll('.menu-checkbox:checked');
+  var ids = Array.from(checked).map(cb => parseInt(cb.value)).filter(id => !isNaN(id));
+  if (!ids.length) return showAlert('Pilih menu yang akan dihapus', 'warning');
+  if (!await showConfirm('Hapus ' + ids.length + ' menu terpilih?')) return;
+  try {
+    await api.post('/menu/bulk-delete', { ids });
+    showToast(ids.length + ' menu berhasil dihapus', 'success');
+    renderMenu();
+  } catch (e) {
+    showToast('Gagal menghapus: ' + (e.message || 'Unknown error'), 'error');
+  }
+}
 
 async function recalcNutrisiMenu() {
   if (!await showConfirm('Hitung ulang nutrisi semua menu berdasarkan bahan baku terkini?', 'Ya, Hitung')) return;

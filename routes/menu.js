@@ -40,7 +40,7 @@ router.get('/menu', async (req, res) => {
   
   // Get menus with ingredients using a single JOIN query
   const sql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat,
-       mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, mb.jumlah
+       mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
        FROM menu m
        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
@@ -77,6 +77,7 @@ router.get('/menu', async (req, res) => {
         kategori_sp: row.kategori_sp,
         berat_1_sp: row.berat_1_sp,
         persen_bdd: row.persen_bdd,
+        berat_per_satuan: row.berat_per_satuan,
         jumlah: row.jumlah
       });
     }
@@ -231,6 +232,14 @@ router.delete('/menu/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+router.post('/menu/bulk-delete', async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'IDs wajib diisi' });
+  const placeholders = ids.map(() => '?').join(',');
+  await db.query(`DELETE FROM menu WHERE id IN (${placeholders}) AND tenant_id=?`, [...ids, req.user.tenant_id]);
+  res.json({ ok: true, deleted: ids.length });
+});
+
 /**
  * GET /menu/:id
  * Mengambil detail menu beserta bahan-bahannya untuk diedit.
@@ -238,7 +247,7 @@ router.delete('/menu/:id', async (req, res) => {
 router.get('/menu/:id', async (req, res) => {
   const [menus] = await db.query(
     `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat,
-       mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, mb.jumlah
+       mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
        FROM menu m
        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
@@ -262,7 +271,7 @@ router.get('/menu/:id', async (req, res) => {
   };
   menus.forEach(row => {
     if (row.bahan_baku_id) {
-      m.bahan.push({ bahan_baku_id: row.bahan_baku_id, nama: row.bahan_nama, satuan: row.satuan, kategori_sp: row.kategori_sp, berat_1_sp: row.berat_1_sp, persen_bdd: row.persen_bdd, jumlah: row.jumlah });
+      m.bahan.push({ bahan_baku_id: row.bahan_baku_id, nama: row.bahan_nama, satuan: row.satuan, kategori_sp: row.kategori_sp, berat_1_sp: row.berat_1_sp, persen_bdd: row.persen_bdd, berat_per_satuan: row.berat_per_satuan, jumlah: row.jumlah });
     }
   });
   res.json(m);

@@ -16,16 +16,17 @@ router.use(requireAuth);
  */
 const TABLES = {
   penerima_manfaat: ['nama_kelompok', 'paket_besar', 'paket_kecil', 'lokasi', 'keterangan'],
-  bahan_baku: ['kode', 'nama', 'kategori', 'kategori_sp', 'berat_1_sp', 'persen_bdd', 'satuan', 'harga_satuan', 'harga_sebelumnya', 'stok_saat_ini', 'stok_minimum', 'kalori', 'protein', 'karbohidrat', 'lemak', 'serat'],
+  bahan_baku: ['kode', 'nama', 'kategori', 'kategori_sp', 'berat_1_sp', 'persen_bdd', 'berat_per_satuan', 'satuan', 'harga_satuan', 'harga_sebelumnya', 'stok_saat_ini', 'stok_minimum', 'kalori', 'protein', 'karbohidrat', 'lemak', 'serat'],
   supplier: ['nama', 'kategori_supply', 'kontak_person', 'telepon', 'email', 'alamat', 'npwp'],
   purchase_order: ['no_po', 'tanggal', 'supplier_id', 'supplier_nama', 'item', 'total_nilai', 'status', 'catatan'],
   penerimaan_barang: ['no_dokumen', 'tanggal_terima', 'supplier_nama', 'ref_po', 'item', 'total_nilai', 'status_qc', 'catatan'],
   produksi: ['tanggal_produksi', 'menu_id', 'menu_nama', 'kategori_penerima', 'jumlah_porsi', 'status', 'catatan'],
   distribusi: ['tanggal_distribusi', 'titik_distribusi', 'kategori_penerima', 'jumlah_porsi', 'kurir', 'status', 'catatan'],
   budget: ['periode', 'kategori_penerima', 'jumlah_penerima', 'harga_per_porsi', 'biaya_operasional', 'total_budget', 'realisasi', 'catatan'],
-  kas_bank: ['tanggal', 'no_transaksi', 'tipe', 'kategori', 'akun', 'deskripsi', 'jumlah'],
+  kas_bank: ['tanggal', 'no_transaksi', 'tipe', 'kategori', 'akun', 'akun_id', 'deskripsi', 'jumlah'],
   divisi: ['nama'],
   sp_referensi_bahan: ['nama', 'kategori', 'berat_bersih', 'bdd_persen', 'berat_kotor', 'energi', 'protein', 'lemak', 'karbohidrat', 'serat'],
+  akun: ['kode', 'nama', 'bp', 'tipe', 'is_active'],
 };
 
 /**
@@ -44,6 +45,7 @@ const REQUIRED_FIELDS = {
   kas_bank: ['tanggal', 'tipe', 'jumlah'],
   divisi: ['nama'],
   sp_referensi_bahan: ['nama', 'berat_bersih'],
+  akun: ['kode', 'nama', 'bp'],
 };
 
 /**
@@ -55,6 +57,7 @@ const UNIQUE_FIELDS = {
   bahan_baku: { nama: 'Nama Bahan' },
   supplier: { nama: 'Nama Supplier' },
   sp_referensi_bahan: { nama: 'Nama Bahan' },
+  akun: { kode: 'Kode Akun', nama: 'Nama Akun' },
 };
 
 /**
@@ -70,6 +73,7 @@ const SEARCHABLE_FIELDS = {
   distribusi: ['titik_distribusi', 'kategori_penerima', 'status', 'kurir'],
   budget: ['periode', 'kategori_penerima'],
   kas_bank: ['tipe', 'kategori', 'akun', 'deskripsi', 'no_transaksi'],
+  akun: ['kode', 'nama', 'bp'],
   sp_referensi_bahan: ['nama', 'kategori'],
 };
 
@@ -131,14 +135,15 @@ for (const table of Object.keys(TABLES)) {
     stok_keluar: ['admin', 'keuangan', 'gudang'],
     produksi: ['admin', 'produksi', 'gudang', 'keuangan', 'ahli_gizi'],
     distribusi: ['admin', 'produksi', 'gudang', 'keuangan', 'ahli_gizi'],
-    sp_referensi_bahan: ['admin', 'ahli_gizi']
+    sp_referensi_bahan: ['admin', 'ahli_gizi'],
+    akun: ['admin', 'keuangan']
   };
   
   const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (req, res, next) => next();
     
   // 1. READ ALL (GET /nama_tabel)
   router.get(`/${table}`, roleMiddleware, async (req, res) => {
-    const { search, page, limit } = req.query;
+    const { search, page, limit, bp } = req.query;
     const searchable = SEARCHABLE_FIELDS[table] || [];
     
     let whereClause = 'WHERE tenant_id=?';
@@ -149,6 +154,11 @@ for (const table of Object.keys(TABLES)) {
       const conditions = searchable.map(f => `${f} LIKE ?`);
       whereClause += ` AND (${conditions.join(' OR ')})`;
       searchable.forEach(() => params.push(`%${search}%`));
+    }
+    // Direct filter: bp (untuk akun)
+    if (bp && table === 'akun') {
+      whereClause += ' AND bp=?';
+      params.push(bp);
     }
     
     // Hitung total sebelum pagination
@@ -253,10 +263,12 @@ for (const table of Object.keys(TABLES)) {
           [req.user.tenant_id, po.no_po]
         );
         if (!existing.length) {
+          const [[akun]] = await db.query('SELECT id FROM akun WHERE tenant_id=? AND kode=?', [req.user.tenant_id, '2000']);
           await db.query(
-            `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, deskripsi, jumlah)
-             VALUES (?, ?, ?, 'keluar', 'Pembayaran Supplier', 'Kas', ?, ?)`,
+            `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, akun_id, deskripsi, jumlah)
+             VALUES (?, ?, ?, 'keluar', 'Pembayaran Supplier', 'Dana Bahan Baku', ?, ?, ?)`,
             [req.user.tenant_id, po.tanggal || new Date(), po.no_po,
+             akun?.id || null,
              `Pembayaran PO#${po.no_po} - ${po.supplier_nama || ''}`, po.total_nilai]
           );
         }
@@ -376,6 +388,9 @@ router.post('/keuangan/backfill-journal', requireRole('admin', 'keuangan'), asyn
     const t = req.user.tenant_id;
     let created = 0;
 
+    const [[akunBahan]] = await db.query('SELECT id FROM akun WHERE tenant_id=? AND kode=?', [t, '2000']);
+    const [[akunOps]] = await db.query('SELECT id FROM akun WHERE tenant_id=? AND kode=?', [t, '2100']);
+
     // Backfill PO yang Dibayar
     const [pos] = await db.query(
       'SELECT * FROM purchase_order WHERE tenant_id=? AND status="Dibayar"', [t]
@@ -387,9 +402,10 @@ router.post('/keuangan/backfill-journal', requireRole('admin', 'keuangan'), asyn
       );
       if (!existing.length) {
         await db.query(
-          `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, deskripsi, jumlah)
-           VALUES (?, ?, ?, 'keluar', 'Pembayaran Supplier', 'Kas', ?, ?)`,
+          `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, akun_id, deskripsi, jumlah)
+           VALUES (?, ?, ?, 'keluar', 'Pembayaran Supplier', 'Dana Bahan Baku', ?, ?, ?)`,
           [t, po.tanggal || new Date(), po.no_po,
+           akunBahan?.id || null,
            `Pembayaran PO#${po.no_po} - ${po.supplier_nama || ''}`, po.total_nilai]
         );
         created++;
@@ -409,9 +425,10 @@ router.post('/keuangan/backfill-journal', requireRole('admin', 'keuangan'), asyn
       );
       if (!existing.length) {
         await db.query(
-          `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, deskripsi, jumlah)
-           VALUES (?, CURDATE(), ?, 'keluar', 'Gaji', 'Kas', ?, ?)`,
+          `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, akun_id, deskripsi, jumlah)
+           VALUES (?, CURDATE(), ?, 'keluar', 'Gaji', 'Dana Operasional', ?, ?, ?)`,
           [t, `PAY/${p.id}`,
+           akunOps?.id || null,
            `Pembayaran Gaji - ${p.nama_karyawan} (${p.bulan}/${p.tahun})`, p.total_gaji]
         );
         created++;

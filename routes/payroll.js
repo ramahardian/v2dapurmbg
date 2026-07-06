@@ -57,10 +57,12 @@ router.put('/payroll/:id', requireRole('admin', 'keuangan'), async (req, res) =>
       [req.user.tenant_id, `PAY/${p.id}`]
     );
     if (!existing.length) {
+      const [[akun]] = await db.query('SELECT id FROM akun WHERE tenant_id=? AND kode=?', [req.user.tenant_id, '2100']);
       await db.query(
-        `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, deskripsi, jumlah)
-         VALUES (?, CURDATE(), ?, 'keluar', 'Gaji', 'Kas', ?, ?)`,
+        `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, akun_id, deskripsi, jumlah)
+         VALUES (?, CURDATE(), ?, 'keluar', 'Gaji', 'Dana Operasional', ?, ?, ?)`,
         [req.user.tenant_id, `PAY/${p.id}`,
+         akun?.id || null,
          `Pembayaran Gaji - ${p.nama_karyawan} (${p.bulan}/${p.tahun})`, p.total_gaji]
       );
     }

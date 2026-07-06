@@ -17,7 +17,7 @@ async function renderLaporan() {
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
   }
 }
-const LAP_TABS = ['siklus', 'hpp', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan'];
+const LAP_TABS = ['siklus', 'hpp', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'berita-acara', 'bp-kas'];
 const LAP_PAGE_SIZE = 10;
 let lapState = { tab: 'siklus', page: 1 };
 
@@ -32,6 +32,10 @@ async function showLap(tab) {
     hpp: { active: 'bg-white text-gray-600 shadow-sm', inactive: 'bg-gray-100 text-gray-700 hover:bg-gray-200' },
     rab: { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
     'rab-bulanan': { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
+    'pengeluaran-bulanan': { active: 'bg-white text-sky-600 shadow-sm', inactive: 'bg-sky-100 text-sky-700 hover:bg-sky-200' },
+    'penggunaan-anggaran': { active: 'bg-white text-teal-600 shadow-sm', inactive: 'bg-teal-100 text-teal-700 hover:bg-teal-200' },
+    'berita-acara': { active: 'bg-white text-orange-600 shadow-sm', inactive: 'bg-orange-100 text-orange-700 hover:bg-orange-200' },
+    'bp-kas': { active: 'bg-white text-indigo-600 shadow-sm', inactive: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' },
   };
   LAP_TABS.forEach(t => {
     const el = document.getElementById('lt-'+t);
@@ -105,7 +109,7 @@ async function showLap(tab) {
             fmtIDR(b.total_biaya_operasional), fmtIDR(budget), fmtIDR(realisasi), fmtIDR(selisih), capaian];
         })
       };
-      window['_export_rab_bulanan'] = { data: rows, fields: ['periode','item_count','total_penerima','rata_harga_per_porsi','total_biaya_operasional','total_budget','total_realisasi'] };
+      window['_export_rab-bulanan'] = { data: rows, fields: ['periode','item_count','total_penerima','rata_harga_per_porsi','total_biaya_operasional','total_budget','total_realisasi'] };
       const s = r.stats;
       const selisihTotal = s.total_budget - s.total_realisasi;
       window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
@@ -115,6 +119,7 @@ async function showLap(tab) {
         ${statCard('Selisih Total', fmtIDR(selisihTotal), selisihTotal >= 0 ? 'surplus' : 'defisit', selisihTotal >= 0 ? 'bg-emerald-50' : 'bg-red-50')}
         ${statCard('Rata-rata Capaian', s.rata_capaian.toFixed(1)+'%', 'per periode', 'bg-violet-50')}
       </div>`;
+    } else if (tab === 'siklus') {
       const [lapRes, bahanRes] = await Promise.all([
         api.get('/siklus/laporan'),
         api.get('/siklus/laporan/bahan'),
@@ -216,7 +221,7 @@ async function showLap(tab) {
           const laba = d.pendapatan - d.biaya;
           return [d.periode, fmtIDR(d.pendapatan), fmtIDR(d.biaya), `<span class="${laba>=0?'text-green-600':'text-red-600'} font-medium mono">${fmtIDR(laba)}</span>`];
         }) };
-      window['_export_laba_rugi'] = { data: rows, fields: ['periode','pendapatan','biaya'] };
+      window['_export_laba-rugi'] = { data: rows, fields: ['periode','pendapatan','biaya'] };
       window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
         ${statCard('Total Pendapatan', fmtIDR(r.totalPendapatan), '', 'bg-emerald-50')}
         ${statCard('Total Biaya', fmtIDR(r.totalBiayaAll), 'dari kas bank', 'bg-orange-50')}
@@ -233,17 +238,409 @@ async function showLap(tab) {
         ${statCard('Rata-rata HPP', fmtIDR(r.stats.rata_hpp), '/porsi', 'bg-blue-50')}
         ${statCard('Total Biaya Bahan', fmtIDR(r.stats.total_biaya), '', 'bg-amber-50')}
       </div>`;
+    } else if (tab === 'pengeluaran-bulanan') {
+      const { bulan, tahun } = lapState;
+      const params = new URLSearchParams();
+      if (bulan) params.set('bulan', bulan);
+      if (tahun) params.set('tahun', tahun);
+      const r = await api.get('/laporan/pengeluaran-bulanan?' + params.toString());
+      const transaksi = r.transaksi || [];
+      window._lapData = { tab: 'pengeluaran-bulanan', rows: transaksi,
+        headers: ['Tanggal','Tipe','Kategori','Akun','Deskripsi','Jumlah'],
+        fields: ['tanggal','tipe','kategori','akun_label','deskripsi','jumlah'],
+        fmt: transaksi.map(t => [
+          fmtDate(t.tanggal),
+          `<span class="${t.tipe==='masuk'?'text-green-600':'text-red-600'} font-medium">${t.tipe}</span>`,
+          t.kategori||'-',
+          t.akun_kode ? t.akun_kode+' - '+t.akun_nama : '-',
+          t.deskripsi||'-',
+          fmtIDR(t.jumlah),
+        ])
+      };
+      window['_export_pengeluaran-bulanan'] = { data: transaksi, fields: ['tanggal','tipe','kategori','akun','deskripsi','jumlah'] };
+      const bulanNama = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][parseInt(bulan||new Date().getMonth()+1)-1];
+      window._lapStatCards = `
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <div class="flex items-center gap-2">
+    <label class="text-xs font-medium text-stone-500">Bulan:</label>
+    <select id="filter-bulan" onchange="gantiPeriodePengeluaran()" class="text-xs border border-stone-300 rounded px-2 py-1.5">
+      ${[1,2,3,4,5,6,7,8,9,10,11,12].map(b => `<option value="${b}" ${(parseInt(bulan||new Date().getMonth()+1))===b?'selected':''}>${['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1]}</option>`).join('')}
+    </select>
+    <select id="filter-tahun" onchange="gantiPeriodePengeluaran()" class="text-xs border border-stone-300 rounded px-2 py-1.5">
+      ${[2024,2025,2026,2027,2028].map(t => `<option value="${t}" ${(parseInt(tahun||new Date().getFullYear()))===t?'selected':''}>${t}</option>`).join('')}
+    </select>
+  </div>
+  <div class="text-xs text-stone-500 font-medium">Periode: ${bulanNama} ${tahun||new Date().getFullYear()}</div>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
+  <div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4">
+    <div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Sisa Dana Lalu</div>
+    <div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold">${fmtIDR(r.sisa_dana_lalu)}</div>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-blue-50 border-0 rounded-xl">
+    <div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Dana Diterima</div>
+    <div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold text-blue-700">${fmtIDR(r.dana_diterima)}</div>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-emerald-50 border-0 rounded-xl">
+    <div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Dana Tersedia</div>
+    <div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold text-emerald-700">${fmtIDR(r.dana_tersedia)}</div>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 ${r.sisa_dana_saat_ini >= 0 ? 'bg-emerald-50' : 'bg-red-50'} border-0 rounded-xl">
+    <div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Sisa Dana Saat Ini</div>
+    <div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold ${r.sisa_dana_saat_ini >= 0 ? 'text-emerald-700' : 'text-red-700'}">${fmtIDR(r.sisa_dana_saat_ini)}</div>
+  </div>
+</div>
+<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">
+  <div class="px-4 py-3 font-bold text-sm border-b border-stone-200 bg-stone-50">Rincian Pengeluaran Bulanan</div>
+  <table class="w-full text-xs sm:text-sm">
+    <tbody>
+      <tr class="border-t border-stone-100">
+        <td class="px-4 py-3 font-medium">Biaya Bahan Baku</td>
+        <td class="px-4 py-3 text-right mono font-semibold">${fmtIDR(r.biaya_bahan_baku)}</td>
+      </tr>
+      <tr class="border-t border-stone-100 bg-stone-50">
+        <td class="px-4 py-3 font-medium">Biaya Operasional</td>
+        <td class="px-4 py-3 text-right mono font-semibold">${fmtIDR(r.biaya_operasional)}</td>
+      </tr>
+      <tr class="border-t border-stone-100">
+        <td class="px-4 py-3 font-medium">Biaya Insentif Fasilitas</td>
+        <td class="px-4 py-3 text-right mono font-semibold">${fmtIDR(r.biaya_insentif_fasilitas)}</td>
+      </tr>
+      ${r.biaya_lainnya > 0 ? `<tr class="border-t border-stone-100 bg-stone-50">
+        <td class="px-4 py-3 font-medium text-stone-500">Biaya Lainnya</td>
+        <td class="px-4 py-3 text-right mono text-stone-500">${fmtIDR(r.biaya_lainnya)}</td>
+      </tr>` : ''}
+      <tr class="border-t-2 border-stone-400 bg-orange-50">
+        <td class="px-4 py-3 font-bold">Total Pengeluaran</td>
+        <td class="px-4 py-3 text-right mono font-bold text-red-700">${fmtIDR(r.total_pengeluaran)}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>`;
+    } else if (tab === 'penggunaan-anggaran') {
+      var baState = lapState;
+      var nowDate = new Date();
+      var bln = baState.pa_bulan || String(nowDate.getMonth() + 1).padStart(2, '0');
+      var thn = baState.pa_tahun || String(nowDate.getFullYear());
+      var blnNama = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][parseInt(bln)-1];
+      var periodeLbl = blnNama + ' ' + thn;
+      var apiData = null;
+      try { apiData = await api.get('/laporan/penggunaan-anggaran?bulan=' + bln + '&tahun=' + thn); } catch(e) {}
+      var d = apiData || { bahan_baku: { diajukan: 0, terpakai: 0, sisa: 0 }, operasional: { diajukan: 0, terpakai: 0, sisa: 0 }, insentif: { diajukan: 0, terpakai: 0, sisa: 0 }, total: { diajukan: 0, terpakai: 0, sisa: 0 } };
+
+      var rekening = baState.pa_rekening || '';
+      var lokasi = 'sukaluyu taman sari';
+      var tglStr = baState.pa_tanggal || nowDate.toISOString().slice(0,10);
+      var tglPanjang = fmtDateIndonesia(tglStr);
+
+      window['_export_penggunaan-anggaran'] = { data: [
+        { kegiatan: 'Bahan Baku', diajukan: d.bahan_baku.diajukan, terpakai: d.bahan_baku.terpakai, sisa: d.bahan_baku.sisa },
+        { kegiatan: 'Operasional', diajukan: d.operasional.diajukan, terpakai: d.operasional.terpakai, sisa: d.operasional.sisa },
+        { kegiatan: 'Insentif Fasilitas', diajukan: d.insentif.diajukan, terpakai: d.insentif.terpakai, sisa: d.insentif.sisa },
+        { kegiatan: 'Total', diajukan: d.total.diajukan, terpakai: d.total.terpakai, sisa: d.total.sisa },
+      ], fields: ['kegiatan','diajukan','terpakai','sisa'] };
+
+      window._lapStatCards =
+        '<div class="max-w-4xl mx-auto">' +
+        '<div class="bg-white border border-stone-200 rounded-lg p-4 sm:p-6 mb-4">' +
+        '<h2 class="text-base font-bold mb-4">Laporan Penggunaan Anggaran</h2>' +
+        '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">' +
+        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Periode</label>' +
+        '<select id="pa-bulan" onchange="paGantiPeriode()" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(bln)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
+        '</select>' +
+        '<select id="pa-tahun" onchange="paGantiPeriode()" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5 mt-1">' +
+        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(thn)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
+        '</select></div>' +
+        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Tanggal Laporan</label><input id="pa-tanggal" type="date" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" value="' + (baState.pa_tanggal||nowDate.toISOString().slice(0,10)) + '"></div>' +
+        '<div><label class="block text-xs font-medium text-stone-500 mb-1">No. Rekening / VA</label><input id="pa-rekening" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="-" value="' + escHtml(rekening) + '"></div>' +
+        '</div>' +
+        '<div class="flex gap-2 mt-4">' +
+        '<button onclick="paSimpan()" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-lg text-sm font-medium">Tampilkan Dokumen</button>' +
+        '<button onclick="paCetak()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-lg text-sm font-medium">Cetak / Print</button>' +
+        '</div></div>';
+
+      var fmtIdr = fmtIDR;
+      var docContent =
+        '<div id="pa-dokumen" class="bg-white border border-stone-200 rounded-lg p-6 sm:p-8 print-area">' +
+
+        '<h1 class="text-base font-bold text-center uppercase mb-4">Laporan Penggunaan Anggaran</h1>' +
+
+        '<h2 class="text-sm font-bold mb-3">I. RINCIAN KEGIATAN</h2>' +
+        '<table class="w-full text-xs border-collapse mb-4">' +
+        '<thead><tr class="bg-stone-100">' +
+        '<th class="border border-stone-300 px-3 py-2 text-left font-semibold">Nama Kegiatan</th>' +
+        '<th class="border border-stone-300 px-3 py-2 text-right font-semibold">Dana Diajukan (Rp)</th>' +
+        '<th class="border border-stone-300 px-3 py-2 text-right font-semibold">Dana Terpakai (Rp)</th>' +
+        '<th class="border border-stone-300 px-3 py-2 text-right font-semibold">Sisa Dana (Rp)</th>' +
+        '</tr></thead><tbody>' +
+        '<tr><td class="border border-stone-300 px-3 py-2">Bahan Baku</td>' +
+        '<td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIdr(d.bahan_baku.diajukan) + '</td>' +
+        '<td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIdr(d.bahan_baku.terpakai) + '</td>' +
+        '<td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIdr(d.bahan_baku.sisa) + '</td></tr>' +
+        '<tr><td class="border border-stone-300 px-3 py-2">Operasional</td>' +
+        '<td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIdr(d.operasional.diajukan) + '</td>' +
+        '<td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIdr(d.operasional.terpakai) + '</td>' +
+        '<td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIdr(d.operasional.sisa) + '</td></tr>' +
+        '<tr><td class="border border-stone-300 px-3 py-2">Insentif Fasilitas</td>' +
+        '<td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIdr(d.insentif.diajukan) + '</td>' +
+        '<td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIdr(d.insentif.terpakai) + '</td>' +
+        '<td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIdr(d.insentif.sisa) + '</td></tr>' +
+        '<tr class="font-bold bg-stone-50">' +
+        '<td class="border border-stone-300 px-3 py-2.5">Total</td>' +
+        '<td class="border border-stone-300 px-3 py-2.5 text-right mono">' + fmtIdr(d.total.diajukan) + '</td>' +
+        '<td class="border border-stone-300 px-3 py-2.5 text-right mono">' + fmtIdr(d.total.terpakai) + '</td>' +
+        '<td class="border border-stone-300 px-3 py-2.5 text-right mono">' + fmtIdr(d.total.sisa) + '</td></tr>' +
+        '</tbody></table>' +
+
+        '<h2 class="text-sm font-bold mb-3">II. KETERANGAN</h2>' +
+        '<p class="text-xs mb-3 leading-relaxed">Dana yang telah digunakan ini adalah untuk kebutuhan kegiatan yang telah direncanakan, dengan rincian sebagai berikut:</p>' +
+        '<ul class="text-xs mb-3 list-disc pl-5 leading-relaxed">' +
+        '<li><strong>Bahan Baku:</strong> Pengadaan bahan baku untuk pelaksanaan kegiatan.</li>' +
+        '<li><strong>Operasional:</strong> Biaya untuk transportasi, ATK, konsumsi, dan keperluan teknis lainnya.</li>' +
+        '<li><strong>Insentif Fasilitas:</strong> Dukungan insentif fasilitas sesuai kebutuhan operasional.</li>' +
+        '</ul>' +
+        '<p class="text-xs mb-1">Nomor rekening/Virtual Account: ' + escHtml(rekening || '-') + '</p>' +
+        '<p class="text-xs mb-3">Sisa dana sebesar <strong>' + fmtIdr(d.total.sisa) + '</strong> akan dialihkan ke periode berikutnya.</p>' +
+
+        '<h2 class="text-sm font-bold mb-3">III. PENUTUP</h2>' +
+        '<p class="text-xs mb-8 leading-relaxed">Dengan ini laporan penggunaan anggaran disampaikan untuk dipergunakan sebagaimana mestinya.</p>' +
+
+        '<div class="grid grid-cols-2 gap-8 text-xs mt-10">' +
+        '<div class="text-center">' +
+        '<p class="mb-1">' + lokasi + ', ' + tglPanjang + '</p>' +
+        '<p class="font-semibold mb-1">Pihak Pertama,</p>' +
+        '<div class="mt-12">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</div>' +
+        '</div>' +
+        '<div class="text-center">' +
+        '<p class="mb-1">' + lokasi + ', ' + tglPanjang + '</p>' +
+        '<p class="font-semibold mb-1">Pihak Kedua,</p>' +
+        '<div class="mt-12">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</div>' +
+        '<p class="mt-2 font-semibold">SPPG SUKALUYU</p>' +
+        '</div></div></div>';
+
+      window._lapStatCards += docContent;
+      window._lapData = null;
+    } else if (tab === 'bp-kas') {
+      var kasState = lapState;
+      var kasNow = new Date();
+      var kasBulan = kasState.bpkas_bulan || String(kasNow.getMonth() + 1).padStart(2, '0');
+      var kasTahun = kasState.bpkas_tahun || String(kasNow.getFullYear());
+      var kasData = null;
+      try { kasData = await api.get('/laporan/bp-kas?bulan=' + kasBulan + '&tahun=' + kasTahun); } catch(e) {}
+      var d = kasData || { periode: '', total_saldo_awal: 0, total_masuk: 0, total_keluar: 0, total_saldo_akhir: 0, akun_data: [], akun_list: [] };
+
+      var totalSa = fmtIDR(d.total_saldo_awal);
+      var totalMi = fmtIDR(d.total_masuk);
+      var totalKk = fmtIDR(d.total_keluar);
+      var totalSaAkhir = fmtIDR(d.total_saldo_akhir);
+      var akunData = d.akun_data || [];
+      var akunList = d.akun_list || [];
+
+      var expandedKey = kasState.bpkas_expanded || null;
+
+      var akunRows = '';
+      akunData.forEach(function(a) {
+        var isExpanded = (expandedKey === String(a.akun_id));
+        var detailHtml = '';
+        if (isExpanded && a.transaksi && a.transaksi.length) {
+          detailHtml = '<tr id="bpkas-detail-' + a.akun_id + '" class="bg-stone-50"><td colspan="6" class="px-4 py-2">' +
+            '<table class="w-full text-[10px]">' +
+            '<thead><tr class="text-stone-500 border-b border-stone-200">' +
+            '<th class="px-2 py-1 text-left">Tanggal</th><th class="px-2 py-1 text-left">No Transaksi</th>' +
+            '<th class="px-2 py-1 text-left">Tipe</th><th class="px-2 py-1 text-left">Kategori</th>' +
+            '<th class="px-2 py-1 text-left">Deskripsi</th><th class="px-2 py-1 text-right">Jumlah</th></tr></thead><tbody>';
+          a.transaksi.forEach(function(t) {
+            detailHtml += '<tr class="border-b border-stone-100">' +
+              '<td class="px-2 py-1">' + fmtDate(t.tanggal) + '</td>' +
+              '<td class="px-2 py-1">' + escHtml(t.no_transaksi||'-') + '</td>' +
+              '<td class="px-2 py-1"><span class="' + (t.tipe==='masuk'?'text-green-600':'text-red-600') + ' font-medium">' + t.tipe + '</span></td>' +
+              '<td class="px-2 py-1">' + escHtml(t.kategori||'-') + '</td>' +
+              '<td class="px-2 py-1">' + escHtml(t.deskripsi||'-') + '</td>' +
+              '<td class="px-2 py-1 text-right mono">' + fmtIDR(t.jumlah) + '</td></tr>';
+          });
+          detailHtml += '</tbody></table></td></tr>';
+        }
+        var sisa = a.total_masuk - a.total_keluar;
+        akunRows += '<tr class="border-t border-stone-100 hover:bg-stone-50 cursor-pointer" onclick="bpkasToggle(' + a.akun_id + ')">' +
+          '<td class="px-3 py-2 text-xs">' + escHtml(a.akun_kode) + '</td>' +
+          '<td class="px-3 py-2 text-xs font-medium">' + escHtml(a.akun_nama) + '</td>' +
+          '<td class="px-3 py-2 text-xs text-right mono">' + fmtIDR(a.saldo_awal) + '</td>' +
+          '<td class="px-3 py-2 text-xs text-right mono text-green-600">' + fmtIDR(a.total_masuk) + '</td>' +
+          '<td class="px-3 py-2 text-xs text-right mono text-red-600">' + fmtIDR(a.total_keluar) + '</td>' +
+          '<td class="px-3 py-2 text-xs text-right mono font-semibold">' + fmtIDR(a.saldo_akhir) + '</td></tr>' +
+          detailHtml;
+      });
+
+      var listBadge = '';
+      if (akunList.length) {
+        listBadge = akunList.map(function(a) { return '<span class="inline-block bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full">' + escHtml(a.kode) + ' - ' + escHtml(a.nama) + '</span>'; }).join(' ');
+        listBadge = '<div class="mt-3 flex flex-wrap gap-1">' + listBadge + '</div>';
+      }
+
+      window['_export_bp-kas'] = { data: akunData, fields: ['akun_kode','akun_nama','saldo_awal','total_masuk','total_keluar','saldo_akhir'] };
+
+      window._lapStatCards =
+        '<div class="mb-4 flex flex-wrap items-center gap-3">' +
+        '<div class="flex items-center gap-2">' +
+        '<label class="text-xs font-medium text-stone-500">Bulan:</label>' +
+        '<select id="bpkas-bulan" onchange="bpkasFilter()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(kasBulan)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
+        '</select>' +
+        '<select id="bpkas-tahun" onchange="bpkasFilter()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(kasTahun)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
+        '</select></div></div>' +
+        '<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">' +
+        '<div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-stone-50 border-0 rounded-xl"><div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Saldo Awal</div><div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold">' + totalSa + '</div></div>' +
+        '<div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-blue-50 border-0 rounded-xl"><div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Debit (Masuk)</div><div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold text-blue-700">' + totalMi + '</div></div>' +
+        '<div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-orange-50 border-0 rounded-xl"><div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Kredit (Keluar)</div><div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold text-orange-700">' + totalKk + '</div></div>' +
+        '<div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-emerald-50 border-0 rounded-xl"><div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Saldo Akhir</div><div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold text-emerald-700">' + totalSaAkhir + '</div></div>' +
+        '</div>' +
+        '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs">' +
+        '<thead class="bg-stone-50"><tr>' +
+        '<th class="text-left px-3 py-2.5 text-[10px] font-semibold uppercase">Kode</th>' +
+        '<th class="text-left px-3 py-2.5 text-[10px] font-semibold uppercase">Nama Akun</th>' +
+        '<th class="text-right px-3 py-2.5 text-[10px] font-semibold uppercase">Saldo Awal</th>' +
+        '<th class="text-right px-3 py-2.5 text-[10px] font-semibold uppercase">Debit</th>' +
+        '<th class="text-right px-3 py-2.5 text-[10px] font-semibold uppercase">Kredit</th>' +
+        '<th class="text-right px-3 py-2.5 text-[10px] font-semibold uppercase">Saldo Akhir</th></tr></thead><tbody>' +
+        (akunRows || '<tr><td colspan="6" class="text-center py-8 text-stone-400">Belum ada transaksi BP Kas periode ini</td></tr>') +
+        '<tr class="border-t-2 border-stone-400 font-bold bg-stone-100">' +
+        '<td colspan="2" class="px-3 py-2.5 text-xs">TOTAL</td>' +
+        '<td class="px-3 py-2.5 text-right text-xs mono">' + totalSa + '</td>' +
+        '<td class="px-3 py-2.5 text-right text-xs mono text-green-700">' + totalMi + '</td>' +
+        '<td class="px-3 py-2.5 text-right text-xs mono text-red-700">' + totalKk + '</td>' +
+        '<td class="px-3 py-2.5 text-right text-xs mono">' + totalSaAkhir + '</td></tr>' +
+        '</tbody></table></div></div>' + listBadge;
+
+      window._lapData = null;
+    } else if (tab === 'berita-acara') {
+      const bs = lapState;
+      const now = new Date();
+      const filterBulan = bs.ba_bulan || String(now.getMonth() + 1).padStart(2, '0');
+      const filterTahun = bs.ba_tahun || String(now.getFullYear());
+      let r = null;
+      let dataLoaded = false;
+      try {
+        r = await api.get('/laporan/pengeluaran-bulanan?bulan='+filterBulan+'&tahun='+filterTahun);
+        dataLoaded = true;
+      } catch(e) { r = null; }
+
+      const bulanNama = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][parseInt(filterBulan)-1];
+      const periodeLabel = bulanNama + ' ' + filterTahun;
+
+      var noBa = bs.ba_no || '';
+      var tglBa = bs.ba_tanggal || '';
+      var penyerahNama = bs.ba_penyerah_nama || '';
+      var penyerahJab = bs.ba_penyerah_jabatan || '';
+      var penerimaNama = bs.ba_penerima_nama || '';
+      var penerimaJab = bs.ba_penerima_jabatan || '';
+      var mengetahuiNama = bs.ba_mengetahui_nama || '';
+      var mengetahuiJab = bs.ba_mengetahui_jabatan || '';
+
+      var docHtml = '';
+      if (dataLoaded && r) {
+        docHtml =
+          '<div id="ba-dokumen" class="bg-white border border-stone-200 rounded-lg p-6 sm:p-8 md:p-10 print-area">' +
+          '<div class="text-center mb-6">' +
+          '<h1 class="text-lg font-bold uppercase tracking-wide">Berita Acara</h1>' +
+          '<h2 class="text-base font-semibold mt-1">Pengalihan Sisa Dana</h2>' +
+          '<p class="text-xs text-stone-500 mt-1">Periode: ' + periodeLabel + '</p></div>' +
+          '<table class="w-full text-xs mb-6">' +
+          '<tr><td class="py-1 w-32 font-medium">Nomor</td><td class="py-1">: ' + (noBa ? escHtml(noBa) : '&mdash;') + '</td></tr>' +
+          '<tr><td class="py-1 font-medium">Tanggal</td><td class="py-1">: ' + fmtDateIndonesia(tglBa) + '</td></tr>' +
+          '</table>' +
+          '<p class="text-xs mb-4 leading-relaxed">Yang bertanda tangan di bawah ini:</p>' +
+          '<table class="w-full text-xs mb-4">' +
+          '<tr><td class="py-1 w-32 font-medium">Nama</td><td class="py-1">: ' + (penyerahNama ? escHtml(penyerahNama) : '&mdash;') + '</td></tr>' +
+          '<tr><td class="py-1 font-medium">Jabatan</td><td class="py-1">: ' + (penyerahJab ? escHtml(penyerahJab) : '&mdash;') + '</td></tr>' +
+          '</table>' +
+          '<p class="text-xs mb-4 leading-relaxed">Yang bertindak selaku <strong>Penyerah</strong>, pada hari ini menyerahkan sisa dana kepada:</p>' +
+          '<table class="w-full text-xs mb-4">' +
+          '<tr><td class="py-1 w-32 font-medium">Nama</td><td class="py-1">: ' + (penerimaNama ? escHtml(penerimaNama) : '&mdash;') + '</td></tr>' +
+          '<tr><td class="py-1 font-medium">Jabatan</td><td class="py-1">: ' + (penerimaJab ? escHtml(penerimaJab) : '&mdash;') + '</td></tr>' +
+          '</table>' +
+          '<p class="text-xs mb-4 leading-relaxed">Yang bertindak selaku <strong>Penerima</strong>, dengan rincian dana sebagai berikut:</p>' +
+          '<table class="w-full text-xs mb-6 border-collapse">' +
+          '<thead><tr class="bg-stone-100"><th class="border border-stone-300 px-3 py-2 text-left font-semibold">Uraian</th><th class="border border-stone-300 px-3 py-2 text-right font-semibold">Jumlah (Rp)</th></tr></thead>' +
+          '<tbody>' +
+          '<tr><td class="border border-stone-300 px-3 py-2">Sisa Dana yang Lalu</td><td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIDR(r.sisa_dana_lalu) + '</td></tr>' +
+          '<tr><td class="border border-stone-300 px-3 py-2">Dana yang Diterima Periode Ini</td><td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIDR(r.dana_diterima) + '</td></tr>' +
+          '<tr class="font-semibold bg-emerald-50"><td class="border border-stone-300 px-3 py-2">Jumlah Dana Tersedia</td><td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIDR(r.dana_tersedia) + '</td></tr>' +
+          '<tr><td colspan="2" class="border border-stone-300 px-3 py-1"></td></tr>' +
+          '<tr><td class="border border-stone-300 px-3 py-2">Biaya Bahan Baku</td><td class="border border-stone-300 px-3 py-2 text-right mono">(' + fmtIDR(r.biaya_bahan_baku) + ')</td></tr>' +
+          '<tr><td class="border border-stone-300 px-3 py-2">Biaya Operasional</td><td class="border border-stone-300 px-3 py-2 text-right mono">(' + fmtIDR(r.biaya_operasional) + ')</td></tr>' +
+          '<tr><td class="border border-stone-300 px-3 py-2">Biaya Insentif Fasilitas</td><td class="border border-stone-300 px-3 py-2 text-right mono">(' + fmtIDR(r.biaya_insentif_fasilitas) + ')</td></tr>' +
+          (r.biaya_lainnya > 0 ? '<tr><td class="border border-stone-300 px-3 py-2">Biaya Lainnya</td><td class="border border-stone-300 px-3 py-2 text-right mono">(' + fmtIDR(r.biaya_lainnya) + ')</td></tr>' : '') +
+          '<tr class="font-semibold bg-red-50"><td class="border border-stone-300 px-3 py-2">Total Pengeluaran</td><td class="border border-stone-300 px-3 py-2 text-right mono">(' + fmtIDR(r.total_pengeluaran) + ')</td></tr>' +
+          '<tr><td colspan="2" class="border border-stone-300 px-3 py-1"></td></tr>' +
+          '<tr class="font-bold bg-blue-50"><td class="border border-stone-300 px-3 py-2.5 text-base">Sisa Dana Saat Ini</td><td class="border border-stone-300 px-3 py-2.5 text-right mono text-base">' + fmtIDR(r.sisa_dana_saat_ini) + '</td></tr>' +
+          '</tbody></table>' +
+          '<p class="text-xs mb-2 leading-relaxed"><strong>Terbilang:</strong> # ' + terbilang(r.sisa_dana_saat_ini) + ' #</p>' +
+          '<p class="text-xs mb-8 leading-relaxed">Demikian Berita Acara ini dibuat dengan sebenarnya untuk dipergunakan sebagaimana mestinya.</p>' +
+          '<div class="grid grid-cols-3 gap-4 text-xs mt-10">' +
+          '<div class="text-center"><div class="font-semibold mb-1">Mengetahui,</div><div class="mt-12">(' + (mengetahuiNama ? escHtml(mengetahuiNama) : '&mdash;') + ')</div><div class="text-stone-500">' + (mengetahuiJab ? escHtml(mengetahuiJab) : '') + '</div></div>' +
+          '<div class="text-center"><div class="font-semibold mb-1">Yang Menyerahkan,</div><div class="mt-12">(' + (penyerahNama ? escHtml(penyerahNama) : '&mdash;') + ')</div><div class="text-stone-500">' + (penyerahJab ? escHtml(penyerahJab) : '') + '</div></div>' +
+          '<div class="text-center"><div class="font-semibold mb-1">Yang Menerima,</div><div class="mt-12">(' + (penerimaNama ? escHtml(penerimaNama) : '&mdash;') + ')</div><div class="text-stone-500">' + (penerimaJab ? escHtml(penerimaJab) : '') + '</div></div>' +
+          '</div></div>';
+      } else if (dataLoaded) {
+        docHtml = '<div class="text-center py-8 text-stone-400">Tidak ada data untuk periode ini</div>';
+      }
+
+      window._lapStatCards =
+        '<div class="max-w-4xl mx-auto">' +
+        '<div class="bg-white border border-stone-200 rounded-lg p-4 sm:p-6 mb-4">' +
+        '<h2 class="text-base font-bold mb-4">Berita Acara Pengalihan Sisa Dana</h2>' +
+        '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">' +
+        '<div>' +
+        '<label class="block text-xs font-medium text-stone-500 mb-1">Periode</label>' +
+        '<select id="ba-bulan" onchange="baGantiPeriode()" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(filterBulan)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
+        '</select>' +
+        '<select id="ba-tahun" onchange="baGantiPeriode()" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5 mt-1">' +
+        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(filterTahun)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
+        '</select></div>' +
+        '<div><label class="block text-xs font-medium text-stone-500 mb-1">No. Berita Acara</label><input id="ba-no" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="BA.001/..." value="' + escHtml(bs.ba_no||'') + '"></div>' +
+        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Tanggal</label><input id="ba-tanggal" type="date" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" value="' + (bs.ba_tanggal||now.toISOString().slice(0,10)) + '"></div>' +
+        '</div>' +
+        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">' +
+        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Yang Menyerahkan (Nama)</label><input id="ba-penyerah-nama" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Nama" value="' + escHtml(bs.ba_penyerah_nama||'') + '"></div>' +
+        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Jabatan</label><input id="ba-penyerah-jabatan" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Jabatan" value="' + escHtml(bs.ba_penyerah_jabatan||'') + '"></div>' +
+        '</div>' +
+        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">' +
+        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Yang Menerima (Nama)</label><input id="ba-penerima-nama" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Nama" value="' + escHtml(bs.ba_penerima_nama||'') + '"></div>' +
+        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Jabatan</label><input id="ba-penerima-jabatan" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Jabatan" value="' + escHtml(bs.ba_penerima_jabatan||'') + '"></div>' +
+        '</div>' +
+        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">' +
+        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Mengetahui (Nama)</label><input id="ba-mengetahui-nama" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Nama" value="' + escHtml(bs.ba_mengetahui_nama||'') + '"></div>' +
+        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Jabatan</label><input id="ba-mengetahui-jabatan" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Jabatan" value="' + escHtml(bs.ba_mengetahui_jabatan||'') + '"></div>' +
+        '</div>' +
+        '<div class="flex gap-2 mt-4">' +
+        '<button onclick="baSimpan()" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-lg text-sm font-medium">Tampilkan Dokumen</button>' +
+        '<button onclick="baCetak()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-lg text-sm font-medium">Cetak / Print</button>' +
+        '</div></div>' + docHtml + '</div>';
+      window['_export_berita-acara'] = { data: [], fields: [] };
+      window._lapData = null;
     } else {
       const d = await api.get('/laporan/keuangan');
       const rows = d.transaksi || [];
-      window._lapData = { tab, rows, headers: ['Tanggal','Tipe','Kategori','Deskripsi','Jumlah'], fields: ['tanggal','tipe','kategori','deskripsi','jumlah'],
-        fmt: rows.map(t => [fmtDate(t.tanggal), t.tipe, t.kategori||'-', t.deskripsi||'-', fmtIDR(t.jumlah)]) };
-      window['_export_keuangan'] = { data: rows, fields: ['tanggal','tipe','kategori','deskripsi','jumlah'] };
-      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
+      window._lapData = { tab, rows, headers: ['Tanggal','Tipe','Kategori','BP','Akun','Deskripsi','Jumlah'], fields: ['tanggal','tipe','kategori','akun_bp','akun_label','deskripsi','jumlah'],
+        fmt: rows.map(t => [fmtDate(t.tanggal), t.tipe, t.kategori||'-', t.akun_bp||'-', t.akun_kode ? t.akun_kode+' - '+t.akun_nama : t.akun||'-', t.deskripsi||'-', fmtIDR(t.jumlah)]) };
+      window['_export_keuangan'] = { data: rows, fields: ['tanggal','tipe','kategori','akun_bp','akun','deskripsi','jumlah'] };
+      let bpCards = '';
+      if (d.by_bp && d.by_bp.length) {
+        bpCards = '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4">' +
+          d.by_bp.map(b => statCard(b.bp, fmtIDR(b.masuk - b.keluar), b.transaksi + ' transaksi', 'bg-stone-50')).join('') +
+          '</div>';
+      }
+      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
+        ${statCard('Saldo Awal Buku', fmtIDR(d.saldo_awal),
+          `<button onclick="editSaldoAwal(${d.saldo_awal})" class="text-[10px] text-blue-600 hover:text-blue-800 underline">ubah</button>`, 'bg-stone-50')}
         ${statCard('Kas Masuk', fmtIDR(d.total_kas_masuk), '', 'bg-blue-50')}
         ${statCard('Kas Keluar', fmtIDR(d.total_kas_keluar), '', 'bg-orange-50')}
-        ${statCard('Saldo', fmtIDR(d.saldo), '', 'bg-blue-50')}
-      </div>`;
+        ${statCard('Saldo Akhir', fmtIDR(d.saldo), 'saldo_awal + masuk - keluar', 'bg-emerald-50')}
+      </div>` + bpCards;
     }
     renderLapPage();
   } catch (err) {
@@ -255,7 +652,10 @@ async function showLap(tab) {
 function renderLapPage() {
   const wrap = document.getElementById('lap-content');
   const ld = window._lapData;
-  if (!ld) return;
+  if (!ld) {
+    if (window._lapStatCards) wrap.innerHTML = window._lapStatCards;
+    return;
+  }
   const totalPages = Math.ceil(ld.fmt.length / LAP_PAGE_SIZE) || 1;
   const page = Math.min(lapState.page, totalPages);
   const start = (page - 1) * LAP_PAGE_SIZE;
@@ -528,6 +928,157 @@ async function exportSiklusBahan() {
   } catch (e) {
     showAlert('Gagal export: ' + e.message, 'error');
   }
+}
+
+function gantiPeriodePengeluaran() {
+  const bulan = document.getElementById('filter-bulan').value;
+  const tahun = document.getElementById('filter-tahun').value;
+  lapState.bulan = bulan;
+  lapState.tahun = tahun;
+  showLap('pengeluaran-bulanan');
+}
+
+function baSimpan() {
+  lapState.ba_no = document.getElementById('ba-no').value;
+  lapState.ba_tanggal = document.getElementById('ba-tanggal').value;
+  lapState.ba_penyerah_nama = document.getElementById('ba-penyerah-nama').value;
+  lapState.ba_penyerah_jabatan = document.getElementById('ba-penyerah-jabatan').value;
+  lapState.ba_penerima_nama = document.getElementById('ba-penerima-nama').value;
+  lapState.ba_penerima_jabatan = document.getElementById('ba-penerima-jabatan').value;
+  lapState.ba_mengetahui_nama = document.getElementById('ba-mengetahui-nama').value;
+  lapState.ba_mengetahui_jabatan = document.getElementById('ba-mengetahui-jabatan').value;
+  lapState.ba_bulan = document.getElementById('ba-bulan').value;
+  lapState.ba_tahun = document.getElementById('ba-tahun').value;
+  showLap('berita-acara');
+}
+
+function baCetak() {
+  var el = document.getElementById('ba-dokumen');
+  if (!el) return showAlert('Tampilkan dokumen terlebih dahulu', 'warning');
+  var win = window.open('', '_blank');
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Berita Acara Pengalihan Sisa Dana</title>';
+  html += '<style>body{font-family:"Times New Roman",serif;padding:40px 60px;font-size:12pt;line-height:1.5;color:#000}';
+  html += 'table{width:100%;border-collapse:collapse}td,th{border:1px solid #000;padding:6px 10px;font-size:11pt}';
+  html += 'h1{font-size:16pt;text-align:center;text-transform:uppercase;letter-spacing:1px}';
+  html += 'h2{font-size:14pt;text-align:center;margin-top:2px}';
+  html += '.grid{display:flex;justify-content:space-between;margin-top:60px}';
+  html += '.grid>div{text-align:center;width:30%}';
+  html += '.mt-12{margin-top:80px}';
+  html += '@media print{body{padding:30px 40px}}</style></head><body>';
+  html += el.innerHTML;
+  html += '</body></html>';
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function() { win.print(); }, 500);
+}
+
+function baGantiPeriode() {
+  lapState.ba_bulan = document.getElementById('ba-bulan').value;
+  lapState.ba_tahun = document.getElementById('ba-tahun').value;
+  showLap('berita-acara');
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function bpkasToggle(akunId) {
+  var key = String(akunId);
+  if (lapState.bpkas_expanded === key) lapState.bpkas_expanded = null;
+  else lapState.bpkas_expanded = key;
+  showLap('bp-kas');
+}
+
+function bpkasFilter() {
+  lapState.bpkas_bulan = document.getElementById('bpkas-bulan').value;
+  lapState.bpkas_tahun = document.getElementById('bpkas-tahun').value;
+  showLap('bp-kas');
+}
+
+function paSimpan() {
+  lapState.pa_bulan = document.getElementById('pa-bulan').value;
+  lapState.pa_tahun = document.getElementById('pa-tahun').value;
+  lapState.pa_tanggal = document.getElementById('pa-tanggal').value;
+  lapState.pa_rekening = document.getElementById('pa-rekening').value;
+  showLap('penggunaan-anggaran');
+}
+
+function paCetak() {
+  var el = document.getElementById('pa-dokumen');
+  if (!el) return showAlert('Tampilkan dokumen terlebih dahulu', 'warning');
+  var win = window.open('', '_blank');
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Laporan Penggunaan Anggaran</title>';
+  html += '<style>body{font-family:"Times New Roman",serif;padding:40px 60px;font-size:12pt;line-height:1.5;color:#000}';
+  html += 'table{width:100%;border-collapse:collapse}td,th{border:1px solid #000;padding:6px 10px;font-size:11pt}';
+  html += 'h1{font-size:16pt;text-align:center;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px}';
+  html += 'h2{font-size:13pt;margin-top:16px;margin-bottom:8px}';
+  html += '.grid{display:flex;justify-content:space-between;margin-top:60px}';
+  html += '.grid>div{text-align:center;width:45%}';
+  html += 'ul{padding-left:20px}';
+  html += '.mt-12{margin-top:80px}';
+  html += '@media print{body{padding:30px 40px}}</style></head><body>';
+  html += el.innerHTML;
+  html += '</body></html>';
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function() { win.print(); }, 500);
+}
+
+function paGantiPeriode() {
+  lapState.pa_bulan = document.getElementById('pa-bulan').value;
+  lapState.pa_tahun = document.getElementById('pa-tahun').value;
+  showLap('penggunaan-anggaran');
+}
+
+function fmtDateIndonesia(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr + 'T00:00:00');
+  const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  return hari[d.getDay()] + ', ' + d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+const TERBILANG_SATUAN = ['', 'ribu', 'juta', 'milyar', 'triliun'];
+const TERBILANG_ANGKA = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan'];
+function terbilang(n) {
+  if (n === 0) return 'nol rupiah';
+  const neg = n < 0;
+  n = Math.abs(n);
+  let parts = [];
+  let satuanIdx = 0;
+  while (n > 0) {
+    const s = n % 1000;
+    if (s > 0) {
+      let str = '';
+      const ratus = Math.floor(s / 100);
+      const puluhan = s % 100;
+      if (ratus > 0) str += (ratus === 1 ? 'seratus' : TERBILANG_ANGKA[ratus] + ' ratus') + ' ';
+      if (puluhan >= 11 && puluhan <= 19) {
+        str += TERBILANG_ANGKA[puluhan % 10] + ' belas ';
+      } else {
+        const puluh = Math.floor(puluhan / 10);
+        const satu = puluhan % 10;
+        if (puluh > 0) str += (puluh === 1 ? 'sepuluh' : TERBILANG_ANGKA[puluh] + ' puluh') + ' ';
+        if (satu > 0) str += TERBILANG_ANGKA[satu] + ' ';
+      }
+      if (satuanIdx === 1 && s === 1) str = 'seribu ';
+      else if (TERBILANG_SATUAN[satuanIdx]) str += TERBILANG_SATUAN[satuanIdx] + ' ';
+      parts.unshift(str.trim());
+    }
+    n = Math.floor(n / 1000);
+    satuanIdx++;
+  }
+  return (neg ? 'minus ' : '') + parts.join(' ').replace(/\s+/g, ' ') + ' rupiah';
+}
+
+function editSaldoAwal(current) {
+  const amount = prompt('Masukkan Saldo Awal Buku (Rp):', fmtIDR(current).replace(/[^0-9]/g,''));
+  if (amount === null) return;
+  const val = parseFloat(amount.replace(/[^0-9.]/g,''));
+  if (isNaN(val) || val < 0) return showAlert('Nilai tidak valid', 'error');
+  api.put('/keuangan/saldo-awal', { saldo_awal: val }).then(r => {
+    if (r.ok) { showAlert('Saldo awal berhasil disimpan', 'success'); showLap('keuangan'); }
+  }).catch(e => showAlert('Gagal: ' + e.message, 'error'));
 }
 
 function renderSiklusBahanTable(days, fixed_kategori) {

@@ -135,6 +135,11 @@ router.get('/shift', requireRole('admin', 'keuangan'), async (req, res) => {
   }
 });
 
+// Kebutuhan Pangan template
+router.get('/kebutuhan-pangan', requireRole('admin', 'ahli_gizi'), (req, res) => {
+  res.render('partials/kebutuhan-pangan');
+});
+
 // Akun template
 router.get('/akun', (req, res) => {
   res.render('partials/akun', { user: req.user });

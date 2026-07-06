@@ -1,45 +1,12 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const {
+  JENJANG_ORDER, KATEGORI_SP, mapJenjang, hitungSP, getSpMapByJenjang, getSpMapByJenjangList, fmtNum
+} = require('../services/spBddCalculator');
 
 const router = express.Router();
 router.use(requireAuth);
-
-const JENJANG_ORDER = ['Balita', 'TK/PAUD', 'SD 1-3', 'SD 4-6', 'SMP', 'SMA', 'Ibu Hamil', 'Ibu Menyusui'];
-
-const KATEGORI_MAP = {
-  'TK': 'TK/PAUD',
-  'PAUD': 'TK/PAUD',
-  'SD': 'SD 1-3',
-  'SMP': 'SMP/MTs, SMA/SMK',
-  'Ibu Hamil': 'Ibu Hamil',
-  'Ibu Menyusui': 'Ibu Menyusui',
-  'Balita': 'Balita',
-};
-
-const JENJANG_MAP = {
-  'TK/PAUD': 'TK/PAUD',
-  'SD/MI (1-3)': 'SD 1-3',
-  'SD/MI (4-6)': 'SD 4-6',
-  'SMP/MTs, SMA/SMK': 'SMP',
-  'SMP': 'SMP',
-  'SMA': 'SMA',
-  'Bumil/Busui': 'Ibu Hamil',
-  'Ibu Hamil': 'Ibu Hamil',
-  'Ibu Menyusui': 'Ibu Menyusui',
-  'Balita': 'Balita',
-};
-
-const KATEGORI_SP = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu', 'Minyak'];
-
-function fmtNum(v) {
-  if (v == null || isNaN(v)) return '0.00';
-  return Number(v).toFixed(2);
-}
-
-function mapJenjang(kat) {
-  return JENJANG_MAP[kat] || JENJANG_MAP[KATEGORI_MAP[kat]] || kat;
-}
 
 // GET /sp/standar - get all standar SP values
 router.get('/sp/standar', requireRole('admin', 'ahli_gizi'), async (req, res) => {
@@ -80,32 +47,21 @@ router.post('/sp/hitung', requireRole('admin', 'ahli_gizi'), async (req, res) =>
     [menu_id]
   );
 
-  const [spRows] = await db.query(
-    'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
-    [targetJenjang]
-  );
-  const spMap = {};
-  for (const r of spRows) spMap[r.kategori_sp] = Number(r.sp_value);
+  const spMap = await getSpMapByJenjang(targetJenjang);
 
-  const result = [];
-  for (const b of bahan) {
-    const spVal = b.kategori_sp ? (spMap[b.kategori_sp] || null) : null;
-    const berat1Sp = Number(b.berat_1_sp || 0);
-    const persenBdd = Number(b.persen_bdd || 100);
-    const beratBersih = spVal !== null ? berat1Sp * spVal : Number(b.jumlah_existing || 0);
-    const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100)) : beratBersih;
-
-    result.push({
+  const result = bahan.map(b => {
+    const h = hitungSP(b, spMap);
+    return {
       bahan_baku_id: b.bahan_baku_id,
       nama: b.nama,
       kategori_sp: b.kategori_sp,
-      sp_value: spVal,
-      berat_1_sp: berat1Sp,
-      berat_bersih: beratBersih,
-      persen_bdd: persenBdd,
-      berat_kotor: beratKotor,
-    });
-  }
+      sp_value: h.sp_value,
+      berat_1_sp: h.berat_1_sp,
+      berat_bersih: h.berat_bersih,
+      persen_bdd: h.persen_bdd,
+      berat_kotor: h.berat_kotor,
+    };
+  });
 
   res.json({
     menu_id: Number(menu_id),
@@ -170,18 +126,7 @@ router.post('/sp/hitung-kebutuhan', requireRole('admin', 'ahli_gizi', 'keuangan'
 
   // Get all SP standards needed
   const allJenjang = [...new Set(dayRows.map(r => mapJenjang(r.kategori_db)))].filter(Boolean);
-  const spMap = {};
-  if (allJenjang.length) {
-    const jh = allJenjang.map(() => '?').join(',');
-    const [spRows] = await db.query(
-      `SELECT jenjang, kategori_sp, sp_value FROM standar_sp WHERE jenjang IN (${jh})`,
-      allJenjang
-    );
-    for (const r of spRows) {
-      if (!spMap[r.jenjang]) spMap[r.jenjang] = {};
-      spMap[r.jenjang][r.kategori_sp] = Number(r.sp_value);
-    }
-  }
+  const spMap = await getSpMapByJenjangList(allJenjang);
 
   const penerima = jumlah_penerima || 0;
   const agg = {};
@@ -192,12 +137,7 @@ router.post('/sp/hitung-kebutuhan', requireRole('admin', 'ahli_gizi', 'keuangan'
     const bahanList = menuBahanMap[day.menu_id] || [];
 
     for (const b of bahanList) {
-      const spVal = b.kategori_sp ? (spValues[b.kategori_sp] || null) : null;
-      const berat1Sp = Number(b.berat_1_sp || 0);
-      const persenBdd = Number(b.persen_bdd || 100);
-      const beratBersih = spVal !== null ? berat1Sp * spVal : Number(b.jumlah_existing || 0);
-      const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100)) : beratBersih;
-
+      const h = hitungSP(b, spValues);
       const key = b.bahan_baku_id;
       if (!agg[key]) {
         agg[key] = {
@@ -205,15 +145,15 @@ router.post('/sp/hitung-kebutuhan', requireRole('admin', 'ahli_gizi', 'keuangan'
           nama: b.nama,
           satuan: b.satuan || 'g',
           kategori_sp: b.kategori_sp,
-          berat_1_sp: berat1Sp,
-          sp_value: spVal,
-          persen_bdd: persenBdd,
-          berat_bersih: beratBersih,
-          berat_kotor: beratKotor,
+          berat_1_sp: h.berat_1_sp,
+          sp_value: h.sp_value,
+          persen_bdd: h.persen_bdd,
+          berat_bersih: h.berat_bersih,
+          berat_kotor: h.berat_kotor,
           total_berat_kotor: 0,
         };
       }
-      agg[key].total_berat_kotor += beratKotor * day.jumlah_porsi;
+      agg[key].total_berat_kotor += h.berat_kotor * day.jumlah_porsi;
     }
   }
 

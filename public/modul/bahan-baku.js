@@ -22,6 +22,7 @@ const BAHAN_BAKU_CRUD_BASE = {
     { k: 'kategori_sp', l: 'Kategori SP', type: 'select', opts: ['','Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'], group: 'info' },
     { k: 'berat_1_sp', l: 'Berat 1 SP (gram)', type: 'number', fmt: 'num', group: 'info' },
     { k: 'persen_bdd', l: 'BDD (%)', type: 'number', fmt: 'num', group: 'info' },
+    { k: 'berat_per_satuan', l: 'Berat per Satuan (gram)', type: 'number', fmt: 'num', desc: 'Isi jika satuan bukan gram (misal 1 pcs = 50g, 1 ikat = 30g)', group: 'info' },
   ],
   cols: ['nama','kategori','kategori_sp','berat_1_sp','persen_bdd','satuan','harga_satuan','stok_saat_ini']
 };

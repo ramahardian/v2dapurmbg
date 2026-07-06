@@ -37,9 +37,9 @@ function renderNav() {
 
   nav.innerHTML = NAV_GROUPS.map(g => {
     const visibleItems = g.items.filter(key => {
-      if (key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'sp-referensi' || key === 'panduan-ahli-gizi') return isAdminOrAhliGizi;
+      if (key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'sp-referensi' || key === 'kebutuhan-pangan' || key === 'bdd-kalkulator' || key === 'panduan-ahli-gizi') return isAdminOrAhliGizi;
       if (key === 'gudang') return isAdminOrGudang;
-      if (key === 'budgeting' || key === 'kas-bank') return isAdminOrKeuangan;
+      if (key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun') return isAdminOrKeuangan;
       if (key === 'laporan') return isAdminOrKeuangan || isAdminOrAhliGizi;
       if (key === 'penerima-manfaat') return isAdminOrKeuangan;
       if (key === 'karyawan' || key === 'absensi' || key === 'payroll' || key === 'shift' || key === 'divisi') return isAdminOrKeuangan;
@@ -78,10 +78,10 @@ function route() {
   const isAdminOrKeuanganOrGudang = userRole === 'admin' || userRole === 'keuangan' || userRole === 'gudang';
   const isAdminOrProduksi = userRole === 'admin' || userRole === 'produksi' || userRole === 'gudang' || userRole === 'keuangan';
   
-  if ((key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'sp-referensi' || key === 'panduan-ahli-gizi') && !isAdminOrAhliGizi) {
+  if ((key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'sp-referensi' || key === 'kebutuhan-pangan' || key === 'bdd-kalkulator' || key === 'panduan-ahli-gizi') && !isAdminOrAhliGizi) {
     showAlert('Akses ditolak', 'error'); navigate('dashboard'); return;
   }
-  if ((key === 'budgeting' || key === 'kas-bank') && !isAdminOrKeuangan) {
+  if ((key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun') && !isAdminOrKeuangan) {
     return showAccessDenied();
   }
   if (key === 'laporan' && !isAdminOrKeuangan && !isAdminOrAhliGizi) {

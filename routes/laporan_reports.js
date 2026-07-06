@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { mapJenjang, hitungSP, getSpMapByJenjang } = require('../services/spBddCalculator');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -167,6 +168,419 @@ router.get('/laporan/rab-bulanan', async (req, res) => {
       : 0,
   };
   res.json({ rows, stats });
+});
+
+// 9. Laporan Perhitungan Kebutuhan Pangan (per Program Makan / siklus)
+router.get('/laporan/kebutuhan-pangan/:siklus_id', async (req, res) => {
+  const { siklus_id } = req.params;
+  const jumlahSiswa = parseInt(req.query.jumlah_siswa) || 0;
+
+  const [[siklus]] = await db.query(
+    'SELECT * FROM siklus_menu WHERE id=? AND tenant_id=?',
+    [siklus_id, req.user.tenant_id]
+  );
+  if (!siklus) return res.status(404).json({ error: 'Siklus tidak ditemukan' });
+
+  const [items] = await db.query(
+    'SELECT * FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke ASC',
+    [siklus_id]
+  );
+
+  const targetJenjang = mapJenjang(siklus.kategori_penerima);
+  const spMap = await getSpMapByJenjang(targetJenjang);
+
+  const days = [];
+
+  for (const item of items) {
+    if (!item.menu_id) {
+      days.push({ hari_ke: item.hari_ke, hari_nama: item.hari_nama, menu_nama: null, bahan: [], jumlah_porsi: item.jumlah_porsi || 0 });
+      continue;
+    }
+
+    const [[menu]] = await db.query(
+      'SELECT * FROM menu WHERE id=?', [item.menu_id]
+    );
+    if (!menu) continue;
+
+    const [bahanRows] = await db.query(
+      `SELECT mb.jumlah as jumlah_existing, b.id, b.nama, b.kategori_sp,
+              b.berat_1_sp, b.persen_bdd, b.satuan
+       FROM menu_bahan mb
+       JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+       WHERE mb.menu_id=?`,
+      [item.menu_id]
+    );
+
+    const bahan = bahanRows.map(b => {
+      const h = hitungSP(b, spMap);
+      const kebutuhanKg = jumlahSiswa > 0 ? Number((h.berat_kotor * jumlahSiswa / 1000).toFixed(2)) : 0;
+
+      return {
+        bahan_id: b.id,
+        nama: b.nama,
+        kategori_sp: b.kategori_sp,
+        sp_value: h.sp_value,
+        berat_1_sp: h.berat_1_sp,
+        berat_bersih: h.berat_bersih,
+        persen_bdd: h.persen_bdd,
+        berat_kotor: h.berat_kotor,
+        jumlah_siswa: jumlahSiswa,
+        kebutuhan_kg: kebutuhanKg,
+        satuan: b.satuan,
+      };
+    });
+
+    const gramasiBersih = bahan.reduce((s, b) => s + b.berat_bersih, 0);
+    const gramasiKotor = bahan.reduce((s, b) => s + b.berat_kotor, 0);
+
+    days.push({
+      hari_ke: item.hari_ke,
+      hari_nama: item.hari_nama,
+      menu_id: item.menu_id,
+      menu_nama: menu.nama,
+      jumlah_porsi: item.jumlah_porsi || 0,
+      gramasi_bersih: gramasiBersih,
+      gramasi_kotor: gramasiKotor,
+      gramasi_total: Number(menu.gramasi_total || 0),
+      bahan,
+    });
+  }
+
+  const totalKebutuhanKg = days.reduce((s, d) =>
+    s + (d.bahan || []).reduce((s2, b) => s2 + b.kebutuhan_kg, 0), 0
+  );
+
+  res.json({
+    siklus: { id: siklus.id, nama: siklus.nama, kategori_penerima: siklus.kategori_penerima, jumlah_porsi: siklus.jumlah_porsi, total_hari: siklus.total_hari },
+    jenjang: targetJenjang,
+    jumlah_siswa: jumlahSiswa,
+    days,
+    total_kebutuhan_kg: Number(totalKebutuhanKg.toFixed(2)),
+  });
+});
+
+// 10. Buku Pembantu Operasional
+router.get('/laporan/bp-operasional', async (req, res) => {
+  const t = req.user.tenant_id;
+  const { bulan, tahun } = req.query;
+  const now = new Date();
+  const filterBulan = bulan || String(now.getMonth() + 1).padStart(2, '0');
+  const filterTahun = tahun || String(now.getFullYear());
+
+  // Ambil akun dengan BP Operasional
+  const [akunList] = await db.query(
+    `SELECT * FROM akun WHERE tenant_id=? AND bp='BP Operasional' AND is_active=1 ORDER BY kode`,
+    [t]
+  );
+
+  // Ambil saldo awal dari tenants
+  const [[{ saldo_awal } = { saldo_awal: 0 }]] = await db.query(
+    'SELECT COALESCE(saldo_awal,0) AS saldo_awal FROM tenants WHERE id=?', [t]
+  );
+
+  // Ambil semua transaksi kas_bank untuk periode tertentu
+  const [transaksi] = await db.query(
+    `SELECT k.*, a.kode as akun_kode, a.nama as akun_nama, a.bp as akun_bp
+     FROM kas_bank k
+     LEFT JOIN akun a ON a.id = k.akun_id
+     WHERE k.tenant_id=?
+       AND DATE_FORMAT(k.tanggal, '%Y-%m') = CONCAT(?, '-', ?)
+       AND (a.bp = 'BP Operasional' OR a.bp IS NULL)
+     ORDER BY k.tanggal ASC, k.id ASC`,
+    [t, filterTahun, filterBulan]
+  );
+
+  // Group transaksi per akun
+  const perAkun = {};
+  for (const trx of transaksi) {
+    const key = trx.akun_id || 'tanpa-akun';
+    if (!perAkun[key]) {
+      perAkun[key] = {
+        akun_id: trx.akun_id,
+        akun_kode: trx.akun_kode || '-',
+        akun_nama: trx.akun_nama || 'Tanpa Akun',
+        transaksi: [],
+        total_masuk: 0,
+        total_keluar: 0,
+      };
+    }
+    perAkun[key].transaksi.push({
+      id: trx.id,
+      tanggal: trx.tanggal,
+      no_transaksi: trx.no_transaksi,
+      tipe: trx.tipe,
+      kategori: trx.kategori,
+      deskripsi: trx.deskripsi,
+      jumlah: Number(trx.jumlah),
+    });
+    if (trx.tipe === 'masuk') perAkun[key].total_masuk += Number(trx.jumlah);
+    else perAkun[key].total_keluar += Number(trx.jumlah);
+  }
+
+  // Hitung saldo awal per akun (sebelum periode filter)
+  for (const key of Object.keys(perAkun)) {
+    if (key === 'tanpa-akun') continue;
+    const akunId = perAkun[key].akun_id;
+    const [[{ saldo_sebelum } = { saldo_sebelum: 0 }]] = await db.query(
+      `SELECT COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE -jumlah END), 0) as saldo_sebelum
+       FROM kas_bank
+       WHERE tenant_id=? AND akun_id=? AND tanggal < STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d')`,
+      [t, akunId, filterTahun, filterBulan]
+    );
+    perAkun[key].saldo_awal = Number(saldo_sebelum);
+    perAkun[key].saldo_akhir = Number(saldo_sebelum) + perAkun[key].total_masuk - perAkun[key].total_keluar;
+  }
+
+  // Untuk transaksi tanpa akun, saldo awal dihitung dari semua transaksi tanpa akun_id
+  if (perAkun['tanpa-akun']) {
+    const [[{ saldo_sebelum } = { saldo_sebelum: 0 }]] = await db.query(
+      `SELECT COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE -jumlah END), 0) as saldo_sebelum
+       FROM kas_bank
+       WHERE tenant_id=? AND akun_id IS NULL AND tanggal < STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d')`,
+      [t, filterTahun, filterBulan]
+    );
+    perAkun['tanpa-akun'].saldo_awal = Number(saldo_sebelum);
+    perAkun['tanpa-akun'].saldo_akhir = Number(saldo_sebelum) + perAkun['tanpa-akun'].total_masuk - perAkun['tanpa-akun'].total_keluar;
+  }
+
+  const akunData = Object.values(perAkun).sort((a, b) => a.akun_kode.localeCompare(b.akun_kode));
+  const totalMasuk = akunData.reduce((s, a) => s + a.total_masuk, 0);
+  const totalKeluar = akunData.reduce((s, a) => s + a.total_keluar, 0);
+
+  res.json({
+    periode: `${filterTahun}-${filterBulan}`,
+    saldo_awal: Number(saldo_awal),
+    total_masuk: totalMasuk,
+    total_keluar: totalKeluar,
+    akun_data: akunData,
+    akun_list: akunList,
+  });
+});
+
+// 11. Catatan Pengeluaran Bulanan
+router.get('/laporan/pengeluaran-bulanan', async (req, res) => {
+  const t = req.user.tenant_id;
+  const { bulan, tahun } = req.query;
+  const now = new Date();
+  const filterBulan = bulan || String(now.getMonth() + 1).padStart(2, '0');
+  const filterTahun = tahun || String(now.getFullYear());
+  const periode = `${filterTahun}-${filterBulan}`;
+
+  // Ambil saldo_awal dari tenants
+  const [[{ saldo_awal } = { saldo_awal: 0 }]] = await db.query(
+    'SELECT COALESCE(saldo_awal, 0) AS saldo_awal FROM tenants WHERE id=?', [t]
+  );
+
+  // Sisa dana yang lalu: saldo_awal + semua transaksi sebelum periode ini
+  const [[{ saldo_sebelum } = { saldo_sebelum: 0 }]] = await db.query(
+    `SELECT COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE -jumlah END), 0) AS saldo_sebelum
+     FROM kas_bank
+     WHERE tenant_id=? AND tanggal < STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d')`,
+    [t, filterTahun, filterBulan]
+  );
+  const sisa_dana_lalu = Number(saldo_awal) + Number(saldo_sebelum);
+
+  // Dana yang diterima saat ini
+  const [[{ dana_diterima } = { dana_diterima: 0 }]] = await db.query(
+    `SELECT COALESCE(SUM(jumlah), 0) AS dana_diterima
+     FROM kas_bank
+     WHERE tenant_id=? AND tipe='masuk' AND DATE_FORMAT(tanggal, '%Y-%m')=?`,
+    [t, periode]
+  );
+
+  // Pengeluaran per kategori
+  const [pengeluaran] = await db.query(
+    `SELECT kategori, SUM(jumlah) AS total
+     FROM kas_bank
+     WHERE tenant_id=? AND tipe='keluar' AND DATE_FORMAT(tanggal, '%Y-%m')=?
+     GROUP BY kategori`,
+    [t, periode]
+  );
+  const byKat = {};
+  for (const p of pengeluaran) byKat[p.kategori] = Number(p.total);
+
+  const biaya_bahan_baku = byKat['Pembayaran Supplier'] || 0;
+  const biaya_operasional = byKat['Biaya Operasional'] || 0;
+  const biaya_insentif_fasilitas = byKat['Gaji'] || 0;
+  const biaya_lainnya = byKat['Lainnya'] || 0;
+  const total_pengeluaran = biaya_bahan_baku + biaya_operasional + biaya_insentif_fasilitas + biaya_lainnya;
+  const dana_tersedia = sisa_dana_lalu + Number(dana_diterima);
+  const sisa_dana_saat_ini = dana_tersedia - total_pengeluaran;
+
+  // Detail transaksi periode ini
+  const [transaksi] = await db.query(
+    `SELECT k.*, a.kode AS akun_kode, a.nama AS akun_nama
+     FROM kas_bank k
+     LEFT JOIN akun a ON a.id = k.akun_id
+     WHERE k.tenant_id=? AND DATE_FORMAT(k.tanggal, '%Y-%m')=?
+     ORDER BY k.tanggal ASC, k.id ASC`,
+    [t, periode]
+  );
+
+  res.json({
+    periode: `${filterTahun}-${filterBulan}`,
+    saldo_awal: Number(saldo_awal),
+    sisa_dana_lalu,
+    dana_diterima: Number(dana_diterima),
+    dana_tersedia,
+    biaya_bahan_baku,
+    biaya_operasional,
+    biaya_insentif_fasilitas,
+    biaya_lainnya,
+    total_pengeluaran,
+    sisa_dana_saat_ini,
+    transaksi: transaksi.map(k => ({
+      ...k,
+      jumlah: Number(k.jumlah),
+    })),
+  });
+});
+
+// 12. Laporan Penggunaan Anggaran
+router.get('/laporan/penggunaan-anggaran', async (req, res) => {
+  const t = req.user.tenant_id;
+  const { bulan, tahun } = req.query;
+  const now = new Date();
+  const filterBulan = bulan || String(now.getMonth() + 1).padStart(2, '0');
+  const filterTahun = tahun || String(now.getFullYear());
+  const periode = `${filterTahun}-${filterBulan}`;
+
+  // Dana Diajukan dari budget
+  const [[budgetRow]] = await db.query(
+    `SELECT COALESCE(SUM(total_budget), 0) AS total_budget,
+            COALESCE(SUM(biaya_operasional), 0) AS total_biaya_operasional
+     FROM budget WHERE tenant_id=? AND periode=?`,
+    [t, periode]
+  );
+
+  const dana_diajukan_total = Number(budgetRow.total_budget);
+  const dana_diajukan_operasional = Number(budgetRow.total_biaya_operasional);
+  // Asumsikan Bahan Baku = total_budget - biaya_operasional, Insentif tidak dipisah di budget
+  const dana_diajukan_bahan = Math.max(0, dana_diajukan_total - dana_diajukan_operasional);
+  const dana_diajukan_insentif = 0;
+
+  // Dana Terpakai dari kas_bank
+  const [pengeluaran] = await db.query(
+    `SELECT kategori, SUM(jumlah) AS total
+     FROM kas_bank
+     WHERE tenant_id=? AND tipe='keluar' AND DATE_FORMAT(tanggal, '%Y-%m')=?
+     GROUP BY kategori`,
+    [t, periode]
+  );
+  const byKat = {};
+  for (const p of pengeluaran) byKat[p.kategori] = Number(p.total);
+
+  const dana_terpakai_bahan = byKat['Pembayaran Supplier'] || 0;
+  const dana_terpakai_operasional = (byKat['Biaya Operasional'] || 0) + (byKat['Lainnya'] || 0);
+  const dana_terpakai_insentif = byKat['Gaji'] || 0;
+  const dana_terpakai_total = dana_terpakai_bahan + dana_terpakai_operasional + dana_terpakai_insentif;
+
+  res.json({
+    periode,
+    bahan_baku: {
+      diajukan: dana_diajukan_bahan,
+      terpakai: dana_terpakai_bahan,
+      sisa: dana_diajukan_bahan - dana_terpakai_bahan,
+    },
+    operasional: {
+      diajukan: dana_diajukan_operasional,
+      terpakai: dana_terpakai_operasional,
+      sisa: dana_diajukan_operasional - dana_terpakai_operasional,
+    },
+    insentif: {
+      diajukan: dana_diajukan_insentif,
+      terpakai: dana_terpakai_insentif,
+      sisa: dana_diajukan_insentif - dana_terpakai_insentif,
+    },
+    total: {
+      diajukan: dana_diajukan_total,
+      terpakai: dana_terpakai_total,
+      sisa: dana_diajukan_total - dana_terpakai_total,
+    },
+  });
+});
+
+// 13. Buku Pembantu BP Kas
+router.get('/laporan/bp-kas', async (req, res) => {
+  const t = req.user.tenant_id;
+  const { bulan, tahun } = req.query;
+  const now = new Date();
+  const filterBulan = bulan || String(now.getMonth() + 1).padStart(2, '0');
+  const filterTahun = tahun || String(now.getFullYear());
+
+  // Ambil akun dengan BP Kas
+  const [akunList] = await db.query(
+    `SELECT * FROM akun WHERE tenant_id=? AND bp='BP Kas' AND is_active=1 ORDER BY kode`,
+    [t]
+  );
+
+  // Ambil semua transaksi kas_bank untuk periode tertentu yang terkait akun BP Kas
+  const [transaksi] = await db.query(
+    `SELECT k.*, a.kode as akun_kode, a.nama as akun_nama, a.bp as akun_bp
+     FROM kas_bank k
+     LEFT JOIN akun a ON a.id = k.akun_id
+     WHERE k.tenant_id=?
+       AND DATE_FORMAT(k.tanggal, '%Y-%m') = CONCAT(?, '-', ?)
+       AND a.bp = 'BP Kas'
+     ORDER BY k.tanggal ASC, k.id ASC`,
+    [t, filterTahun, filterBulan]
+  );
+
+  // Group transaksi per akun
+  const perAkun = {};
+  for (const trx of transaksi) {
+    const key = trx.akun_id;
+    if (!perAkun[key]) {
+      perAkun[key] = {
+        akun_id: trx.akun_id,
+        akun_kode: trx.akun_kode || '-',
+        akun_nama: trx.akun_nama || 'Tanpa Akun',
+        transaksi: [],
+        total_masuk: 0,
+        total_keluar: 0,
+      };
+    }
+    perAkun[key].transaksi.push({
+      id: trx.id,
+      tanggal: trx.tanggal,
+      no_transaksi: trx.no_transaksi,
+      tipe: trx.tipe,
+      kategori: trx.kategori,
+      deskripsi: trx.deskripsi,
+      jumlah: Number(trx.jumlah),
+    });
+    if (trx.tipe === 'masuk') perAkun[key].total_masuk += Number(trx.jumlah);
+    else perAkun[key].total_keluar += Number(trx.jumlah);
+  }
+
+  // Hitung saldo awal per akun (sebelum periode filter)
+  for (const key of Object.keys(perAkun)) {
+    const akunId = perAkun[key].akun_id;
+    const [[{ saldo_sebelum } = { saldo_sebelum: 0 }]] = await db.query(
+      `SELECT COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE -jumlah END), 0) as saldo_sebelum
+       FROM kas_bank
+       WHERE tenant_id=? AND akun_id=? AND tanggal < STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d')`,
+      [t, akunId, filterTahun, filterBulan]
+    );
+    perAkun[key].saldo_awal = Number(saldo_sebelum);
+    perAkun[key].saldo_akhir = Number(saldo_sebelum) + perAkun[key].total_masuk - perAkun[key].total_keluar;
+  }
+
+  const akunData = Object.values(perAkun).sort((a, b) => a.akun_kode.localeCompare(b.akun_kode));
+  const totalSaldoAwal = akunData.reduce((s, a) => s + a.saldo_awal, 0);
+  const totalMasuk = akunData.reduce((s, a) => s + a.total_masuk, 0);
+  const totalKeluar = akunData.reduce((s, a) => s + a.total_keluar, 0);
+  const totalSaldoAkhir = akunData.reduce((s, a) => s + a.saldo_akhir, 0);
+
+  res.json({
+    periode: `${filterTahun}-${filterBulan}`,
+    total_saldo_awal: totalSaldoAwal,
+    total_masuk: totalMasuk,
+    total_keluar: totalKeluar,
+    total_saldo_akhir: totalSaldoAkhir,
+    akun_data: akunData,
+    akun_list: akunList,
+  });
 });
 
 module.exports = router;

@@ -39,11 +39,16 @@ require('dotenv').config();
       const [nutCols] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'kalori'");
       if (!nutCols.length) {
         await conn.query('ALTER TABLE bahan_baku ADD COLUMN kalori DECIMAL(10,2) DEFAULT 0 AFTER harga_satuan, ADD COLUMN protein DECIMAL(10,2) DEFAULT 0 AFTER kalori, ADD COLUMN karbohidrat DECIMAL(10,2) DEFAULT 0 AFTER protein, ADD COLUMN lemak DECIMAL(10,2) DEFAULT 0 AFTER karbohidrat, ADD COLUMN serat DECIMAL(10,2) DEFAULT 0 AFTER lemak');
-        console.log('✓ Migrasi bahan_baku: tambah kolom nutrisi (kalori, protein, karbohidrat, lemak, serat)');
-      }
-    } catch (e) {
-      console.log('  (skip migrasi nutrisi bahan_baku)', e.message);
+      console.log('✓ Migrasi bahan_baku: tambah kolom nutrisi (kalori, protein, karbohidrat, lemak, serat)');
     }
+    const [beratCols] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'berat_per_satuan'");
+    if (!beratCols.length) {
+      await conn.query("ALTER TABLE bahan_baku ADD COLUMN berat_per_satuan DECIMAL(10,2) DEFAULT 0 COMMENT 'Berat 1 satuan dalam gram' AFTER persen_bdd");
+      console.log('✓ Migrasi bahan_baku: tambah kolom berat_per_satuan');
+    }
+  } catch (e) {
+    console.log('  (skip migrasi nutrisi bahan_baku)', e.message);
+  }
     // Migrasi kolom jabatan di tabel karyawan (jika menggunakan schema lama dengan jabatan_id)
     try {
       const [jabCols] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'karyawan' AND COLUMN_NAME = 'jabatan'");
@@ -186,9 +191,69 @@ require('dotenv').config();
     } catch (e) {
       console.log('  (skip copy seed sp_referensi_bahan ke tenant lain)', e.message);
     }
-    console.log('✓ Schema berhasil dibuat');
-    await conn.end();
-
+    // Migrasi tabel akun (Chart of Accounts)
+    try {
+      await conn.query(`CREATE TABLE IF NOT EXISTS akun (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tenant_id INT NOT NULL,
+        kode VARCHAR(10) NOT NULL,
+        nama VARCHAR(200) NOT NULL,
+        bp VARCHAR(50) NOT NULL,
+        tipe ENUM('Manual','Otomatis') DEFAULT 'Manual',
+        is_active TINYINT(1) DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+        INDEX idx_tenant (tenant_id),
+        UNIQUE KEY uk_kode_tenant (kode, tenant_id)
+      ) ENGINE=InnoDB`);
+      console.log('✓ Migrasi akun: tabel dibuat');
+    } catch (e) {
+      console.log('  (skip migrasi tabel akun)', e.message);
+    }
+    // Migrasi kolom akun_id di kas_bank
+    try {
+      const [aidCols] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'kas_bank' AND COLUMN_NAME = 'akun_id'");
+      if (!aidCols.length) {
+        await conn.query("ALTER TABLE kas_bank ADD COLUMN akun_id INT AFTER akun");
+        console.log('✓ Migrasi kas_bank: tambah kolom akun_id');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi akun_id kas_bank)', e.message);
+    }
+    // Seed default akun per tenant
+    try {
+      const [tenants] = await conn.query('SELECT id FROM tenants');
+      const [existingAkun] = await conn.query('SELECT COUNT(*) as cnt FROM akun WHERE tenant_id=?', [tenants[0]?.id || 0]);
+      if (tenants.length && !existingAkun[0].cnt) {
+        const seedAkun = [
+          ['1000', 'Petty Cash/Cash in Hand', 'BP Kas', 'Manual'],
+          ['1100', 'Kas di Bank', 'BP Kas', 'Manual'],
+          ['2000', 'Dana Bahan Baku', 'BP Jenis Dana', 'Manual'],
+          ['2100', 'Dana Operasional', 'BP Jenis Dana', 'Manual'],
+        ];
+        for (const t of tenants) {
+          for (const [kode, nama, bp, tipe] of seedAkun) {
+            await conn.query(
+              'INSERT IGNORE INTO akun (tenant_id, kode, nama, bp, tipe) VALUES (?,?,?,?,?)',
+              [t.id, kode, nama, bp, tipe]
+            );
+          }
+        }
+        console.log('✓ Seed akun: data default untuk semua tenant');
+      }
+    } catch (e) {
+      console.log('  (skip seed akun)', e.message);
+    }
+    // Migrasi kolom saldo_awal di tenants
+    try {
+      const [saCols] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tenants' AND COLUMN_NAME = 'saldo_awal'");
+      if (!saCols.length) {
+        await conn.query("ALTER TABLE tenants ADD COLUMN saldo_awal DECIMAL(15,2) DEFAULT 0 AFTER is_active");
+        console.log('✓ Migrasi tenants: tambah kolom saldo_awal');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi saldo_awal)', e.message);
+    }
     // Seed admin tenant + user
     const [tExist] = await db.query('SELECT id FROM tenants LIMIT 1');
     if (!tExist.length) {
@@ -201,6 +266,8 @@ require('dotenv').config();
     } else {
       console.log('✓ Tenant sudah ada, skip seed');
     }
+    console.log('✓ Schema berhasil dibuat');
+    await conn.end();
     process.exit(0);
   } catch (e) {
     console.error('✗ Migrate gagal:', e.message);

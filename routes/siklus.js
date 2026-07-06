@@ -1,14 +1,11 @@
 const express = require('express');
 const db = require('../db');
-// Middleware autentikasi (Supabase) yang akan memvalidasi token 
-// dan menyisipkan data user (termasuk tenant_id) ke dalam object req.user
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { FIXED_KATEGORI, KATEGORI_MAP_DISPLAY, mapToDisplay, hitungBDD } = require('../services/spBddCalculator');
 
 const router = express.Router();
 
-// Menerapkan middleware autentikasi secara global untuk seluruh endpoint di router ini
 router.use(requireAuth);
-// Terapkan role-based access control: hanya admin dan ahli_gizi yang bisa akses
 router.use(requireRole('admin', 'ahli_gizi'));
 
 /**
@@ -90,18 +87,6 @@ router.get('/siklus/laporan', async (req, res) => {
  * Mengambil rincian kebutuhan bahan baku per hari dari semua siklus.
  * Menggabungkan siklus_menu_item → menu → menu_bahan → bahan_baku.
  */
-const FIXED_KATEGORI = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
-
-const KATEGORI_MAP = {
-  'TK': 'TK/PAUD',
-  'PAUD': 'TK/PAUD',
-  'SD': 'SD/MI (1-3)',
-  'SMP': 'SMP/MTs, SMA/SMK',
-  'Ibu Hamil': 'Bumil/Busui',
-  'Ibu Menyusui': 'Bumil/Busui',
-  'Balita': 'Balita',
-};
-
 router.get('/siklus/laporan/bahan', async (req, res) => {
   const [siklusList] = await db.query(
     'SELECT id, nama, kategori_penerima, jumlah_porsi FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
@@ -152,11 +137,9 @@ router.get('/siklus/laporan/bahan', async (req, res) => {
 
     for (const br of bahanRows) {
       const katDb = br.kategori_penerima || day.kategori_db;
-      const katDisplay = KATEGORI_MAP[katDb] || katDb;
-      // Koreksi BDD: berat_kotor = round(berat_bersih / (bdd/100))
+      const katDisplay = mapToDisplay(katDb);
       const beratBersih = Number(br.jumlah) * day.jumlah_porsi;
-      const bdd = Number(br.persen_bdd) || 100;
-      const beratKotor = bdd > 0 ? Math.round(beratBersih / (bdd / 100)) : beratBersih;
+      const beratKotor = hitungBDD(beratBersih, br.persen_bdd);
       dayRows.push({
         hari_nama: day.hari_nama,
         hari_ke: day.hari_ke,
@@ -221,7 +204,7 @@ router.get('/siklus/laporan/bahan', async (req, res) => {
     });
   }
 
-  res.json({ days: result, fixed_kategori: FIXED_KATEGORI, kategori_map: KATEGORI_MAP });
+  res.json({ days: result, fixed_kategori: FIXED_KATEGORI, kategori_map: KATEGORI_MAP_DISPLAY });
 });
 
 /**
@@ -359,6 +342,18 @@ router.put('/siklus/:id', async (req, res) => {
 router.delete('/siklus/:id', async (req, res) => {
   await db.query('DELETE FROM siklus_menu WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
   res.json({ ok: true });
+});
+
+/**
+ * POST /siklus/bulk-delete
+ * Menghapus banyak siklus sekaligus berdasarkan array ID.
+ */
+router.post('/siklus/bulk-delete', async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'IDs wajib diisi' });
+  const placeholders = ids.map(() => '?').join(',');
+  await db.query(`DELETE FROM siklus_menu WHERE id IN (${placeholders}) AND tenant_id=?`, [...ids, req.user.tenant_id]);
+  res.json({ ok: true, deleted: ids.length });
 });
 
 /**
