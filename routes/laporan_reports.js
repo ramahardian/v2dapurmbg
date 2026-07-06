@@ -266,31 +266,30 @@ router.get('/laporan/bp-operasional', async (req, res) => {
   const now = new Date();
   const filterBulan = bulan || String(now.getMonth() + 1).padStart(2, '0');
   const filterTahun = tahun || String(now.getFullYear());
+  const startDate = `${filterTahun}-${filterBulan}-01`;
+  const [y, m] = [parseInt(filterTahun), parseInt(filterBulan)];
+  const endDate = new Date(y, m, 1).toISOString().slice(0, 10);
 
-  // Ambil akun dengan BP Operasional
   const [akunList] = await db.query(
     `SELECT * FROM akun WHERE tenant_id=? AND bp='BP Operasional' AND is_active=1 ORDER BY kode`,
     [t]
   );
 
-  // Ambil saldo awal dari tenants
   const [[{ saldo_awal } = { saldo_awal: 0 }]] = await db.query(
     'SELECT COALESCE(saldo_awal,0) AS saldo_awal FROM tenants WHERE id=?', [t]
   );
 
-  // Ambil semua transaksi kas_bank untuk periode tertentu
   const [transaksi] = await db.query(
     `SELECT k.*, a.kode as akun_kode, a.nama as akun_nama, a.bp as akun_bp
      FROM kas_bank k
      LEFT JOIN akun a ON a.id = k.akun_id
      WHERE k.tenant_id=?
-       AND DATE_FORMAT(k.tanggal, '%Y-%m') = CONCAT(?, '-', ?)
+       AND k.tanggal >= ? AND k.tanggal < ?
        AND (a.bp = 'BP Operasional' OR a.bp IS NULL)
      ORDER BY k.tanggal ASC, k.id ASC`,
-    [t, filterTahun, filterBulan]
+    [t, startDate, endDate]
   );
 
-  // Group transaksi per akun
   const perAkun = {};
   for (const trx of transaksi) {
     const key = trx.akun_id || 'tanpa-akun';
@@ -317,27 +316,31 @@ router.get('/laporan/bp-operasional', async (req, res) => {
     else perAkun[key].total_keluar += Number(trx.jumlah);
   }
 
-  // Hitung saldo awal per akun (sebelum periode filter)
-  for (const key of Object.keys(perAkun)) {
-    if (key === 'tanpa-akun') continue;
-    const akunId = perAkun[key].akun_id;
-    const [[{ saldo_sebelum } = { saldo_sebelum: 0 }]] = await db.query(
-      `SELECT COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE -jumlah END), 0) as saldo_sebelum
+  const akunIds = Object.keys(perAkun).filter(k => k !== 'tanpa-akun');
+  if (akunIds.length) {
+    const ph = akunIds.map(() => '?').join(',');
+    const [saldoRows] = await db.query(
+      `SELECT akun_id, COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE -jumlah END), 0) as saldo_sebelum
        FROM kas_bank
-       WHERE tenant_id=? AND akun_id=? AND tanggal < STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d')`,
-      [t, akunId, filterTahun, filterBulan]
+       WHERE tenant_id=? AND akun_id IN (${ph}) AND tanggal < ?
+       GROUP BY akun_id`,
+      [t, ...akunIds, startDate]
     );
-    perAkun[key].saldo_awal = Number(saldo_sebelum);
-    perAkun[key].saldo_akhir = Number(saldo_sebelum) + perAkun[key].total_masuk - perAkun[key].total_keluar;
+    const saldoMap = {};
+    for (const r of saldoRows) saldoMap[r.akun_id] = Number(r.saldo_sebelum);
+    for (const id of akunIds) {
+      const s = saldoMap[id] || 0;
+      perAkun[id].saldo_awal = s;
+      perAkun[id].saldo_akhir = s + perAkun[id].total_masuk - perAkun[id].total_keluar;
+    }
   }
 
-  // Untuk transaksi tanpa akun, saldo awal dihitung dari semua transaksi tanpa akun_id
   if (perAkun['tanpa-akun']) {
     const [[{ saldo_sebelum } = { saldo_sebelum: 0 }]] = await db.query(
       `SELECT COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE -jumlah END), 0) as saldo_sebelum
        FROM kas_bank
-       WHERE tenant_id=? AND akun_id IS NULL AND tanggal < STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d')`,
-      [t, filterTahun, filterBulan]
+       WHERE tenant_id=? AND akun_id IS NULL AND tanggal < ?`,
+      [t, startDate]
     );
     perAkun['tanpa-akun'].saldo_awal = Number(saldo_sebelum);
     perAkun['tanpa-akun'].saldo_akhir = Number(saldo_sebelum) + perAkun['tanpa-akun'].total_masuk - perAkun['tanpa-akun'].total_keluar;

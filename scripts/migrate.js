@@ -254,6 +254,16 @@ require('dotenv').config();
     } catch (e) {
       console.log('  (skip migrasi saldo_awal)', e.message);
     }
+    // Index untuk kas_bank
+    try {
+      const [idxRows] = await conn.query("SHOW INDEX FROM kas_bank WHERE Key_name='idx_kas_bank_tenant_tanggal'");
+      if (!idxRows.length) {
+        await conn.query('CREATE INDEX idx_kas_bank_tenant_tanggal ON kas_bank (tenant_id, tanggal)');
+        console.log('✓ Migrasi kas_bank: index (tenant_id, tanggal)');
+      }
+    } catch (e) {
+      console.log('  (skip index kas_bank)', e.message);
+    }
     // Seed admin tenant + user
     const [tExist] = await db.query('SELECT id FROM tenants LIMIT 1');
     if (!tExist.length) {
