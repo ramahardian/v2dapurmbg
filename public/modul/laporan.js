@@ -120,24 +120,26 @@ async function showLap(tab) {
         ${statCard('Rata-rata Capaian', s.rata_capaian.toFixed(1)+'%', 'per periode', 'bg-violet-50')}
       </div>`;
     } else if (tab === 'siklus') {
-      const [lapRes, bahanRes] = await Promise.all([
+      const [smRes, lapRes] = await Promise.all([
+        api.get('/siklus/laporan/siklus-menu'),
         api.get('/siklus/laporan'),
-        api.get('/siklus/laporan/bahan'),
       ]);
-      const { siklus, ringkasan } = lapRes;
-      const { days, fixed_kategori } = bahanRes;
-      const FKC = fixed_kategori || FIXED_KATEGORI_LAP;
-      const headers = ['Nama Siklus','Kategori','Porsi/Hari','Hari','Terisi','Coverage','Rata Kalori','Rata Protein','Rata Karbo','Rata Lemak','Rata Serat'];
-      const fields = ['nama','kategori_penerima','jumlah_porsi','stats.totalDays','stats.filledDays','stats.coverage','stats.avg.kalori','stats.avg.protein','stats.avg.karbohidrat','stats.avg.lemak','stats.avg.serat'];
-      const fmt = siklus.map(s => [
-        s.nama, s.kategori_penerima||'-', fmtNum(s.jumlah_porsi),
-        s.stats.totalDays, s.stats.filledDays, s.stats.coverage + '%',
-        fmtNum(s.stats.avg.kalori), fmtNum(s.stats.avg.protein), fmtNum(s.stats.avg.karbohidrat),
-        fmtNum(s.stats.avg.lemak), fmtNum(s.stats.avg.serat)
-      ]);
-      window._lapData = { tab: 'siklus', rows: siklus, headers, fields, fmt };
-      window['_export_siklus'] = { data: siklus.map(s => ({ ...s, ...s.stats.avg, totalHari: s.stats.totalDays, filledDays: s.stats.filledDays, coverage: s.stats.coverage })), fields: ['nama','kategori_penerima','jumlah_porsi','totalHari','filledDays','coverage','kalori','protein','karbohidrat','lemak','serat'] };
-      window._lapBahanHtml = days.length ? renderSiklusBahanTable(days, fixed_kategori) : '<div class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Belum ada data siklus dengan menu terisi</div></div>';
+      const { siklus, group_order, group_order2, group_labels } = smRes;
+      const { ringkasan } = lapRes;
+      window._lapData = null;
+
+      // Build Laporan 1: Siklus Menu 10 Hari
+      let lap1Html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6">';
+      lap1Html += '<div class="px-4 py-3 font-bold text-sm border-b border-stone-200 bg-rose-50 text-rose-800">LAPORAN 1 — SIKLUS MENU 10 HARI</div>';
+      lap1Html += renderDailyMenuTable(siklus, group_order, group_labels);
+      lap1Html += '</div>';
+
+      // Build Laporan 2: Identifikasi Resep
+      let lap2Html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">';
+      lap2Html += '<div class="px-4 py-3 font-bold text-sm border-b border-stone-200 bg-amber-50 text-amber-800">LAPORAN 2 — IDENTIFIKASI RESEP</div>';
+      lap2Html += renderResepTable(siklus, group_order2, group_labels);
+      lap2Html += '</div>';
+
       window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
         ${statCard('Total Siklus', fmtNum(ringkasan.totalSiklus), 'siklus', 'bg-rose-50')}
         ${statCard('Total Hari', fmtNum(ringkasan.totalHari), 'hari siklus', 'bg-blue-50')}
@@ -145,13 +147,8 @@ async function showLap(tab) {
         ${statCard('Hari Kosong', fmtNum(ringkasan.totalKosong), 'belum terisi', 'bg-orange-50')}
         ${statCard('Menu Unik', fmtNum(ringkasan.totalMenuUnik), 'menu digunakan', 'bg-violet-50')}
       </div>
-      <div class="flex justify-end mb-2">
-        <button onclick="exportSiklusBahan()" class="border border-rose-300 text-rose-700 hover:bg-rose-50 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          Export Rencana Bahan XLSX
-        </button>
-      </div>
-      <div id="siklus-bahan-table"></div>`;
+      ${lap1Html}
+      ${lap2Html}`;
     } else if (tab === 'pembelian') {
       const r = await api.get('/laporan/pembelian');
       const rows = r.rows || [];
@@ -673,29 +670,6 @@ function renderLapPage() {
     </div>`;
   }
 
-  // Append bahan table for siklus tab
-  if (ld.tab === 'siklus' && window._lapBahanHtml) {
-    const FKC = FIXED_KATEGORI_LAP;
-    html += `<div class="mt-6 bg-white border border-stone-200 rounded-lg overflow-hidden">
-      <div class="px-4 py-3 font-bold text-sm border-b border-stone-200">Rencana Kebutuhan Bahan Pangan</div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-xs print:text-[9px]">
-          <thead class="bg-[#1e40af] text-white">
-            <tr>
-              <th class="px-3 py-2.5 text-center font-bold whitespace-nowrap">Bahan Pangan</th>
-              ${FKC.map(k => `<th class="px-3 py-2.5 text-center font-bold whitespace-nowrap">${k}</th>`).join('')}
-              <th class="px-3 py-2.5 text-center font-bold whitespace-nowrap">Total Porsi</th>
-              <th class="px-3 py-2.5 text-center font-bold whitespace-nowrap">Kebutuhan Pangan (kg)</th>
-              <th class="px-3 py-2.5 text-center font-bold whitespace-nowrap">Buffer 1–10%</th>
-              <th class="px-3 py-2.5 text-center font-bold whitespace-nowrap">Rincian Pembelian</th>
-            </tr>
-          </thead>
-          <tbody>${window._lapBahanHtml}</tbody>
-        </table>
-      </div>
-    </div>`;
-  }
-
   wrap.innerHTML = html;
 }
 
@@ -1079,6 +1053,115 @@ function editSaldoAwal(current) {
   api.put('/keuangan/saldo-awal', { saldo_awal: val }).then(r => {
     if (r.ok) { showAlert('Saldo awal berhasil disimpan', 'success'); showLap('keuangan'); }
   }).catch(e => showAlert('Gagal: ' + e.message, 'error'));
+}
+
+function renderDailyMenuTable(siklus, group_order, group_labels) {
+  if (!siklus.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
+
+  // Collect all days from all siklus
+  const allDays = [];
+  for (const s of siklus) {
+    for (const d of s.days) {
+      allDays.push(d);
+    }
+  }
+  allDays.sort((a, b) => a.hari_ke - b.hari_ke);
+
+  if (!allDays.length) return '<div class="p-8 text-center text-stone-400">Belum ada data menu terisi</div>';
+
+  const dayLabels = allDays.map(d => d.menu_nama
+    ? `<div class="text-xs">${d.hari_nama}</div><div class="text-[10px] font-normal opacity-60">Hari ${d.hari_ke}</div>`
+    : `<div class="text-xs">${d.hari_nama}</div><div class="text-[10px] font-normal opacity-60">Hari ${d.hari_ke}</div>`);
+
+  let html = '<div class="overflow-x-auto"><table class="w-full text-xs">';
+  html += '<thead><tr class="bg-rose-100">';
+  html += '<th class="px-3 py-2.5 text-left font-semibold text-rose-800 whitespace-nowrap">Kelompok Bahan</th>';
+  for (const lbl of dayLabels) {
+    html += `<th class="px-3 py-2.5 text-center font-semibold text-rose-800 whitespace-nowrap">${lbl}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  for (const kat of group_order) {
+    const label = group_labels[kat] || kat;
+    const colorClass = kat === 'Karbohidrat' ? 'text-amber-800' :
+      kat === 'Protein Hewani' ? 'text-red-800' :
+      kat === 'Protein Nabati' ? 'text-emerald-800' :
+      kat === 'Sayur' ? 'text-green-800' :
+      kat === 'Buah' ? 'text-orange-800' :
+      kat === 'Susu' ? 'text-blue-800' : 'text-stone-800';
+    html += `<tr class="border-t border-stone-100">`;
+    html += `<td class="px-3 py-2 font-medium ${colorClass} whitespace-nowrap">${label}</td>`;
+    for (const d of allDays) {
+      const items = d.by_kategori[kat];
+      const cell = items && items.length
+        ? `<span class="inline-flex flex-wrap gap-1">${items.map(n => `<span class="bg-stone-100 px-2 py-0.5 rounded text-stone-700 text-[11px]">${n}</span>`).join('')}</span>`
+        : '<span class="text-stone-300">—</span>';
+      html += `<td class="px-3 py-2 text-sm">${cell}</td>`;
+    }
+    html += '</tr>';
+  }
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function renderResepTable(siklus, group_order, group_labels) {
+  if (!siklus.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
+
+  const allDays = [];
+  for (const s of siklus) {
+    for (const d of s.days) {
+      allDays.push({ ...d, siklus_nama: s.siklus_nama });
+    }
+  }
+  allDays.sort((a, b) => a.hari_ke - b.hari_ke);
+
+  if (!allDays.length) return '<div class="p-8 text-center text-stone-400">Belum ada data menu terisi</div>';
+
+  // Assign each day's menu to its primary food group by checking which kategori has the most ingredients
+  function getPrimaryKat(byKat) {
+    let maxCount = 0, primary = null;
+    for (const kat of group_order) {
+      const count = (byKat[kat] || []).length;
+      if (count > maxCount) { maxCount = count; primary = kat; }
+    }
+    return primary;
+  }
+
+  const dayLabels = allDays.map(d => `<div class="text-xs">Menu ${d.hari_ke}</div>`);
+
+  let html = '<div class="overflow-x-auto"><table class="w-full text-xs">';
+  html += '<thead><tr class="bg-amber-100">';
+  html += '<th class="px-3 py-2.5 text-left font-semibold text-amber-800 whitespace-nowrap">Kelompok Bahan</th>';
+  for (const lbl of dayLabels) {
+    html += `<th class="px-3 py-2.5 text-center font-semibold text-amber-800 whitespace-nowrap">${lbl}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  for (const kat of group_order) {
+    const label = group_labels[kat] || kat;
+    const colorClass = kat === 'Karbohidrat' ? 'text-amber-800' :
+      kat === 'Protein Hewani' ? 'text-red-800' :
+      kat === 'Protein Nabati' ? 'text-emerald-800' :
+      kat === 'Sayur' ? 'text-green-800' :
+      kat === 'Buah' ? 'text-orange-800' : 'text-stone-800';
+    html += `<tr class="border-t border-stone-100">`;
+    html += `<td class="px-3 py-2 font-medium ${colorClass} whitespace-nowrap">${label}</td>`;
+    for (const d of allDays) {
+      const primary = getPrimaryKat(d.by_kategori);
+      let cell;
+      if (primary === kat) {
+        cell = `<span class="font-medium text-stone-800">${d.menu_nama}</span>`;
+      } else {
+        cell = '<span class="text-stone-300">—</span>';
+      }
+      html += `<td class="px-3 py-2 text-sm">${cell}</td>`;
+    }
+    html += '</tr>';
+  }
+
+  html += '</tbody></table></div>';
+  return html;
 }
 
 function renderSiklusBahanTable(days, fixed_kategori) {

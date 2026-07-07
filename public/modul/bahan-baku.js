@@ -144,14 +144,19 @@ function renderBahanBakuTable(rows) {
     return;
   }
   const fields = getBahanCrud();
-  const headers = fields.cols.map(k => `<th class="text-left px-4 py-3 text-xs font-semibold text-stone-600 uppercase">${fields.fields.find(f => f.k === k)?.l || k}</th>`).join('');
-  const body = rows.map(r => `<tr class="border-t border-stone-100">
+  const numKeys = fields.fields.filter(f => f.fmt === 'idr' || f.fmt === 'num').map(f => f.k);
+  const headers = fields.cols.map(k => {
+    const align = numKeys.includes(k) ? 'text-right' : 'text-left';
+    return `<th class="${align} px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wider">${fields.fields.find(f => f.k === k)?.l || k}</th>`;
+  }).join('');
+  const body = rows.map((r, i) => `<tr class="${i % 2 === 0 ? 'bg-white' : 'bg-stone-50/50'} hover:bg-stone-100/60 transition-colors">
     ${fields.cols.map(k => {
       const f = fields.fields.find(x => x.k === k);
       const v = r[k];
-      let cell = v == null || v === '' ? '-' : v;
+      let cell = v == null || v === '' ? '<span class="text-stone-300">—</span>' : String(v);
+      const align = numKeys.includes(k) ? 'text-right' : 'text-left';
       if (f?.fmt === 'idr') {
-        cell = `<span class="mono">${fmtIDR(v)}</span>`;
+        cell = fmtIDR(v);
         if (k === 'harga_satuan' && r.harga_sebelumnya > 0) {
           const prev = Number(r.harga_sebelumnya);
           const curr = Number(v);
@@ -160,16 +165,20 @@ function renderBahanBakuTable(rows) {
           else cell += ` <span class="text-stone-400 text-xs">—</span>`;
         }
       }
-      else if (f?.fmt === 'num') cell = `<span class="mono">${fmtNum(v)}</span>`;
+      else if (f?.fmt === 'num') cell = fmtNum(v);
       else if (f?.type === 'date') cell = fmtDate(v);
-      return `<td class="px-4 py-3 text-sm">${cell}</td>`;
+      else if (k === 'kategori_sp' && v) {
+        const colors = { 'Karbohidrat':'bg-amber-100 text-amber-800','Protein Hewani':'bg-red-100 text-red-800','Protein Nabati':'bg-emerald-100 text-emerald-800','Sayur':'bg-green-100 text-green-800','Buah':'bg-orange-100 text-orange-800','Susu':'bg-blue-100 text-blue-800','Minyak':'bg-yellow-100 text-yellow-800' };
+        cell = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[v]||'bg-stone-100 text-stone-700'}">${v}</span>`;
+      }
+      return `<td class="${align} px-4 py-3 text-sm">${cell}</td>`;
     }).join('')}
     <td class="px-4 py-3 text-right whitespace-nowrap">
-      ${spRefLookup[(r.nama||'').toLowerCase()] ? `<button onclick='showSpRefNutrisi(${JSON.stringify(r.nama||'').replace(/'/g, "\\'")})' class="text-emerald-600 hover:text-emerald-800 p-1.5 inline-flex items-center" title="Nutrisi"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></button>` : ''}
-      <button onclick='editBahanBaku(${JSON.stringify(r).replace(/'/g, "\\'")})' class="text-stone-500 hover:text-stone-900 p-1.5 inline-flex items-center" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-      ${currentUser?.role !== 'ahli_gizi' ? `<button onclick='deleteBahanBaku(${r.id})' class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
+      ${spRefLookup[(r.nama||'').toLowerCase()] ? `<button onclick='showSpRefNutrisi(${JSON.stringify(r.nama||'').replace(/'/g, "\\'")})' class="text-emerald-600 hover:text-emerald-700 p-1.5 inline-flex items-center" title="Nutrisi"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></button>` : ''}
+      <button onclick='editBahanBaku(${JSON.stringify(r).replace(/'/g, "\\'")})' class="text-stone-400 hover:text-stone-700 p-1.5 inline-flex items-center" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      ${currentUser?.role !== 'ahli_gizi' ? `<button onclick='deleteBahanBaku(${r.id})' class="text-stone-400 hover:text-red-600 p-1.5 inline-flex items-center" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
     </td></tr>`).join('');
-  w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead class="bg-stone-50"><tr>${headers}<th class="px-4 py-3 text-right text-xs font-semibold text-stone-600 uppercase">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-stone-200 bg-stone-50">${headers}<th class="px-4 py-3 text-right text-xs font-semibold text-stone-500 uppercase tracking-wider">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 function editBahanBaku(row) {

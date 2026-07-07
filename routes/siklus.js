@@ -415,4 +415,100 @@ router.get('/siklus/:id/laporan', async (req, res) => {
   });
 });
 
+/**
+ * GET /siklus/laporan/siklus-menu
+ * Mengembalikan data siklus menu per hari yang dikelompokkan berdasarkan kategori_sp (kelompok bahan).
+ * Untuk ditampilkan dalam laporan Siklus Menu 10 Hari dan Identifikasi Resep.
+ */
+router.get('/siklus/laporan/siklus-menu', async (req, res) => {
+  const [siklusList] = await db.query(
+    'SELECT id, nama, kategori_penerima, jumlah_porsi FROM siklus_menu WHERE tenant_id=? AND status="Aktif" ORDER BY id',
+    [req.user.tenant_id]
+  );
+
+  const KAT_SP_LABEL = {
+    'Karbohidrat': 'Makanan Pokok',
+    'Protein Hewani': 'Lauk Hewani',
+    'Protein Nabati': 'Lauk Nabati',
+    'Sayur': 'Sayur',
+    'Buah': 'Buah',
+    'Susu': 'Susu',
+    'Minyak': 'Minyak',
+  };
+  const GROUP_ORDER = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
+  const GROUP_ORDER2 = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah'];
+
+  const result = [];
+
+  for (const s of siklusList) {
+    const [items] = await db.query(
+      `SELECT si.*, m.nama as menu_nama_lengkap, m.gramasi_total
+       FROM siklus_menu_item si
+       LEFT JOIN menu m ON m.id = si.menu_id
+       WHERE si.siklus_id=? AND si.menu_id IS NOT NULL
+       ORDER BY si.hari_ke ASC`,
+      [s.id]
+    );
+
+    const days = [];
+    for (const it of items) {
+      const [bahan] = await db.query(
+        `SELECT b.nama, b.kategori_sp, b.persen_bdd, mb.jumlah as berat_bersih
+         FROM menu_bahan mb
+         JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+         WHERE mb.menu_id=?`,
+        [it.menu_id]
+      );
+
+      const byKat = {};
+      for (const b of bahan) {
+        const kat = b.kategori_sp || 'Lainnya';
+        if (!byKat[kat]) byKat[kat] = [];
+        if (!byKat[kat].includes(b.nama)) byKat[kat].push(b.nama);
+      }
+
+      const ingredientDetails = bahan.map(b => {
+        const beratBersih = Number(b.berat_bersih || 0);
+        const persenBdd = Number(b.persen_bdd || 100);
+        const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
+        const kebutuhanKg = s.jumlah_porsi > 0 ? Math.round((beratKotor * s.jumlah_porsi / 1000) * 100) / 100 : 0;
+        return {
+          nama: b.nama,
+          kategori_sp: b.kategori_sp,
+          berat_bersih: beratBersih,
+          persen_bdd: persenBdd,
+          berat_kotor: beratKotor,
+          kebutuhan_kg: kebutuhanKg,
+        };
+      });
+
+      days.push({
+        hari_ke: it.hari_ke,
+        hari_nama: it.hari_nama,
+        menu_id: it.menu_id,
+        menu_nama: it.menu_nama || it.menu_nama_lengkap || '-',
+        jumlah_porsi: s.jumlah_porsi,
+        by_kategori: byKat,
+        ingredients: bahan.map(b => ({ nama: b.nama, kategori_sp: b.kategori_sp })),
+        ingredient_details: ingredientDetails,
+      });
+    }
+
+    result.push({
+      siklus_id: s.id,
+      siklus_nama: s.nama,
+      kategori_penerima: s.kategori_penerima,
+      jumlah_porsi: s.jumlah_porsi,
+      days,
+    });
+  }
+
+  res.json({
+    siklus: result,
+    group_order: GROUP_ORDER,
+    group_order2: GROUP_ORDER2,
+    group_labels: KAT_SP_LABEL,
+  });
+});
+
 module.exports = router;
