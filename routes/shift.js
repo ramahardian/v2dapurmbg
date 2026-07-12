@@ -9,24 +9,18 @@ router.use(requireAuth);
 
 // GET /shift — all shifts for tenant
 router.get('/shift', requireRole('admin', 'keuangan'), async (req, res) => {
-  const { departemen } = req.query;
-  let sql = `SELECT * FROM shift WHERE tenant_id=?`;
-  const params = [req.user.tenant_id];
-  if (departemen) { sql += ` AND departemen=?`; params.push(departemen); }
-  sql += ` ORDER BY departemen, jam_masuk ASC`;
-  const [rows] = await db.query(sql, params);
+  const [rows] = await db.query(`SELECT * FROM shift WHERE tenant_id=? ORDER BY jam_masuk ASC`, [req.user.tenant_id]);
   res.json(rows);
 });
 
 // POST /shift
 router.post('/shift', requireRole('admin', 'keuangan'), async (req, res) => {
-  const { nama, departemen, jam_masuk, jam_keluar, warna } = req.body;
+  const { nama, jam_masuk, jam_keluar, warna } = req.body;
   if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama shift wajib diisi' });
-  if (!departemen || !departemen.trim()) return res.status(400).json({ error: 'Departemen wajib diisi' });
   if (!jam_masuk || !jam_keluar) return res.status(400).json({ error: 'Jam masuk dan jam keluar wajib diisi' });
   const [r] = await db.query(
-    `INSERT INTO shift (tenant_id, nama, departemen, jam_masuk, jam_keluar, warna) VALUES (?,?,?,?,?,?)`,
-    [req.user.tenant_id, nama.trim(), departemen.trim(), jam_masuk, jam_keluar, warna || '#3B82F6']
+    `INSERT INTO shift (tenant_id, nama, jam_masuk, jam_keluar, warna) VALUES (?,?,?,?,?)`,
+    [req.user.tenant_id, nama.trim(), jam_masuk, jam_keluar, warna || '#3B82F6']
   );
   const [rows] = await db.query(`SELECT * FROM shift WHERE id=?`, [r.insertId]);
   res.json(rows[0]);
@@ -34,10 +28,9 @@ router.post('/shift', requireRole('admin', 'keuangan'), async (req, res) => {
 
 // PUT /shift/:id
 router.put('/shift/:id', requireRole('admin', 'keuangan'), async (req, res) => {
-  const { nama, departemen, jam_masuk, jam_keluar, warna, is_active } = req.body;
+  const { nama, jam_masuk, jam_keluar, warna, is_active } = req.body;
   const sets = []; const vals = [];
   if (nama !== undefined) { sets.push('nama=?'); vals.push(nama); }
-  if (departemen !== undefined) { sets.push('departemen=?'); vals.push(departemen); }
   if (jam_masuk !== undefined) { sets.push('jam_masuk=?'); vals.push(jam_masuk); }
   if (jam_keluar !== undefined) { sets.push('jam_keluar=?'); vals.push(jam_keluar); }
   if (warna !== undefined) { sets.push('warna=?'); vals.push(warna); }
@@ -59,8 +52,8 @@ router.delete('/shift/:id', requireRole('admin', 'keuangan'), async (req, res) =
 
 // GET /jadwal — schedule assignments, optional filter by karyawan_id or tanggal
 router.get('/jadwal', requireRole('admin', 'keuangan'), async (req, res) => {
-  const { karyawan_id, tanggal, departemen } = req.query;
-  let sql = `SELECT jk.*, s.nama as shift_nama, s.departemen as shift_departemen,
+  const { karyawan_id, tanggal } = req.query;
+  let sql = `SELECT jk.*, s.nama as shift_nama,
     s.jam_masuk, s.jam_keluar, s.warna, k.nama as nama_karyawan, j.name as jabatan
     FROM jadwal_karyawan jk
     JOIN shift s ON s.id=jk.shift_id
@@ -69,7 +62,6 @@ router.get('/jadwal', requireRole('admin', 'keuangan'), async (req, res) => {
     WHERE jk.tenant_id=?`;
   const params = [req.user.tenant_id];
   if (karyawan_id) { sql += ` AND jk.karyawan_id=?`; params.push(karyawan_id); }
-  if (departemen) { sql += ` AND s.departemen=?`; params.push(departemen); }
   if (tanggal) { sql += ` AND jk.tanggal_mulai <= ? AND (jk.tanggal_selesai IS NULL OR jk.tanggal_selesai >= ?)`; params.push(tanggal, tanggal); }
   sql += ` ORDER BY jk.tanggal_mulai DESC, k.nama ASC`;
   const [rows] = await db.query(sql, params);
@@ -79,7 +71,7 @@ router.get('/jadwal', requireRole('admin', 'keuangan'), async (req, res) => {
 // GET /jadwal/:id
 router.get('/jadwal/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   const [rows] = await db.query(
-    `SELECT jk.*, s.nama as shift_nama, s.departemen, s.jam_masuk, s.jam_keluar, s.warna, k.nama as nama_karyawan
+    `SELECT jk.*, s.nama as shift_nama, s.jam_masuk, s.jam_keluar, s.warna, k.nama as nama_karyawan
      FROM jadwal_karyawan jk
      JOIN shift s ON s.id=jk.shift_id
      JOIN karyawan k ON k.id=jk.karyawan_id
@@ -126,6 +118,58 @@ router.put('/jadwal/:id', requireRole('admin', 'keuangan'), async (req, res) => 
 // DELETE /jadwal/:id
 router.delete('/jadwal/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   await db.query(`DELETE FROM jadwal_karyawan WHERE id=? AND tenant_id=?`, [req.params.id, req.user.tenant_id]);
+  res.json({ ok: true });
+});
+
+// ===== SHIFT DIVISI (many-to-many) =====
+
+// GET /shift/:id/divisi — divisi assigned to a shift
+router.get('/shift/:id/divisi', requireRole('admin', 'keuangan'), async (req, res) => {
+  const [rows] = await db.query(
+    `SELECT d.* FROM shift_divisi sd
+     JOIN divisi d ON d.id=sd.divisi_id
+     WHERE sd.shift_id=? AND sd.tenant_id=?`,
+    [req.params.id, req.user.tenant_id]
+  );
+  res.json(rows);
+});
+
+// POST /shift/:id/divisi — assign a divisi to a shift
+router.post('/shift/:id/divisi', requireRole('admin', 'keuangan'), async (req, res) => {
+  const { divisi_id } = req.body;
+  if (!divisi_id) return res.status(400).json({ error: 'Divisi wajib dipilih' });
+  try {
+    await db.query(
+      `INSERT INTO shift_divisi (shift_id, divisi_id, tenant_id) VALUES (?,?,?)`,
+      [req.params.id, divisi_id, req.user.tenant_id]
+    );
+    const [rows] = await db.query(`SELECT * FROM divisi WHERE id=?`, [divisi_id]);
+    res.json(rows[0]);
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Divisi sudah terdaftar di shift ini' });
+    throw e;
+  }
+});
+
+// DELETE /shift/:id/divisi/:divisi_id — remove assignment
+router.delete('/shift/:id/divisi/:divisi_id', requireRole('admin', 'keuangan'), async (req, res) => {
+  await db.query(
+    `DELETE FROM shift_divisi WHERE shift_id=? AND divisi_id=? AND tenant_id=?`,
+    [req.params.id, req.params.divisi_id, req.user.tenant_id]
+  );
+  res.json({ ok: true });
+});
+
+// PUT /shift/:id/divisi — replace all divisi assignments at once
+router.put('/shift/:id/divisi', requireRole('admin', 'keuangan'), async (req, res) => {
+  const { divisi_ids } = req.body;
+  if (!Array.isArray(divisi_ids)) return res.status(400).json({ error: 'divisi_ids harus array' });
+  const tenant_id = req.user.tenant_id;
+  const shift_id = req.params.id;
+  await db.query(`DELETE FROM shift_divisi WHERE shift_id=? AND tenant_id=?`, [shift_id, tenant_id]);
+  for (const did of divisi_ids) {
+    await db.query(`INSERT IGNORE INTO shift_divisi (shift_id, divisi_id, tenant_id) VALUES (?,?,?)`, [shift_id, did, tenant_id]);
+  }
   res.json({ ok: true });
 });
 

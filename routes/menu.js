@@ -1,10 +1,26 @@
 const express = require('express');
 const db = require('../db');
+const fs = require('fs');
+const path = require('path');
 // Mengimpor middleware untuk memvalidasi sesi pengguna (misalnya via token Supabase)
 // Middleware ini menyisipkan req.user yang berisi informasi seperti tenant_id
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+
+function saveBase64Foto(base64Data) {
+  if (!base64Data || !base64Data.startsWith('data:image')) return base64Data || null;
+  const matches = base64Data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);
+  if (!matches) return null;
+  try {
+    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+    const filename = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+    const filepath = path.join(__dirname, '..', 'public', 'uploads', 'menu', filename);
+    fs.writeFileSync(filepath, buffer);
+    return '/uploads/menu/' + filename;
+  } catch { return null; }
+}
 
 // Menerapkan middleware autentikasi secara global pada router ini
 // Semua endpoint di bawah ini hanya bisa diakses oleh pengguna yang sudah login
@@ -39,14 +55,14 @@ router.get('/menu', async (req, res) => {
   const totalCount = totalCountResult[0].count;
   
   // Get menus with ingredients using a single JOIN query
-  const sql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat,
-       mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
-       FROM menu m
-       LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
-       LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
-       ${whereClause}
-       ORDER BY m.id DESC
-       LIMIT ? OFFSET ?`;
+  const sql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.foto,
+        mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
+        FROM menu m
+        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
+        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+        ${whereClause}
+        ORDER BY m.id DESC
+        LIMIT ? OFFSET ?`;
   
   queryParams.push(Number(limit), Number(offset));
   const [rows] = await db.query(sql, queryParams);
@@ -66,6 +82,7 @@ router.get('/menu', async (req, res) => {
         karbohidrat: row.karbohidrat,
         lemak: row.lemak,
         serat: row.serat,
+        foto: row.foto,
         bahan: []
       };
     }
@@ -102,7 +119,7 @@ router.get('/menu', async (req, res) => {
  * Menggunakan Database Transaction untuk memastikan integritas data (header dan detail tersimpan bersamaan).
  */
 router.post('/menu', async (req, res) => {
-  const { nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat, bahan } = req.body;
+  const { nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat, foto, bahan } = req.body;
   
   if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama menu wajib diisi' });
   
@@ -123,10 +140,11 @@ router.post('/menu', async (req, res) => {
     await conn.beginTransaction(); // Memulai transaksi
     
     // 1. Simpan data header menu
+    const fotoUrl = foto ? saveBase64Foto(foto) : null;
     const [r] = await conn.query(
-      `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [req.user.tenant_id, nama, kategori_penerima || null, deskripsi || null, gramasi_total || 0, kalori || 0, protein || 0, karbohidrat || 0, lemak || 0, serat || 0]);
+      `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat, foto)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [req.user.tenant_id, nama, kategori_penerima || null, deskripsi || null, gramasi_total || 0, kalori || 0, protein || 0, karbohidrat || 0, lemak || 0, serat || 0, fotoUrl]);
       
     // 2. Jika ada data bahan baku, simpan ke tabel relasi (menu_bahan)
     if (Array.isArray(bahan)) {
@@ -185,9 +203,18 @@ router.put('/menu/:id', async (req, res) => {
     }
     
     // 1. Update data header menu sesuai ID dan kepemilikan tenant
+    const fotoUrl = f.foto ? saveBase64Foto(f.foto) : undefined;
+    let fotoSql = '';
+    const fotoParams = [];
+    if (fotoUrl) {
+      fotoSql = ', foto=?';
+      fotoParams.push(fotoUrl);
+    } else if (f.foto === 'hapus') {
+      fotoSql = ', foto=NULL';
+    }
     await conn.query(
-      `UPDATE menu SET nama=?, kategori_penerima=?, deskripsi=?, gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?`,
-      [f.nama, f.kategori_penerima || null, f.deskripsi || null, f.gramasi_total || 0, f.kalori || 0, f.protein || 0, f.karbohidrat || 0, f.lemak || 0, f.serat || 0, req.params.id, req.user.tenant_id]);
+      `UPDATE menu SET nama=?, kategori_penerima=?, deskripsi=?, gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=?${fotoSql} WHERE id=? AND tenant_id=?`,
+      [f.nama, f.kategori_penerima || null, f.deskripsi || null, f.gramasi_total || 0, f.kalori || 0, f.protein || 0, f.karbohidrat || 0, f.lemak || 0, f.serat || 0, ...fotoParams, req.params.id, req.user.tenant_id]);
       
     // 2. Perbarui detail bahan baku
     if (Array.isArray(f.bahan)) {
@@ -246,12 +273,12 @@ router.post('/menu/bulk-delete', async (req, res) => {
  */
 router.get('/menu/:id', async (req, res) => {
   const [menus] = await db.query(
-    `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat,
-       mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
-       FROM menu m
-       LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
-       LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
-       WHERE m.id=? AND m.tenant_id=?`,
+    `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.foto,
+        mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
+        FROM menu m
+        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
+        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+        WHERE m.id=? AND m.tenant_id=?`,
     [req.params.id, req.user.tenant_id]
   );
   if (!menus.length) return res.status(404).json({ error: 'Menu tidak ditemukan' });
@@ -267,6 +294,7 @@ router.get('/menu/:id', async (req, res) => {
     karbohidrat: menus[0].karbohidrat,
     lemak: menus[0].lemak,
     serat: menus[0].serat,
+    foto: menus[0].foto,
     bahan: []
   };
   menus.forEach(row => {

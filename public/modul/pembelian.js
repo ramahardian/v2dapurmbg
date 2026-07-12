@@ -9,17 +9,26 @@ async function renderPembelian() {
       { k: 'no_po', l: 'Nomor PO', req: true },
       { k: 'tanggal', l: 'Tanggal', type: 'date', req: true },
       { k: 'supplier_nama', l: 'Supplier' },
-      { k: 'item', l: 'Daftar Item', type: 'textarea' },
+      { k: 'unit_dapur', l: 'Unit Dapur' },
       { k: 'total_nilai', l: 'Total Nilai (IDR)', type: 'number', fmt: 'idr' },
       { k: 'status', l: 'Status', type: 'select', opts: ['Draft','Disetujui','Dikirim','Diterima','Dibayar'] },
       { k: 'catatan', l: 'Catatan', type: 'textarea' },
     ],
-    cols: ['no_po', 'tanggal', 'supplier_nama', 'total_nilai', 'status'],
+    cols: ['no_po', 'tanggal', 'supplier_nama', 'unit_dapur', 'total_nilai', 'status'],
   };
 
   await renderCrud(cfg);
 
   document.getElementById('add-btn').onclick = () => openPembelianForm(null);
+
+  const _origEditRow = window.editRow;
+  window.editRow = function(cfg, row) {
+    if (cfg.endpoint === '/purchase_order') {
+      openPembelianForm(row);
+    } else {
+      _origEditRow(cfg, row);
+    }
+  };
 
   const toolbar = document.querySelector('#content > div:first-child');
   if (!toolbar) return;
@@ -37,34 +46,27 @@ async function renderPembelian() {
 
   const wrap = document.getElementById('table-wrap');
   if (wrap) {
-    const obs = new MutationObserver(() => {
-      wrap.querySelectorAll('[onclick*="editRow"]').forEach(el => {
-        const m = el.getAttribute('onclick').match(/editRow\((.+?), (.+?)\)/);
-        if (m) {
-          el.removeAttribute('onclick');
-          const row = JSON.parse(m[2]);
-          el.addEventListener('click', () => openPembelianForm(row));
-        }
-      });
+    function pasangTombolKirim() {
       wrap.querySelectorAll('[onclick*="deleteRow"]').forEach(el => {
         const m = el.getAttribute('onclick').match(/deleteRow\("(.+?)", (.+?),/);
-        if (m) {
-          const rowData = window._crudRows?.find(r => r.id === parseInt(m[2]));
-          if (!rowData) return;
-          const tr = el.closest('tr');
-          if (!tr || tr.querySelector('[data-kirim-btn]')) return;
-          const action = el.parentNode;
-          const kirim = document.createElement('button');
-          kirim.className = 'text-emerald-600 hover:text-emerald-800 p-1.5 inline-flex items-center';
-          kirim.title = 'Kirim ke Koperasi';
-          kirim.dataset.kirimBtn = '1';
-          kirim.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>';
-          kirim.addEventListener('click', () => kirimKeKoperasi(rowData));
-          action.insertBefore(kirim, el);
-        }
+        if (!m) return;
+        const rowData = window._crudRows?.find(r => r.id === parseInt(m[2]));
+        if (!rowData) return;
+        const tr = el.closest('tr');
+        if (!tr || tr.querySelector('[data-kirim-btn]')) return;
+        const action = el.parentNode;
+        const kirim = document.createElement('button');
+        kirim.className = 'text-emerald-600 hover:text-emerald-800 p-1.5 inline-flex items-center';
+        kirim.title = 'Kirim ke Koperasi';
+        kirim.dataset.kirimBtn = '1';
+        kirim.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>';
+        kirim.addEventListener('click', () => kirimKeKoperasi(rowData));
+        action.insertBefore(kirim, el);
       });
-    });
+    }
+    const obs = new MutationObserver(pasangTombolKirim);
     obs.observe(wrap, { childList: true, subtree: true });
+    pasangTombolKirim();
   }
 }
 
@@ -82,16 +84,24 @@ async function kirimKeKoperasi(po) {
 
   const payload = {
     id_unit_dapur: Number(id_unit_dapur),
+    nama_dapur: po.unit_dapur || '',
     supplier_name: po.supplier_nama || '',
-    purchase_date: po.tanggal,
-    items: items.map(i => ({
-      name: i.nama || '',
-      qty: Number(i.qty) || 0,
-      unit: i.satuan || '',
-      price: Number(i.harga || i.subtotal || 0),
-    })),
+    tanggal_pesanan: po.tanggal,
+    items: items.map(i => {
+      const m = (i.kode || '').match(/EXT[-\s]?(\d+)/i);
+      const ingredient_id = m ? parseInt(m[1]) : (Number(i.id_koperasi) || 0);
+      return {
+        ingredient_id,
+        name: i.nama || '',
+        qty: Number(i.qty) || 0,
+        unit: i.satuan || '',
+        price: Number(i.harga || i.subtotal || 0),
+      };
+    }),
     notes: 'PO: ' + po.no_po + (po.catatan ? ' — ' + po.catatan : ''),
   };
+
+  console.log('JSON dikirim ke koperasi:', JSON.stringify(payload, null, 2));
 
   try {
     const r = await fetch('https://koperasi.mealify.id/api/pesanan_dapur.php', {
@@ -101,6 +111,17 @@ async function kirimKeKoperasi(po) {
     const result = await r.json();
     if (result.success) {
       showToast('PO berhasil dikirim ke koperasi. Kode: ' + (result.data?.kode_pesanan || '-'), 'success');
+
+      // Kirim notifikasi WhatsApp ke admin
+      try {
+        fetch('/api/notif/wa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: `🛒 *PESANAN BARU DARI DAPUR*\n\nPO: ${po.no_po}\nUnit Dapur: ${po.unit_dapur || '-'}\nSupplier: ${po.supplier_nama || '-'}\nTanggal: ${po.tanggal}\nTotal: Rp ${(Number(po.total_nilai) || 0).toLocaleString('id-ID')}\nStatus: Dikirim ke Koperasi\n\nTerkirim otomatis dari sistem dapur.`,
+          }),
+        });
+      } catch (_) {}
     } else {
       showAlert('Gagal: ' + (result.message || 'Respons tidak valid'), 'error');
     }
@@ -116,6 +137,14 @@ async function openPembelianForm(editing) {
     _bahanBakuList = Array.isArray(data) ? data : (data.data || []);
   } catch (e) {
     _bahanBakuList = [];
+  }
+
+  let supplierList = [];
+  try {
+    const supData = await api.get('/supplier');
+    supplierList = Array.isArray(supData) ? supData : (supData.data || []);
+  } catch (e) {
+    supplierList = [];
   }
 
   const now = new Date();
@@ -138,12 +167,19 @@ async function openPembelianForm(editing) {
         </div>
         <div>
           <label class="text-sm text-stone-700">Tanggal <span class="text-red-500">*</span></label>
-          <input id="po-tanggal" type="date" value="${editing ? editing.tanggal : tgl}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+          <input id="po-tanggal" type="date" value="${editing ? (editing.tanggal || '').slice(0, 10) : tgl}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
         </div>
       </div>
       <div>
         <label class="text-sm text-stone-700">Supplier</label>
-        <input id="po-supplier_nama" value="${editing ? (editing.supplier_nama || '') : ''}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+        <select id="po-supplier_nama" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+          <option value="">— Pilih Supplier —</option>
+          ${supplierList.map(s => `<option value="${s.nama}" data-id="${s.id}" ${editing && editing.supplier_nama === s.nama ? 'selected' : ''}>${s.nama}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="text-sm text-stone-700">Unit Dapur</label>
+        <input id="po-unit_dapur" value="${editing ? (editing.unit_dapur || '') : ''}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
       </div>
       <div>
         <label class="text-sm text-stone-700 font-medium">Daftar Item</label>
@@ -193,14 +229,14 @@ function renderPoItems(items) {
         ${_bahanBakuList.map(b => {
           const isNew = b.created_at && (Date.now() - new Date(b.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
           const sel = Number(b.id) === Number(item.bahan_baku_id) ? 'selected' : '';
-          return `<option value="${b.id}" ${sel}>${b.nama}${isNew ? ' 🆕' : ''}${b.harga_satuan ? ' @ ' + fmtIDR(b.harga_satuan) : ''}</option>`;
+          const kodeNum = b.kode ? (b.kode.match(/EXT[-\s]?(\d+)/i)?.[1] || b.kode) : '';
+          return `<option value="${b.id}" ${sel}>${kodeNum ? '[' + kodeNum + '] ' : ''}${b.nama}${isNew ? ' 🆕' : ''}${b.harga_satuan ? ' @ ' + fmtIDR(b.harga_satuan) : ''}</option>`;
         }).join('')}
       </select>
       <input type="number" step="0.001" value="${item.qty || ''}" placeholder="Qty"
         onchange="updatePoItem(${i}, 'qty', this.value)"
         class="w-24 h-10 px-3 border border-stone-200 rounded-md text-sm mono">
       <span class="h-10 leading-10 text-sm text-stone-500 shrink-0">${item.satuan || ''}</span>
-      <span class="h-10 leading-10 text-sm text-right mono w-28 shrink-0">${item.subtotal ? fmtIDR(item.subtotal) : ''}</span>
       <button onclick="removePoItem(${i})" class="h-10 px-2 text-red-600 hover:bg-red-50 rounded" title="Hapus">×</button>
     </div>
   `).join('');
@@ -240,18 +276,28 @@ function savePembelian() {
   if (!_poItems.length) { showAlert('Minimal satu item harus ditambahkan', 'warning'); return; }
 
   const total = _poItems.reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
+  const supplierEl = document.getElementById('po-supplier_nama');
+  const supplierNama = supplierEl.value.trim();
+  const supplierId = supplierEl.selectedIndex > 0 ? (supplierEl.options[supplierEl.selectedIndex]?.dataset?.id || null) : null;
   const payload = {
     no_po,
     tanggal,
-    supplier_nama: document.getElementById('po-supplier_nama').value.trim(),
-    item: JSON.stringify(_poItems.map(i => ({
-      bahan_baku_id: i.bahan_baku_id,
-      nama: _bahanBakuList.find(b => Number(b.id) === Number(i.bahan_baku_id))?.nama || '',
-      qty: Number(i.qty) || 0,
-      satuan: i.satuan,
-      harga: Number(_bahanBakuList.find(b => Number(b.id) === Number(i.bahan_baku_id))?.harga_satuan || 0),
-      subtotal: Number(i.subtotal) || 0,
-    }))),
+    supplier_id: supplierId,
+    supplier_nama: supplierNama,
+    unit_dapur: document.getElementById('po-unit_dapur').value.trim(),
+    item: JSON.stringify(_poItems.map(i => {
+      const b = _bahanBakuList.find(x => Number(x.id) === Number(i.bahan_baku_id));
+      return {
+        bahan_baku_id: i.bahan_baku_id,
+        id_koperasi: b?.id_koperasi || null,
+        kode: b?.kode || '',
+        nama: b?.nama || '',
+        qty: Number(i.qty) || 0,
+        satuan: i.satuan,
+        harga: Number(b?.harga_satuan || 0),
+        subtotal: Number(i.subtotal) || 0,
+      };
+    })),
     total_nilai: total,
     status: document.getElementById('po-status').value,
     catatan: document.getElementById('po-catatan').value.trim(),
@@ -322,6 +368,14 @@ async function generatePOFromSiklus() {
       return;
     }
 
+    let siklusSupplierList = [];
+    try {
+      const supData = await api.get('/supplier');
+      siklusSupplierList = Array.isArray(supData) ? supData : (supData.data || []);
+    } catch (e) {
+      siklusSupplierList = [];
+    }
+
     preview.innerHTML = `
       <div class="border border-stone-200 rounded-lg overflow-hidden">
         <table class="w-full text-sm">
@@ -337,7 +391,8 @@ async function generatePOFromSiklus() {
           <tbody>
             ${result.items.map(i => `
               <tr class="border-t border-stone-100">
-                <td class="px-3 py-2">${i.bahan_nama}</td>
+                const kodeNum = i.kode ? (i.kode.match(/EXT[-\s]?(\d+)/i)?.[1] || i.kode) : '';
+                <td class="px-3 py-2">${kodeNum ? '[' + kodeNum + '] ' : ''}${i.bahan_nama}</td>
                 <td class="px-3 py-2 text-right mono">${i.total_qty} ${i.satuan}</td>
                 <td class="px-3 py-2 text-right mono">${i.buffer_10} ${i.satuan}</td>
                 <td class="px-3 py-2 text-right mono">${fmtIDR(i.harga_satuan)}</td>
@@ -352,16 +407,26 @@ async function generatePOFromSiklus() {
         </table>
       </div>
       <div class="mt-3 flex gap-2">
-        <input id="po-supplier" placeholder="Nama Supplier" class="flex-1 h-10 px-3 border border-stone-200 rounded-md text-sm">
+        <select id="po-supplier" class="flex-1 h-10 px-3 border border-stone-200 rounded-md text-sm">
+          <option value="">— Pilih Supplier —</option>
+          ${siklusSupplierList.map(s => `<option value="${s.nama}" data-id="${s.id}">${s.nama}</option>`).join('')}
+        </select>
+        <input id="po-unit_dapur-siklus" placeholder="Unit Dapur" class="flex-1 h-10 px-3 border border-stone-200 rounded-md text-sm">
       </div>
       <button id="confirm-create-po" class="mt-2 bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">Konfirmasi & Buat PO</button>`;
 
     document.getElementById('modal-save').style.display = 'none';
     document.getElementById('confirm-create-po').onclick = async () => {
-      const supplier = document.getElementById('po-supplier').value;
+      const supplierEl = document.getElementById('po-supplier');
+      const supplierNama = supplierEl.value;
+      const supplierId = supplierEl.selectedIndex > 0 ? (supplierEl.options[supplierEl.selectedIndex]?.dataset?.id || null) : null;
+      const unitDapur = document.getElementById('po-unit_dapur-siklus')?.value?.trim() || '';
       const tgl = new Date().toISOString().slice(0, 10);
       const nomor = 'PO-' + tgl.replace(/-/g, '') + '-' + Date.now().toString().slice(-4);
       const items = result.items.map(i => ({
+        bahan_baku_id: i.bahan_baku_id,
+        id_koperasi: i.id_koperasi,
+        kode: i.kode || '',
         nama: i.bahan_nama,
         qty: i.buffer_10,
         satuan: i.satuan,
@@ -371,7 +436,9 @@ async function generatePOFromSiklus() {
 
       try {
         await api.post('/purchase_order', {
-          no_po: nomor, tanggal: tgl, supplier_nama: supplier,
+          no_po: nomor, tanggal: tgl,
+          supplier_id: supplierId, supplier_nama: supplierNama,
+          unit_dapur: unitDapur,
           item: JSON.stringify(items), total_nilai: result.total_estimated,
           status: 'Draft', catatan: 'Dibuat dari siklus: ' + result.siklus_refs.join(', '),
         });

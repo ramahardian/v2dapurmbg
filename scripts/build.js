@@ -22,8 +22,12 @@ const FILES = [
   'bp-operasional.js',
   'sp-referensi.js',
   'panduan.js',
-  'kebutuhan-bahan-menu.js',
+  'panduan-keuangan.js',
+  'perhitungan-bdd.js',
   'bdd-kalkulator.js',
+  'perencanaan.js',
+  'total-kebutuhan.js',
+  'ijin-cuti.js',
   'definisi.js',
   'inti.js',
 ];

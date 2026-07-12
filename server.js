@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const whatsappBot = require('./services/whatsappBot');
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
 const app = express();
@@ -22,7 +23,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "https://koperasi.mealify.id"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
     },
@@ -91,4 +92,9 @@ app.use((err, req, res, next) => {
   if (res.headersSent) return;
   res.status(500).json({ error: err.message || 'Internal server error' });
 });
-app.listen(PORT, () => console.log(`Dapur Sukaluyu berjalan di http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Dapur Sukaluyu berjalan di http://localhost:${PORT}`);
+  if (process.env.WA_BOT_ENABLED === 'true') {
+    whatsappBot.init().catch(e => console.error('Gagal init WA Bot:', e.message));
+  }
+});

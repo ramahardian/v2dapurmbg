@@ -37,7 +37,7 @@ function renderNav() {
 
   nav.innerHTML = NAV_GROUPS.map(g => {
     const visibleItems = g.items.filter(key => {
-      if (key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'sp-referensi' || key === 'kebutuhan-bahan-menu' || key === 'bdd-kalkulator' || key === 'panduan-ahli-gizi') return isAdminOrAhliGizi;
+      if (key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'perencanaan' || key === 'total-kebutuhan' || key === 'standar-sp' || key === 'sp-referensi' || key === 'perhitungan-bdd' || key === 'bdd-kalkulator' || key === 'panduan-ahli-gizi') return isAdminOrAhliGizi;
       if (key === 'gudang') return isAdminOrGudang;
       if (key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun') return isAdminOrKeuangan;
       if (key === 'laporan') return isAdminOrKeuangan || isAdminOrAhliGizi;
@@ -78,10 +78,10 @@ function route() {
   const isAdminOrKeuanganOrGudang = userRole === 'admin' || userRole === 'keuangan' || userRole === 'gudang';
   const isAdminOrProduksi = userRole === 'admin' || userRole === 'produksi' || userRole === 'gudang' || userRole === 'keuangan';
   
-  if ((key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'standar-sp' || key === 'sp-referensi' || key === 'kebutuhan-bahan-menu' || key === 'bdd-kalkulator' || key === 'panduan-ahli-gizi') && !isAdminOrAhliGizi) {
+  if ((key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'perencanaan' || key === 'total-kebutuhan' || key === 'standar-sp' || key === 'sp-referensi' || key === 'perhitungan-bdd' || key === 'bdd-kalkulator' || key === 'panduan-ahli-gizi') && !isAdminOrAhliGizi) {
     showAlert('Akses ditolak', 'error'); navigate('dashboard'); return;
   }
-  if ((key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun') && !isAdminOrKeuangan) {
+  if ((key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun' || key === 'panduan-keuangan') && !isAdminOrKeuangan) {
     return showAccessDenied();
   }
   if (key === 'laporan' && !isAdminOrKeuangan && !isAdminOrAhliGizi) {

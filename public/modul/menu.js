@@ -79,12 +79,17 @@ function renderMenuHtml(menus) {
           </tr>
         </thead>
         <tbody id="menu-table-body">
-          ${menus.length > 0 ? menus.map(m => `
+            ${menus.length > 0 ? menus.map(m => `
             <tr class="border-t border-stone-100">
               <td class="px-4 py-3 text-sm">
                 <input type="checkbox" value="${m.id}" onchange="updateSelectedMenuCount()" class="menu-checkbox w-4 h-4 rounded border-stone-300 text-[#1e40af] focus:ring-[#1e40af]/30">
               </td>
-              <td class="px-4 py-3 text-sm font-medium truncate max-w-[180px]" title="${m.nama}">${m.nama}</td>
+              <td class="px-4 py-3 text-sm font-medium truncate max-w-[180px]" title="${m.nama}">
+                <div class="flex items-center gap-2">
+                  ${m.foto ? `<img src="${m.foto}" class="w-8 h-8 rounded object-cover border border-stone-200 shrink-0" />` : ''}
+                  <span>${m.nama}</span>
+                </div>
+              </td>
               <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.gramasi_total}g</td>
               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.kalori} kkal</td>
@@ -164,16 +169,25 @@ function openMenuForm(editing) {
       ${[['gramasi_total','Gramasi'],['kalori','Kalori'],['protein','Protein'],['karbohidrat','Karbo'],['lemak','Lemak']].map(([k,l]) =>
         `<div><label class="text-xs">${l}</label><input id="m-${k}" type="number" value="${m[k] || 0}" class="mt-1 w-full h-9 px-2 border border-stone-200 rounded-md mono text-sm" /></div>`).join('')}
     </div>
+    <div class="mt-3"><label class="text-sm">Foto Menu</label>
+      <div class="flex items-center gap-3 mt-1">
+        ${m.foto ? `<div class="relative group"><img src="${m.foto}" class="w-20 h-20 object-cover rounded-lg border border-stone-200" /><button type="button" onclick="document.getElementById('m-foto').value='';this.closest('.flex').querySelector('img').remove();document.getElementById('m-foto-preview').innerHTML=''" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs leading-none opacity-0 group-hover:opacity-100 transition-opacity">&times;</button></div>` : ''}
+        <div id="m-foto-preview"></div>
+        <button type="button" onclick="document.getElementById('m-foto-input').click()" class="px-3 py-1.5 text-xs border border-stone-300 rounded hover:bg-stone-50">Pilih Foto</button>
+        <input type="hidden" id="m-foto" value="${m.foto || ''}" />
+        <input type="file" id="m-foto-input" accept="image/*" class="hidden" onchange="previewMenuFoto(this)" />
+      </div>
+    </div>
     <div class="border-t border-stone-200 mt-4 pt-3">
       <div class="flex justify-between items-center mb-2">
         <div class="font-semibold text-sm">Bahan & Gramasi</div>
         <button type="button" onclick="addBahanRow()" class="text-xs border border-stone-300 px-3 py-1 rounded">+ Tambah Bahan</button>
       </div>
       <div id="bahan-list" class="space-y-2"></div>
-    </div>`;
+    </div>
+    `;
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, jumlah: b.jumlah, berat_per_satuan: b.berat_per_satuan || 0 }));
   renderBahanList();
-  hitungNutrisi();
   document.getElementById('modal-save').onclick = async () => {
     if (!validateForm([{ id: 'm-nama', label: 'Nama Menu' }])) return;
     const payload = {
@@ -185,6 +199,7 @@ function openMenuForm(editing) {
       protein: +document.getElementById('m-protein').value || 0,
       karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
       lemak: +document.getElementById('m-lemak').value || 0,
+      foto: document.getElementById('m-foto').value || undefined,
       bahan: window._menuBahan.filter(b => b.bahan_baku_id && (b.jumlah || b.kategori_sp)),
     };
     if (editing) await api.put('/menu/' + editing.id, payload);
@@ -319,6 +334,18 @@ async function deleteSelectedMenu() {
   } catch (e) {
     showToast('Gagal menghapus: ' + (e.message || 'Unknown error'), 'error');
   }
+}
+
+function previewMenuFoto(input) {
+  var file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { showAlert('Ukuran foto maksimal 5MB', 'warning'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('m-foto').value = e.target.result;
+    document.getElementById('m-foto-preview').innerHTML = '<img src="' + e.target.result + '" class="w-20 h-20 object-cover rounded-lg border border-stone-200" />';
+  };
+  reader.readAsDataURL(file);
 }
 
 async function recalcNutrisiMenu() {

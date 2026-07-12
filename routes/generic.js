@@ -15,10 +15,10 @@ router.use(requireAuth);
  * Ini sangat penting untuk mencegah SQL Injection atau manipulasi data yang tidak diinginkan.
  */
 const TABLES = {
-  penerima_manfaat: ['nama_kelompok', 'paket_besar', 'paket_kecil', 'lokasi', 'keterangan'],
+  penerima_manfaat: ['nama_kelompok', 'paket_besar', 'paket_kecil', 'lokasi', 'keterangan', 'kategori_penerima', 'provinsi', 'kota', 'kecamatan', 'nomor_telepon', 'nama_kontak', 'email', 'status_kepemilikan'],
   bahan_baku: ['kode', 'nama', 'kategori', 'kategori_sp', 'berat_1_sp', 'persen_bdd', 'berat_per_satuan', 'satuan', 'harga_satuan', 'harga_sebelumnya', 'stok_saat_ini', 'stok_minimum', 'kalori', 'protein', 'karbohidrat', 'lemak', 'serat'],
   supplier: ['nama', 'kategori_supply', 'kontak_person', 'telepon', 'email', 'alamat', 'npwp'],
-  purchase_order: ['no_po', 'tanggal', 'supplier_id', 'supplier_nama', 'item', 'total_nilai', 'status', 'catatan'],
+  purchase_order: ['no_po', 'tanggal', 'supplier_id', 'supplier_nama', 'item', 'total_nilai', 'status', 'unit_dapur', 'catatan'],
   penerimaan_barang: ['no_dokumen', 'tanggal_terima', 'supplier_nama', 'ref_po', 'item', 'total_nilai', 'status_qc', 'catatan'],
   produksi: ['tanggal_produksi', 'menu_id', 'menu_nama', 'kategori_penerima', 'jumlah_porsi', 'status', 'catatan'],
   distribusi: ['tanggal_distribusi', 'titik_distribusi', 'kategori_penerima', 'jumlah_porsi', 'kurir', 'status', 'catatan'],
@@ -64,7 +64,7 @@ const UNIQUE_FIELDS = {
  * Field yang bisa dicari (search) per tabel.
  */
 const SEARCHABLE_FIELDS = {
-  penerima_manfaat: ['nama_kelompok', 'lokasi'],
+  penerima_manfaat: ['nama_kelompok', 'lokasi', 'kategori_penerima', 'provinsi', 'kota', 'kecamatan', 'nama_kontak', 'email', 'status_kepemilikan'],
   bahan_baku: ['nama', 'kode', 'kategori'],
   supplier: ['nama', 'kategori_supply', 'kontak_person'],
   purchase_order: ['no_po', 'supplier_nama', 'status'],
@@ -271,6 +271,8 @@ for (const table of Object.keys(TABLES)) {
              akun?.id || null,
              `Pembayaran PO#${po.no_po} - ${po.supplier_nama || ''}`, po.total_nilai]
           );
+          // Auto-recalculate budget realisasi
+          await recalculateRealisasi(req.user.tenant_id);
         }
       }
 
@@ -333,49 +335,50 @@ router.get('/penerima_manfaat/total', async (req, res) => {
   res.json({ total: Number(row.total) });
 });
 
-// 6. Budget Recalculation - update realisasi from actual transactions
-router.post('/budget/recalculate-realisasi', requireRole('admin', 'keuangan'), async (req, res) => {
-  try {
-    const t = req.user.tenant_id;
-    // Ambil semua budget entries per tenant
-    const [budgets] = await db.query('SELECT * FROM budget WHERE tenant_id=? ORDER BY periode', [t]);
-    // Hitung total kas_bank keluar per periode
-    const [kasKeluar] = await db.query(
-      `SELECT DATE_FORMAT(tanggal,'%Y-%m') as periode, SUM(jumlah) as total
-       FROM kas_bank WHERE tenant_id=? AND tipe='keluar' GROUP BY periode`,
-      [t]
-    );
-    const kasMap = {};
-    for (const k of kasKeluar) kasMap[k.periode] = Number(k.total);
+// 6. Reusable: Recalculate Budget Realisasi
+async function recalculateRealisasi(tenantId) {
+  const t = tenantId;
+  const [budgets] = await db.query('SELECT * FROM budget WHERE tenant_id=? ORDER BY periode', [t]);
+  const [kasKeluar] = await db.query(
+    `SELECT DATE_FORMAT(tanggal,'%Y-%m') as periode, SUM(jumlah) as total
+     FROM kas_bank WHERE tenant_id=? AND tipe='keluar' GROUP BY periode`,
+    [t]
+  );
+  const kasMap = {};
+  for (const k of kasKeluar) kasMap[k.periode] = Number(k.total);
 
-    // Group budget by periode
-    const perPeriode = {};
-    for (const b of budgets) {
-      if (!perPeriode[b.periode]) perPeriode[b.periode] = [];
-      perPeriode[b.periode].push(b);
-    }
+  const perPeriode = {};
+  for (const b of budgets) {
+    if (!perPeriode[b.periode]) perPeriode[b.periode] = [];
+    perPeriode[b.periode].push(b);
+  }
 
-    let updated = 0;
-    for (const [periode, entries] of Object.entries(perPeriode)) {
-      const totalKas = kasMap[periode] || 0;
-      if (totalKas <= 0) continue;
-      const totalBudget = entries.reduce((s, e) => s + Number(e.total_budget), 0);
-      if (totalBudget <= 0) {
-        // Equal distribution if no budget set
-        const share = totalKas / entries.length;
-        for (const e of entries) {
-          await db.query('UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?', [share, e.id, t]);
-          updated++;
-        }
-      } else {
-        for (const e of entries) {
-          const share = totalKas * (Number(e.total_budget) / totalBudget);
-          await db.query('UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?', [share, e.id, t]);
-          updated++;
-        }
+  let updated = 0;
+  for (const [periode, entries] of Object.entries(perPeriode)) {
+    const totalKas = kasMap[periode] || 0;
+    if (totalKas <= 0) continue;
+    const totalBudget = entries.reduce((s, e) => s + Number(e.total_budget), 0);
+    if (totalBudget <= 0) {
+      const share = totalKas / entries.length;
+      for (const e of entries) {
+        await db.query('UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?', [share, e.id, t]);
+        updated++;
+      }
+    } else {
+      for (const e of entries) {
+        const share = totalKas * (Number(e.total_budget) / totalBudget);
+        await db.query('UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?', [share, e.id, t]);
+        updated++;
       }
     }
-    res.json({ ok: true, updated, total_periode: Object.keys(perPeriode).length });
+  }
+  return updated;
+}
+
+router.post('/budget/recalculate-realisasi', requireRole('admin', 'keuangan'), async (req, res) => {
+  try {
+    const updated = await recalculateRealisasi(req.user.tenant_id);
+    res.json({ ok: true, updated });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Gagal recalculate realisasi' });

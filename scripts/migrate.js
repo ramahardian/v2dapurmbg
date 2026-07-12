@@ -17,6 +17,22 @@ require('dotenv').config();
     });
     const sql = fs.readFileSync(path.join(__dirname, '..', 'schema.sql'), 'utf8');
     await conn.query(sql);
+    // Create siklus_menu_item_bahan for grid ingredient input
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS siklus_menu_item_bahan (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        siklus_id INT NOT NULL,
+        hari_ke INT NOT NULL,
+        kategori_sp VARCHAR(50) NOT NULL,
+        bahan_baku_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (siklus_id) REFERENCES siklus_menu(id) ON DELETE CASCADE,
+        FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id),
+        INDEX idx_siklus_hari (siklus_id, hari_ke)
+      ) ENGINE=InnoDB
+    `);
+    console.log('  [OK] Tabel siklus_menu_item_bahan tersedia');
+
     // Migrasi kolom penerima_manfaat jika masih pakai schema lama
     try {
       const [cols] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'penerima_manfaat' AND COLUMN_NAME = 'paket_besar'");
@@ -105,6 +121,39 @@ require('dotenv').config();
       }
     } catch (e) {
       console.log('  (skip perbaikan kolom photo)', e.message);
+    }
+    // Migrasi kolom foto di tabel menu
+    try {
+      const [fotoMenu] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'menu' AND COLUMN_NAME = 'foto'");
+      if (!fotoMenu.length) {
+        await conn.query("ALTER TABLE menu ADD COLUMN foto VARCHAR(255) DEFAULT NULL AFTER serat");
+        console.log('✓ Migrasi menu: tambah kolom foto');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi foto menu)', e.message);
+    }
+    // Migrasi kolom foto di tabel siklus_menu_item
+    try {
+      const [fotoSmi] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'siklus_menu_item' AND COLUMN_NAME = 'foto'");
+      if (!fotoSmi.length) {
+        await conn.query("ALTER TABLE siklus_menu_item ADD COLUMN foto VARCHAR(255) DEFAULT NULL AFTER serat");
+        console.log('✓ Migrasi siklus_menu_item: tambah kolom foto');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi foto siklus_menu_item)', e.message);
+    }
+    // Migrasi kolom id_koperasi di bahan_baku
+    try {
+      const [ikCols] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'id_koperasi'");
+      if (!ikCols.length) {
+        await conn.query("ALTER TABLE bahan_baku ADD COLUMN id_koperasi INT NULL AFTER id, ADD INDEX idx_id_koperasi (id_koperasi)");
+        console.log('✓ Migrasi bahan_baku: tambah kolom id_koperasi');
+        // Isi id_koperasi dari kode yang sudah ada (EXT-<id>)
+        await conn.query("UPDATE bahan_baku SET id_koperasi = CAST(REPLACE(kode, 'EXT-', '') AS UNSIGNED) WHERE kode LIKE 'EXT-%' AND id_koperasi IS NULL");
+        console.log('✓ Migrasi bahan_baku: isi id_koperasi dari kode existing');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi id_koperasi)', e.message);
     }
     // Migrasi kolom SP di bahan_baku
     try {
@@ -254,6 +303,33 @@ require('dotenv').config();
     } catch (e) {
       console.log('  (skip migrasi saldo_awal)', e.message);
     }
+    // Migrasi shift: drop kolom departemen + create shift_divisi
+    try {
+      const [deptCol] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'shift' AND COLUMN_NAME = 'departemen'");
+      if (deptCol.length) {
+        await conn.query("ALTER TABLE shift DROP COLUMN departemen");
+        console.log('✓ Migrasi shift: drop kolom departemen');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi drop departemen shift)', e.message);
+    }
+    try {
+      await conn.query(`CREATE TABLE IF NOT EXISTS shift_divisi (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        shift_id INT NOT NULL,
+        divisi_id INT NOT NULL,
+        tenant_id INT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
+        FOREIGN KEY (divisi_id) REFERENCES divisi(id) ON DELETE CASCADE,
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+        UNIQUE KEY uk_shift_divisi (shift_id, divisi_id),
+        INDEX idx_tenant (tenant_id)
+      ) ENGINE=InnoDB`);
+      console.log('✓ Migrasi shift_divisi: tabel dibuat');
+    } catch (e) {
+      console.log('  (skip migrasi shift_divisi)', e.message);
+    }
     // Index untuk kas_bank
     try {
       const [idxRows] = await conn.query("SHOW INDEX FROM kas_bank WHERE Key_name='idx_kas_bank_tenant_tanggal'");
@@ -264,6 +340,27 @@ require('dotenv').config();
     } catch (e) {
       console.log('  (skip index kas_bank)', e.message);
     }
+    // Kolom resep_map di siklus_menu_item untuk identifikasi resep
+    try {
+      const [rCol] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'siklus_menu_item' AND COLUMN_NAME = 'resep_map'");
+      if (!rCol.length) {
+        await conn.query("ALTER TABLE siklus_menu_item ADD COLUMN resep_map TEXT AFTER menu_nama");
+        console.log('✓ Migrasi siklus_menu_item: kolom resep_map');
+      }
+    } catch (e) {
+      console.log('  (skip resep_map)', e.message);
+    }
+    // Migrasi kolom dokumen di ijin_cuti (untuk upload surat/ijin)
+    try {
+      const [dokCols] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ijin_cuti' AND COLUMN_NAME = 'dokumen'");
+      if (!dokCols.length) {
+        await conn.query("ALTER TABLE ijin_cuti ADD COLUMN dokumen LONGTEXT AFTER alasan");
+        console.log('✓ Migrasi ijin_cuti: tambah kolom dokumen');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi dokumen ijin_cuti)', e.message);
+    }
+
     // Seed admin tenant + user
     const [tExist] = await db.query('SELECT id FROM tenants LIMIT 1');
     if (!tExist.length) {

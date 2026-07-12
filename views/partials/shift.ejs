@@ -3,25 +3,18 @@
     <button id="add-shift-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Shift Baru</button>
     <button id="add-jadwal-btn" class="border border-stone-300 hover:bg-stone-100 px-4 py-2 rounded-md text-sm font-medium">+ Atur Jadwal</button>
   </div>
-  <select id="shift-filter-departemen" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
-    <option value="">Semua Departemen</option>
-    <% jabatanList.forEach(j => { %>
-      <option value="<%= j.name %>"><%= j.name %></option>
-    <% }) %>
-  </select>
 </div>
 
 <!-- Tabel Master Shift -->
 <div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6">
   <div class="px-4 py-3 bg-stone-50 border-b border-stone-200 font-semibold text-sm flex items-center gap-2">
     <svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    Master Shift per Divisi
+    Master Shift
   </div>
   <div class="overflow-x-auto">
     <table class="w-full">
       <thead class="bg-stone-50">
         <tr>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Departemen</th>
           <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Nama Shift</th>
           <th class="text-center px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Jam Masuk</th>
           <th class="text-center px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Jam Keluar</th>
@@ -33,19 +26,18 @@
         <% if (shifts.length) { %>
           <% shifts.forEach(s => { %>
             <tr class="border-t border-stone-100">
-              <td class="px-4 py-3 text-sm"><span class="px-2 py-0.5 rounded text-xs font-medium" style="background:<%= s.warna %>20;color:<%= s.warna %>"><%= s.departemen %></span></td>
-              <td class="px-4 py-3 text-sm font-medium"><%= s.nama %></td>
+              <td class="px-4 py-3 text-sm font-medium"><span class="px-2 py-0.5 rounded text-xs font-medium" style="background:<%= s.warna %>20;color:<%= s.warna %>"><%= s.nama %></span></td>
               <td class="px-4 py-3 text-sm text-center mono"><%= s.jam_masuk.slice(0,5) %></td>
-              <td class="px-4 py-3 text-sm text-center mono"><%= s.jam_keluar.slice(0,5) %></td>
+              <td class="px-4 py-3 text-sm text-center mono"><%= s.jam_keluar.slice(0,5) %><% if (s.jam_keluar <= s.jam_masuk) { %><span class="ml-1.5 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded cursor-default" title="Lintas hari (berakhir besok)">+1</span><% } %></td>
               <td class="px-4 py-3 text-sm text-center"><span class="text-xs px-2 py-0.5 rounded <%= s.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500' %>"><%= s.is_active ? 'Aktif' : 'Nonaktif' %></span></td>
               <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                <button onclick="editShift(<%= s.id %>)" class="text-stone-500 hover:text-stone-900 mr-2">Edit</button>
-                <button onclick="deleteShift(<%= s.id %>)" class="text-red-600 hover:text-red-800">Hapus</button>
+                <button onclick="editShift(<%= s.id %>)" class="text-stone-500 hover:text-stone-900 p-1.5 inline-flex" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button onclick="deleteShift(<%= s.id %>)" class="text-red-600 hover:text-red-800 p-1.5 inline-flex" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
               </td>
             </tr>
           <% }) %>
         <% } else { %>
-          <tr><td colspan="6" class="text-center py-12 text-stone-400">Belum ada shift. Klik "+ Shift Baru" untuk mulai.</td></tr>
+          <tr><td colspan="5" class="text-center py-12 text-stone-400">Belum ada shift. Klik "+ Shift Baru" untuk mulai.</td></tr>
         <% } %>
       </tbody>
     </table>

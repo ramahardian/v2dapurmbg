@@ -174,6 +174,7 @@ async function loadSiklusDetail(id) {
           const totalK = Number(it.kalori || 0) + Number(it.protein || 0) + Number(it.karbohidrat || 0) + Number(it.lemak || 0) + Number(it.serat || 0);
           return `<div class="border border-stone-200 rounded-lg p-4">
             <div class="text-xs font-semibold uppercase text-stone-500 mb-2">Hari ${it.hari_ke} — ${it.hari_nama}</div>
+            ${it.foto ? `<div class="mb-2"><img src="${it.foto}" class="w-full h-32 object-cover rounded-lg border border-stone-200" alt="${it.menu_nama || 'Menu'}" /></div>` : ''}
             <div class="font-bold text-sm mb-1">${it.menu_nama || '<span class="text-stone-400">Belum diisi</span>'}</div>
             <div class="text-xs text-stone-500 mb-2">${fmtNum(it.jumlah_porsi)} porsi</div>
             ${it.menu_nama ? `<div class="grid grid-cols-3 gap-1 text-[10px] mb-2">
@@ -446,212 +447,366 @@ async function editSiklus(id) {
 
 async function openSiklusForm(editing) {
   const isEdit = !!editing;
-  const s = editing || { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 7, status: 'Draft', catatan: '', items: HARI_OPTIONS.slice(0,7).map((h,i) => ({ hari_ke: i+1, hari_nama: h, menu_id: '', menu_nama: '', jumlah_porsi: 0 })) };
+  const s = editing || { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 7, status: 'Draft', catatan: '', items: HARI_OPTIONS.slice(0,7).map((h,i) => ({ hari_ke: i+1, hari_nama: h, menu_nama: '', jumlah_porsi: 0 })) };
+  // Preserve existing metadata when re-rendering (e.g. from saveGridPicker / hariChange)
+  const prevMeta = window._siklusMeta;
+  if (prevMeta) {
+    if (!s.kategori_penerima && prevMeta.kategori_penerima) s.kategori_penerima = prevMeta.kategori_penerima;
+    if ((!s.jumlah_porsi || s.jumlah_porsi === 0) && prevMeta.jumlah_porsi) s.jumlah_porsi = prevMeta.jumlah_porsi;
+    if (!s.catatan && prevMeta.catatan) s.catatan = prevMeta.catatan;
+  }
   const formData = JSON.parse(JSON.stringify(s));
 
   const totalHari = s.total_hari || 7;
   if (!formData.items || !formData.items.length) {
     formData.items = HARI_OPTIONS.slice(0, Math.min(14, Math.max(1, totalHari))).map((h, i) => ({
-      hari_ke: i + 1, hari_nama: h, menu_id: '', menu_nama: '', jumlah_porsi: formData.jumlah_porsi || 0
+      hari_ke: i + 1, hari_nama: h, menu_nama: '', jumlah_porsi: formData.jumlah_porsi || 0
     }));
   }
 
-  document.getElementById('modal-title').textContent = isEdit ? 'Edit Siklus Menu' : 'Siklus Menu Baru';
-
-  // Hide default modal footer
-  const saveBtn = document.getElementById('modal-save');
-  if (saveBtn) saveBtn.style.display = 'none';
-  const footer = document.querySelector('#modal > div > div.border-t.flex.justify-end:last-child');
-  if (footer) footer.style.display = 'none';
-
-  const body = document.getElementById('modal-body');
-  const kats = ['', 'Ibu Hamil', 'Ibu Menyusui', 'Balita', 'PAUD', 'TK', 'SD', 'SMP'];
+  const c = document.getElementById('content');
   const statuses = ['Draft', 'Aktif', 'Arsip'];
 
-  body.innerHTML = `
-    <div class="space-y-4 max-w-lg mx-auto">
-      <div>
-        <label class="text-sm font-medium text-stone-700">Nama Siklus *</label>
-        <input id="sk-nama" value="${s.nama}" placeholder="cth: Siklus Menu SD Minggu 1" class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all text-sm" />
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="text-sm font-medium text-stone-700">Kategori Penerima</label>
-          <select id="sk-kat" class="mt-1 w-full h-11 px-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm">
-            ${kats.map(o => `<option value="${o}" ${s.kategori_penerima === o ? 'selected' : ''}>${o || '— Semua —'}</option>`).join('')}
-          </select>
+  let bahanBySp = {};
+  try { bahanBySp = await api.get('/bahan/by-sp'); } catch { bahanBySp = {}; }
+  window._bahanBySp = bahanBySp;
+
+  let existingGrid = {};
+  if (isEdit && s.id) {
+    try {
+      const gridRes = await api.get('/siklus/' + s.id + '/bahan-grid');
+      for (const d of (gridRes.days || [])) existingGrid[d.hari_ke] = d;
+    } catch {}
+  }
+
+  const ROW_KEYS = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
+  const ROW_LABELS = { Karbohidrat: 'Makanan Pokok', 'Protein Hewani': 'Lauk Hewani', 'Protein Nabati': 'Lauk Nabati', Sayur: 'Sayur', Buah: 'Buah', Susu: 'Susu' };
+  const ROW_ICONS = { Karbohidrat: '🌾', 'Protein Hewani': '🥩', 'Protein Nabati': '🫘', Sayur: '🥬', Buah: '🍎', Susu: '🥛' };
+
+  const gridData = {};
+  if (window._gridDirty && window._gridData) {
+    // Use in-memory grid data (re-render from picker save)
+    for (const hk of Object.keys(window._gridData)) {
+      gridData[hk] = JSON.parse(JSON.stringify(window._gridData[hk]));
+    }
+    window._gridDirty = false;
+  } else {
+    for (const it of formData.items) {
+      const hk = it.hari_ke;
+      const existingItem = isEdit && s.items ? s.items.find(i => i.hari_ke === hk) : null;
+      gridData[hk] = { hari_ke: hk, hari_nama: it.hari_nama, menu_nama: it.menu_nama || '', bahan: {}, resep_map: (existingGrid[hk] && existingGrid[hk].resep_map) || {}, foto: existingItem ? existingItem.foto : null };
+      for (const rk of ROW_KEYS) {
+        const existing = existingGrid[hk] && existingGrid[hk].bahan && existingGrid[hk].bahan[rk];
+        gridData[hk].bahan[rk] = (existing || []).map(b => ({ ...b }));
+      }
+    }
+  }
+  window._gridData = gridData;
+  window._rowKeys = ROW_KEYS;
+
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
+  function fmtDate(d) { return d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0'); }
+  function getDate(hk) { const d = new Date(startDate); d.setDate(d.getDate() + hk - 1); return d; }
+
+  c.innerHTML = `
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <button onclick="renderSiklus()" class="w-10 h-10 rounded-xl flex items-center justify-center text-stone-500 hover:bg-stone-100 border border-stone-200 transition-all"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+          <h1 class="text-2xl font-bold text-stone-800">${isEdit ? 'Edit' : 'Buat'} Siklus Menu</h1>
         </div>
-        <div>
-          <label class="text-sm font-medium text-stone-700">Jumlah Porsi/Hari</label>
-          <input id="sk-porsi" type="number" value="${s.jumlah_porsi}" min="0" class="mt-1 w-full h-11 px-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm" />
+        <div class="flex gap-3">
+          <button onclick="renderSiklus()" class="px-5 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-xl border border-stone-200 transition-all">Kembali</button>
+          <button id="sk-btn-save" class="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 rounded-xl shadow-sm transition-all">${isEdit ? 'Update' : 'Simpan'}</button>
         </div>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="text-sm font-medium text-stone-700">Total Hari Siklus</label>
-          <input id="sk-hari" type="number" min="1" max="14" value="${s.total_hari || 7}" onchange="openSiklusFormHariChange(this)" class="mt-1 w-full h-11 px-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm" />
-        </div>
-        <div>
-          <label class="text-sm font-medium text-stone-700">Status</label>
-          <select id="sk-status" class="mt-1 w-full h-11 px-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm">
-            ${statuses.map(st => `<option value="${st}" ${s.status === st ? 'selected' : ''}>${st}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-      <div>
-        <label class="text-sm font-medium text-stone-700">Catatan (opsional)</label>
-        <textarea id="sk-cat" rows="2" placeholder="Catatan tambahan..." class="mt-1 w-full px-4 py-2.5 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm">${s.catatan || ''}</textarea>
       </div>
 
-      <div class="border-t border-stone-200 pt-4">
-        <div class="font-semibold text-sm mb-3">Penempatan Menu per Hari</div>
-        <div id="siklus-item-list" class="space-y-2"></div>
+      <div class="bg-white rounded-2xl border border-stone-200 px-6 py-5 mb-5 shadow-sm">
+        <div class="flex flex-wrap gap-x-6 gap-y-4 items-end">
+          <div class="min-w-[250px] flex-1"><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Nama Siklus</label><input id="sk-nama" value="${s.nama}" placeholder="cth: Siklus Menu SD" class="mt-1.5 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 text-sm font-medium transition-all" /></div>
+          <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Hari</label><input id="sk-hari" type="number" min="1" max="14" value="${s.total_hari||7}" onchange="openSiklusFormHariChange(this)" class="mt-1.5 w-20 h-11 px-3 border border-stone-200 rounded-xl text-sm text-center" /></div>
+          <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Status</label><select id="sk-status" class="mt-1.5 h-11 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[120px]">${statuses.map(st => '<option value="'+st+'"'+(s.status===st?' selected':'')+'>'+st+'</option>').join('')}</select></div>
+        </div>
       </div>
 
-      <div class="flex justify-end gap-3 pt-4 border-t border-stone-100">
-        <button id="sk-btn-batal" class="px-5 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-xl transition-colors">Batal</button>
-        <button id="sk-btn-save" class="px-6 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm">${isEdit ? 'Update Siklus' : 'Simpan Siklus'}</button>
+      <!-- Calendar Weeks -->
+      <div class="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm mb-5">
+        <div class="overflow-x-auto"><table class="w-full" style="min-width:${Math.max(600, formData.items.length * 130 + 100)}px"><thead><tr>
+          <th class="w-[100px] min-w-[100px] px-3 py-3 text-left text-xs font-semibold text-stone-400 bg-stone-50 border-b border-r border-stone-200">Kelompok</th>${formData.items.map(it => {
+            const dt = getDate(it.hari_ke);
+            const existingFoto = gridData[it.hari_ke] && gridData[it.hari_ke].foto ? gridData[it.hari_ke].foto : null;
+            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top"><div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div><div class="inline-block my-1 px-2 py-0.5 rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">Menu ' + it.hari_ke + '</div><div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div>' +
+              (existingFoto ? '<div class="relative mt-1 group"><img src="' + existingFoto + '" class="w-16 h-16 object-cover rounded-lg mx-auto border border-stone-200" /><button type="button" onclick="removeSiklusFoto(' + it.hari_ke + ')" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs leading-none opacity-0 group-hover:opacity-100 transition-opacity">&times;</button></div>' : '') +
+              '<button type="button" onclick="uploadSiklusFoto(' + (isEdit ? s.id : 'null') + ', ' + it.hari_ke + ')" class="mt-1 text-[10px] text-blue-600 hover:text-blue-800 hover:underline">' + (existingFoto ? 'Ganti' : '+ Foto') + '</button>' +
+              '</th>';
+          }).join('')}
+        </tr></thead><tbody>
+          ${ROW_KEYS.map(rk => {
+            const clr = {Karbohidrat:'amber','Protein Hewani':'rose','Protein Nabati':'emerald',Sayur:'green',Buah:'orange',Susu:'blue'}[rk];
+            const bgClr = {Karbohidrat:'amber-50','Protein Hewani':'rose-50','Protein Nabati':'emerald-50',Sayur:'green-50',Buah:'orange-50',Susu:'blue-50'}[rk];
+            let r = '<tr class="hover:bg-stone-50/50 transition-colors"><td class="px-3 py-2.5 text-xs font-bold text-' + clr + '-700 bg-' + bgClr + ' border-b border-r border-stone-200">' + ROW_LABELS[rk] + '</td>';
+            for (const it of formData.items) {
+              const s = gridData[it.hari_ke].bahan[rk] || [];
+              r += '<td class="px-2 py-2 border-b border-r border-stone-200 cursor-pointer hover:bg-' + clr + '-50/40 transition-colors" onclick="openGridPicker(' + it.hari_ke + ',\'' + rk + '\')"><div class="flex flex-wrap gap-1">';
+              if (s.length) {
+                for (const b of s) {
+                  r += '<span class="inline-flex items-center gap-1 bg-' + clr + '-100 text-' + clr + '-700 px-2 py-0.5 rounded-md text-xs font-medium">' + b.nama + '</span>';
+                }
+              } else {
+                r += '<span class="text-xs text-stone-300 italic">+ tambah</span>';
+              }
+              r += '</div></td>';
+            }
+            r += '</tr>';
+            return r;
+          }).join('')}
+        </tbody></table></div>
+      </div>
+
+      <!-- Identifikasi Resep -->
+      <div class="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm">
+        <div class="px-5 py-3 border-b border-stone-200"><h3 class="font-bold text-stone-700">Identifikasi Resep</h3></div>
+        <div class="overflow-x-auto"><table class="w-full" style="min-width:${Math.max(600, formData.items.length * 130 + 100)}px"><thead><tr>
+          <th class="w-[100px] min-w-[100px] px-3 py-3 text-left text-xs font-semibold text-stone-400 bg-stone-50 border-b border-r border-stone-200">Kelompok</th>${formData.items.map(it => {
+            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200"><span class="text-xs font-semibold text-stone-700">Menu ' + it.hari_ke + '</span></th>';
+          }).join('')}
+        </tr></thead><tbody>
+          ${ROW_KEYS.map(rk => {
+            const clr = {Karbohidrat:'amber','Protein Hewani':'rose','Protein Nabati':'emerald',Sayur:'green',Buah:'orange',Susu:'blue'}[rk];
+            const bgClr = {Karbohidrat:'amber-50','Protein Hewani':'rose-50','Protein Nabati':'emerald-50',Sayur:'green-50',Buah:'orange-50',Susu:'blue-50'}[rk];
+            let r = '<tr class="hover:bg-stone-50/50 transition-colors"><td class="px-3 py-2.5 text-xs font-bold text-' + clr + '-700 bg-' + bgClr + ' border-b border-r border-stone-200">' + ROW_LABELS[rk] + '</td>';
+            for (const it of formData.items) {
+              const val = (gridData[it.hari_ke].resep_map && gridData[it.hari_ke].resep_map[rk]) || '';
+              r += '<td class="px-2 py-2 border-b border-r border-stone-200"><input type="text" value="' + val + '" class="w-full text-xs px-2.5 py-1.5 border border-dashed border-stone-300 rounded-lg bg-white/80 focus:outline-none focus:border-emerald-400 focus:bg-white focus:ring-1 focus:ring-emerald-300/30 transition-all" data-hk="' + it.hari_ke + '" data-kat="' + rk + '" data-field="resep" placeholder="cth: Nasi Putih" /></td>';
+            }
+            r += '</tr>';
+            return r;
+          }).join('')}
+        </tbody></table></div>
       </div>
     </div>`;
 
-  window._siklusFormItems = formData.items;
-  window._siklusFormPorsi = formData.jumlah_porsi;
-  renderSiklusFormItems();
-
-  // Batal
-  document.getElementById('sk-btn-batal').onclick = function() {
-    var m = document.getElementById('modal-save');
-    if (m) m.style.display = '';
-    var ft = document.querySelector('#modal > div > div.border-t.flex.justify-end:last-child');
-    if (ft) ft.style.display = '';
-    closeModal();
-  };
-
-  // Simpan
+  window._siklusFormId = s.id || null;
+  window._siklusMeta = { kategori_penerima: s.kategori_penerima || '', jumlah_porsi: Number(s.jumlah_porsi) || 0, catatan: s.catatan || '' };
   document.getElementById('sk-btn-save').onclick = async function() {
     var nama = document.getElementById('sk-nama').value.trim();
     if (!nama) { showAlert('Nama siklus harus diisi', 'warning'); return; }
     var totalHari = +document.getElementById('sk-hari').value || 7;
-    var porsi = +document.getElementById('sk-porsi').value || 0;
-    var items = window._siklusFormItems;
-    if (totalHari !== items.length) {
-      items = HARI_OPTIONS.slice(0, Math.min(14, Math.max(1, totalHari))).map((h, i) => ({
-        hari_ke: i + 1, hari_nama: h, menu_id: (items[i] && items[i].menu_id) || '', menu_nama: (items[i] && items[i].menu_nama) || '', jumlah_porsi: (items[i] && items[i].jumlah_porsi) || 0
-      }));
+    var gd = window._gridData || {};
+    var rowKeys = window._rowKeys || [];
+    var items = [], gridPayload = [];
+    var hkKeys = Object.keys(gd).sort((a,b) => Number(a)-Number(b));
+    for (var i = 0; i < hkKeys.length; i++) {
+      var hk = Number(hkKeys[i]), day = gd[hk];
+      if (!day) continue;
+      var fotoVal = day.foto || null;
+      items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: '', menu_nama: day.menu_nama || '', jumlah_porsi: 0, foto: fotoVal });
+      for (var ri = 0; ri < rowKeys.length; ri++) {
+        var rk = rowKeys[ri], ids = (day.bahan[rk] || []).map(function(b) { return b.id; });
+        gridPayload.push({ hari_ke: hk, kategori_sp: rk, bahan_baku_ids: ids });
+      }
     }
-    var payload = {
-      nama: nama,
-      kategori_penerima: document.getElementById('sk-kat').value,
-      jumlah_porsi: porsi,
-      total_hari: totalHari,
-      status: document.getElementById('sk-status').value,
-      catatan: document.getElementById('sk-cat').value,
-      items: items.map(function(it, i) {
-        var select = document.getElementById('sk-menu-' + i);
-        var porsiInput = document.getElementById('sk-porsi-' + i);
-        return {
-          hari_ke: it.hari_ke,
-          hari_nama: it.hari_nama,
-          menu_id: select ? select.value : '',
-          menu_nama: select && select.selectedIndex > 0 ? select.options[select.selectedIndex].text : '',
-          jumlah_porsi: porsiInput ? +porsiInput.value || 0 : porsi
-        };
-      })
-    };
+    var meta = window._siklusMeta || {};
+    var payload = { nama, kategori_penerima: meta.kategori_penerima || '', jumlah_porsi: meta.jumlah_porsi || 0, total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', items };
+    // Collect resep_map from Identifikasi Resep inputs
+    var resepMap = {};
+    var resepInputs = document.querySelectorAll('input[data-field="resep"]');
+    for (var ri = 0; ri < resepInputs.length; ri++) {
+      var inp = resepInputs[ri];
+      var hk = inp.getAttribute('data-hk');
+      if (!resepMap[hk]) resepMap[hk] = {};
+      resepMap[hk][inp.getAttribute('data-kat')] = inp.value.trim();
+    }
     try {
-      if (isEdit) await api.put('/siklus/' + s.id, payload);
-      else await api.post('/siklus', payload);
+      var savedId = window._siklusFormId;
+      if (isEdit) await api.put('/siklus/' + savedId, payload);
+      else { var res = await api.post('/siklus', payload); savedId = res.id; }
+      if (savedId) await api.post('/siklus/' + savedId + '/bahan-grid', { grid: gridPayload, resepMap });
       showToast('Siklus menu berhasil ' + (isEdit ? 'diperbarui' : 'disimpan'), 'success');
-      var m = document.getElementById('modal-save');
-      if (m) m.style.display = '';
-      var ft = document.querySelector('#modal > div > div.border-t.flex.justify-end:last-child');
-      if (ft) ft.style.display = '';
-      closeModal();
       renderSiklus();
-    } catch (e) {
-      showToast('Gagal menyimpan: ' + (e.message || 'Unknown error'), 'error');
-    }
+    } catch (e) { showToast('Gagal: ' + (e.message || 'Unknown error'), 'error'); }
   };
-
-  document.getElementById('modal').classList.remove('hidden');
-  document.getElementById('modal').classList.add('flex');
 }
 
-function openSiklusFormHariChange(input) {
-  var newTotal = Math.min(14, Math.max(1, +input.value || 1));
-  var items = window._siklusFormItems;
-  if (newTotal > items.length) {
-    for (var i = items.length; i < newTotal; i++) {
-      items.push({ hari_ke: i + 1, hari_nama: HARI_OPTIONS[i] || 'Hari-' + (i + 1), menu_id: '', menu_nama: '', jumlah_porsi: 0 });
-    }
-  } else if (newTotal < items.length) {
-    items.length = newTotal;
+// Modal helper for grid picker
+function showModal(title, bodyHtml, sizeClass) {
+  var existing = document.getElementById('siklus-modal');
+  if (existing) existing.remove();
+  var m = document.createElement('div');
+  m.id = 'siklus-modal';
+  m.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/40';
+  m.innerHTML = '<div class="bg-white rounded-2xl shadow-xl ' + (sizeClass || 'max-w-lg') + ' w-full mx-4 max-h-[90vh] overflow-hidden"><div class="flex items-center justify-between px-5 py-3 border-b border-stone-200"><h3 class="font-bold text-stone-700 text-sm">' + title + '</h3><button onclick="closeGridPicker()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400">&times;</button></div><div id="modal-body">' + bodyHtml + '</div></div>';
+  document.body.appendChild(m);
+  m.addEventListener('click', function(e) { if (e.target === m) { closeGridPicker(); } });
+}
+
+// Popup picker
+var _gridPickerOpen = false;
+function openGridPicker(hk, rk) {
+  if (_gridPickerOpen) return;
+  _gridPickerOpen = true;
+  var list = (window._bahanBySp || {})[rk] || [];
+  var gd = window._gridData;
+  if (!gd[hk]) return;
+  var sel = gd[hk].bahan[rk] || [];
+  var selIds = sel.map(function(b) { return b.id; });
+  var html = '<div class="p-4"><div class="font-bold text-sm mb-3 text-stone-700">Pilih Bahan — ' + rk + ' (Menu ' + hk + ')</div><div class="max-h-[280px] overflow-y-auto space-y-0.5">';
+  for (var i = 0; i < list.length; i++) {
+    var b = list[i];
+    html += '<label class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-stone-50 cursor-pointer text-sm"><input type="checkbox" value="' + b.id + '" ' + (selIds.indexOf(b.id) !== -1 ? 'checked' : '') + ' class="rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"> ' + b.nama + '</label>';
   }
-  window._siklusFormItems = items;
-  renderSiklusFormItems();
+  html += '</div><div class="flex justify-end gap-2 mt-4 pt-3 border-t border-stone-100"><button onclick="closeGridPicker()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Batal</button><button onclick="saveGridPicker(' + hk + ',\'' + rk + '\')" class="px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg">Simpan</button></div></div>';
+  showModal('Pilih Bahan', html, 'max-w-sm');
+}
+function saveGridPicker(hk, rk) {
+  var m = document.getElementById('siklus-modal');
+  var checks = m ? m.querySelectorAll('input[type=checkbox]:checked') : [];
+  var ids = [], gd = window._gridData, list = (window._bahanBySp || {})[rk] || [];
+  for (var i = 0; i < checks.length; i++) ids.push(Number(checks[i].value));
+  if (!gd[hk]) { if (m) m.remove(); _gridPickerOpen = false; return; }
+  gd[hk].bahan[rk] = ids.map(function(id) { var f = list.find(function(b) { return b.id === id; }); return f ? { id: f.id, nama: f.nama } : null; }).filter(Boolean);
+  if (m) m.remove(); _gridPickerOpen = false;
+  window._gridDirty = true;
+  var curNama = (document.getElementById('sk-nama')?.value) || '';
+  var curStatus = (document.getElementById('sk-status')?.value) || 'Draft';
+  var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
+  var items = hkKeys.map(function(hk) {
+    var d = window._gridData[Number(hk)];
+    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
+  });
+  openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, total_hari: items.length, status: curStatus, items: items } : { nama: curNama, total_hari: items.length, status: curStatus, items: items });
+}
+function closeGridPicker() { var m = document.getElementById('siklus-modal'); if (m) m.remove(); _gridPickerOpen = false; }
+
+// Photo upload for siklus menu items
+function uploadSiklusFoto(siklusId, hariKe) {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/png,image/jpeg,image/jpg,image/gif,image/webp';
+  input.onchange = async function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showAlert('Ukuran foto maksimal 5MB', 'warning');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = async function(ev) {
+      var base64 = ev.target.result;
+      // If editing existing siklus, upload directly via API
+      if (siklusId) {
+        try {
+          var res = await fetch('/api/siklus/' + siklusId + '/foto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hari_ke: hariKe, foto: base64 }),
+            credentials: 'include'
+          });
+          if (!res.ok) { var err = await res.json(); throw new Error(err.error || 'Gagal upload'); }
+          var data = await res.json();
+          // Update gridData
+          if (window._gridData && window._gridData[hariKe]) {
+            window._gridData[hariKe].foto = data.foto;
+          }
+          window._gridDirty = true;
+          showToast('Foto berhasil diupload', 'success');
+          // Re-render the form
+          var curNama = document.getElementById('sk-nama')?.value;
+          var curStatus = document.getElementById('sk-status')?.value;
+          var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
+          var items = hkKeys.map(function(hk) {
+            var d = window._gridData[Number(hk)];
+            return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
+          });
+          openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, total_hari: items.length, status: curStatus, items: items } : { nama: curNama, total_hari: items.length, status: curStatus, items: items });
+        } catch (err) {
+          showAlert(err.message, 'error');
+        }
+      } else {
+        // New siklus - store foto in grid data and re-render
+        if (window._gridData && window._gridData[hariKe]) {
+          window._gridData[hariKe].foto = base64;
+        }
+        window._gridDirty = true;
+        var curNama = document.getElementById('sk-nama')?.value;
+        var curStatus = document.getElementById('sk-status')?.value;
+        var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
+        var items = hkKeys.map(function(hk) {
+          var d = window._gridData[Number(hk)];
+          return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
+        });
+        openSiklusForm({ nama: curNama, total_hari: items.length, status: curStatus, items: items });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
 }
 
-function renderSiklusFormItems() {
-  var list = document.getElementById('siklus-item-list');
-  if (!list) return;
-  var items = window._siklusFormItems || [];
-  var defaultPorsi = window._siklusFormPorsi || 0;
-  var menuOpts = (window._menuCache || []).map(function(m) { return '<option value="' + m.id + '">' + m.nama + '</option>'; }).join('');
-  var h = '';
-  items.forEach(function(it, i) {
-    var hasMenu = !!it.menu_id;
-    h += '<div class="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-stone-100 hover:border-stone-200 hover:shadow-sm transition-all">';
-    h += '<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-xs font-bold text-blue-600 shrink-0">H' + it.hari_ke + '</div>';
-    h += '<div class="w-16 shrink-0 text-xs text-stone-400">' + it.hari_nama + '</div>';
-    h += '<div class="flex-1 min-w-0"><select id="sk-menu-' + i + '" class="w-full h-10 px-3 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white">';
-    h += '<option value="">— Pilih Menu —</option>' + menuOpts + '</select></div>';
-    h += '<div class="w-20 shrink-0"><input id="sk-porsi-' + i + '" type="number" value="' + (it.jumlah_porsi || defaultPorsi || '') + '" min="0" placeholder="Porsi" class="w-full h-10 px-2 border border-stone-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>';
-    h += '<button id="sk-clear-' + i + '" class="w-8 h-8 rounded-lg flex items-center justify-center text-stone-400 hover:text-red-500 hover:bg-red-50 transition-all ' + (hasMenu ? '' : 'invisible') + '">×</button>';
-    h += '</div>';
-    h += '<div id="sk-bd-' + i + '" class="ml-10"></div>';
-  });
-  list.innerHTML = h;
-
-  items.forEach(function(it, i) {
-    var select = document.getElementById('sk-menu-' + i);
-    if (select && it.menu_id) select.value = it.menu_id;
-
-    // Show breakdown if menu is pre-selected
-    if (it.menu_id) {
-      getMenuKategoriBreakdown(it.menu_id).then(function(g) {
-        var el = document.getElementById('sk-bd-' + i);
-        if (el) el.innerHTML = renderKategoriBreakdown(g);
-      });
-    }
-
-    var clearBtn = document.getElementById('sk-clear-' + i);
-    if (clearBtn) {
-      clearBtn.onclick = function() {
-        items[i].menu_id = '';
-        items[i].menu_nama = '';
-        renderSiklusFormItems();
-      };
-    }
-    if (select) {
-      select.onchange = function() {
-        items[i].menu_id = this.value;
-        items[i].menu_nama = this.options[this.selectedIndex] ? this.options[this.selectedIndex].text : '';
-        // Show clear button
-        var clearBtn2 = document.getElementById('sk-clear-' + i);
-        if (clearBtn2) {
-          clearBtn2.className = 'w-8 h-8 rounded-lg flex items-center justify-center text-stone-400 hover:text-red-500 hover:bg-red-50 transition-all ' + (this.value ? '' : 'invisible');
+function removeSiklusFoto(hariKe) {
+  var siklusId = window._siklusFormId;
+  if (siklusId) {
+    if (!confirm('Hapus foto ini?')) return;
+    fetch('/api/siklus/' + siklusId + '/foto/' + hariKe, {
+      method: 'DELETE',
+      credentials: 'include'
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.ok) {
+        if (window._gridData && window._gridData[hariKe]) {
+          window._gridData[hariKe].foto = null;
         }
-        // Show category breakdown
-        var bdEl = document.getElementById('sk-bd-' + i);
-        if (bdEl) {
-          bdEl.innerHTML = '<div class="text-[10px] text-stone-400 animate-pulse">Memuat...</div>';
-          getMenuKategoriBreakdown(this.value).then(function(g) {
-            bdEl.innerHTML = renderKategoriBreakdown(g);
-          });
+        window._gridDirty = true;
+        var curNama = document.getElementById('sk-nama')?.value;
+        var curStatus = document.getElementById('sk-status')?.value;
+        var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
+        var items = hkKeys.map(function(hk) {
+          var d = window._gridData[Number(hk)];
+          return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
+        });
+        openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, total_hari: items.length, status: curStatus, items: items } : { nama: curNama, total_hari: items.length, status: curStatus, items: items });
+        showToast('Foto berhasil dihapus', 'success');
+      }
+    }).catch(function() { showAlert('Gagal menghapus foto', 'error'); });
+  }
+}
+
+async function openSiklusFormHariChange(input) {
+  var newTotal = Math.min(14, Math.max(1, +input.value || 1));
+
+  if (window._gridData) {
+    var gridData = window._gridData;
+    var rowKeys = window._rowKeys || [];
+    var hkKeys = Object.keys(gridData).sort(function(a,b) { return Number(a)-Number(b); });
+    var existingLen = hkKeys.length;
+
+    if (newTotal > existingLen) {
+      for (var i = existingLen + 1; i <= newTotal; i++) {
+        var nama = HARI_OPTIONS[i - 1] || 'Hari-' + i;
+        gridData[i] = { hari_ke: i, hari_nama: nama, menu_nama: '', bahan: {}, resep_map: {} };
+        for (var ri = 0; ri < rowKeys.length; ri++) {
+          gridData[i].bahan[rowKeys[ri]] = [];
         }
-      };
+      }
+    } else if (newTotal < existingLen) {
+      for (var k in gridData) {
+        if (Number(k) > newTotal) delete gridData[k];
+      }
     }
+    window._gridData = gridData;
+  }
+
+  // Collect current form values and re-render
+  window._gridDirty = true;
+  var curNama = document.getElementById('sk-nama').value;
+  var curStatus = document.getElementById('sk-status').value;
+  var curId = window._siklusFormId;
+  var items = Object.keys(window._gridData || {}).sort(function(a,b) { return Number(a)-Number(b); }).map(function(hk) {
+    var d = window._gridData[hk];
+    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
   });
+  openSiklusForm(curId ? { id: curId, nama: curNama, total_hari: newTotal, status: curStatus, items: items } : { nama: curNama, total_hari: newTotal, status: curStatus, items: items });
 }
 
 // Preload menu list for siklus form

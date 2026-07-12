@@ -381,25 +381,6 @@ async function renderBddKalkulator() {
       '</div>',
     '</div>',
 
-    // Referensi Cepat
-    '<div class="bg-white border border-stone-200 rounded-xl p-5 mb-4">',
-      '<div class="text-sm font-bold text-stone-700 mb-3">📖 Contoh Perhitungan</div>',
-      '<div class="overflow-x-auto">',
-        '<table class="w-full text-xs">',
-          '<thead class="bg-stone-50">',
-            '<tr>',
-              '<th class="text-left px-3 py-2 font-semibold text-stone-600">Bahan</th>',
-              '<th class="text-center px-3 py-2 font-semibold text-stone-600">BDD</th>',
-              '<th class="text-right px-3 py-2 font-semibold text-stone-600">Bersih (g)</th>',
-              '<th class="text-right px-3 py-2 font-semibold text-stone-600">Kotor (g)</th>',
-              '<th class="text-right px-3 py-2 font-semibold text-stone-600">Kebutuhan (kg)</th>',
-            '</tr>',
-          '</thead>',
-          '<tbody id="bdd-tabel-contoh"></tbody>',
-        '</table>',
-      '</div>',
-    '</div>',
-
     '</div>',
   ].join('\n');
 
@@ -411,33 +392,6 @@ async function renderBddKalkulator() {
   document.getElementById('bdd-persen').value = 100;
   perbaruiHasil();
 
-  // Muat tabel contoh
-  muatTabelContoh();
 }
 
-/**
- * Memuat tabel contoh perhitungan bahan-bahan umum
- */
-async function muatTabelContoh() {
-  var tbody = document.getElementById('bdd-tabel-contoh');
-  try {
-    var res = await api.get('/sp_referensi_bahan?limit=20');
-    var list = Array.isArray(res) ? res : (res.data || []);
-    var html = list.map(function(b) {
-      var bdd = Math.round((b.bdd_persen || 0) * 100);
-      var bersih = b.berat_bersih || 0;
-      var kotor = b.berat_kotor || 0;
-      var kebutuhan = hitungKebutuhanBahan(kotor, 490);
-      return '<tr class="border-t border-stone-100 hover:bg-stone-50/50">' +
-        '<td class="px-3 py-2 font-medium">' + (b.nama || '-') + '</td>' +
-        '<td class="px-3 py-2 text-center mono">' + bdd + '%</td>' +
-        '<td class="px-3 py-2 text-right mono">' + fmt2(bersih) + '</td>' +
-        '<td class="px-3 py-2 text-right mono">' + fmt2(kotor) + '</td>' +
-        '<td class="px-3 py-2 text-right mono font-semibold text-emerald-700">' + fmt2(kebutuhan) + '</td>' +
-        '</tr>';
-    }).join('');
-    tbody.innerHTML = html || '<tr><td colspan="5" class="text-center py-4 text-stone-400">Tidak ada data</td></tr>';
-  } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-stone-400">Gagal memuat data</td></tr>';
-  }
-}
+

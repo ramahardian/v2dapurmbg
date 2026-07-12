@@ -63,8 +63,8 @@ async function reloadCrud(cfg) {
       return `<td class="px-4 py-3 text-sm">${cell}</td>`;
     }).join('')}
     <td class="px-4 py-3 text-right whitespace-nowrap">
-      <button onclick='editRow(${JSON.stringify(cfg).replace(/'/g, "\\'")}, ${JSON.stringify(r).replace(/'/g, "\\'")})' class="text-stone-500 hover:text-stone-900 p-1.5 inline-flex items-center" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-      <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "\\'")})' class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      <button onclick='editRow(${JSON.stringify(cfg).replace(/'/g, "&#39;")}, ${JSON.stringify(r).replace(/'/g, "&#39;")})' class="text-stone-500 hover:text-stone-900 p-1.5 inline-flex items-center" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "&#39;")})' class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
     </td></tr>`).join('');
   w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead class="bg-stone-50"><tr>${headers}<th class="px-4 py-3 text-right text-xs font-semibold text-stone-600 uppercase">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
 
@@ -138,6 +138,10 @@ function renderField(f, editing) {
   const ro = f.readOnly;
   const roCls = ro ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : '';
   const val = editing?.[f.k];
+  let actionHtml = '';
+  if (f.action) {
+      actionHtml = `<button type="button" onclick='${f.action.onclick}' class="text-xs border border-blue-300 text-blue-700 hover:bg-blue-50 px-2 py-0.5 rounded flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>${f.action.label}</button>`;
+  }
   let input;
   if (f.type === 'select') {
     input = `<select id="f-${f.k}" ${ro ? 'disabled' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm ${roCls}">
@@ -154,7 +158,8 @@ function renderField(f, editing) {
     if (f.fmt === 'num' && f.decimals != null && val != null) ival = Number(val).toFixed(f.decimals);
     input = `<input id="f-${f.k}" type="${itype}" value="${ival}" ${ro ? 'readonly' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm ${f.type === 'number' ? 'mono' : ''} ${roCls}" />`;
   }
-  return `<div class="${f.type === 'hidden' ? '' : 'mb-3'}"><label class="text-sm text-stone-700">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>${input}</div>`;
+  const header = f.action ? `<div class="flex items-center justify-between"><label class="text-sm text-stone-700">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>${actionHtml}</div>` : `<label class="text-sm text-stone-700">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>`;
+  return `<div class="${f.type === 'hidden' ? '' : 'mb-3'}">${header}${input}</div>`;
 }
 
 function openForm(cfg, editing) {
@@ -186,7 +191,11 @@ function openForm(cfg, editing) {
     api.get(f.source).then(rows => {
       const list = Array.isArray(rows) ? rows : (rows.data || []);
       sel.innerHTML = '<option value="">— Pilih ' + f.l + ' —</option>' +
-        list.map(r => `<option value="${r[f.valueField || 'id']}" data-item='${encodeURIComponent(JSON.stringify(r))}' ${editing?.[f.k] == r[f.valueField || 'id'] ? 'selected' : ''}>${r[f.labelField || 'nama']}</option>`).join('');
+        list.map(r => {
+          var label = r[f.labelField || 'nama'];
+          if (f.labelFormat) label = f.labelFormat.replace(/\{(\w+)\}/g, function(_, k) { return r[k] != null ? r[k] : ''; });
+          return `<option value="${r[f.valueField || 'id']}" data-item='${encodeURIComponent(JSON.stringify(r))}' ${editing?.[f.k] == r[f.valueField || 'id'] ? 'selected' : ''}>${label}</option>`;
+        }).join('');
       sel.onchange = function() {
         const opt = sel.options[sel.selectedIndex];
         if (opt && opt.dataset.item) {
@@ -382,3 +391,25 @@ async function backfillJournal() {
     showAlert('Gagal: ' + e.message, 'error');
   }
 }
+
+// Tanya AI — generate teks dari field lain (misal nama) → isi textarea
+window.tanyaAi = async function(fieldId, sourceField) {
+  var nameEl = sourceField ? document.getElementById('f-' + sourceField) : null;
+  var name = nameEl ? nameEl.value.trim() : '';
+  var q;
+  if (name) {
+    q = 'Inti "' + name + '" dapur MBG:';
+  } else {
+    q = prompt('Apa yang ingin Anda tanyakan?');
+    if (!q) return;
+  }
+  var textarea = document.getElementById('f-' + fieldId);
+  if (!textarea) return;
+  textarea.value = 'Menulis...';
+  try {
+    var resp = await api.post('/ai/tanya', { prompt: q });
+    textarea.value = resp.text || '';
+  } catch (e) {
+    textarea.value = 'Error: ' + (e.message || 'Gagal');
+  }
+};

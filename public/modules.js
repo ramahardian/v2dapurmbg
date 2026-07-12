@@ -4,7 +4,7 @@ const NAV_GROUPS = [
   { label: 'Operasional', items: ['penerima-manfaat', 'bahan-baku', 'gudang', 'produksi', 'distribusi'] },
   { label: 'Pembelian', items: ['supplier', 'pembelian', 'penerimaan'] },
   { label: 'Akuntansi', items: ['budgeting', 'kas-bank', 'laporan'] },
-  { label: 'SDM', items: ['karyawan', 'absensi', 'payroll'] },
+  { label: 'SDM', items: ['karyawan', 'absensi', 'ijin-cuti', 'payroll'] },
   { label: 'Ahli Gizi', items: ['menu', 'hpp', 'siklus'] },
 ];
 
@@ -27,5 +27,6 @@ const MODULES = {
   siklus: { title: 'Siklus Menu', sub: 'Rencana menu berulang', icon: '', render: renderSiklus },
   karyawan: { title: 'Karyawan', sub: 'Data master karyawan', icon: '', render: renderKaryawan },
   absensi: { title: 'Absensi', sub: 'Kehadiran karyawan harian', icon: '', render: renderAbsensi },
+  'ijin-cuti': { title: 'Ijin/Cuti', sub: 'Izin dan cuti karyawan', icon: '', render: renderIjinCuti },
   payroll: { title: 'Payroll', sub: 'Penggajian karyawan per periode', icon: '', render: renderPayroll },
 };

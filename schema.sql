@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS menu (
   karbohidrat DECIMAL(10,2) DEFAULT 0,
   lemak DECIMAL(10,2) DEFAULT 0,
   serat DECIMAL(10,2) DEFAULT 0,
+  foto VARCHAR(255) DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   INDEX idx_tenant (tenant_id)
@@ -121,6 +122,7 @@ CREATE TABLE IF NOT EXISTS purchase_order (
   item TEXT,
   total_nilai DECIMAL(15,2) DEFAULT 0,
   status ENUM('Draft','Disetujui','Dikirim','Diterima','Dibayar') DEFAULT 'Draft',
+  unit_dapur VARCHAR(100),
   catatan TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
@@ -270,6 +272,7 @@ CREATE TABLE IF NOT EXISTS siklus_menu_item (
   karbohidrat DECIMAL(10,2) DEFAULT 0,
   lemak DECIMAL(10,2) DEFAULT 0,
   serat DECIMAL(10,2) DEFAULT 0,
+  foto VARCHAR(255) DEFAULT NULL,
   FOREIGN KEY (siklus_id) REFERENCES siklus_menu(id) ON DELETE CASCADE,
   INDEX idx_siklus (siklus_id)
 ) ENGINE=InnoDB;
@@ -314,18 +317,51 @@ CREATE TABLE IF NOT EXISTS absensi (
   INDEX idx_absensi_tanggal (tenant_id, tanggal)
 ) ENGINE=InnoDB;
 
+-- Ijin / Cuti Karyawan
+CREATE TABLE IF NOT EXISTS ijin_cuti (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  karyawan_id INT NOT NULL,
+  jenis ENUM('Izin','Cuti') NOT NULL,
+  tanggal_mulai DATE NOT NULL,
+  tanggal_selesai DATE NOT NULL,
+  alasan TEXT,
+  status ENUM('Menunggu','Disetujui','Ditolak') DEFAULT 'Menunggu',
+  approved_by INT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  FOREIGN KEY (karyawan_id) REFERENCES karyawan(id) ON DELETE CASCADE,
+  FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_tenant (tenant_id),
+  INDEX idx_karyawan (karyawan_id),
+  INDEX idx_tanggal (tenant_id, tanggal_mulai)
+) ENGINE=InnoDB;
+
 -- Shift (jadwal kerja per divisi)
 CREATE TABLE IF NOT EXISTS shift (
   id INT AUTO_INCREMENT PRIMARY KEY,
   tenant_id INT NOT NULL,
   nama VARCHAR(100) NOT NULL,
-  departemen VARCHAR(100) NOT NULL,
   jam_masuk TIME NOT NULL,
   jam_keluar TIME NOT NULL,
   warna VARCHAR(7) DEFAULT '#3B82F6',
   is_active TINYINT(1) DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  INDEX idx_tenant (tenant_id)
+) ENGINE=InnoDB;
+
+-- Relasi Shift ke Divisi (many-to-many: setiap divisi bisa pilih shift)
+CREATE TABLE IF NOT EXISTS shift_divisi (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  shift_id INT NOT NULL,
+  divisi_id INT NOT NULL,
+  tenant_id INT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
+  FOREIGN KEY (divisi_id) REFERENCES divisi(id) ON DELETE CASCADE,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  UNIQUE KEY uk_shift_divisi (shift_id, divisi_id),
   INDEX idx_tenant (tenant_id)
 ) ENGINE=InnoDB;
 

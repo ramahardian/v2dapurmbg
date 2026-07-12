@@ -117,6 +117,11 @@ router.get('/absensi', requireRole('admin', 'keuangan'), (req, res) => {
   res.render('partials/absensi');
 });
 
+// Ijin/Cuti template - only admin and keuangan
+router.get('/ijin-cuti', requireRole('admin', 'keuangan'), (req, res) => {
+  res.render('partials/ijin_cuti');
+});
+
 // Payroll template - only admin and keuangan
 router.get('/payroll', requireRole('admin', 'keuangan'), (req, res) => {
   res.render('partials/payroll');
@@ -125,19 +130,28 @@ router.get('/payroll', requireRole('admin', 'keuangan'), (req, res) => {
 // Shift template - only admin and keuangan
 router.get('/shift', requireRole('admin', 'keuangan'), async (req, res) => {
   try {
-    const [shifts] = await db.query('SELECT * FROM shift WHERE tenant_id=? ORDER BY departemen, jam_masuk', [req.user.tenant_id]);
-    const [departemens] = await db.query('SELECT DISTINCT departemen FROM karyawan WHERE departemen IS NOT NULL ORDER BY departemen');
-    const [jabatanList] = await db.query('SELECT * FROM jabatan ORDER BY name');
-    res.render('partials/shift', { shifts, departemens: departemens.map(d => d.departemen), jabatanList });
+    const [shifts] = await db.query('SELECT * FROM shift WHERE tenant_id=? ORDER BY jam_masuk', [req.user.tenant_id]);
+    const [divisiList] = await db.query('SELECT * FROM divisi ORDER BY nama');
+    res.render('partials/shift', { shifts, divisiList });
   } catch (err) {
     console.error('Shift template error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Kebutuhan Bahan Menu template
-router.get('/kebutuhan-bahan-menu', requireRole('admin', 'ahli_gizi'), (req, res) => {
-  res.render('partials/kebutuhan-bahan-menu');
+// Perhitungan BDD template — khusus ahli gizi
+router.get('/perhitungan-bdd', requireRole('admin', 'ahli_gizi'), (req, res) => {
+  res.render('partials/perhitungan-bdd');
+});
+
+// Perencanaan Kebutuhan Bahan Pangan template — khusus ahli gizi
+router.get('/perencanaan', requireRole('admin', 'ahli_gizi'), (req, res) => {
+  res.render('partials/perencanaan');
+});
+
+// Total Kebutuhan Pangan template — khusus ahli gizi
+router.get('/total-kebutuhan', requireRole('admin', 'ahli_gizi'), (req, res) => {
+  res.render('partials/total-kebutuhan');
 });
 
 // Akun template

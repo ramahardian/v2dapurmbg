@@ -23,6 +23,11 @@
     <div class="mono text-2xl mt-2 font-semibold"><%= summary.stok_menipis %></div>
     <div class="text-xs text-stone-500 mt-1"><%= summary.jumlah_bahan_baku %> bahan total</div>
   </div>
+  <div class="bg-white border border-stone-200 rounded-lg p-5">
+    <div class="text-xs uppercase tracking-wider text-stone-500 font-medium">Ijin/Cuti Hari Ini</div>
+    <div class="mono text-2xl mt-2 font-semibold"><%= summary.ijin_cuti_hari_ini || 0 %></div>
+    <div class="text-xs text-stone-500 mt-1">Menunggu persetujuan: <b><%= summary.ijin_cuti_menunggu || 0 %></b></div>
+  </div>
 </div>
 <div class="bg-white border border-stone-200 rounded-lg p-5">
   <div class="font-bold mb-3">Stok Menipis</div>

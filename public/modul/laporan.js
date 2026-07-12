@@ -17,7 +17,7 @@ async function renderLaporan() {
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
   }
 }
-const LAP_TABS = ['siklus', 'hpp', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'berita-acara', 'bp-kas'];
+const LAP_TABS = ['siklus', 'hpp', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas'];
 const LAP_PAGE_SIZE = 10;
 let lapState = { tab: 'siklus', page: 1 };
 
@@ -34,7 +34,6 @@ async function showLap(tab) {
     'rab-bulanan': { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
     'pengeluaran-bulanan': { active: 'bg-white text-sky-600 shadow-sm', inactive: 'bg-sky-100 text-sky-700 hover:bg-sky-200' },
     'penggunaan-anggaran': { active: 'bg-white text-teal-600 shadow-sm', inactive: 'bg-teal-100 text-teal-700 hover:bg-teal-200' },
-    'berita-acara': { active: 'bg-white text-orange-600 shadow-sm', inactive: 'bg-orange-100 text-orange-700 hover:bg-orange-200' },
     'bp-kas': { active: 'bg-white text-indigo-600 shadow-sm', inactive: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' },
   };
   LAP_TABS.forEach(t => {
@@ -47,13 +46,7 @@ async function showLap(tab) {
   const wrap = document.getElementById('lap-content');
   wrap.innerHTML = '<div class="flex items-center justify-center py-16"><svg class="animate-spin h-8 w-8 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
-    if (tab === 'budget') {
-      const rows = await api.get('/budget');
-      window._lapData = { tab, rows, headers: ['Periode','Kategori','Penerima','Budget','Realisasi','Selisih'], fields: ['periode','kategori_penerima','jumlah_penerima','total_budget','realisasi'],
-        fmt: rows.map(b => [b.periode, b.kategori_penerima||'-', fmtNum(b.jumlah_penerima), fmtIDR(b.total_budget), fmtIDR(b.realisasi), fmtIDR(b.total_budget - b.realisasi)]) };
-      window['_export_budget'] = { data: rows, fields: ['periode','kategori_penerima','jumlah_penerima','total_budget','realisasi'] };
-      window._lapStatCards = '';
-    } else if (tab === 'persediaan') {
+    if (tab === 'persediaan') {
       const rows = await api.get('/bahan_baku');
       window._lapData = { tab, rows, headers: ['Nama','Kategori','Stok','Satuan','Harga','Nilai'], fields: ['nama','kategori','satuan','stok_saat_ini','stok_minimum','harga_satuan'],
         fmt: rows.map(b => [b.nama, b.kategori||'-', fmtNum(b.stok_saat_ini), b.satuan, fmtIDR(b.harga_satuan), fmtIDR(b.stok_saat_ini * b.harga_satuan)]) };
@@ -120,24 +113,27 @@ async function showLap(tab) {
         ${statCard('Rata-rata Capaian', s.rata_capaian.toFixed(1)+'%', 'per periode', 'bg-violet-50')}
       </div>`;
     } else if (tab === 'siklus') {
-      const [smRes, lapRes] = await Promise.all([
-        api.get('/siklus/laporan/siklus-menu'),
+      const [siklusList, lapRes, menuHarianRes] = await Promise.all([
+        api.get('/siklus'),
         api.get('/siklus/laporan'),
+        api.get('/siklus/laporan/menu-harian').catch(() => null),
       ]);
-      const { siklus, group_order, group_order2, group_labels } = smRes;
       const { ringkasan } = lapRes;
       window._lapData = null;
 
+      const menuHarian = menuHarianRes ? menuHarianRes.siklus : [];
+      const kategori_order = menuHarianRes ? menuHarianRes.kategori_order : ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
+
       // Build Laporan 1: Siklus Menu 10 Hari
       let lap1Html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6">';
-      lap1Html += '<div class="px-4 py-3 font-bold text-sm border-b border-stone-200 bg-rose-50 text-rose-800">LAPORAN 1 — SIKLUS MENU 10 HARI</div>';
-      lap1Html += renderDailyMenuTable(siklus, group_order, group_labels);
+      lap1Html += '<div style="padding:8px 12px;font-weight:700;font-size:14px;background:#f59e0b;color:#fff;border-bottom:2px solid #000;">LAPORAN 1 — SIKLUS MENU 10 HARI</div>';
+      lap1Html += renderDailyMenuTable(menuHarian, kategori_order);
       lap1Html += '</div>';
 
       // Build Laporan 2: Identifikasi Resep
       let lap2Html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">';
-      lap2Html += '<div class="px-4 py-3 font-bold text-sm border-b border-stone-200 bg-amber-50 text-amber-800">LAPORAN 2 — IDENTIFIKASI RESEP</div>';
-      lap2Html += renderResepTable(siklus, group_order2, group_labels);
+      lap2Html += '<div style="padding:8px 12px;font-weight:700;font-size:14px;background:#f59e0b;color:#fff;border-bottom:2px solid #000;">LAPORAN 2 — IDENTIFIKASI RESEP</div>';
+      lap2Html += renderResepTable(menuHarian, kategori_order);
       lap2Html += '</div>';
 
       window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
@@ -152,9 +148,10 @@ async function showLap(tab) {
     } else if (tab === 'pembelian') {
       const r = await api.get('/laporan/pembelian');
       const rows = r.rows || [];
-      window._lapData = { tab, rows, headers: ['No PO','Tanggal','Supplier','Total','Status'], fields: ['no_po','tanggal','supplier_nama','total_nilai','status'],
-        fmt: rows.map(d => [d.no_po, fmtDate(d.tanggal), d.supplier_nama||'-', fmtIDR(d.total_nilai), d.status]) };
-      window['_export_pembelian'] = { data: rows, fields: ['no_po','tanggal','supplier_nama','total_nilai','status'] };
+      const fmtItem = d => { try { return JSON.parse(d.item || '[]').map(i => i.nama).filter(Boolean).join(', '); } catch { return ''; } };
+      window._lapData = { tab, rows, headers: ['No PO','Tanggal','Supplier','Item','Total','Status'], fields: ['no_po','tanggal','supplier_nama','item_nama','total_nilai','status'],
+        fmt: rows.map(d => [d.no_po, fmtDate(d.tanggal), d.supplier_nama||'-', fmtItem(d), fmtIDR(d.total_nilai), d.status]) };
+      window['_export_pembelian'] = { data: rows.map(d => ({ ...d, item_nama: fmtItem(d) })), fields: ['no_po','tanggal','supplier_nama','item_nama','total_nilai','status'] };
       window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
         ${statCard('Total PO', fmtNum(r.stats.total_po), '', 'bg-indigo-50')}
         ${statCard('Draft', fmtNum(r.stats.draft), '', 'bg-stone-50')}
@@ -512,113 +509,6 @@ async function showLap(tab) {
         '</tbody></table></div></div>' + listBadge;
 
       window._lapData = null;
-    } else if (tab === 'berita-acara') {
-      const bs = lapState;
-      const now = new Date();
-      const filterBulan = bs.ba_bulan || String(now.getMonth() + 1).padStart(2, '0');
-      const filterTahun = bs.ba_tahun || String(now.getFullYear());
-      let r = null;
-      let dataLoaded = false;
-      try {
-        r = await api.get('/laporan/pengeluaran-bulanan?bulan='+filterBulan+'&tahun='+filterTahun);
-        dataLoaded = true;
-      } catch(e) { r = null; }
-
-      const bulanNama = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][parseInt(filterBulan)-1];
-      const periodeLabel = bulanNama + ' ' + filterTahun;
-
-      var noBa = bs.ba_no || '';
-      var tglBa = bs.ba_tanggal || '';
-      var penyerahNama = bs.ba_penyerah_nama || '';
-      var penyerahJab = bs.ba_penyerah_jabatan || '';
-      var penerimaNama = bs.ba_penerima_nama || '';
-      var penerimaJab = bs.ba_penerima_jabatan || '';
-      var mengetahuiNama = bs.ba_mengetahui_nama || '';
-      var mengetahuiJab = bs.ba_mengetahui_jabatan || '';
-
-      var docHtml = '';
-      if (dataLoaded && r) {
-        docHtml =
-          '<div id="ba-dokumen" class="bg-white border border-stone-200 rounded-lg p-6 sm:p-8 md:p-10 print-area">' +
-          '<div class="text-center mb-6">' +
-          '<h1 class="text-lg font-bold uppercase tracking-wide">Berita Acara</h1>' +
-          '<h2 class="text-base font-semibold mt-1">Pengalihan Sisa Dana</h2>' +
-          '<p class="text-xs text-stone-500 mt-1">Periode: ' + periodeLabel + '</p></div>' +
-          '<table class="w-full text-xs mb-6">' +
-          '<tr><td class="py-1 w-32 font-medium">Nomor</td><td class="py-1">: ' + (noBa ? escHtml(noBa) : '&mdash;') + '</td></tr>' +
-          '<tr><td class="py-1 font-medium">Tanggal</td><td class="py-1">: ' + fmtDateIndonesia(tglBa) + '</td></tr>' +
-          '</table>' +
-          '<p class="text-xs mb-4 leading-relaxed">Yang bertanda tangan di bawah ini:</p>' +
-          '<table class="w-full text-xs mb-4">' +
-          '<tr><td class="py-1 w-32 font-medium">Nama</td><td class="py-1">: ' + (penyerahNama ? escHtml(penyerahNama) : '&mdash;') + '</td></tr>' +
-          '<tr><td class="py-1 font-medium">Jabatan</td><td class="py-1">: ' + (penyerahJab ? escHtml(penyerahJab) : '&mdash;') + '</td></tr>' +
-          '</table>' +
-          '<p class="text-xs mb-4 leading-relaxed">Yang bertindak selaku <strong>Penyerah</strong>, pada hari ini menyerahkan sisa dana kepada:</p>' +
-          '<table class="w-full text-xs mb-4">' +
-          '<tr><td class="py-1 w-32 font-medium">Nama</td><td class="py-1">: ' + (penerimaNama ? escHtml(penerimaNama) : '&mdash;') + '</td></tr>' +
-          '<tr><td class="py-1 font-medium">Jabatan</td><td class="py-1">: ' + (penerimaJab ? escHtml(penerimaJab) : '&mdash;') + '</td></tr>' +
-          '</table>' +
-          '<p class="text-xs mb-4 leading-relaxed">Yang bertindak selaku <strong>Penerima</strong>, dengan rincian dana sebagai berikut:</p>' +
-          '<table class="w-full text-xs mb-6 border-collapse">' +
-          '<thead><tr class="bg-stone-100"><th class="border border-stone-300 px-3 py-2 text-left font-semibold">Uraian</th><th class="border border-stone-300 px-3 py-2 text-right font-semibold">Jumlah (Rp)</th></tr></thead>' +
-          '<tbody>' +
-          '<tr><td class="border border-stone-300 px-3 py-2">Sisa Dana yang Lalu</td><td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIDR(r.sisa_dana_lalu) + '</td></tr>' +
-          '<tr><td class="border border-stone-300 px-3 py-2">Dana yang Diterima Periode Ini</td><td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIDR(r.dana_diterima) + '</td></tr>' +
-          '<tr class="font-semibold bg-emerald-50"><td class="border border-stone-300 px-3 py-2">Jumlah Dana Tersedia</td><td class="border border-stone-300 px-3 py-2 text-right mono">' + fmtIDR(r.dana_tersedia) + '</td></tr>' +
-          '<tr><td colspan="2" class="border border-stone-300 px-3 py-1"></td></tr>' +
-          '<tr><td class="border border-stone-300 px-3 py-2">Biaya Bahan Baku</td><td class="border border-stone-300 px-3 py-2 text-right mono">(' + fmtIDR(r.biaya_bahan_baku) + ')</td></tr>' +
-          '<tr><td class="border border-stone-300 px-3 py-2">Biaya Operasional</td><td class="border border-stone-300 px-3 py-2 text-right mono">(' + fmtIDR(r.biaya_operasional) + ')</td></tr>' +
-          '<tr><td class="border border-stone-300 px-3 py-2">Biaya Insentif Fasilitas</td><td class="border border-stone-300 px-3 py-2 text-right mono">(' + fmtIDR(r.biaya_insentif_fasilitas) + ')</td></tr>' +
-          (r.biaya_lainnya > 0 ? '<tr><td class="border border-stone-300 px-3 py-2">Biaya Lainnya</td><td class="border border-stone-300 px-3 py-2 text-right mono">(' + fmtIDR(r.biaya_lainnya) + ')</td></tr>' : '') +
-          '<tr class="font-semibold bg-red-50"><td class="border border-stone-300 px-3 py-2">Total Pengeluaran</td><td class="border border-stone-300 px-3 py-2 text-right mono">(' + fmtIDR(r.total_pengeluaran) + ')</td></tr>' +
-          '<tr><td colspan="2" class="border border-stone-300 px-3 py-1"></td></tr>' +
-          '<tr class="font-bold bg-blue-50"><td class="border border-stone-300 px-3 py-2.5 text-base">Sisa Dana Saat Ini</td><td class="border border-stone-300 px-3 py-2.5 text-right mono text-base">' + fmtIDR(r.sisa_dana_saat_ini) + '</td></tr>' +
-          '</tbody></table>' +
-          '<p class="text-xs mb-2 leading-relaxed"><strong>Terbilang:</strong> # ' + terbilang(r.sisa_dana_saat_ini) + ' #</p>' +
-          '<p class="text-xs mb-8 leading-relaxed">Demikian Berita Acara ini dibuat dengan sebenarnya untuk dipergunakan sebagaimana mestinya.</p>' +
-          '<div class="grid grid-cols-3 gap-4 text-xs mt-10">' +
-          '<div class="text-center"><div class="font-semibold mb-1">Mengetahui,</div><div class="mt-12">(' + (mengetahuiNama ? escHtml(mengetahuiNama) : '&mdash;') + ')</div><div class="text-stone-500">' + (mengetahuiJab ? escHtml(mengetahuiJab) : '') + '</div></div>' +
-          '<div class="text-center"><div class="font-semibold mb-1">Yang Menyerahkan,</div><div class="mt-12">(' + (penyerahNama ? escHtml(penyerahNama) : '&mdash;') + ')</div><div class="text-stone-500">' + (penyerahJab ? escHtml(penyerahJab) : '') + '</div></div>' +
-          '<div class="text-center"><div class="font-semibold mb-1">Yang Menerima,</div><div class="mt-12">(' + (penerimaNama ? escHtml(penerimaNama) : '&mdash;') + ')</div><div class="text-stone-500">' + (penerimaJab ? escHtml(penerimaJab) : '') + '</div></div>' +
-          '</div></div>';
-      } else if (dataLoaded) {
-        docHtml = '<div class="text-center py-8 text-stone-400">Tidak ada data untuk periode ini</div>';
-      }
-
-      window._lapStatCards =
-        '<div class="max-w-4xl mx-auto">' +
-        '<div class="bg-white border border-stone-200 rounded-lg p-4 sm:p-6 mb-4">' +
-        '<h2 class="text-base font-bold mb-4">Berita Acara Pengalihan Sisa Dana</h2>' +
-        '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">' +
-        '<div>' +
-        '<label class="block text-xs font-medium text-stone-500 mb-1">Periode</label>' +
-        '<select id="ba-bulan" onchange="baGantiPeriode()" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5">' +
-        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(filterBulan)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
-        '</select>' +
-        '<select id="ba-tahun" onchange="baGantiPeriode()" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5 mt-1">' +
-        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(filterTahun)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
-        '</select></div>' +
-        '<div><label class="block text-xs font-medium text-stone-500 mb-1">No. Berita Acara</label><input id="ba-no" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="BA.001/..." value="' + escHtml(bs.ba_no||'') + '"></div>' +
-        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Tanggal</label><input id="ba-tanggal" type="date" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" value="' + (bs.ba_tanggal||now.toISOString().slice(0,10)) + '"></div>' +
-        '</div>' +
-        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">' +
-        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Yang Menyerahkan (Nama)</label><input id="ba-penyerah-nama" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Nama" value="' + escHtml(bs.ba_penyerah_nama||'') + '"></div>' +
-        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Jabatan</label><input id="ba-penyerah-jabatan" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Jabatan" value="' + escHtml(bs.ba_penyerah_jabatan||'') + '"></div>' +
-        '</div>' +
-        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">' +
-        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Yang Menerima (Nama)</label><input id="ba-penerima-nama" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Nama" value="' + escHtml(bs.ba_penerima_nama||'') + '"></div>' +
-        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Jabatan</label><input id="ba-penerima-jabatan" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Jabatan" value="' + escHtml(bs.ba_penerima_jabatan||'') + '"></div>' +
-        '</div>' +
-        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">' +
-        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Mengetahui (Nama)</label><input id="ba-mengetahui-nama" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Nama" value="' + escHtml(bs.ba_mengetahui_nama||'') + '"></div>' +
-        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Jabatan</label><input id="ba-mengetahui-jabatan" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="Jabatan" value="' + escHtml(bs.ba_mengetahui_jabatan||'') + '"></div>' +
-        '</div>' +
-        '<div class="flex gap-2 mt-4">' +
-        '<button onclick="baSimpan()" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-lg text-sm font-medium">Tampilkan Dokumen</button>' +
-        '<button onclick="baCetak()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-lg text-sm font-medium">Cetak / Print</button>' +
-        '</div></div>' + docHtml + '</div>';
-      window['_export_berita-acara'] = { data: [], fields: [] };
-      window._lapData = null;
     } else {
       const d = await api.get('/laporan/keuangan');
       const rows = d.transaksi || [];
@@ -686,8 +576,8 @@ function statCard(title, value, sub, bgClass) {
 }
 function tableHtml(headers, rows) {
   return `<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mt-3"><div class="overflow-x-auto"><table class="w-full">
-    <thead class="bg-stone-50"><tr>${headers.map(h => `<th class="text-left px-2 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase whitespace-nowrap">${h}</th>`).join('')}</tr></thead>
-    <tbody>${rows.length ? rows.map(r => `<tr class="border-t border-stone-100">${r.map(c => `<td class="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm whitespace-nowrap">${c}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${headers.length}" class="text-center py-8 sm:py-12 text-stone-400"><svg class="w-10 h-10 sm:w-14 sm:h-14 mx-auto mb-2 sm:mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-xs sm:text-sm">Belum ada data</div></td></tr>`}</tbody>
+    <thead class="bg-stone-50"><tr>${headers.map(h => `<th class="text-left px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider whitespace-nowrap">${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.length ? rows.map(r => `<tr class="border-t border-stone-100 transition-colors">${r.map(c => `<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm whitespace-nowrap leading-relaxed">${c}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${headers.length}" class="text-center py-8 sm:py-12 text-stone-400"><svg class="w-10 h-10 sm:w-14 sm:h-14 mx-auto mb-2 sm:mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-xs sm:text-sm">Belum ada data</div></td></tr>`}</tbody>
   </table></div></div>`;
 }
 function exportBar(name, data, fields) {
@@ -706,7 +596,8 @@ function exportCSV(name) {
 function exportXlsxLaporan(name) {
   const { data, fields } = window['_export_'+name];
   if (!data.length) return showAlert('Tidak ada data', 'warning');
-  const ws = XLSX.utils.json_to_sheet(data, { header: fields });
+  const clean = data.map(r => Object.fromEntries(fields.map(f => [f, r[f] ?? ''])));
+  const ws = XLSX.utils.json_to_sheet(clean);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, name);
   XLSX.writeFile(wb, `laporan-${name}.xlsx`);
@@ -716,192 +607,8 @@ function lapExport() {
   exportXlsxLaporan(tab);
 }
 
-const FIXED_KATEGORI_LAP = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
-
 function fmt2(v) {
   return Number(v || 0).toFixed(2);
-}
-
-function rincianPembelian(totalKg, satuan) {
-  const s = (satuan || 'kg').toLowerCase();
-  if (s === 'kg' || s === 'gram' || s === 'g') return fmt2(totalKg) + ' kg';
-  if (s === 'pcs' || s === 'buah' || s === 'biji') return Math.ceil(totalKg) + ' pcs';
-  if (s === 'ekor') return Math.ceil(totalKg) + ' ekor';
-  if (s === 'ikat') return Math.ceil(totalKg) + ' ikat';
-  if (s === 'tray') return Math.ceil(totalKg) + ' tray';
-  if (s === 'dus' || s === 'karton') return Math.ceil(totalKg) + ' dus';
-  if (s === 'liter' || s === 'lt') return fmt2(totalKg) + ' liter';
-  if (s === 'ml') return fmt2(totalKg * 1000) + ' ml';
-  return fmt2(totalKg) + ' ' + (satuan || 'kg');
-}
-
-async function exportSiklusBahan() {
-  try {
-    const { days, fixed_kategori } = await api.get('/siklus/laporan/bahan');
-    const FKC = fixed_kategori || FIXED_KATEGORI_LAP;
-    const hasBahan = days.some(d => d.bahan.length > 0);
-
-    const colLabels = ['Bahan Pangan', ...FKC, 'Total Porsi', 'Kebutuhan Pangan (kg)', 'Buffer 1–10%', 'Rincian Pembelian'];
-    const totalCols = colLabels.length;
-    const colWidths = [28, ...FKC.map(() => 14), 12, 16, 14, 22];
-
-    const wsData = [];
-    let rowIdx = 0;
-
-    // Row 0: Title
-    wsData.push(['Laporan Rencana Kebutuhan Bahan Pangan']);
-    rowIdx++;
-
-    // Row 1: Headers
-    wsData.push(colLabels);
-    rowIdx++;
-
-    for (const day of days) {
-      // Day header row
-      wsData.push([day.label]);
-      rowIdx++;
-
-      if (!hasBahan) {
-        wsData.push(['(Belum ada data bahan — isi komposisi bahan di setiap menu terlebih dahulu)']);
-        rowIdx++;
-      } else {
-        let subTotalGram = 0;
-        let subTotalPorsi = 0;
-
-        for (const b of day.bahan) {
-          const row = [b.bahan_nama];
-          let totalGram = 0;
-          for (const kat of FKC) {
-            const val = b.per_kategori[kat] || 0;
-            row.push(val ? fmt2(val) : '0,00');
-            totalGram += val;
-          }
-          const totalKg = totalGram / 1000;
-          const buffer = totalKg * 1.1;
-          const totalPorsi = day.porsi_per_kat
-            ? Object.values(day.porsi_per_kat).reduce((s, v) => s + v, 0)
-            : 0;
-          row.push(totalPorsi);
-          row.push(fmt2(totalKg));
-          row.push(fmt2(buffer));
-          row.push(rincianPembelian(totalKg, b.satuan));
-          wsData.push(row);
-          rowIdx++;
-          subTotalGram += totalGram;
-          subTotalPorsi = totalPorsi;
-        }
-
-        // Subtotal row
-        const subRow = ['SUBTOTAL'];
-        for (const kat of FKC) {
-          const katTotal = day.bahan.reduce((s, b) => s + (b.per_kategori[kat] || 0), 0);
-          subRow.push(fmt2(katTotal));
-        }
-        const subKg = subTotalGram / 1000;
-        subRow.push(subTotalPorsi || '');
-        subRow.push(fmt2(subKg));
-        subRow.push(fmt2(subKg * 1.1));
-        subRow.push('');
-        wsData.push(subRow);
-        rowIdx++;
-      }
-
-      // Empty spacer row
-      wsData.push([]);
-      rowIdx++;
-    }
-
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // Column widths
-    ws['!cols'] = colWidths.map(w => ({ wch: w }));
-
-    // Merge cells for title
-    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } }];
-
-    // Page setup for A4 Landscape
-    ws['!pageSetup'] = { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
-    ws['!printGrid'] = true;
-
-    // Style Title row
-    if (ws['A1']) {
-      ws['A1'].s = { font: { bold: true, sz: 14, color: { rgb: '1e40af' } }, alignment: { horizontal: 'center', vertical: 'center' }, fill: { fgColor: { rgb: 'EFF6FF' } } };
-    }
-
-    // Style Header row
-    for (let c = 0; c < totalCols; c++) {
-      const cellRef = XLSX.utils.encode_cell({ r: 1, c });
-      if (ws[cellRef]) {
-        ws[cellRef].s = {
-          font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
-          fill: { fgColor: { rgb: '1e40af' } },
-          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-          border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
-        };
-      }
-    }
-
-    // Style day header rows (bold, light background)
-    let r = 2;
-    for (const day of days) {
-      r++; // day header
-      if (!hasBahan) { r++; continue; }
-      const dayHeaderRef = XLSX.utils.encode_cell({ r, c: 0 });
-      if (ws[dayHeaderRef]) {
-        ws[dayHeaderRef].s = {
-          font: { bold: true, sz: 11, color: { rgb: '1e40af' } },
-          fill: { fgColor: { rgb: 'DBEAFE' } },
-          alignment: { horizontal: 'left', vertical: 'center' },
-        };
-      }
-      // Merge day header across all columns
-      ws['!merges'].push({ s: { r, c: 0 }, e: { r, c: totalCols - 1 } });
-      r++;
-      // Data rows
-      const dayBahanCount = day.bahan.length;
-      for (let i = 0; i < dayBahanCount; i++) {
-        const dataRowRef = XLSX.utils.encode_cell({ r, c: 0 });
-        if (ws[dataRowRef]) {
-          ws[dataRowRef].s = { alignment: { horizontal: 'left', vertical: 'center' } };
-        }
-        for (let c = 1; c < totalCols; c++) {
-          const cref = XLSX.utils.encode_cell({ r, c });
-          if (ws[cref]) {
-            ws[cref].s = {
-              alignment: { horizontal: c < totalCols - 1 ? 'right' : 'left', vertical: 'center' },
-              border: { top: { style: 'thin', color: { rgb: 'E5E7EB' } }, bottom: { style: 'thin', color: { rgb: 'E5E7EB' } } },
-            };
-          }
-        }
-        r++;
-      }
-      // Subtotal row
-      const subRef = XLSX.utils.encode_cell({ r, c: 0 });
-      if (ws[subRef]) {
-        ws[subRef].s = { font: { bold: true, sz: 10 }, fill: { fgColor: { rgb: 'FEF3C7' } }, alignment: { horizontal: 'left', vertical: 'center' } };
-      }
-      for (let c = 1; c < totalCols; c++) {
-        const cref = XLSX.utils.encode_cell({ r, c });
-        if (ws[cref]) {
-          ws[cref].s = {
-            font: { bold: true, sz: 10 },
-            fill: { fgColor: { rgb: 'FEF3C7' } },
-            alignment: { horizontal: c < totalCols - 1 ? 'right' : 'left', vertical: 'center' },
-            border: { top: { style: 'medium', color: { rgb: 'D97706' } }, bottom: { style: 'medium', color: { rgb: 'D97706' } } },
-          };
-        }
-      }
-      r++;
-      // Spacer
-      r++;
-    }
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Rencana Bahan');
-    XLSX.writeFile(wb, 'rencana-kebutuhan-bahan.xlsx');
-  } catch (e) {
-    showAlert('Gagal export: ' + e.message, 'error');
-  }
 }
 
 function gantiPeriodePengeluaran() {
@@ -910,46 +617,6 @@ function gantiPeriodePengeluaran() {
   lapState.bulan = bulan;
   lapState.tahun = tahun;
   showLap('pengeluaran-bulanan');
-}
-
-function baSimpan() {
-  lapState.ba_no = document.getElementById('ba-no').value;
-  lapState.ba_tanggal = document.getElementById('ba-tanggal').value;
-  lapState.ba_penyerah_nama = document.getElementById('ba-penyerah-nama').value;
-  lapState.ba_penyerah_jabatan = document.getElementById('ba-penyerah-jabatan').value;
-  lapState.ba_penerima_nama = document.getElementById('ba-penerima-nama').value;
-  lapState.ba_penerima_jabatan = document.getElementById('ba-penerima-jabatan').value;
-  lapState.ba_mengetahui_nama = document.getElementById('ba-mengetahui-nama').value;
-  lapState.ba_mengetahui_jabatan = document.getElementById('ba-mengetahui-jabatan').value;
-  lapState.ba_bulan = document.getElementById('ba-bulan').value;
-  lapState.ba_tahun = document.getElementById('ba-tahun').value;
-  showLap('berita-acara');
-}
-
-function baCetak() {
-  var el = document.getElementById('ba-dokumen');
-  if (!el) return showAlert('Tampilkan dokumen terlebih dahulu', 'warning');
-  var win = window.open('', '_blank');
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Berita Acara Pengalihan Sisa Dana</title>';
-  html += '<style>body{font-family:"Times New Roman",serif;padding:40px 60px;font-size:12pt;line-height:1.5;color:#000}';
-  html += 'table{width:100%;border-collapse:collapse}td,th{border:1px solid #000;padding:6px 10px;font-size:11pt}';
-  html += 'h1{font-size:16pt;text-align:center;text-transform:uppercase;letter-spacing:1px}';
-  html += 'h2{font-size:14pt;text-align:center;margin-top:2px}';
-  html += '.grid{display:flex;justify-content:space-between;margin-top:60px}';
-  html += '.grid>div{text-align:center;width:30%}';
-  html += '.mt-12{margin-top:80px}';
-  html += '@media print{body{padding:30px 40px}}</style></head><body>';
-  html += el.innerHTML;
-  html += '</body></html>';
-  win.document.write(html);
-  win.document.close();
-  setTimeout(function() { win.print(); }, 500);
-}
-
-function baGantiPeriode() {
-  lapState.ba_bulan = document.getElementById('ba-bulan').value;
-  lapState.ba_tahun = document.getElementById('ba-tahun').value;
-  showLap('berita-acara');
 }
 
 function escHtml(s) {
@@ -1011,40 +678,6 @@ function fmtDateIndonesia(dateStr) {
   const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   return hari[d.getDay()] + ', ' + d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
 }
-
-const TERBILANG_SATUAN = ['', 'ribu', 'juta', 'milyar', 'triliun'];
-const TERBILANG_ANGKA = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan'];
-function terbilang(n) {
-  if (n === 0) return 'nol rupiah';
-  const neg = n < 0;
-  n = Math.abs(n);
-  let parts = [];
-  let satuanIdx = 0;
-  while (n > 0) {
-    const s = n % 1000;
-    if (s > 0) {
-      let str = '';
-      const ratus = Math.floor(s / 100);
-      const puluhan = s % 100;
-      if (ratus > 0) str += (ratus === 1 ? 'seratus' : TERBILANG_ANGKA[ratus] + ' ratus') + ' ';
-      if (puluhan >= 11 && puluhan <= 19) {
-        str += TERBILANG_ANGKA[puluhan % 10] + ' belas ';
-      } else {
-        const puluh = Math.floor(puluhan / 10);
-        const satu = puluhan % 10;
-        if (puluh > 0) str += (puluh === 1 ? 'sepuluh' : TERBILANG_ANGKA[puluh] + ' puluh') + ' ';
-        if (satu > 0) str += TERBILANG_ANGKA[satu] + ' ';
-      }
-      if (satuanIdx === 1 && s === 1) str = 'seribu ';
-      else if (TERBILANG_SATUAN[satuanIdx]) str += TERBILANG_SATUAN[satuanIdx] + ' ';
-      parts.unshift(str.trim());
-    }
-    n = Math.floor(n / 1000);
-    satuanIdx++;
-  }
-  return (neg ? 'minus ' : '') + parts.join(' ').replace(/\s+/g, ' ') + ' rupiah';
-}
-
 function editSaldoAwal(current) {
   const amount = prompt('Masukkan Saldo Awal Buku (Rp):', fmtIDR(current).replace(/[^0-9]/g,''));
   if (amount === null) return;
@@ -1055,168 +688,137 @@ function editSaldoAwal(current) {
   }).catch(e => showAlert('Gagal: ' + e.message, 'error'));
 }
 
-function renderDailyMenuTable(siklus, group_order, group_labels) {
-  if (!siklus.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
+function renderDailyMenuTable(menuHarian, kategori_order) {
+  const siklus = menuHarian || [];
+  if (!siklus.length) return '<div class="p-8 text-center text-stone-400">Belum ada data siklus</div>';
 
-  // Collect all days from all siklus
-  const allDays = [];
+  const KAT_MAP = { Karbohidrat: 'Makanan Pokok', 'Protein Hewani': 'Lauk Hewani', 'Protein Nabati': 'Lauk Nabati', Sayur: 'Sayur', Buah: 'Buah', Susu: 'Susu', Minyak: 'Minyak' };
+  const ROW_KEYS = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
+  const ROW_LABELS = ROW_KEYS.map(k => KAT_MAP[k] || k);
+
+  let maxHari = 0;
   for (const s of siklus) {
     for (const d of s.days) {
-      allDays.push(d);
+      if (d.hari_ke > maxHari) maxHari = d.hari_ke;
     }
   }
-  allDays.sort((a, b) => a.hari_ke - b.hari_ke);
+  if (!maxHari) return '<div class="p-8 text-center text-stone-400">Belum ada hari terisi</div>';
 
-  if (!allDays.length) return '<div class="p-8 text-center text-stone-400">Belum ada data menu terisi</div>';
+  const dayKeys = Array.from({ length: maxHari }, (_, i) => i + 1);
 
-  const dayLabels = allDays.map(d => d.menu_nama
-    ? `<div class="text-xs">${d.hari_nama}</div><div class="text-[10px] font-normal opacity-60">Hari ${d.hari_ke}</div>`
-    : `<div class="text-xs">${d.hari_nama}</div><div class="text-[10px] font-normal opacity-60">Hari ${d.hari_ke}</div>`);
+  let html = '<div class="overflow-x-auto text-xs leading-relaxed">';
+  html += '<table class="w-full border-collapse border border-stone-300">';
 
-  let html = '<div class="overflow-x-auto"><table class="w-full text-xs">';
-  html += '<thead><tr class="bg-rose-100">';
-  html += '<th class="px-3 py-2.5 text-left font-semibold text-rose-800 whitespace-nowrap">Kelompok Bahan</th>';
-  for (const lbl of dayLabels) {
-    html += `<th class="px-3 py-2.5 text-center font-semibold text-rose-800 whitespace-nowrap">${lbl}</th>`;
+  html += '<thead>';
+  html += '<tr class="bg-amber-400 text-center font-bold">';
+  html += '<th class="border border-stone-300 px-3 py-2 text-[11px]" style="color:#000">Kelompok Bahan Makanan</th>';
+  for (const k of dayKeys) {
+    const dayNama = kategori_order && siklus.length && siklus[0].days[k-1] ? siklus[0].days[k-1].hari_nama : '';
+    html += `<th class="border border-stone-300 px-3 py-2 text-center text-[11px]" style="color:#000">Menu ${k}<br><span class="text-[10px] font-normal">${dayNama}</span></th>`;
   }
-  html += '</tr></thead><tbody>';
+  html += '</tr>';
+  html += '</thead>';
 
-  for (const kat of group_order) {
-    const label = group_labels[kat] || kat;
-    const colorClass = kat === 'Karbohidrat' ? 'text-amber-800' :
-      kat === 'Protein Hewani' ? 'text-red-800' :
-      kat === 'Protein Nabati' ? 'text-emerald-800' :
-      kat === 'Sayur' ? 'text-green-800' :
-      kat === 'Buah' ? 'text-orange-800' :
-      kat === 'Susu' ? 'text-blue-800' : 'text-stone-800';
-    html += `<tr class="border-t border-stone-100">`;
-    html += `<td class="px-3 py-2 font-medium ${colorClass} whitespace-nowrap">${label}</td>`;
-    for (const d of allDays) {
-      const items = d.by_kategori[kat];
-      const cell = items && items.length
-        ? `<span class="inline-flex flex-wrap gap-1">${items.map(n => `<span class="bg-stone-100 px-2 py-0.5 rounded text-stone-700 text-[11px]">${n}</span>`).join('')}</span>`
-        : '<span class="text-stone-300">—</span>';
-      html += `<td class="px-3 py-2 text-sm">${cell}</td>`;
-    }
-    html += '</tr>';
-  }
+  html += '<tbody>';
 
-  html += '</tbody></table></div>';
-  return html;
-}
+  for (let ri = 0; ri < ROW_KEYS.length; ri++) {
+    const rowLabel = ROW_LABELS[ri];
+    const isFirst = ri === 0;
 
-function renderResepTable(siklus, group_order, group_labels) {
-  if (!siklus.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
+    html += `<tr class="border border-stone-300 ${isFirst ? 'bg-sky-50' : ''}">`;
+    html += `<td class="border border-stone-300 px-3 py-2 font-bold ${isFirst ? 'bg-sky-50' : ''}">${rowLabel}</td>`;
 
-  const allDays = [];
-  for (const s of siklus) {
-    for (const d of s.days) {
-      allDays.push({ ...d, siklus_nama: s.siklus_nama });
-    }
-  }
-  allDays.sort((a, b) => a.hari_ke - b.hari_ke);
-
-  if (!allDays.length) return '<div class="p-8 text-center text-stone-400">Belum ada data menu terisi</div>';
-
-  // Assign each day's menu to its primary food group by checking which kategori has the most ingredients
-  function getPrimaryKat(byKat) {
-    let maxCount = 0, primary = null;
-    for (const kat of group_order) {
-      const count = (byKat[kat] || []).length;
-      if (count > maxCount) { maxCount = count; primary = kat; }
-    }
-    return primary;
-  }
-
-  const dayLabels = allDays.map(d => `<div class="text-xs">Menu ${d.hari_ke}</div>`);
-
-  let html = '<div class="overflow-x-auto"><table class="w-full text-xs">';
-  html += '<thead><tr class="bg-amber-100">';
-  html += '<th class="px-3 py-2.5 text-left font-semibold text-amber-800 whitespace-nowrap">Kelompok Bahan</th>';
-  for (const lbl of dayLabels) {
-    html += `<th class="px-3 py-2.5 text-center font-semibold text-amber-800 whitespace-nowrap">${lbl}</th>`;
-  }
-  html += '</tr></thead><tbody>';
-
-  for (const kat of group_order) {
-    const label = group_labels[kat] || kat;
-    const colorClass = kat === 'Karbohidrat' ? 'text-amber-800' :
-      kat === 'Protein Hewani' ? 'text-red-800' :
-      kat === 'Protein Nabati' ? 'text-emerald-800' :
-      kat === 'Sayur' ? 'text-green-800' :
-      kat === 'Buah' ? 'text-orange-800' : 'text-stone-800';
-    html += `<tr class="border-t border-stone-100">`;
-    html += `<td class="px-3 py-2 font-medium ${colorClass} whitespace-nowrap">${label}</td>`;
-    for (const d of allDays) {
-      const primary = getPrimaryKat(d.by_kategori);
-      let cell;
-      if (primary === kat) {
-        cell = `<span class="font-medium text-stone-800">${d.menu_nama}</span>`;
-      } else {
-        cell = '<span class="text-stone-300">—</span>';
-      }
-      html += `<td class="px-3 py-2 text-sm">${cell}</td>`;
-    }
-    html += '</tr>';
-  }
-
-  html += '</tbody></table></div>';
-  return html;
-}
-
-function renderSiklusBahanTable(days, fixed_kategori) {
-  const FKC = fixed_kategori || FIXED_KATEGORI_LAP;
-  const TOTAL_COLS = FKC.length + 5;
-  const hasBahan = days.some(d => d.bahan.length > 0);
-  let html = '';
-
-  for (const day of days) {
-    html += `<tr class="bg-blue-50"><td colspan="${TOTAL_COLS}" class="px-3 py-2.5 text-sm font-bold text-blue-800">${day.label}</td></tr>`;
-
-    if (!hasBahan) {
-      html += `<tr><td colspan="${TOTAL_COLS}" class="px-3 py-4 text-center text-stone-400 text-sm">Belum ada data bahan</td></tr>`;
-    } else {
-      for (const b of day.bahan) {
-        html += '<tr class="border-t border-stone-100">';
-        html += `<td class="px-3 py-2 text-sm whitespace-nowrap">${b.bahan_nama}</td>`;
-        let totalGram = 0;
-        for (const kat of FKC) {
-          const val = b.per_kategori[kat] || 0;
-          html += `<td class="px-3 py-2 text-sm text-right mono whitespace-nowrap">${val ? fmt2(val) : '0,00'}</td>`;
-          totalGram += val;
+    for (const k of dayKeys) {
+      const names = [];
+      for (const s of siklus) {
+        for (const d of s.days) {
+          if (d.hari_ke === k) {
+            const katItems = d.kategori && d.kategori[ROW_KEYS[ri]];
+            if (katItems && katItems.length) {
+              for (const n of katItems) {
+                if (!names.includes(n)) names.push(n);
+              }
+            }
+          }
         }
-        const totalKg = totalGram / 1000;
-        const buffer = totalKg * 1.1;
-        const totalPorsi = day.porsi_per_kat
-          ? Object.values(day.porsi_per_kat).reduce((s, v) => s + v, 0)
-          : 0;
-        html += `<td class="px-3 py-2 text-sm text-right mono font-semibold">${totalPorsi}</td>`;
-        html += `<td class="px-3 py-2 text-sm text-right mono">${fmt2(totalKg)}</td>`;
-        html += `<td class="px-3 py-2 text-sm text-right mono">${fmt2(buffer)}</td>`;
-        html += `<td class="px-3 py-2 text-sm whitespace-nowrap">${rincianPembelian(totalKg, b.satuan)}</td>`;
-        html += '</tr>';
       }
-
-      // Subtotal
-      html += '<tr class="bg-amber-50 border-t-2 border-amber-400">';
-      html += '<td class="px-3 py-2 text-sm font-bold">SUBTOTAL</td>';
-      for (const kat of FKC) {
-        const katTotal = day.bahan.reduce((s, b2) => s + (b2.per_kategori[kat] || 0), 0);
-        html += `<td class="px-3 py-2 text-sm text-right mono font-bold">${fmt2(katTotal)}</td>`;
+      let cell = '<span class="text-stone-300">-</span>';
+      if (names.length) {
+        cell = names.map(n => `<div class="text-[10px] py-0.5">${n}</div>`).join('');
       }
-      const subGram = day.bahan.reduce((s, b2) => s + b2.total, 0);
-      const subPorsi = day.porsi_per_kat ? Object.values(day.porsi_per_kat).reduce((s, v) => s + v, 0) : 0;
-      html += `<td class="px-3 py-2 text-sm text-right mono font-bold">${subPorsi || ''}</td>`;
-      html += `<td class="px-3 py-2 text-sm text-right mono font-bold">${fmt2(subGram / 1000)}</td>`;
-      html += `<td class="px-3 py-2 text-sm text-right mono font-bold">${fmt2(subGram / 1000 * 1.1)}</td>`;
-      html += '<td class="px-3 py-2"></td>';
-      html += '</tr>';
+      html += `<td class="border border-stone-300 px-3 py-2 align-top">${cell}</td>`;
     }
-
-    // Spacer row
-    html += '<tr><td colspan="' + TOTAL_COLS + '" class="p-1"></td></tr>';
+    html += '</tr>';
   }
 
+  html += '</tbody></table></div>';
   return html;
 }
+
+function renderResepTable(siklus, kategori_order) {
+  if (!siklus.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
+
+  const KAT_MAP = { Karbohidrat: 'Makanan Pokok', 'Protein Hewani': 'Lauk Hewani', 'Protein Nabati': 'Lauk Nabati', Sayur: 'Sayur', Buah: 'Buah', Susu: 'Susu', Minyak: 'Minyak' };
+  const ROW_KEYS = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
+
+  // Flatten all days from all siklus, group by hari_ke
+  const byDay = {};
+  for (const s of siklus) {
+    for (const d of s.days) {
+      if (!d.menu_id) continue;
+      const key = d.hari_ke;
+      if (!byDay[key]) {
+        byDay[key] = { hari_ke: d.hari_ke, hari_nama: d.hari_nama, catNames: {} };
+        for (const rk of ROW_KEYS) byDay[key].catNames[rk] = [];
+      }
+      const parts = (d.menu_nama || '').split(/[+,]/).map(s => s.trim()).filter(Boolean);
+      const catWithItems = ROW_KEYS.filter(k2 => d.kategori && d.kategori[k2] && d.kategori[k2].length > 0);
+      let pi = 0;
+      for (const ck of catWithItems) {
+        const name = pi < parts.length ? parts[pi] : (d.menu_nama || '');
+        if (!byDay[key].catNames[ck].includes(name)) byDay[key].catNames[ck].push(name);
+        pi++;
+      }
+    }
+  }
+
+  const dayKeys = Object.keys(byDay).sort((a, b) => Number(a) - Number(b));
+  if (!dayKeys.length) return '<div class="p-8 text-center text-stone-400">Belum ada data menu terisi</div>';
+
+  let html = '<div class="overflow-x-auto">';
+  html += '<table class="w-full border-collapse border border-stone-300 text-xs">';
+  html += '<thead>';
+  html += '<tr class="bg-amber-400 text-center font-bold">';
+  html += '<th class="border border-stone-300 px-3 py-2 text-[11px]" style="color:#000">Kelompok Bahan Makanan</th>';
+  for (const k of dayKeys) {
+    const d = byDay[k];
+    html += `<th class="border border-stone-300 px-3 py-2 text-center text-[11px]" style="color:#000">Menu ${k}<br><span class="text-[10px] font-normal">${d.hari_nama}</span></th>`;
+  }
+  html += '</tr>';
+  html += '</thead>';
+  html += '<tbody>';
+
+  for (let ri = 0; ri < ROW_KEYS.length; ri++) {
+    const rk = ROW_KEYS[ri];
+    const label = KAT_MAP[rk] || rk;
+    const isFirst = ri === 0;
+    html += `<tr class="border border-stone-300 ${isFirst ? 'bg-emerald-50' : ''}">`;
+    html += `<td class="border border-stone-300 px-3 py-2 font-bold ${isFirst ? 'bg-emerald-50' : ''}">${label}</td>`;
+
+    for (const k of dayKeys) {
+      const d = byDay[k];
+      const names = d.catNames[rk];
+      const cell = names.length
+        ? names.map(n => `<div class="py-0.5 font-medium text-teal-700">${n}</div>`).join('')
+        : '<span class="text-stone-300">—</span>';
+      html += `<td class="border border-stone-300 px-3 py-2 align-top">${cell}</td>`;
+    }
+    html += '</tr>';
+  }
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+
 

@@ -29,20 +29,21 @@ router.post('/bahan-baku/sync', requireRole('admin', 'ahli_gizi'), async (req, r
       const satuan = item.satuan || 'Kg';
       const harga = parseFloat(item.harga_estimasi) || 0;
       const stok = parseFloat(item.stok_sekarang) || 0;
-      const kode = `EXT-${item.id}`;
+      const idKoperasi = parseInt(item.id);
+      const kode = idKoperasi ? `EXT-${idKoperasi}` : null;
 
       if (existing.length) {
         const [[cur]] = await db.query('SELECT harga_satuan FROM bahan_baku WHERE id=?', [existing[0].id]);
         const oldPrice = cur && Number(cur.harga_satuan) !== harga ? cur.harga_satuan : 0;
         await db.query(
-          `UPDATE bahan_baku SET kode=?, kategori=?, satuan=?, harga_satuan=?, harga_sebelumnya=?, stok_saat_ini=? WHERE id=? AND tenant_id=?`,
-          [kode, kategori, satuan, harga, oldPrice, stok, existing[0].id, req.user.tenant_id]
+          `UPDATE bahan_baku SET kode=?, id_koperasi=?, kategori=?, satuan=?, harga_satuan=?, harga_sebelumnya=?, stok_saat_ini=? WHERE id=? AND tenant_id=?`,
+          [kode, idKoperasi, kategori, satuan, harga, oldPrice, stok, existing[0].id, req.user.tenant_id]
         );
         updated++;
       } else {
         await db.query(
-          `INSERT INTO bahan_baku (tenant_id, kode, nama, kategori, satuan, harga_satuan, stok_saat_ini, stok_minimum) VALUES (?,?,?,?,?,?,?,0)`,
-          [req.user.tenant_id, kode, nama, kategori, satuan, harga, stok]
+          `INSERT INTO bahan_baku (tenant_id, kode, id_koperasi, nama, kategori, satuan, harga_satuan, stok_saat_ini, stok_minimum) VALUES (?,?,?,?,?,?,?,?,0)`,
+          [req.user.tenant_id, kode, idKoperasi, nama, kategori, satuan, harga, stok]
         );
         imported++;
       }

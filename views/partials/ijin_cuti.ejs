@@ -1,0 +1,153 @@
+<!-- Summary Cards -->
+<div id="cuti-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+  <div class="bg-white border border-stone-200 rounded-lg p-4 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+      <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-stone-500 font-medium">Total</div>
+      <div id="cuti-stat-total" class="mono text-xl font-semibold">—</div>
+    </div>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-lg p-4 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+      <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-stone-500 font-medium">Menunggu</div>
+      <div id="cuti-stat-menunggu" class="mono text-xl font-semibold text-amber-600">—</div>
+    </div>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-lg p-4 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+      <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-stone-500 font-medium">Disetujui</div>
+      <div id="cuti-stat-disetujui" class="mono text-xl font-semibold text-green-600">—</div>
+    </div>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-lg p-4 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+      <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-stone-500 font-medium">Ditolak</div>
+      <div id="cuti-stat-ditolak" class="mono text-xl font-semibold text-red-600">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters & Actions -->
+<div class="mb-4 space-y-2">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+    <select id="cuti-filter-karyawan" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
+      <option value="">Semua Karyawan</option>
+    </select>
+    <div class="relative">
+      <span class="absolute -top-2 left-2 bg-white px-1 text-xs text-stone-500">Dari</span>
+      <input id="cuti-filter-tanggal-awal" type="date" class="h-10 px-3 border border-stone-200 rounded-md text-sm w-full" />
+    </div>
+    <div class="relative">
+      <span class="absolute -top-2 left-2 bg-white px-1 text-xs text-stone-500">Sampai</span>
+      <input id="cuti-filter-tanggal-akhir" type="date" class="h-10 px-3 border border-stone-200 rounded-md text-sm w-full" />
+    </div>
+    <select id="cuti-filter-jenis" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
+      <option value="">Semua Jenis</option>
+      <option value="Izin">Izin</option>
+      <option value="Cuti">Cuti</option>
+    </select>
+    <select id="cuti-filter-status" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
+      <option value="">Semua Status</option>
+      <option value="Menunggu">Menunggu</option>
+      <option value="Disetujui">Disetujui</option>
+      <option value="Ditolak">Ditolak</option>
+    </select>
+    <div class="flex gap-2">
+      <button onclick="loadIjinCuti()" class="flex-1 px-4 py-2 border border-stone-200 rounded-md text-sm whitespace-nowrap hover:bg-stone-50">Filter</button>
+      <button onclick="openIjinCutiForm()" class="flex-1 bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap">+ Tambah</button>
+    </div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-stone-50">
+        <tr>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Karyawan</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">NIK</th>
+          <th class="text-center px-4 py-3 text-xs font-semibold uppercase">Jenis</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Tanggal</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Durasi</th>
+          <th class="text-center px-4 py-3 text-xs font-semibold uppercase">Status</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Alasan</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="cuti-table-body">
+        <tr><td colspan="8" class="text-center py-12 text-stone-400">Memuat data ijin/cuti...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+<div id="cuti-pagination" class="flex items-center justify-between mt-3 text-sm text-stone-500"></div>
+
+<!-- Form Modal -->
+<div id="cuti-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+    <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-stone-200 flex justify-between items-center">
+      <h3 id="cuti-modal-title" class="text-base font-bold">Input Ijin/Cuti</h3>
+      <button onclick="closeCutiModal()" class="text-stone-400 hover:text-stone-700 text-xl">×</button>
+    </div>
+    <div class="p-4 sm:p-6 overflow-y-auto flex-1">
+      <form id="cuti-form" class="space-y-4" onsubmit="return false;">
+        <input type="hidden" id="cuti-id" />
+        <div>
+          <label class="text-sm text-stone-700">Karyawan <span class="text-red-500">*</span></label>
+          <select id="cuti-karyawan" required class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md"></select>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div>
+            <label class="text-sm text-stone-700">Tanggal Mulai <span class="text-red-500">*</span></label>
+            <input id="cuti-tanggal-mulai" type="date" required class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" />
+          </div>
+          <div>
+            <label class="text-sm text-stone-700">Tanggal Selesai</label>
+            <input id="cuti-tanggal-selesai" type="date" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" />
+          </div>
+        </div>
+        <div>
+          <label class="text-sm text-stone-700">Jenis <span class="text-red-500">*</span></label>
+          <select id="cuti-jenis" onchange="toggleDokumenUpload()" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
+            <option value="Izin">Izin</option>
+            <option value="Cuti">Cuti</option>
+          </select>
+        </div>
+        <div id="cuti-dokumen-wrap">
+          <label class="text-sm text-stone-700">Upload Dokumen Pendukung</label>
+          <p class="text-xs text-stone-400 mt-0.5 mb-1">Opsional — bisa untuk surat sakit, surat izin, dll.</p>
+          <div class="flex items-center gap-3">
+            <button type="button" onclick="document.getElementById('cuti-dokumen-input').click()" class="px-3 py-1.5 text-xs border border-stone-300 rounded hover:bg-stone-50">Pilih File</button>
+            <span id="cuti-dokumen-name" class="text-xs text-stone-500"></span>
+            <input type="file" id="cuti-dokumen-input" accept=".pdf,.jpg,.jpeg,.png,.webp" class="hidden" onchange="previewDokumenName(this)" />
+            <input type="hidden" id="cuti-dokumen" value="" />
+            <button type="button" id="cuti-dokumen-hapus" onclick="hapusDokumen()" class="hidden text-xs text-red-600 hover:text-red-800">× Hapus</button>
+          </div>
+          <div id="cuti-dokumen-preview" class="mt-2"></div>
+        </div>
+        <div>
+          <label class="text-sm text-stone-700">Alasan</label>
+          <textarea id="cuti-alasan" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md" rows="2" placeholder="Alasan izin/cuti..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="px-4 sm:px-6 py-3 border-t border-stone-200 flex justify-end gap-2">
+      <button onclick="closeCutiModal()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded">Batal</button>
+      <button id="cuti-save" class="px-4 py-2 text-sm bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded font-medium">Simpan</button>
+    </div>
+  </div>
+</div>
