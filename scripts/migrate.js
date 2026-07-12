@@ -361,6 +361,17 @@ require('dotenv').config();
       console.log('  (skip migrasi dokumen ijin_cuti)', e.message);
     }
 
+    // Migrasi kolom mobile absensi (GPS, foto)
+    try {
+      const [latCol] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'absensi' AND COLUMN_NAME = 'latitude'");
+      if (!latCol.length) {
+        await conn.query("ALTER TABLE absensi ADD COLUMN latitude DECIMAL(10,8) DEFAULT NULL AFTER keterangan, ADD COLUMN longitude DECIMAL(11,8) DEFAULT NULL AFTER latitude, ADD COLUMN clock_out_lat DECIMAL(10,8) DEFAULT NULL AFTER longitude, ADD COLUMN clock_out_lng DECIMAL(11,8) DEFAULT NULL AFTER clock_out_lat, ADD COLUMN foto_masuk VARCHAR(255) DEFAULT NULL AFTER clock_out_lng, ADD COLUMN foto_keluar VARCHAR(255) DEFAULT NULL AFTER foto_masuk");
+        console.log('✓ Migrasi absensi: tambah kolom GPS & foto untuk mobile');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi mobile absensi)', e.message);
+    }
+
     // Seed admin tenant + user
     const [tExist] = await db.query('SELECT id FROM tenants LIMIT 1');
     if (!tExist.length) {

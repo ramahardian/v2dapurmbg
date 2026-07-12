@@ -387,6 +387,9 @@ CREATE TABLE IF NOT EXISTS jadwal_karyawan (
 -- Alter absensi: tambah kolom shift_id (jika belum ada)
 -- Note: MySQL tidak mendukung IF NOT EXISTS untuk ADD COLUMN, gunakan query terpisah jika perlu
 
+-- Kolom untuk mobile absensi (GPS & foto) — dijalankan oleh scripts/migrate.js
+-- Migration ini ada di scripts/migrate.js dengan pattern INFORMATION_SCHEMA
+
 -- Payroll
 CREATE TABLE IF NOT EXISTS payroll (
   id INT AUTO_INCREMENT PRIMARY KEY,
