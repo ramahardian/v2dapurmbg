@@ -3,7 +3,14 @@ const db = require('../db');
 
 function sign(user) {
   return jwt.sign(
-    { uid: user.id, tenant_id: user.tenant_id, role: user.role, email: user.email },
+    {
+      uid: user.id,
+      tenant_id: user.tenant_id,
+      role: user.role,
+      email: user.email,
+      nama: user.nama || '',
+      phone: user.phone || '',
+    },
     process.env.JWT_SECRET,
     { expiresIn: '8h' }
   );

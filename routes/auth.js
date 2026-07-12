@@ -61,6 +61,104 @@ router.post('/login', loginLimiter, async (req, res) => {
   }
 });
 
+/**
+ * POST /auth/login-phone — Login via nomor telepon (untuk mobile app)
+ *
+ * Mencocokkan nomor telepon dengan data karyawan,
+ * lalu login sebagai user yang email-nya cocok.
+ *
+ * Body: { phone: "0891234567890" }
+ * Response: { token, user, karyawan }
+ */
+router.post('/login-phone', loginLimiter, async (req, res) => {
+  try {
+    let { phone } = req.body;
+    if (!phone) return res.status(400).json({ error: 'Nomor telepon wajib diisi' });
+
+    // Normalisasi: hapus semua non-digit
+    phone = phone.replace(/[^0-9]/g, '');
+
+    // Jika diawali 0, simpan dengan dan tanpa 0 untuk fleksibilitas
+    const variants = [phone];
+    if (phone.startsWith('0')) variants.push(phone.slice(1));
+    else variants.push('0' + phone);
+
+    if (phone.length < 10) {
+      return res.status(400).json({ error: 'Nomor telepon minimal 10 angka' });
+    }
+
+    // Cari karyawan berdasarkan nomor telepon
+    const placeholders = variants.map(() => 'REPLACE(REPLACE(phone, " ", ""), "-", "") = ?').join(' OR ');
+    const [karyawan] = await db.query(
+      `SELECT id, nama, nik, departemen, email, phone 
+       FROM karyawan 
+       WHERE (${placeholders}) AND status='Aktif'
+       LIMIT 1`,
+      variants
+    );
+
+    if (!karyawan.length) {
+      return res.status(401).json({ error: 'Nomor telepon tidak terdaftar' });
+    }
+
+    const k = karyawan[0];
+
+    // Cari user yang email-nya cocok dengan email karyawan
+    if (!k.email) {
+      return res.status(403).json({
+        error: 'Akun ini tidak memiliki email terdaftar',
+        solusi: 'Hubungi admin untuk menghubungkan data karyawan dengan akun login'
+      });
+    }
+
+    const [users] = await db.query(
+      'SELECT id, tenant_id, email, nama, role, foto FROM users WHERE email=? LIMIT 1',
+      [k.email]
+    );
+
+    if (!users.length) {
+      return res.status(403).json({
+        error: 'Email karyawan tidak terhubung ke akun pengguna',
+        solusi: 'Hubungi admin untuk menghubungkan data karyawan dengan akun login'
+      });
+    }
+
+    const u = users[0];
+
+    // Buat token JWT — sertakan phone dari data karyawan
+    const token = sign({ ...u, phone: k.phone });
+
+    // Set cookie untuk kompatibilitas web
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 8 * 3600 * 1000,
+      path: '/'
+    });
+
+    // Response sesuai format yang diharapkan frontend
+    res.json({
+      token,
+      user: {
+        id: u.id,
+        phone: k.phone || phone,
+        nama: u.nama,
+        role: u.role
+      },
+      karyawan: {
+        id: k.id,
+        nama: k.nama,
+        nik: k.nik,
+        departemen: k.departemen
+      }
+    });
+  } catch (e) {
+    console.error('Login-phone error:', e);
+    res.status(500).json({ error: 'Gagal login: ' + e.message });
+  }
+});
+
 router.post('/logout', (req, res) => {
   res.clearCookie('access_token');
   res.json({ ok: true });
