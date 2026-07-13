@@ -31,7 +31,7 @@ async function getKaryawanId(user) {
     params.push(user.tenant_id);
   }
   const [rows] = await db.query(
-    `SELECT id, nama, nik, departemen, jabatan_id, photo, phone FROM karyawan 
+    `SELECT id, tenant_id, nama, nik, departemen, jabatan_id, photo, phone FROM karyawan 
      WHERE email=? AND status='Aktif' ${tenantFilter} LIMIT 1`,
     params
   );
@@ -50,6 +50,8 @@ async function ensureKaryawan(req, res, next) {
       solusi: 'Hubungi admin untuk menghubungkan email ini ke data karyawan'
     });
   }
+  // Pastikan tenant_id pak punya karyawan (user mungkin tenant_id-nya NULL)
+  if (karyawan.tenant_id) req.user.tenant_id = karyawan.tenant_id;
   req.karyawan = karyawan;
   next();
 }
