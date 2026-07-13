@@ -161,6 +161,7 @@
     async function loadStatus() {
       try {
         // Load profile
+        console.log('Fetching profile from:', window.location.origin + '/api/mobile/profile');
         const pRes = await fetch('/api/mobile/profile');
         if (!pRes.ok) {
           const pText = await pRes.text();
