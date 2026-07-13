@@ -18,6 +18,7 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
+
 /* ──────────────────────────────────────────────
  * Helper: cari karyawan_id dari user yang login
  * ────────────────────────────────────────────── */
