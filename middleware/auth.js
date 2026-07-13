@@ -45,7 +45,33 @@ async function requireAuth(req, res, next) {
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ error: 'Tidak terautentikasi' });
-    if (req.user.role === 'admin' || roles.includes(req.user.role)) return next();
+    
+    const sensitiveEndpoint = /hpp|kesehatan|kecukupan|gizi|sp\/(?:hitung|standar)/; 
+    
+    const sensitiveRoles = ['ahli_gizi', 'produksi', 'production', 'gudang'];
+    
+    if (req.user.role === 'admin') return next();
+    
+    if (sensitiveRoles.includes(req.user.role)) {
+      if (roles.includes('keuangan')) {
+        return res.status(403).json({ error: 'Akses ahli gizi diperlukan untuk endpoint nutrisi sensitif' });
+      }
+      if (roles.includes('SDM') && req.user.role !== 'SDM') {
+        return res.status(403).json({ error: 'Anda tidak diberikan akses ke SDM' });
+      }
+      return next();
+    }
+    
+    if (req.user.role === 'SDM' && roles.includes('ahli_gizi')) {
+      return res.status(403).json({ error: 'SDM grup tidak diberikan akses untuk endpoint nutrisi sensitif' });
+    }
+    
+    if (req.user.role === 'keuangan' && roles.includes('ahli_gizi')) {
+      return res.status(403).json({ error: 'Akuntansi tidak diberikan akses untuk endpoint nutrisi sensitif' });
+    }
+    
+    if (roles.includes(req.user.role)) return next();
+    
     return res.status(403).json({ error: 'Akses ditolak' });
   };
 }
