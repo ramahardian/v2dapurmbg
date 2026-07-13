@@ -18,16 +18,26 @@ function sign(user) {
 
 async function requireAuth(req, res, next) {
   const token = req.cookies?.access_token || (req.headers.authorization || '').replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'Tidak terautentikasi' });
+  if (!token) {
+    console.log('🔐 [requireAuth] ❌ Tidak ada token — url:', req.originalUrl);
+    return res.status(401).json({ error: 'Tidak terautentikasi' });
+  }
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('🔐 [requireAuth] ✅ Token valid — payload:', JSON.stringify({ uid: payload.uid, email: payload.email, tenant_id: payload.tenant_id, role: payload.role }));
+
     const [rows] = await db.query('SELECT id, tenant_id, email, nama, role, foto FROM users WHERE id=?', [payload.uid]);
-    if (!rows.length) return res.status(401).json({ error: 'User tidak ditemukan' });
+    if (!rows.length) {
+      console.log('🔐 [requireAuth] ❌ User tidak ditemukan di database — uid:', payload.uid, '| token payload:', JSON.stringify(payload));
+      return res.status(401).json({ error: 'User tidak ditemukan' });
+    }
+
     const user = rows[0];
+    console.log('🔐 [requireAuth] ✅ User ditemukan — id:', user.id, '| email:', user.email, '| tenant_id:', user.tenant_id, '| role:', user.role);
     req.user = user;
     next();
   } catch (e) {
-    console.error('Auth middleware error:', e);
+    console.error('🔐 [requireAuth] 💥 Token error:', e.message);
     return res.status(401).json({ error: 'Token tidak valid' });
   }
 }

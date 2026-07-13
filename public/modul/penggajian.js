@@ -271,18 +271,46 @@ function renderAbsensiTable(list, pagination) {
     pg.innerHTML = `<span>${pagination.total} data</span><div class="flex gap-1">${pagination.totalPages > 1 ? Array.from({ length: pagination.totalPages }, (_, i) => `<button onclick="loadAbsensi(${i + 1})" class="px-3 py-1 rounded ${i + 1 === pagination.page ? 'bg-[#1e40af] text-white' : 'bg-stone-100 hover:bg-stone-200'}">${i + 1}</button>`).join('') : ''}</div>`;
   }
 }
+function formatDateInput(val) {
+  // HTML input[type=date] butuh format YYYY-MM-DD dalam TIMEZONE LOKAL
+  // Database return ISO string UTC: "2026-07-12T17:00:00.000Z" (sebenarnya 13 Juli WIB)
+  // Pakai slice(0,10) SALAH karena ambil tanggal UTC, bukan lokal
+  if (!val) return '';
+  const d = new Date(val);
+  if (!isNaN(d.getTime())) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  // Fallback: ambil 10 karakter pertama
+  return val.slice(0, 10);
+}
+
 function openAbsensiForm(a) {
   document.getElementById('absensi-id').value = a ? a.id : '';
-  document.getElementById('absensi-karyawan').value = a ? a.karyawan_id : '';
-  document.getElementById('absensi-tanggal').value = a ? a.tanggal : new Date().toISOString().slice(0,10);
+  document.getElementById('absensi-tanggal').value = a ? formatDateInput(a.tanggal) : new Date().toISOString().slice(0,10);
   document.getElementById('absensi-status').value = a ? a.status : 'Hadir';
   document.getElementById('absensi-masuk').value = a ? a.jam_masuk || '' : '';
   document.getElementById('absensi-keluar').value = a ? a.jam_keluar || '' : '';
   document.getElementById('absensi-keterangan').value = a ? a.keterangan || '' : '';
   document.getElementById('absensi-modal-title').textContent = a ? 'Edit Absensi' : 'Input Absensi';
+
+  // Populate dropdown karyawan dulu, BARU set value (biar selection-nya tidak hilang)
   const sel = document.getElementById('absensi-karyawan');
+  // Pakai karyawanOptions dari modul penggajian, fallback ke window.karyawanOptions
+  // (di-set oleh renderAbsensi di absensi.js)
+  const options = (typeof karyawanOptions !== 'undefined' && karyawanOptions.length)
+    ? karyawanOptions
+    : (window.karyawanOptions || []);
   sel.innerHTML = '<option value="">— Pilih —</option>' +
-    (karyawanOptions || []).map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+    options.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+  
+  // Set value setelah options tersedia
+  if (a && a.karyawan_id) {
+    sel.value = a.karyawan_id;
+  }
+
   document.getElementById('absensi-modal').classList.remove('hidden');
   document.getElementById('absensi-modal').classList.add('flex');
 }
@@ -385,6 +413,218 @@ function savePayroll() {
   }
   document.getElementById('payroll-modal').classList.add('hidden');
   document.getElementById('payroll-modal').classList.remove('flex');
+}
+
+// ===== Tab Switch (harus global karena dipanggil dari template via onclick) =====
+function switchPayTab(tab) {
+  document.querySelectorAll('.tab-pay').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('pay-tab-' + tab);
+  if (el) el.classList.add('active');
+  const bulanan = document.getElementById('pay-bulanan');
+  const mingguan = document.getElementById('pay-mingguan');
+  if (bulanan) bulanan.classList.toggle('hidden', tab !== 'bulanan');
+  if (mingguan) mingguan.classList.toggle('hidden', tab !== 'mingguan');
+
+  if (tab === 'mingguan') {
+    const now = new Date();
+    const blnSel = document.getElementById('pm-filter-bulan');
+    if (blnSel) blnSel.value = now.getMonth() + 1;
+    const thnInput = document.getElementById('pm-filter-tahun');
+    if (thnInput) thnInput.value = now.getFullYear();
+    loadPayrollMingguan();
+  }
+}
+
+// ===== Payroll Mingguan =====
+async function loadPayrollMingguan() {
+  const bln = document.getElementById('pm-filter-bulan')?.value || '';
+  const thn = document.getElementById('pm-filter-tahun')?.value || '';
+  const mgg = document.getElementById('pm-filter-minggu')?.value || '1';
+  if (!bln || !thn) return;
+  try {
+    const res = await api.get(`/payroll/mingguan?bulan=${bln}&tahun=${thn}&minggu_ke=${mgg}`);
+    renderPayrollMingguanTable(res);
+  } catch (e) {
+    console.error('Payroll mingguan error:', e);
+    const tb = document.getElementById('pm-tbody');
+    if (tb) tb.innerHTML = `<tr><td colspan="12" class="text-center py-12 text-red-600">Gagal memuat: ${e.message}</td></tr>`;
+  }
+}
+
+function renderPayrollMingguanTable(data) {
+  const info = document.getElementById('pm-info');
+  const label = document.getElementById('pm-label');
+  const total = document.getElementById('pm-total');
+  const thead = document.getElementById('pm-thead');
+  const tbody = document.getElementById('pm-tbody');
+  const tfoot = document.getElementById('pm-tfoot');
+  const footHadir = document.getElementById('pm-foot-hadir');
+  const footGaji = document.getElementById('pm-foot-gaji');
+
+  if (!data || !data.karyawan || !data.minggu) {
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-12 text-stone-400">Tidak ada data</td></tr>';
+    info.classList.add('hidden');
+    tfoot.classList.add('hidden');
+    return;
+  }
+
+  const { minggu, karyawan, totals } = data;
+
+  // Info header
+  info.classList.remove('hidden');
+  label.innerHTML = '<svg class="w-3.5 h-3.5 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ' + minggu.label;
+  total.textContent = `${totals.total_karyawan} karyawan · ${totals.total_hadir} hadir · Total: ${fmtIDR(totals.total_gaji)}`;
+
+  // Day headers
+  const daysHeader = document.getElementById('pm-header-days');
+  daysHeader.textContent = `${minggu.dates.length} Hari Kerja`;
+
+  const subHeader = document.getElementById('pm-header-sub');
+  const tglNama = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  subHeader.innerHTML = minggu.dates.map((tgl, i) => {
+    const d = new Date(tgl + 'T00:00:00');
+    const hari = tglNama[d.getDay()];
+    const tglNum = tgl.slice(8, 10);
+    return `<th class="text-center px-1 py-1 text-[10px] font-semibold uppercase border-l border-stone-200 min-w-[72px] ${[0,6].includes(d.getDay()) ? 'text-red-400' : ''}">${hari}<br><span class="text-xs">${tglNum}</span></th>`;
+  }).join('');
+
+  // Body
+  if (!karyawan.length) {
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-12 text-stone-400">Tidak ada karyawan aktif</td></tr>';
+    tfoot.classList.add('hidden');
+    return;
+  }
+
+  tfoot.classList.remove('hidden');
+  footHadir.textContent = `${totals.total_hadir}`;
+  footGaji.textContent = fmtIDR(totals.total_gaji);
+
+  tbody.innerHTML = karyawan.map(k => `
+    <tr class="border-t border-stone-100 hover:bg-stone-50">
+      <td class="px-3 py-2 text-sm font-medium whitespace-nowrap">${k.nama}</td>
+      <td class="px-2 py-2 text-xs text-stone-500 whitespace-nowrap border-r border-stone-200">${k.jabatan}</td>
+      ${k.harian.map((h, i) => {
+        const tgl = minggu.dates[i];
+        const d = new Date(tgl + 'T00:00:00');
+        const isWeekend = [0, 6].includes(d.getDay());
+        if (!h) {
+          return `<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ${isWeekend ? 'bg-stone-50' : ''}">
+            <span class="text-stone-300">—</span>
+          </td>`;
+        }
+        if (h.status === 'Hadir') {
+          return `<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ${isWeekend ? 'bg-stone-50' : ''}">
+            <div class="text-emerald-600 font-medium">${h.masuk || '?'}</div>
+            <div class="text-stone-400">${h.keluar || '?'}</div>
+          </td>`;
+        }
+        return `<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ${isWeekend ? 'bg-stone-50' : ''}">
+          <span class="text-${h.status === 'Sakit' ? 'amber' : h.status === 'Izin' ? 'blue' : h.status === 'Cuti' ? 'violet' : 'red'}-600">${h.status}</span>
+        </td>`;
+      }).join('')}
+      <td class="text-center px-2 py-2 text-sm font-bold border-l border-stone-200">${k.total_hadir}x</td>
+      <td class="text-right px-2 py-2 text-xs mono whitespace-nowrap">${fmtIDR(k.upah_per_hari)}</td>
+      <td class="text-right px-2 py-2 text-sm font-bold mono whitespace-nowrap">${fmtIDR(k.total_gaji)}</td>
+    </tr>
+  `).join('');
+}
+
+// ===== Export Payroll Mingguan =====
+async function exportPayrollMingguan() {
+  const bln = document.getElementById('pm-filter-bulan')?.value || '';
+  const thn = document.getElementById('pm-filter-tahun')?.value || '';
+  const mgg = document.getElementById('pm-filter-minggu')?.value || '1';
+  if (!bln || !thn) return showAlert('Pilih bulan & tahun terlebih dahulu', 'warning');
+
+  try {
+    const res = await api.get(`/payroll/mingguan?bulan=${bln}&tahun=${thn}&minggu_ke=${mgg}`);
+    if (!res || !res.karyawan || !res.karyawan.length) {
+      return showAlert('Tidak ada data untuk diexport', 'warning');
+    }
+
+    const { minggu, karyawan } = res;
+    const days = minggu.dates;
+    const tglNama = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+
+    // Bangun headers dinamis: Nama | Jabatan | D1 Masuk | D1 Keluar | ... | Total Hadir | Upah/Hari | Total Gaji
+    const headers = ['Nama Karyawan', 'Jabatan'];
+    days.forEach((tgl, i) => {
+      const d = new Date(tgl + 'T00:00:00');
+      const label = tglNama[d.getDay()] + ' ' + tgl.slice(8,10) + '/' + tgl.slice(5,7);
+      headers.push(label + ' Masuk', label + ' Keluar');
+    });
+    headers.push('Total Hadir', 'Upah/Hari', 'Total Gaji');
+
+    // Data per karyawan
+    const rows = karyawan.map(k => {
+      const row = [k.nama, k.jabatan];
+      k.harian.forEach(h => {
+        if (h && h.status === 'Hadir') {
+          row.push(h.masuk || '-', h.keluar || '-');
+        } else if (h) {
+          row.push(h.status, '-');
+        } else {
+          row.push('-', '-');
+        }
+      });
+      row.push(k.total_hadir, k.upah_per_hari, k.total_gaji);
+      return row;
+    });
+
+    // Baris total
+    const totalHadir = karyawan.reduce((s, k) => s + k.total_hadir, 0);
+    const totalGaji = karyawan.reduce((s, k) => s + k.total_gaji, 0);
+    const totalRow = ['TOTAL', ''];
+    days.forEach(() => { totalRow.push('', ''); });
+    totalRow.push(totalHadir, '', totalGaji);
+    rows.push(totalRow);
+
+    // Buat workbook
+    const wb = XLSX.utils.book_new();
+    const wsData = [headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Atur lebar kolom
+    const colWidths = [
+      { wch: 28 }, // Nama
+      { wch: 18 }, // Jabatan
+    ];
+    days.forEach(() => { colWidths.push({ wch: 10 }, { wch: 10 }); });
+    colWidths.push({ wch: 10 }, { wch: 12 }, { wch: 14 });
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Payroll Mingguan');
+
+    const filename = `payroll-mingguan-${minggu.label.replace(/[\s,()]/g, '_')}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  } catch (e) {
+    console.error('Export mingguan error:', e);
+    showAlert('Gagal export: ' + e.message, 'error');
+  }
+}
+
+// ===== Bayar Payroll Mingguan =====
+async function bayarPayrollMingguan() {
+  const bln = document.getElementById('pm-filter-bulan')?.value || '';
+  const thn = document.getElementById('pm-filter-tahun')?.value || '';
+  const mgg = document.getElementById('pm-filter-minggu')?.value || '1';
+  if (!bln || !thn) return showAlert('Pilih bulan & tahun terlebih dahulu', 'warning');
+
+  if (!await showConfirm('Bayar payroll mingguan ini? Jurnal otomatis akan dibuat di Kas Bank.', 'Ya, Bayar')) return;
+
+  try {
+    const res = await api.post('/payroll/mingguan/bayar', { bulan: bln, tahun: thn, minggu_ke: parseInt(mgg) });
+    if (res.ok) {
+      showToast('✅ ' + res.pesan, 'success');
+      loadPayrollMingguan(); // refresh
+    }
+  } catch (e) {
+    if (e.status === 409) {
+      showAlert('Jurnal untuk periode ini sudah ada di Kas Bank (No. ' + (e.data?.no_transaksi || '') + ')', 'warning');
+    } else {
+      showAlert('Gagal: ' + (e.message || ''), 'error');
+    }
+  }
 }
 
 // ===== Shift — Jadwal Kerja per Divisi =====

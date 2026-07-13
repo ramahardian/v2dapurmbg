@@ -73,15 +73,19 @@ router.post('/login', loginLimiter, async (req, res) => {
 router.post('/login-phone', loginLimiter, async (req, res) => {
   try {
     let { phone } = req.body;
+    console.log('🔐 [Login-Phone] ➡️ Request masuk — Phone:', phone);
     if (!phone) return res.status(400).json({ error: 'Nomor telepon wajib diisi' });
 
     // Normalisasi: hapus semua non-digit
     phone = phone.replace(/[^0-9]/g, '');
+    console.log('🔐 [Login-Phone] 🧹 Phone setelah normalisasi:', phone);
 
     // Jika diawali 0, simpan dengan dan tanpa 0 untuk fleksibilitas
     const variants = [phone];
     if (phone.startsWith('0')) variants.push(phone.slice(1));
     else variants.push('0' + phone);
+
+    console.log('🔐 [Login-Phone] 🔢 Variants yang dicari:', variants);
 
     if (phone.length < 10) {
       return res.status(400).json({ error: 'Nomor telepon minimal 10 angka' });
@@ -89,6 +93,7 @@ router.post('/login-phone', loginLimiter, async (req, res) => {
 
     // Cari karyawan berdasarkan nomor telepon
     const placeholders = variants.map(() => 'REPLACE(REPLACE(phone, " ", ""), "-", "") = ?').join(' OR ');
+    console.log('🔐 [Login-Phone] 🔍 Mencari karyawan...');
     const [karyawan] = await db.query(
       `SELECT id, nama, nik, departemen, email, phone 
        FROM karyawan 
@@ -97,26 +102,35 @@ router.post('/login-phone', loginLimiter, async (req, res) => {
       variants
     );
 
+    console.log('🔐 [Login-Phone] 📊 Hasil query karyawan — ditemukan:', karyawan.length, 'data:', JSON.stringify(karyawan[0] || null));
+
     if (!karyawan.length) {
+      console.log('🔐 [Login-Phone] ❌ GAGAL — Nomor telepon tidak ditemukan di tabel karyawan');
       return res.status(401).json({ error: 'Nomor telepon tidak terdaftar' });
     }
 
     const k = karyawan[0];
+    console.log('🔐 [Login-Phone] ✅ Karyawan ditemukan — ID:', k.id, '| Nama:', k.nama, '| Email:', k.email, '| Phone:', k.phone, '| Departemen:', k.departemen);
 
     // Cari user yang email-nya cocok dengan email karyawan
     if (!k.email) {
+      console.log('🔐 [Login-Phone] ❌ GAGAL — Karyawan tidak memiliki email! Nama:', k.nama);
       return res.status(403).json({
         error: 'Akun ini tidak memiliki email terdaftar',
         solusi: 'Hubungi admin untuk menghubungkan data karyawan dengan akun login'
       });
     }
 
+    console.log('🔐 [Login-Phone] 🔍 Mencari user dengan email:', k.email);
     const [users] = await db.query(
       'SELECT id, tenant_id, email, nama, role, foto FROM users WHERE email=? LIMIT 1',
       [k.email]
     );
 
+    console.log('🔐 [Login-Phone] 📊 Hasil query user — ditemukan:', users.length, 'data:', JSON.stringify(users[0] || null));
+
     if (!users.length) {
+      console.log('🔐 [Login-Phone] ❌ GAGAL — Tidak ada user dengan email:', k.email);
       return res.status(403).json({
         error: 'Email karyawan tidak terhubung ke akun pengguna',
         solusi: 'Hubungi admin untuk menghubungkan data karyawan dengan akun login'
@@ -124,9 +138,11 @@ router.post('/login-phone', loginLimiter, async (req, res) => {
     }
 
     const u = users[0];
+    console.log('🔐 [Login-Phone] ✅ User ditemukan — ID:', u.id, '| Email:', u.email, '| Nama:', u.nama, '| Role:', u.role, '| tenant_id:', u.tenant_id);
 
     // Buat token JWT — sertakan phone dari data karyawan
     const token = sign({ ...u, phone: k.phone });
+    console.log('🔐 [Login-Phone] ✅ Token JWT berhasil dibuat — uid:', u.id, '| tenant_id:', u.tenant_id, '| role:', u.role);
 
     // Set cookie untuk kompatibilitas web
     res.cookie('access_token', token, {
@@ -136,6 +152,8 @@ router.post('/login-phone', loginLimiter, async (req, res) => {
       maxAge: 8 * 3600 * 1000,
       path: '/'
     });
+
+    console.log('🔐 [Login-Phone] ✅ Login BERHASIL — redirect ke dashboard untuk:', k.nama);
 
     // Response sesuai format yang diharapkan frontend
     res.json({
@@ -154,7 +172,7 @@ router.post('/login-phone', loginLimiter, async (req, res) => {
       }
     });
   } catch (e) {
-    console.error('Login-phone error:', e);
+    console.error('🔐 [Login-Phone] 💥 ERROR —', e.message, e.stack);
     res.status(500).json({ error: 'Gagal login: ' + e.message });
   }
 });

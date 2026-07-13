@@ -18,6 +18,8 @@ async function renderAbsensi() {
       const absForm = document.getElementById('absensi-karyawan');
       if (absForm) absForm.innerHTML = '<option value="">— Pilih —</option>' +
         list.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+      // Set global karyawanOptions agar form edit absensi juga bisa akses
+      window.karyawanOptions = list;
     } catch (e) {
       console.error('Gagal load karyawan:', e);
     }

@@ -11,8 +11,6 @@
 
 const express = require('express');
 const db = require('../db');
-const fs = require('fs');
-const path = require('path');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -20,40 +18,193 @@ router.use(requireAuth);
 
 
 /* ──────────────────────────────────────────────
+ * Helper: bangun klausa WHERE untuk tenant_id
+ * Handle NULL dengan aman karena di MySQL NULL = NULL itu FALSE
+ * ────────────────────────────────────────────── */
+function tenantWhere(alias = '') {
+  const prefix = alias ? `${alias}.` : '';
+  return (tid) => {
+    if (tid != null) {
+      return { sql: `${prefix}tenant_id=?`, params: [tid] };
+    }
+    return { sql: `${prefix}tenant_id IS NULL`, params: [] };
+  };
+}
+
+/* ──────────────────────────────────────────────
+ * Helper: cari shift efektif untuk seorang karyawan pada tanggal tertentu
+ * Prioritas:
+ *   1) jadwal_karyawan (per individu)
+ *   2) jabatan.shift_id
+ *   3) shift_divisi via departemen
+ * ────────────────────────────────────────────── */
+async function getEffectiveShift(karyawan, tenantId, dateStr, dayOfWeek) {
+  const tw = tenantWhere('jk');
+  const { sql: tSql, params: tParams } = tw(tenantId);
+
+  // Step 1: jadwal_karyawan
+  const [rows] = await db.query(
+    `SELECT s.id, s.nama, s.jam_masuk, s.jam_keluar, s.warna,
+            jk.tanggal_mulai, jk.tanggal_selesai, jk.hari_kerja
+     FROM jadwal_karyawan jk
+     JOIN shift s ON s.id=jk.shift_id
+     WHERE ${tSql} AND jk.karyawan_id=?
+       AND jk.tanggal_mulai <= ?
+       AND (jk.tanggal_selesai IS NULL OR jk.tanggal_selesai >= ?)
+     ORDER BY jk.tanggal_mulai DESC
+     LIMIT 1`,
+    [...tParams, karyawan.id, dateStr, dateStr]
+  );
+
+  if (rows.length) {
+    return {
+      sumber: 'jadwal_karyawan',
+      id: rows[0].id,
+      nama: rows[0].nama,
+      jam_masuk: rows[0].jam_masuk,
+      jam_keluar: rows[0].jam_keluar,
+      warna: rows[0].warna,
+      hari_kerja: rows[0].hari_kerja || '1,2,3,4,5,6,7',
+      tanggal_mulai: rows[0].tanggal_mulai,
+      tanggal_selesai: rows[0].tanggal_selesai
+    };
+  }
+
+  // Step 2: jabatan.shift_id
+  if (karyawan.jabatan_id) {
+    const [jabShift] = await db.query(
+      `SELECT s.id, s.nama, s.jam_masuk, s.jam_keluar, s.warna
+       FROM jabatan j
+       JOIN shift s ON s.id=j.shift_id
+       WHERE j.id=? AND s.tenant_id=?
+       LIMIT 1`,
+      [karyawan.jabatan_id, tenantId]
+    );
+    if (jabShift.length) {
+      return {
+        sumber: 'jabatan',
+        id: jabShift[0].id,
+        nama: jabShift[0].nama,
+        jam_masuk: jabShift[0].jam_masuk,
+        jam_keluar: jabShift[0].jam_keluar,
+        warna: jabShift[0].warna,
+        hari_kerja: '1,2,3,4,5,6', // Sen-Sab default
+        tanggal_mulai: null,
+        tanggal_selesai: null
+      };
+    }
+  }
+
+  // Step 3: shift_divisi via departemen
+  if (karyawan.departemen) {
+    const [deptShift] = await db.query(
+      `SELECT s.id, s.nama, s.jam_masuk, s.jam_keluar, s.warna
+       FROM shift s
+       JOIN shift_divisi sd ON sd.shift_id=s.id
+       JOIN divisi d ON d.id=sd.divisi_id
+       WHERE d.nama=? AND s.tenant_id=?
+       LIMIT 1`,
+      [karyawan.departemen, tenantId]
+    );
+    if (deptShift.length) {
+      return {
+        sumber: 'divisi',
+        id: deptShift[0].id,
+        nama: deptShift[0].nama,
+        jam_masuk: deptShift[0].jam_masuk,
+        jam_keluar: deptShift[0].jam_keluar,
+        warna: deptShift[0].warna,
+        hari_kerja: '1,2,3,4,5,6', // Sen-Sab default
+        tanggal_mulai: null,
+        tanggal_selesai: null
+      };
+    }
+  }
+
+  return null;
+}
+
+/* ──────────────────────────────────────────────
+ * Helper: hitung jumlah hari kerja dalam sebulan
+ * ────────────────────────────────────────────── */
+function countWorkDays(bulan, tahun, hariKerjaStr, tglMulai, tglSelesai) {
+  const hariKerja = hariKerjaStr.split(',').map(Number);
+  const daysInMonth = new Date(tahun, bulan, 0).getDate();
+  let count = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(tahun, bulan - 1, d);
+    const dayOfWeek = dateObj.getDay() + 1; // 1=Sun ... 7=Sat (MySQL style)
+    if (!hariKerja.includes(dayOfWeek)) continue;
+    const dateStr = `${tahun}-${String(bulan).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if (tglMulai && dateStr < tglMulai) continue;
+    if (tglSelesai && dateStr > tglSelesai) continue;
+    count++;
+  }
+  return count;
+}
+
+/* ──────────────────────────────────────────────
  * Helper: cari karyawan_id dari user yang login
  * ────────────────────────────────────────────── */
 async function getKaryawanId(user) {
-  // Cocokkan user email dengan email di tabel karyawan
-  // Handle jika tenant_id NULL (user belum punya tenant)
-  const params = [user.email];
-  let tenantFilter = '';
+  console.log('🔐 [getKaryawanId] 🔍 Mencari karyawan — user.email:', user.email, '| user.tenant_id:', user.tenant_id, '| user.id:', user.id);
+
+  // 1) Coba exact match: email + tenant_id (jika user punya tenant_id)
   if (user.tenant_id) {
-    tenantFilter = 'AND tenant_id=?';
-    params.push(user.tenant_id);
+    console.log('🔐 [getKaryawanId] 🔎 Mencoba exact match — email:', user.email, '+ tenant_id:', user.tenant_id);
+    const [rows] = await db.query(
+      `SELECT id, tenant_id, nama, nik, departemen, jabatan_id, photo, phone FROM karyawan 
+       WHERE email=? AND status='Aktif' AND tenant_id=? LIMIT 1`,
+      [user.email, user.tenant_id]
+    );
+    console.log('🔐 [getKaryawanId] 📊 Exact match — ditemukan:', rows.length, 'data:', JSON.stringify(rows[0] || null));
+    if (rows.length) {
+      console.log('🔐 [getKaryawanId] ✅ Cocok dengan tenant_id! Karyawan:', rows[0].nama, '| tenant_id:', rows[0].tenant_id);
+      return rows[0];
+    }
+    console.log('🔐 [getKaryawanId] ⚠️ Exact match gagal, fallback cari tanpa tenant_id');
   }
-  const [rows] = await db.query(
+
+  // 2) Fallback: cari berdasarkan email saja (tanpa filter tenant_id)
+  console.log('🔐 [getKaryawanId] 🔎 Fallback — cari karyawan dengan email:', user.email, '(tanpa filter tenant_id)');
+  const [fallback] = await db.query(
     `SELECT id, tenant_id, nama, nik, departemen, jabatan_id, photo, phone FROM karyawan 
-     WHERE email=? AND status='Aktif' ${tenantFilter} LIMIT 1`,
-    params
+     WHERE email=? AND status='Aktif' LIMIT 1`,
+    [user.email]
   );
-  if (!rows.length) return null;
-  return rows[0];
+  console.log('🔐 [getKaryawanId] 📊 Fallback — ditemukan:', fallback.length, 'data:', JSON.stringify(fallback[0] || null));
+  if (fallback.length) {
+    console.log('🔐 [getKaryawanId] ✅ Ditemukan via fallback! Karyawan:', fallback[0].nama, '| tenant_id:', fallback[0].tenant_id);
+    return fallback[0];
+  }
+
+  console.log('🔐 [getKaryawanId] ❌ GAGAL — Karyawan dengan email', user.email, 'tidak ditemukan sama sekali!');
+  return null;
 }
 
 /* ──────────────────────────────────────────────
  * Helper: cek apakah user bisa akses fitur mobile
  * ────────────────────────────────────────────── */
 async function ensureKaryawan(req, res, next) {
+  console.log('🔐 [ensureKaryawan] 🔍 Memeriksa akses karyawan — user id:', req.user.id, '| email:', req.user.email, '| tenant_id:', req.user.tenant_id, '| role:', req.user.role);
   const karyawan = await getKaryawanId(req.user);
   if (!karyawan) {
+    console.log('🔐 [ensureKaryawan] ❌ AKSES DITOLAK — req.user:', JSON.stringify({ id: req.user.id, email: req.user.email, tenant_id: req.user.tenant_id, role: req.user.role }));
     return res.status(403).json({
       error: 'Akun ini tidak terhubung ke data karyawan',
       solusi: 'Hubungi admin untuk menghubungkan email ini ke data karyawan'
     });
   }
-  // Pastikan tenant_id pak punya karyawan (user mungkin tenant_id-nya NULL)
-  if (karyawan.tenant_id) req.user.tenant_id = karyawan.tenant_id;
+  // Pastikan tenant_id terisi — priority: karyawan → user → default 1 (Dapur Sukaluyu)
+  if (karyawan.tenant_id) {
+    console.log('🔐 [ensureKaryawan] 🔄 Sync tenant_id — user.tenant_id:', req.user.tenant_id, '→ karyawan.tenant_id:', karyawan.tenant_id);
+    req.user.tenant_id = karyawan.tenant_id;
+  } else if (!req.user.tenant_id) {
+    console.log('🔐 [ensureKaryawan] 🏢 Default tenant_id ke 1 (Dapur Sukaluyu) — karena karyawan dan user sama-sama NULL');
+    req.user.tenant_id = 1;
+  }
   req.karyawan = karyawan;
+  console.log('🔐 [ensureKaryawan] ✅ Akses diizinkan — karyawan:', karyawan.nama, '| nik:', karyawan.nik, '| dept:', karyawan.departemen, '| tenant_id:', req.user.tenant_id);
   next();
 }
 
@@ -63,16 +214,66 @@ async function ensureKaryawan(req, res, next) {
  * ────────────────────────────────────────────── */
 router.get('/absensi/status', ensureKaryawan, async (req, res) => {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const dayOfWeek = now.getDay() + 1;
+
+    const tw = tenantWhere();
+    const { sql: tenantSql, params: tenantParams } = tw(req.user.tenant_id);
+
     const [rows] = await db.query(
-      `SELECT id, tanggal, status, jam_masuk, jam_keluar, 
-              latitude, longitude, clock_out_lat, clock_out_lng,
-              foto_masuk, foto_keluar, keterangan
+      `SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan
        FROM absensi 
-       WHERE tenant_id=? AND karyawan_id=? AND tanggal=?
+       WHERE ${tenantSql} AND karyawan_id=? AND tanggal=?
        LIMIT 1`,
-      [req.user.tenant_id, req.karyawan.id, today]
+      [...tenantParams, req.karyawan.id, today]
     );
+
+    // Cek shift efektif hari ini untuk deteksi bolos & terkunci
+    const shift = await getEffectiveShift(req.karyawan, req.user.tenant_id, today, dayOfWeek);
+    let peringatan_bolos = false;
+    let pesan_bolos = '';
+    let terkunci = false;
+
+    if (shift && !rows.length) {
+      const hariKerja = (shift.hari_kerja || '1,2,3,4,5,6,7').split(',').map(Number);
+      if (hariKerja.includes(dayOfWeek)) {
+        const shiftStart = parseTimeToMinutes(shift.jam_masuk);
+        const shiftEnd = parseTimeToMinutes(shift.jam_keluar);
+        const isCrossDay = shiftEnd <= shiftStart;
+        const awalBolehMasuk = (shiftStart - 60 + 1440) % 1440;   // 1 jam SEBELUM shift
+        const toleransiTelat = (shiftStart + 15) % 1440;          // 15 menit toleransi
+        let sudahMulai = false;
+
+        if (!isCrossDay) {
+          // Normal: PAGI 08:00-16:00
+          if (currentMinutes >= awalBolehMasuk && currentMinutes <= shiftEnd) {
+            // Dalam jendela absen (1 jam sebelum shift sampai shift selesai)
+            if (currentMinutes > toleransiTelat) {
+              sudahMulai = true;  // lewat toleransi 15 menit
+            }
+          } else if (currentMinutes > shiftEnd) {
+            // Lewat shift dan belum check-in → kunci tombol sampai 1 jam sebelum shift besok
+            terkunci = true;
+          }
+        } else {
+          // Lintas hari: SORE 19:00-03:00
+          if (currentMinutes >= awalBolehMasuk || currentMinutes < shiftEnd) {
+            // Masih dalam jendela absen
+            if (currentMinutes > toleransiTelat) sudahMulai = true;
+          } else {
+            // Lewat shift dan belum check-in → kunci
+            terkunci = true;
+          }
+        }
+
+        if (sudahMulai) {
+          peringatan_bolos = true;
+          pesan_bolos = `⚠️ Shift ${shift.nama} mulai ${shift.jam_masuk.slice(0,5)} — Anda belum clock-in! (Toleransi 15 menit)`;
+        }
+      }
+    }
 
     if (!rows.length) {
       return res.json({
@@ -80,40 +281,59 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         sudah_masuk: false,
         sudah_keluar: false,
         data: null,
-        pesan: 'Belum absen hari ini'
+        peringatan_bolos,
+        pesan_bolos,
+        terkunci,
+        shift_hari_ini: shift ? {
+          nama: shift.nama,
+          jam_masuk: shift.jam_masuk?.slice(0,5),
+          jam_keluar: shift.jam_keluar?.slice(0,5)
+        } : null,
+        pesan: peringatan_bolos ? pesan_bolos : 'Belum absen hari ini'
       });
     }
 
     const a = rows[0];
+    const butuhKoreksi = a.status === 'Butuh Koreksi' || (a.keterangan && a.keterangan.includes('Butuh Koreksi'));
+
     res.json({
       sudah_absensi: true,
       sudah_masuk: !!a.jam_masuk,
       sudah_keluar: !!a.jam_keluar,
+      peringatan_bolos: false,
+      terkunci: false,
+      butuh_koreksi: butuhKoreksi,
       data: {
         id: a.id,
         tanggal: a.tanggal,
         status: a.status,
         jam_masuk: a.jam_masuk,
         jam_keluar: a.jam_keluar,
-        latitude: a.latitude,
-        longitude: a.longitude,
-        clock_out_lat: a.clock_out_lat,
-        clock_out_lng: a.clock_out_lng,
-        foto_masuk: a.foto_masuk,
-        foto_keluar: a.foto_keluar,
         keterangan: a.keterangan
       },
+      shift_hari_ini: shift ? {
+        nama: shift.nama,
+        jam_masuk: shift.jam_masuk?.slice(0,5),
+        jam_keluar: shift.jam_keluar?.slice(0,5)
+      } : null,
       pesan: a.jam_masuk && a.jam_keluar
-        ? 'Absensi hari ini sudah lengkap'
+        ? (butuhKoreksi ? 'Clock-out selesai — perlu koreksi admin' : 'Absensi hari ini sudah lengkap')
         : a.jam_masuk
           ? 'Sudah clock-in, silakan clock-out'
           : 'Belum absen hari ini'
     });
   } catch (err) {
-    console.error('Mobile absensi status error:', err);
+    console.error('🔐 [Status] 💥 ERROR —', err.message);
     res.status(500).json({ error: 'Gagal memuat status absensi' });
   }
 });
+
+// Helper: parse jam ke menit (local, untuk dipakai di status)
+function parseTimeToMinutes(t) {
+  if (!t) return 0;
+  const p = t.split(':');
+  return parseInt(p[0]) * 60 + parseInt(p[1]);
+}
 
 /* ──────────────────────────────────────────────
  * POST /api/mobile/absensi/clock-in — Absen masuk
@@ -124,16 +344,18 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
  * ────────────────────────────────────────────── */
 router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
   try {
-    const { latitude, longitude, foto, keterangan } = req.body;
+    const { keterangan } = req.body;
     const tenant_id = req.user.tenant_id;
     const karyawan_id = req.karyawan.id;
     const today = new Date().toISOString().slice(0, 10);
     const nowTime = new Date().toTimeString().slice(0, 8); // HH:mm:ss
+    const tw = tenantWhere();
 
     // Cek apakah sudah absen hari ini
+    const { sql: tSql, params: tParams } = tw(tenant_id);
     const [existing] = await db.query(
-      `SELECT id, jam_masuk FROM absensi WHERE tenant_id=? AND karyawan_id=? AND tanggal=?`,
-      [tenant_id, karyawan_id, today]
+      `SELECT id, jam_masuk FROM absensi WHERE ${tSql} AND karyawan_id=? AND tanggal=?`,
+      [...tParams, karyawan_id, today]
     );
 
     if (existing.length) {
@@ -145,12 +367,12 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
       }
       // Ada record tapi belum ada jam_masuk — update
       await db.query(
-        `UPDATE absensi SET jam_masuk=?, latitude=?, longitude=?, keterangan=?
-         WHERE id=? AND tenant_id=?`,
-        [nowTime, latitude || null, longitude || null, keterangan || null, existing[0].id, tenant_id]
+        `UPDATE absensi SET jam_masuk=?, keterangan=?
+         WHERE id=? AND ${tSql}`,
+        [nowTime, keterangan || null, existing[0].id, ...tParams]
       );
       const [updated] = await db.query(
-        `SELECT id, tanggal, status, jam_masuk, jam_keluar, latitude, longitude, keterangan
+        `SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan
          FROM absensi WHERE id=?`,
         [existing[0].id]
       );
@@ -161,25 +383,53 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
       });
     }
 
-    // Buat record baru
-    // Tentukan status default: jika jam masuk > batas toleransi, jadi 'Terlambat'
-    // Untuk sekarang default 'Hadir'
-    const status = 'Hadir';
-
-    // Simpan foto jika ada
-    let fotoPath = null;
-    if (foto) {
-      fotoPath = saveMobilePhoto(foto, 'masuk');
+    // Cek apakah shift sudah lewat (terkunci)
+    const nowTimeCheck = new Date();
+    const todayCheck = nowTimeCheck.toISOString().slice(0, 10);
+    const dayOfWeekCheck = nowTimeCheck.getDay() + 1;
+    const shiftCheck = await getEffectiveShift(req.karyawan, req.user.tenant_id, todayCheck, dayOfWeekCheck);
+    if (shiftCheck && !existing.length) {
+      const hariKerjaCheck = (shiftCheck.hari_kerja || '1,2,3,4,5,6,7').split(',').map(Number);
+      if (hariKerjaCheck.includes(dayOfWeekCheck)) {
+        const sStart = parseTimeToMinutes(shiftCheck.jam_masuk);
+        const sEnd = parseTimeToMinutes(shiftCheck.jam_keluar);
+        const nowMinCheck = nowTimeCheck.getHours() * 60 + nowTimeCheck.getMinutes();
+        const isCrossDay = sEnd <= sStart;
+        const awalBolehMasuk = (sStart - 60 + 1440) % 1440;  // 1 jam SEBELUM shift
+        let bolehMasuk = false;
+        
+        if (!isCrossDay) {
+          // Normal 08:00-16:00 — boleh dari 1 jam sebelum shift sampai shift selesai
+          if (nowMinCheck >= awalBolehMasuk && nowMinCheck <= sEnd) {
+            bolehMasuk = true;
+          }
+        } else {
+          // Lintas hari 19:00-03:00
+          if (nowMinCheck >= awalBolehMasuk || nowMinCheck < sEnd) {
+            bolehMasuk = true;
+          }
+        }
+        
+        if (!bolehMasuk) {
+          return res.status(403).json({
+            error: 'Belum waktunya absen. Clock-in dibuka 1 jam sebelum shift dimulai.',
+            solusi: 'Silakan coba lagi mendekati jam shift Anda.'
+          });
+        }
+      }
     }
 
+    // Buat record baru
+    const status = 'Hadir';
+
     const [r] = await db.query(
-      `INSERT INTO absensi (tenant_id, karyawan_id, tanggal, status, jam_masuk, latitude, longitude, foto_masuk, keterangan)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-      [tenant_id, karyawan_id, today, status, nowTime, latitude || null, longitude || null, fotoPath, keterangan || null]
+      `INSERT INTO absensi (tenant_id, karyawan_id, tanggal, status, jam_masuk, keterangan)
+       VALUES (?,?,?,?,?,?)`,
+      [tenant_id, karyawan_id, today, status, nowTime, keterangan || null]
     );
 
     const [rows] = await db.query(
-      `SELECT id, tanggal, status, jam_masuk, jam_keluar, latitude, longitude, foto_masuk, keterangan
+      `SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan
        FROM absensi WHERE id=?`,
       [r.insertId]
     );
@@ -204,53 +454,150 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
  * ────────────────────────────────────────────── */
 router.post('/absensi/clock-out', ensureKaryawan, async (req, res) => {
   try {
-    const { latitude, longitude, foto, keterangan } = req.body;
+    const { keterangan } = req.body;
     const tenant_id = req.user.tenant_id;
     const karyawan_id = req.karyawan.id;
-    const today = new Date().toISOString().slice(0, 10);
-    const nowTime = new Date().toTimeString().slice(0, 8);
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const nowTime = now.toTimeString().slice(0, 8);
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const tw = tenantWhere();
 
-    // Cari record absensi hari ini
+    // Cari record absensi PALING AKHIR yang belum clock-out
+    // Cari dari kemarin dan hari ini (untuk mengakomodasi lintas hari)
+    const { sql: tSql, params: tParams } = tw(tenant_id);
+    const kemarin = new Date(now);
+    kemarin.setDate(kemarin.getDate() - 1);
+    const kemarinStr = kemarin.toISOString().slice(0, 10);
+
     const [existing] = await db.query(
-      `SELECT id, jam_masuk, jam_keluar FROM absensi 
-       WHERE tenant_id=? AND karyawan_id=? AND tanggal=?`,
-      [tenant_id, karyawan_id, today]
+      `SELECT id, tanggal, jam_masuk, jam_keluar FROM absensi 
+       WHERE ${tSql} AND karyawan_id=? AND tanggal IN (?, ?) AND jam_masuk IS NOT NULL
+       ORDER BY tanggal DESC
+       LIMIT 1`,
+      [...tParams, karyawan_id, kemarinStr, today]
     );
 
     if (!existing.length) {
       return res.status(400).json({
-        error: 'Anda belum melakukan clock-in hari ini. Silakan clock-in terlebih dahulu.'
+        error: 'Tidak ada sesi absen yang belum clock-out. Silakan clock-in terlebih dahulu.'
       });
     }
 
     if (existing[0].jam_keluar) {
       return res.status(400).json({
-        error: 'Anda sudah melakukan clock-out hari ini',
+        error: 'Anda sudah melakukan clock-out',
         data: { id: existing[0].id, jam_keluar: existing[0].jam_keluar }
       });
     }
 
-    if (!existing[0].jam_masuk) {
-      return res.status(400).json({
-        error: 'Anda belum clock-in. Silakan clock-in terlebih dahulu.'
-      });
+    const tanggalAbsen = existing[0].tanggal;
+    const dayOfWeek = new Date(tanggalAbsen + 'T00:00:00').getDay() + 1;
+    const shift = await getEffectiveShift(req.karyawan, req.user.tenant_id, tanggalAbsen, dayOfWeek);
+
+    if (shift) {
+      const hariKerja = (shift.hari_kerja || '1,2,3,4,5,6,7').split(',').map(Number);
+      if (hariKerja.includes(dayOfWeek)) {
+        const sStart = parseTimeToMinutes(shift.jam_masuk);
+        const sEnd = parseTimeToMinutes(shift.jam_keluar);
+        const isCrossDay = sEnd <= sStart;
+
+        // Tentukan apakah sudah boleh clock-out (setelah shift end)
+        let bolehKeluar = false;
+        if (!isCrossDay) {
+          if (nowMinutes >= sEnd) bolehKeluar = true;
+        } else {
+          if (nowMinutes >= sStart || nowMinutes < sEnd) {
+            bolehKeluar = false; // masih dalam shift
+          } else {
+            bolehKeluar = true;
+          }
+        }
+
+        if (!bolehKeluar) {
+          const jamSelesai = shift.jam_keluar.slice(0,5);
+          return res.status(403).json({
+            error: 'Anda belum bisa clock-out. Shift Anda selesai pukul ' + jamSelesai + '.',
+            solusi: 'Silakan clock-out setelah jam shift selesai.'
+          });
+        }
+
+        // Cek deadline: 1 jam sebelum shift besok
+        // Shift besok = shift hari ini + 24 jam (waktu yang sama)
+        // Deadline = sStart - 60 (dalam menit, dengan wrap-around)
+        const deadline = (sStart - 60 + 1440) % 1440;
+        let lewatDeadline = false;
+
+        if (tanggalAbsen === today) {
+          // Masih hari yang sama — deadline besok pagi
+          if (nowMinutes >= deadline && nowMinutes < sStart) {
+            lewatDeadline = true;
+          }
+        } else {
+          // Besoknya — cek apakah lewat deadline
+          if (!isCrossDay) {
+            if (nowMinutes >= deadline && nowMinutes < sStart) {
+              lewatDeadline = true;
+            } else if (nowMinutes >= sStart) {
+              // Sudah masuk shift baru — lewat deadline
+              lewatDeadline = true;
+            }
+          } else {
+            // Cross-day sudah lewat
+            lewatDeadline = true;
+          }
+        }
+
+        if (lewatDeadline) {
+          return res.status(403).json({
+            error: 'Batas waktu clock-out sudah lewat (1 jam sebelum shift berikutnya).',
+            solusi: 'Hubungi admin untuk koreksi absensi.'
+          });
+        }
+
+        // Tandai "butuh koreksi" jika clock-out lebih dari 1 jam setelah shift selesai
+        const batasNormal = sEnd + 60;
+        let butuhKoreksi = false;
+        if (!isCrossDay) {
+          if (tanggalAbsen < today || nowMinutes > batasNormal) butuhKoreksi = true;
+        } else {
+          if (nowMinutes > 720) butuhKoreksi = true; // lewat jam 12:00 siang
+        }
+
+        const catatan = butuhKoreksi
+          ? (keterangan ? keterangan + ' | Butuh Koreksi' : 'Butuh Koreksi')
+          : (keterangan || null);
+
+        await db.query(
+          `UPDATE absensi SET jam_keluar=?, keterangan=?, status=?
+           WHERE id=? AND ${tSql}`,
+          [nowTime, catatan, butuhKoreksi ? 'Butuh Koreksi' : 'Hadir', existing[0].id, ...tParams]
+        );
+
+        const [updated] = await db.query(
+          `SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan
+           FROM absensi WHERE id=?`,
+          [existing[0].id]
+        );
+
+        return res.json({
+          ok: true,
+          pesan: butuhKoreksi ? 'Clock-out berhasil (Butuh Koreksi)' : 'Clock-out berhasil',
+          butuh_koreksi: butuhKoreksi,
+          data: updated[0]
+        });
+      }
     }
 
-    // Simpan foto jika ada
-    let fotoPath = null;
-    if (foto) {
-      fotoPath = saveMobilePhoto(foto, 'keluar');
-    }
-
+    // Fallback: tidak ada shift — langsung clock-out tanpa validasi
     await db.query(
-      `UPDATE absensi SET jam_keluar=?, clock_out_lat=?, clock_out_lng=?, foto_keluar=?, keterangan=?
-       WHERE id=? AND tenant_id=?`,
-      [nowTime, latitude || null, longitude || null, fotoPath, keterangan || null, existing[0].id, tenant_id]
+      `UPDATE absensi SET jam_keluar=?, keterangan=?
+       WHERE id=? AND ${tSql}`,
+      [nowTime, keterangan || null, existing[0].id, ...tParams]
     );
 
     const [updated] = await db.query(
-      `SELECT id, tanggal, status, jam_masuk, jam_keluar, latitude, longitude, 
-              clock_out_lat, clock_out_lng, foto_masuk, foto_keluar, keterangan
+      `SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan
        FROM absensi WHERE id=?`,
       [existing[0].id]
     );
@@ -258,6 +605,7 @@ router.post('/absensi/clock-out', ensureKaryawan, async (req, res) => {
     res.json({
       ok: true,
       pesan: 'Clock-out berhasil',
+      butuh_koreksi: false,
       data: updated[0]
     });
   } catch (err) {
@@ -278,9 +626,13 @@ router.get('/absensi/riwayat', ensureKaryawan, async (req, res) => {
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
     const offset = (pageNum - 1) * limitNum;
+    const twA = tenantWhere('a');
+    const twJk = tenantWhere('jk');
+    const { sql: tSql, params: tParams } = twA(req.user.tenant_id);
+    const { sql: jkSql, params: jkParams } = twJk(req.user.tenant_id);
 
-    let where = 'WHERE a.tenant_id=? AND a.karyawan_id=?';
-    const params = [req.user.tenant_id, req.karyawan.id];
+    let where = `WHERE ${tSql} AND a.karyawan_id=?`;
+    const params = [...tParams, req.karyawan.id];
 
     if (bulan && tahun) {
       where += ' AND MONTH(a.tanggal)=? AND YEAR(a.tanggal)=?';
@@ -295,18 +647,17 @@ router.get('/absensi/riwayat', ensureKaryawan, async (req, res) => {
     );
 
     const [rows] = await db.query(
-      `SELECT a.id, a.tanggal, a.status, a.jam_masuk, a.jam_keluar,
-              a.latitude, a.longitude, a.foto_masuk, a.foto_keluar, a.keterangan,
+      `SELECT a.id, a.tanggal, a.status, a.jam_masuk, a.jam_keluar, a.keterangan,
               s.nama as shift_nama, s.jam_masuk as shift_masuk, s.jam_keluar as shift_keluar
        FROM absensi a
        LEFT JOIN jadwal_karyawan jk ON jk.karyawan_id=a.karyawan_id 
-         AND jk.tenant_id=a.tenant_id 
+         AND ${jkSql}
          AND a.tanggal BETWEEN jk.tanggal_mulai AND COALESCE(jk.tanggal_selesai, a.tanggal)
        LEFT JOIN shift s ON s.id=jk.shift_id
        ${where}
        ORDER BY a.tanggal DESC, a.created_at DESC
        LIMIT ? OFFSET ?`,
-      [...params, limitNum, offset]
+      [...jkParams, ...params, limitNum, offset]
     );
 
     // Hitung statistik untuk range data yang ditampilkan
@@ -352,8 +703,10 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
     const now = new Date();
     const bulan = parseInt(req.query.bulan) || (now.getMonth() + 1);
     const tahun = parseInt(req.query.tahun) || now.getFullYear();
+    const tw = tenantWhere();
+    const { sql: tSql, params: tParams } = tw(req.user.tenant_id);
 
-    // Statistik bulan ini
+    // Statistik dari absensi yang tercatat
     const [[stats]] = await db.query(
       `SELECT 
          COUNT(*) AS total_hari,
@@ -364,10 +717,10 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
          SUM(CASE WHEN status='Alpha' THEN 1 ELSE 0 END) AS alpha,
          SUM(CASE WHEN jam_masuk IS NOT NULL THEN 1 ELSE 0 END) AS pernah_absen,
          SUM(CASE WHEN jam_masuk IS NOT NULL AND jam_keluar IS NULL THEN 1 ELSE 0 END) AS belum_clockout,
-         SUM(CASE WHEN latitude IS NOT NULL THEN 1 ELSE 0 END) AS pakai_gps
+         0 AS pakai_gps
        FROM absensi 
-       WHERE tenant_id=? AND karyawan_id=? AND MONTH(tanggal)=? AND YEAR(tanggal)=?`,
-      [req.user.tenant_id, req.karyawan.id, bulan, tahun]
+       WHERE ${tSql} AND karyawan_id=? AND MONTH(tanggal)=? AND YEAR(tanggal)=?`,
+      [...tParams, req.karyawan.id, bulan, tahun]
     );
 
     // Data chart harian untuk seluruh bulan
@@ -377,9 +730,9 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
               CASE WHEN jam_keluar IS NOT NULL THEN CONCAT('Pulang: ', TIME_FORMAT(jam_keluar, '%H:%i')) ELSE '-' END as jam_keluar_label,
               status
        FROM absensi 
-       WHERE tenant_id=? AND karyawan_id=? AND MONTH(tanggal)=? AND YEAR(tanggal)=?
+       WHERE ${tSql} AND karyawan_id=? AND MONTH(tanggal)=? AND YEAR(tanggal)=?
        ORDER BY tanggal ASC`,
-      [req.user.tenant_id, req.karyawan.id, bulan, tahun]
+      [...tParams, req.karyawan.id, bulan, tahun]
     );
 
     // Hitung jam kerja rata-rata
@@ -388,10 +741,77 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
          ROUND(AVG(TIMESTAMPDIFF(MINUTE, jam_masuk, jam_keluar) / 60), 1), 0
        ) AS rata_rata_jam
        FROM absensi 
-       WHERE tenant_id=? AND karyawan_id=? AND MONTH(tanggal)=? AND YEAR(tanggal)=?
+       WHERE ${tSql} AND karyawan_id=? AND MONTH(tanggal)=? AND YEAR(tanggal)=?
          AND jam_masuk IS NOT NULL AND jam_keluar IS NOT NULL`,
-      [req.user.tenant_id, req.karyawan.id, bulan, tahun]
+      [...tParams, req.karyawan.id, bulan, tahun]
     );
+
+    // Hitung hari kerja seharusnya (expected) dan bolos
+    let expected_hari = 0;
+    let bolos = 0;
+
+    // Ambil tanggal_masuk karyawan
+    const [[karyawanRow]] = await db.query(
+      'SELECT tanggal_masuk FROM karyawan WHERE id=?', [req.karyawan.id]
+    );
+    const tglMasuk = karyawanRow?.tanggal_masuk || null;
+
+    // Cari shift efektif — coba beberapa sampel tanggal (1, 15, akhir bulan)
+    // supaya tidak terlewat kalau jadwal mulai/selesai di luar tanggal 15
+    const daysInMonth = new Date(tahun, bulan, 0).getDate();
+    const sampleDates = [1, 15, daysInMonth];
+    let shift = null;
+    for (const d of sampleDates) {
+      const dateStr = `${tahun}-${String(bulan).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dow = new Date(tahun, bulan - 1, d).getDay() + 1;
+      shift = await getEffectiveShift(req.karyawan, req.user.tenant_id, dateStr, dow);
+      if (shift) break;
+    }
+
+    if (shift) {
+      const awalBulan = `${tahun}-${String(bulan).padStart(2,'0')}-01`;
+      const hariIni = now.toISOString().slice(0, 10);
+
+      // Tentukan tanggal mulai efektif:
+      // 1) Pakai tanggal_masuk jika ada
+      // 2) Jika null, cek apakah pernah absen sebelumnya (berarti karyawan sudah aktif)
+      // 3) Jika tidak pernah absen sama sekali → skip (mungkin baru)
+      let tglMulaiEfektif = null;
+
+      if (tglMasuk) {
+        tglMulaiEfektif = tglMasuk > awalBulan ? tglMasuk : awalBulan;
+      } else {
+        const [[{ pernahAbsen }]] = await db.query(
+          'SELECT COUNT(*) AS pernahAbsen FROM absensi WHERE karyawan_id=?',
+          [req.karyawan.id]
+        );
+        if (pernahAbsen > 0) {
+          // Karyawan sudah pernah absen — hitung dari awal bulan
+          tglMulaiEfektif = awalBulan;
+        }
+        // else: tidak pernah absen, skip bolos
+      }
+
+      if (tglMulaiEfektif) {
+        // Batasi akhir hitungan: min(shift.tanggal_selesai, hari ini)
+        const tglSelesai = shift.tanggal_selesai && shift.tanggal_selesai < hariIni
+          ? shift.tanggal_selesai : hariIni;
+
+        expected_hari = countWorkDays(
+          bulan, tahun,
+          shift.hari_kerja || '1,2,3,4,5,6',
+          tglMulaiEfektif,
+          tglSelesai
+        );
+        const realHadir = Number(stats?.hadir || 0) + Number(stats?.sakit || 0)
+          + Number(stats?.izin || 0) + Number(stats?.cuti || 0);
+        bolos = Math.max(0, expected_hari - realHadir);
+      }
+    }
+
+    // Gabungkan alpha dari DB dengan bolos kalkulasi
+    const alphaDb = Number(stats?.alpha || 0);
+    const alphaFinal = Math.max(alphaDb, bolos);
 
     res.json({
       periode: `${bulan}/${tahun}`,
@@ -399,11 +819,13 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
       tahun,
       statistik: {
         total_hari: Number(stats?.total_hari || 0),
+        expected_hari,
         hadir: Number(stats?.hadir || 0),
         sakit: Number(stats?.sakit || 0),
         izin: Number(stats?.izin || 0),
         cuti: Number(stats?.cuti || 0),
-        alpha: Number(stats?.alpha || 0),
+        alpha: alphaFinal,
+        bolos,
         belum_clockout: Number(stats?.belum_clockout || 0),
         pakai_gps: Number(stats?.pakai_gps || 0)
       },
@@ -427,22 +849,11 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
 router.get('/absensi/shift-saya', ensureKaryawan, async (req, res) => {
   try {
     const today = new Date().toISOString().slice(0, 10);
-    const dayOfWeek = new Date().getDay() + 1; // MySQL DAYOFWEEK: 1=Sunday, 7=Saturday
+    const dayOfWeek = new Date().getDay() + 1;
 
-    const [rows] = await db.query(
-      `SELECT s.id, s.nama, s.jam_masuk, s.jam_keluar, s.warna,
-              jk.tanggal_mulai, jk.tanggal_selesai, jk.hari_kerja
-       FROM jadwal_karyawan jk
-       JOIN shift s ON s.id=jk.shift_id
-       WHERE jk.tenant_id=? AND jk.karyawan_id=?
-         AND jk.tanggal_mulai <= ?
-         AND (jk.tanggal_selesai IS NULL OR jk.tanggal_selesai >= ?)
-       ORDER BY jk.tanggal_mulai DESC
-       LIMIT 1`,
-      [req.user.tenant_id, req.karyawan.id, today, today]
-    );
+    const shift = await getEffectiveShift(req.karyawan, req.user.tenant_id, today, dayOfWeek);
 
-    if (!rows.length) {
+    if (!shift) {
       return res.json({
         ada_shift: false,
         pesan: 'Tidak ada shift untuk hari ini',
@@ -450,12 +861,10 @@ router.get('/absensi/shift-saya', ensureKaryawan, async (req, res) => {
       });
     }
 
-    const shift = rows[0];
-    // Cek apakah hari ini termasuk hari kerja
     const hariKerja = (shift.hari_kerja || '1,2,3,4,5,6,7').split(',').map(Number);
     const isTodayWorkDay = hariKerja.includes(dayOfWeek);
 
-    res.json({
+    return res.json({
       ada_shift: true,
       hari_kerja_hari_ini: isTodayWorkDay,
       data: {
@@ -465,7 +874,8 @@ router.get('/absensi/shift-saya', ensureKaryawan, async (req, res) => {
         jam_keluar: shift.jam_keluar,
         warna: shift.warna,
         tanggal_mulai: shift.tanggal_mulai,
-        tanggal_selesai: shift.tanggal_selesai
+        tanggal_selesai: shift.tanggal_selesai,
+        sumber: shift.sumber
       }
     });
   } catch (err) {
@@ -479,18 +889,27 @@ router.get('/absensi/shift-saya', ensureKaryawan, async (req, res) => {
  * ────────────────────────────────────────────── */
 router.get('/profile', ensureKaryawan, async (req, res) => {
   try {
+    const tw = tenantWhere('k');
+    const { sql: tenantSql, params: tenantParams } = tw(req.user.tenant_id);
+    console.log('🔐 [Profile] 📋 Mengambil profil karyawan — id:', req.karyawan.id, '| tenant_sql:', tenantSql, '| params:', tenantParams);
+
     const [rows] = await db.query(
       `SELECT k.id, k.nama, k.nik, k.departemen, k.email, k.phone, k.photo, k.status,
               k.tanggal_masuk, k.address, j.name as jabatan
        FROM karyawan k
        LEFT JOIN jabatan j ON j.id=k.jabatan_id
-       WHERE k.id=? AND k.tenant_id=?`,
-      [req.karyawan.id, req.user.tenant_id]
+       WHERE k.id=? AND ${tenantSql}`,
+      [req.karyawan.id, ...tenantParams]
     );
 
+    console.log('🔐 [Profile] 📊 Hasil query profil — ditemukan:', rows.length, 'data:', JSON.stringify(rows[0] || null));
+
     if (!rows.length) {
+      console.log('🔐 [Profile] ❌ GAGAL — Karyawan ID:', req.karyawan.id, 'tidak ditemukan');
       return res.status(404).json({ error: 'Karyawan tidak ditemukan' });
     }
+
+    console.log('🔐 [Profile] ✅ Profil berhasil di-load —', rows[0].nama, '|', rows[0].jabatan, '|', rows[0].departemen);
 
     res.json({
       data: rows[0],
@@ -502,30 +921,37 @@ router.get('/profile', ensureKaryawan, async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Mobile profile error:', err);
+    console.error('🔐 [Profile] 💥 ERROR —', err.message);
     res.status(500).json({ error: 'Gagal memuat profil' });
   }
 });
 
 /* ──────────────────────────────────────────────
- * Helper: simpan foto dari base64
+ * POST /api/mobile/ijin-cuti — Self-service ijin/cuti
+ * Karyawan mengajukan ijin/cuti untuk dirinya sendiri
+ * Body: { jenis, tanggal_mulai, tanggal_selesai?, alasan?, dokumen? }
  * ────────────────────────────────────────────── */
-function saveMobilePhoto(base64Data, prefix = 'masuk') {
-  if (!base64Data || !base64Data.startsWith('data:image')) return null;
+router.post('/ijin-cuti', ensureKaryawan, async (req, res) => {
   try {
-    const matches = base64Data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);
-    if (!matches) return null;
-    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-    const buffer = Buffer.from(matches[2], 'base64');
-    const filename = `mobile_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const dir = path.join(__dirname, '..', 'public', 'uploads', 'absensi');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, filename), buffer);
-    return '/uploads/absensi/' + filename;
+    const { jenis, tanggal_mulai, tanggal_selesai, alasan, dokumen } = req.body;
+    if (!jenis) return res.status(400).json({ error: 'Jenis wajib dipilih' });
+    if (!tanggal_mulai) return res.status(400).json({ error: 'Tanggal mulai wajib diisi' });
+
+    const [r] = await db.query(
+      `INSERT INTO ijin_cuti (tenant_id, karyawan_id, jenis, tanggal_mulai, tanggal_selesai, alasan, dokumen, status) 
+       VALUES (?,?,?,?,?,?,?,'Menunggu')`,
+      [req.user.tenant_id, req.karyawan.id, jenis, tanggal_mulai, tanggal_selesai || null, alasan || null, dokumen || null]
+    );
+
+    res.json({
+      ok: true,
+      pesan: 'Pengajuan ijin/cuti berhasil dikirim',
+      id: r.insertId
+    });
   } catch (err) {
-    console.error('Gagal simpan foto absensi:', err.message);
-    return null;
+    console.error('Mobile ijin-cuti error:', err);
+    res.status(500).json({ error: 'Gagal mengajukan: ' + err.message });
   }
-}
+});
 
 module.exports = router;

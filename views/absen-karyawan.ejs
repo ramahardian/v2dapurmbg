@@ -3,421 +3,752 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Absen Karyawan — Dapur Sukaluyu</title>
+  <title>Dashboard Absen — Dapur Sukaluyu</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'IBM Plex Sans', sans-serif; }
-    h1,h2,h3 { font-family: 'Plus Jakarta Sans', sans-serif; }
-    .bg-pastel-header { background: linear-gradient(135deg, #f8e8f0 0%, #f3e8f5 50%, #e8edf8 100%); }
-    .btn-absen { transition: all 0.2s; }
-    .btn-absen:active { transform: scale(0.96); }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f1f5f9;
+      min-height: 100vh;
+      padding-bottom: 2rem;
+      color: #1e293b;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+    }
+    .header-bar {
+      background: #1e293b;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 1.25rem; height: 1.25rem;
+      border: 2px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    .skeleton {
+      background: #e2e8f0;
+      border-radius: 0.5rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .badge-hadir { background: #dcfce7; color: #166534; }
+    .badge-sakit { background: #fef9c3; color: #854d0e; }
+    .badge-izin { background: #dbeafe; color: #1e40af; }
+    .badge-cuti { background: #f3e8ff; color: #6b21a8; }
+    .badge-alpha { background: #fee2e2; color: #991b1b; }
+    .badge-terlambat { background: #ffedd5; color: #9a3412; }
+    .badge-koreksi { background: #fce7f3; color: #9d174d; }
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 600; font-size: 0.875rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 0.15s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+    .btn-primary:active:not(:disabled) { background: #1e40af; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-success:hover:not(:disabled) { background: #15803d; }
+    .btn-outline { background: #fff; color: #64748b; border-color: #e2e8f0; }
+    .btn-outline:hover:not(:disabled) { background: #f8fafc; }
+    .bar { height: 0.5rem; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
+    @media (max-width: 480px) {
+      body { padding-bottom: 1rem; }
+    }
   </style>
 </head>
-<body class="min-h-screen bg-[#f5f0f7]">
+<body>
   <!-- Header -->
-  <header class="bg-pastel-header border-b border-pink-200/40">
-    <div class="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl overflow-hidden bg-white/70 flex items-center justify-center shrink-0 shadow-sm">
-          <img src="/asset/logo.png" alt="" class="w-full h-full object-contain p-1" />
-        </div>
-        <div>
-          <div class="text-xs text-stone-400">Absen Karyawan</div>
-          <div class="font-semibold text-sm text-stone-700" id="nama-karyawan">—</div>
+  <header class="header-bar">
+    <div class="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center shrink-0" id="avatar-container">
+        <img id="profile-photo" src="" alt="" class="w-full h-full object-cover rounded-lg hidden" onerror="this.classList.add('hidden')" />
+        <div id="avatar-placeholder" class="w-full h-full flex items-center justify-center">
+          <svg class="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg>
         </div>
       </div>
-      <button id="btn-logout" class="text-stone-400 hover:text-stone-600 transition p-2" title="Keluar">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      </button>
+      <div class="flex-1 min-w-0">
+        <div class="font-bold text-white text-sm truncate" id="nama-karyawan">—</div>
+        <div class="flex items-center gap-2 mt-0.5">
+          <span class="text-amber-300 text-[0.65rem] font-medium" id="jabatan-karyawan"></span>
+          <span class="text-white/20">·</span>
+          <span class="text-white/40 text-[0.65rem]" id="nik-karyawan"></span>
+        </div>
+      </div>
+      <div class="flex items-center gap-1">
+        <button id="btn-refresh" class="p-2 text-white/40 hover:text-white/80 transition rounded-lg hover:bg-white/10" title="Refresh">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:1.125rem;height:1.125rem"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        </button>
+        <button id="btn-logout" class="p-2 text-white/40 hover:text-red-300 transition rounded-lg hover:bg-white/10" title="Keluar">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:1.125rem;height:1.125rem"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
     </div>
   </header>
 
-  <main class="max-w-lg mx-auto px-4 py-6 pb-24 space-y-5">
-    <!-- Jam Real-time -->
-    <div class="rounded-2xl p-6 text-center text-stone-700 bg-gradient-to-br from-pink-200 via-pink-100 to-purple-200 shadow-md">
-      <div class="text-5xl font-bold tracking-wider font-mono text-stone-700" id="clock-display">--:--:--</div>
-      <div class="text-stone-500 text-sm mt-1" id="date-display">—</div>
-    </div>
+  <main class="max-w-lg mx-auto px-4 pt-4 space-y-3 pb-20">
 
-    <!-- Status Absensi -->
-    <div class="bg-white/80 backdrop-blur rounded-2xl shadow-sm border border-pink-200/50 p-5" id="status-card">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="font-bold text-stone-700">Status Hari Ini</h2>
-        <span class="text-xs text-stone-400" id="tanggal-hari-ini"></span>
-      </div>
-      <div id="status-content" class="space-y-3">
-        <div class="flex items-center justify-center py-4 text-stone-400">
-          <svg class="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-          Memuat status...
+    <!-- ─── Clock & Greeting ─── -->
+    <div class="card p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="text-slate-500 text-[0.65rem] uppercase tracking-wider font-medium" id="greeting-text">Selamat Datang</div>
+          <div class="text-3xl font-bold text-slate-800 tracking-widest font-mono mt-0.5" id="clock-display">--:--:--</div>
+          <div class="text-slate-400 text-xs mt-1" id="date-display">—</div>
+        </div>
+        <div class="text-right">
+          <div class="text-slate-400 text-[0.6rem] uppercase tracking-wider" id="network-status">● Online</div>
         </div>
       </div>
     </div>
 
-    <!-- Tombol Absen -->
-    <div class="grid grid-cols-2 gap-3" id="absen-buttons">
-      <button id="btn-clock-in" class="btn-absen relative overflow-hidden h-28 rounded-2xl shadow-md border-2 border-transparent bg-white/80 flex flex-col items-center justify-center gap-1 font-semibold text-stone-400 cursor-not-allowed" disabled>
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span class="text-sm">Clock In</span>
-      </button>
-      <button id="btn-clock-out" class="btn-absen relative overflow-hidden h-28 rounded-2xl shadow-md border-2 border-transparent bg-white/80 flex flex-col items-center justify-center gap-1 font-semibold text-stone-400 cursor-not-allowed" disabled>
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span class="text-sm">Clock Out</span>
-      </button>
-    </div>
-
-    <!-- Riwayat Singkat -->
-    <div class="bg-white/80 backdrop-blur rounded-2xl shadow-sm border border-pink-200/50 p-5">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="font-bold text-stone-700">Riwayat Absen</h2>
-        <button id="btn-lihat-semua" class="text-xs text-pink-500 hover:text-pink-600 font-medium hidden">Lihat Semua</button>
+    <!-- ─── Shift Info ─── -->
+    <div id="shift-card" class="card p-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-slate-500 text-[0.6rem] uppercase tracking-wider font-medium">Shift Hari Ini</div>
+          <div class="text-slate-800 font-semibold text-sm" id="shift-nama">—</div>
+        </div>
+        <div class="text-right">
+          <div class="text-slate-700 text-sm font-mono font-semibold" id="shift-jam">--:--</div>
+          <div class="text-slate-400 text-[0.6rem] uppercase tracking-wider" id="shift-jam-label">—</div>
+        </div>
       </div>
-      <div id="riwayat-content">
-        <div class="flex items-center justify-center py-4 text-stone-400 text-sm">
-          <svg class="w-4 h-4 animate-spin mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-          Memuat...
+      <div id="shift-progress-wrap" class="mt-3">
+        <div class="bar">
+          <div id="shift-progress" class="bar-fill bg-amber-500" style="width:0%"></div>
+        </div>
+        <div class="flex justify-between text-[0.6rem] text-slate-400 mt-1">
+          <span id="shift-label-masuk">Mulai</span>
+          <span id="shift-status-text" class="text-slate-500">—</span>
+          <span id="shift-label-keluar">Selesai</span>
         </div>
       </div>
     </div>
+
+    <!-- ─── Status Absensi ─── -->
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-slate-800 font-bold text-sm">Status Hari Ini</h2>
+        <span class="text-slate-400 text-[0.65rem]" id="tanggal-hari-ini"></span>
+      </div>
+      <div id="status-skeleton" class="space-y-3">
+        <div class="skeleton h-20 w-full"></div>
+      </div>
+      <div id="status-content" class="hidden space-y-3"></div>
+    </div>
+
+    <!-- ─── Tombol Absen ─── -->
+    <div id="absen-buttons" class="grid grid-cols-2 gap-3">
+      <button id="btn-clock-in" class="h-16 btn btn-outline text-slate-400" disabled>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Clock In</span>
+      </button>
+      <button id="btn-clock-out" class="h-16 btn btn-outline text-slate-400" disabled>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Clock Out</span>
+      </button>
+    </div>
+
+    <!-- ─── Statistik Bulanan ─── -->
+    <div class="card p-4 hidden" id="statistik-card">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-slate-800 font-bold text-sm">Ringkasan Bulan Ini</h2>
+        <span class="text-slate-400 text-[0.6rem] uppercase tracking-wider" id="statistik-periode"></span>
+      </div>
+      <div id="statistik-skeleton" class="space-y-3">
+        <div class="skeleton h-16 w-full"></div>
+        <div class="skeleton h-8 w-full"></div>
+      </div>
+      <div id="statistik-content" class="hidden">
+        <div class="flex items-center justify-between text-[0.6rem] text-slate-400 mb-2 pb-2 border-b border-slate-100">
+          <span>Target hari kerja bulan ini</span>
+          <span class="font-semibold text-slate-600" id="stat-label-expected">—</span>
+        </div>
+        <div class="space-y-2 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-emerald-600 text-[0.6rem] font-semibold w-10">Hadir</span>
+            <div class="bar flex-1"><div id="stat-hadir-bar" class="bar-fill bg-emerald-500" style="width:0%"></div></div>
+            <span class="text-slate-600 text-xs font-mono w-8 text-right" id="stat-hadir-val">0</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-yellow-600 text-[0.6rem] font-semibold w-10">Sakit</span>
+            <div class="bar flex-1"><div id="stat-sakit-bar" class="bar-fill bg-yellow-500" style="width:0%"></div></div>
+            <span class="text-slate-600 text-xs font-mono w-8 text-right" id="stat-sakit-val">0</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-blue-600 text-[0.6rem] font-semibold w-10">Izin</span>
+            <div class="bar flex-1"><div id="stat-izin-bar" class="bar-fill bg-blue-500" style="width:0%"></div></div>
+            <span class="text-slate-600 text-xs font-mono w-8 text-right" id="stat-izin-val">0</span>
+          </div>
+          <div id="stat-alpha-row" class="flex items-center gap-2">
+            <span class="text-orange-600 text-[0.6rem] font-semibold w-10">Alpha</span>
+            <div class="bar flex-1"><div id="stat-alpha-bar" class="bar-fill bg-orange-500" style="width:0%"></div></div>
+            <span class="text-slate-600 text-xs font-mono w-8 text-right" id="stat-alpha-val">0</span>
+          </div>
+          <div id="stat-bolos-row" class="flex items-center gap-2 hidden">
+            <span class="text-red-600 text-[0.6rem] font-semibold w-10">Bolos</span>
+            <div class="bar flex-1"><div id="stat-bolos-bar" class="bar-fill bg-red-500" style="width:0%"></div></div>
+            <span class="text-slate-600 text-xs font-mono w-8 text-right" id="stat-bolos-val">0</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-3">
+          <div>
+            <div class="text-slate-500 text-[0.6rem] uppercase tracking-wider font-medium">Rata-rata Jam Kerja</div>
+            <div class="text-slate-800 font-bold text-lg" id="stat-rata-jam">0</div>
+          </div>
+          <div class="relative w-14 h-14">
+            <svg class="w-14 h-14 -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e2e8f0" stroke-width="2.5"/>
+              <circle id="stat-ring" cx="18" cy="18" r="15.5" fill="none" stroke="#2563eb" stroke-width="2.5"
+                stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="97.4" style="transition:stroke-dashoffset 0.8s ease;transform:rotate(-90deg);transform-origin:50% 50%"/>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center text-slate-500 text-[0.5rem] font-semibold">jam</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Riwayat Absen ─── -->
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-1">
+        <h2 class="text-slate-800 font-bold text-sm">Riwayat Absen</h2>
+        <button id="btn-lihat-semua" class="text-blue-600/70 hover:text-blue-600 text-[0.65rem] font-medium transition hidden">Lihat Semua</button>
+      </div>
+      <div id="riwayat-skeleton" class="space-y-2 pt-2">
+        <div class="skeleton h-10 w-full"></div>
+        <div class="skeleton h-10 w-full"></div>
+        <div class="skeleton h-10 w-full"></div>
+      </div>
+      <div id="riwayat-content" class="hidden pt-1"></div>
+    </div>
+
   </main>
 
-  <!-- Modal Konfirmasi -->
-  <div id="modal-overlay" class="fixed inset-0 bg-black/30 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white/95 backdrop-blur rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-      <div class="text-center">
-        <div id="modal-icon" class="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center"></div>
-        <h3 class="font-bold text-lg text-stone-700" id="modal-title">Konfirmasi</h3>
-        <p class="text-sm text-stone-500 mt-1" id="modal-desc">Apakah Anda yakin?</p>
+  <!-- ─── Modal Profil Karyawan ─── -->
+  <div id="profile-modal" class="fixed inset-0 bg-black/30 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
+      <!-- Header -->
+      <div class="sticky top-0 bg-white z-10 px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="font-bold text-base text-slate-800">Profil Karyawan</h3>
+        <button onclick="closeProfileModal()" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
-      <div id="modal-location" class="hidden text-xs text-stone-500 bg-pink-50 rounded-lg p-3 flex items-center gap-2">
-        <svg class="w-3.5 h-3.5 shrink-0 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      
+      <div class="p-5 space-y-5">
+        <!-- Info Karyawan -->
+        <div class="flex items-center gap-4">
+          <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden" id="profile-modal-avatar">
+            <img id="profile-modal-photo" src="" alt="" class="w-full h-full object-cover hidden" />
+            <div id="profile-modal-placeholder" class="w-full h-full flex items-center justify-center">
+              <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg>
+            </div>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="font-bold text-lg text-slate-800 truncate" id="profile-modal-nama">—</div>
+            <div class="text-xs text-slate-500 mt-0.5">NIK <span id="profile-modal-nik">—</span></div>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-xs font-medium text-amber-600" id="profile-modal-jabatan"></span>
+              <span class="text-xs text-slate-300">·</span>
+              <span class="text-xs text-slate-500" id="profile-modal-departemen"></span>
+            </div>
+            <div class="text-xs text-slate-400 mt-0.5" id="profile-modal-phone"></div>
+          </div>
+        </div>
+
+        <hr class="border-slate-100" />
+
+        <!-- ── Ijin/Cuti Form ── -->
+        <div>
+          <h4 class="font-semibold text-sm text-slate-700 mb-3">Ajukan Ijin / Cuti</h4>
+          <form id="cuti-form-profil" class="space-y-3" onsubmit="return false;">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-slate-600 font-medium">Jenis <span class="text-red-500">*</span></label>
+                <select id="cuti-jenis" onchange="toggleDokumenProfil()" class="mt-1 w-full h-10 px-3 border border-slate-200 rounded-lg text-sm">
+                  <option value="Izin">Izin</option>
+                  <option value="Cuti">Cuti</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs text-slate-600 font-medium">Tanggal Mulai <span class="text-red-500">*</span></label>
+                <input id="cuti-tanggal-mulai" type="date" class="mt-1 w-full h-10 px-3 border border-slate-200 rounded-lg text-sm" />
+              </div>
+            </div>
+            <div>
+              <label class="text-xs text-slate-600 font-medium">Tanggal Selesai</label>
+              <input id="cuti-tanggal-selesai" type="date" class="mt-1 w-full h-10 px-3 border border-slate-200 rounded-lg text-sm" />
+            </div>
+            <div id="cuti-dokumen-wrap-profil">
+              <label class="text-xs text-slate-600 font-medium">Upload Dokumen</label>
+              <p class="text-[11px] text-slate-400 mt-0.5">Surat sakit / izin (opsional, maks 2MB)</p>
+              <div class="flex items-center gap-2 mt-1">
+                <button type="button" onclick="document.getElementById('cuti-dokumen-input').click()" class="px-3 py-1.5 text-xs border border-slate-300 rounded-lg hover:bg-slate-50">Pilih File</button>
+                <span id="cuti-dokumen-name" class="text-xs text-slate-500 truncate"></span>
+                <input type="file" id="cuti-dokumen-input" accept=".pdf,.jpg,.jpeg,.png" class="hidden" onchange="previewDokumenProfil(this)" />
+                <input type="hidden" id="cuti-dokumen" value="" />
+                <button type="button" id="cuti-dokumen-hapus" onclick="hapusDokumenProfil()" class="hidden text-xs text-red-500 hover:text-red-700">Hapus</button>
+              </div>
+            </div>
+            <div>
+              <label class="text-xs text-slate-600 font-medium">Alasan</label>
+              <textarea id="cuti-alasan" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" rows="2" placeholder="Alasan izin/cuti..."></textarea>
+            </div>
+            <button type="button" onclick="submitCutiProfil()" class="w-full h-11 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14"/></svg>
+              Ajukan Ijin/Cuti
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Modal Konfirmasi ─── -->
+  <div id="modal-overlay" class="fixed inset-0 bg-black/30 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-sm p-6 space-y-5 shadow-xl">
+      <div class="text-center">
+        <div id="modal-icon" class="w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center bg-amber-100">
+          <svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3 class="font-bold text-lg text-slate-800" id="modal-title">Konfirmasi</h3>
+        <p class="text-slate-500 text-sm mt-1" id="modal-desc">Apakah Anda yakin?</p>
+      </div>
+      <div id="modal-location" class="hidden text-xs text-slate-500 bg-slate-50 rounded-lg p-3 flex items-center gap-2.5">
+        <div class="spinner shrink-0" style="width:1rem;height:1rem"></div>
         <span id="modal-location-text">Mendapatkan lokasi...</span>
       </div>
       <div class="flex gap-3">
-        <button id="modal-batal" class="flex-1 h-11 border border-stone-200 rounded-xl text-stone-500 font-medium text-sm hover:bg-stone-50 transition">Batal</button>
-        <button id="modal-ya" class="flex-1 h-11 rounded-xl font-medium text-sm transition shadow-md">Ya, Absen!</button>
+        <button id="modal-batal" class="flex-1 h-11 btn btn-outline">Batal</button>
+        <button id="modal-ya" class="flex-1 h-11 btn btn-primary">Ya, Absen!</button>
       </div>
     </div>
   </div>
 
-  <!-- Toast -->
-  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden">
-    <div class="bg-stone-700 text-white text-sm px-5 py-3 rounded-xl shadow-xl flex items-center gap-2">
-      <span id="toast-icon"></span>
-      <span id="toast-text"></span>
-    </div>
-  </div>
+  <!-- ─── Toast Container ─── -->
+  <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none" id="toast-container"></div>
 
   <script>
-    // ─── State ───
-    let karyawanData = null;
-    let absenStatus = null;
-    let currentLocation = null;
+    let karyawanData = null, absenStatus = null, currentLocation = null, rekapData = null, riwayatExpanded = false;
 
-    // ─── Helper ───
-    function formatTime(t) { if (!t) return '—'; const p = t.split(':'); return p[0]+':'+p[1]; }
-    function formatDate(d) {
-      const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-      const dd = new Date(d + 'T00:00:00');
-      return dd.getDate() + ' ' + months[dd.getMonth()] + ' ' + dd.getFullYear();
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
     }
+    function fmt(t) { if (!t) return '—'; const p = t.split(':'); return p[0]+':'+p[1]; }
+    function fmtFull(t) { if (!t) return '—'; const p = t.split(':'); return p[0]+':'+p[1]+':'+(p[2]||'00'); }
+    function toMin(t) { if (!t) return 0; const p = t.split(':'); return +p[0]*60+ +p[1]; }
+    function parseDate(d) {
+      if (!d) return null;
+      const ds = d.includes('T') ? d : d+'T00:00:00';
+      const dd = new Date(ds);
+      return isNaN(dd.getTime()) ? null : dd;
+    }
+    function fmtDate(d) { const dd = parseDate(d); if (!dd) return '—'; const m = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']; return dd.getDate()+' '+m[dd.getMonth()]; }
+    function fmtDateFull(d) { const dd = parseDate(d); if (!dd) return '—'; const m = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']; return dd.getDate()+' '+m[dd.getMonth()]+' '+dd.getFullYear(); }
 
     function showToast(msg, type) {
-      const t = document.getElementById('toast');
-      const icon = document.getElementById('toast-icon');
-      const text = document.getElementById('toast-text');
-      icon.innerHTML = type === 'success'
-        ? '<svg class="w-4 h-4 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
-        : '<svg class="w-4 h-4 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
-      text.textContent = msg;
-      t.classList.remove('hidden');
-      setTimeout(() => t.classList.add('hidden'), 3000);
+      const c = document.getElementById('toast-container');
+      const t = document.createElement('div');
+      t.className = 'pointer-events-auto bg-white border border-slate-200 text-slate-800 px-4 py-2.5 rounded-lg text-sm flex items-center gap-2.5 shadow-lg transform translate-y-2 opacity-0 transition-all duration-300 max-w-[90vw] '+(type==='error'?'border-red-200 bg-red-50 text-red-700':'border-emerald-200 bg-emerald-50 text-emerald-700');
+      t.innerHTML = (type==='error'
+        ? '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+        : '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>')
+        + '<span>'+escapeHtml(msg)+'</span>';
+      c.appendChild(t);
+      requestAnimationFrame(() => { t.classList.remove('translate-y-2','opacity-0'); });
+      setTimeout(() => { t.classList.add('translate-y-2','opacity-0'); setTimeout(() => t.remove(), 300); }, 3000);
     }
 
-    // ─── Jam Real-time ───
+    // Clock
     function updateClock() {
-      const now = new Date();
-      document.getElementById('clock-display').textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-      const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      document.getElementById('date-display').textContent = now.toLocaleDateString('id-ID', opts);
-      document.getElementById('tanggal-hari-ini').textContent = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' });
+      const n = new Date();
+      document.getElementById('clock-display').textContent = n.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      document.getElementById('date-display').textContent = n.toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+      document.getElementById('tanggal-hari-ini').textContent = n.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'short'});
+      const h = n.getHours();
+      let g = 'Selamat Malam';
+      if (h>=4&&h<11) g='Selamat Pagi'; else if (h>=11&&h<15) g='Selamat Siang'; else if (h>=15&&h<18) g='Selamat Sore';
+      document.getElementById('greeting-text').textContent = g;
     }
-    updateClock();
-    setInterval(updateClock, 1000);
+    updateClock(); setInterval(updateClock, 1000);
 
-    // ─── Dapatkan Lokasi ───
+    // Network
+    if (navigator.onLine !== undefined) {
+      const u = () => { const e=document.getElementById('network-status'); e.textContent=navigator.onLine?'● Online':'○ Offline'; e.style.color=navigator.onLine?'#16a34a':'#dc2626'; };
+      window.addEventListener('online',u); window.addEventListener('offline',u); u();
+    }
+
+    // Location
     function getLocation() {
-      return new Promise((resolve) => {
-        if (!navigator.geolocation) return resolve(null);
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          () => resolve(null),
-          { enableHighAccuracy: true, timeout: 10000 }
-        );
+      return new Promise(r => {
+        if (!navigator.geolocation) return r(null);
+        navigator.geolocation.getCurrentPosition(p=>r({lat:p.coords.latitude,lng:p.coords.longitude}),()=>r(null),{enableHighAccuracy:true,timeout:8000,maximumAge:30000});
       });
     }
 
-    // ─── Load Data ───
-    async function loadStatus() {
+    // Load All
+    async function loadAll() {
       try {
-        // Load profile
-        const pRes = await fetch('/api/mobile/profile?_=' + Date.now());
+        const pRes = await fetch('/api/mobile/profile?_='+Date.now());
         if (!pRes.ok) {
-          const pText = await pRes.text();
-          let pErr;
-          try { pErr = JSON.parse(pText); } catch (e) { pErr = {}; }
-          document.getElementById('status-content').innerHTML = '<div class="text-center py-4 text-red-400 text-sm">' + (pErr.error || pErr.solusi || 'Error ' + pRes.status) + '</div>';
-          if (pRes.status === 401) setTimeout(() => { window.location.href = '/absen'; }, 1500);
+          if (pRes.status===401) { showToast('Sesi habis, silakan login ulang','error'); setTimeout(()=>{window.location.href='/absen'},1500); }
+          else { const pErr=await pRes.json().catch(()=>({})); showSkeleton('status',false); showSkeleton('statistik',false); showSkeleton('riwayat',false); showToast(pErr.error||'Gagal memuat profil','error'); }
           return;
         }
-        const pText = await pRes.text();
-        let pData;
-        try { pData = JSON.parse(pText); } catch (e) {
-          document.getElementById('status-content').innerHTML = '<div class="text-center py-4 text-red-400 text-sm">Profil: ' + pText.substring(0, 120) + '</div>';
-          return;
-        }
+        const pData = await pRes.json();
         karyawanData = pData.data;
         document.getElementById('nama-karyawan').textContent = karyawanData.nama;
+        document.getElementById('jabatan-karyawan').textContent = karyawanData.jabatan || '—';
+        document.getElementById('nik-karyawan').textContent = 'NIK ' + (karyawanData.nik || '—');
+        const ph = document.getElementById('profile-photo');
+        if (karyawanData.photo) { ph.src=karyawanData.photo; ph.classList.remove('hidden'); document.getElementById('avatar-placeholder').classList.add('hidden'); }
 
-        // Load status
-        const sRes = await fetch('/api/mobile/absensi/status?_=' + Date.now());
-        if (!sRes.ok) {
-          const sText = await sRes.text();
-          let sErr;
-          try { sErr = JSON.parse(sText); } catch (e) { sErr = {}; }
-          document.getElementById('status-content').innerHTML = '<div class="text-center py-4 text-red-400 text-sm">' + (sErr.error || 'Error ' + sRes.status) + '</div>';
-          return;
-        }
-        const sText = await sRes.text();
-        let sData;
-        try { sData = JSON.parse(sText); } catch (e) {
-          document.getElementById('status-content').innerHTML = '<div class="text-center py-4 text-red-400 text-sm">Respons status: ' + sText.substring(0, 120) + '</div>';
-          console.error('Status response text:', sText);
-          return;
-        }
-        absenStatus = sData;
-
-        renderStatus(sData);
-        renderButtons(sData);
-
-        // Load riwayat
-        const rRes = await fetch('/api/mobile/absensi/riwayat?limit=10&_=' + Date.now());
-        if (rRes.ok) {
-          const rData = await rRes.json();
-          renderRiwayat(rData);
-        } else {
-          document.getElementById('riwayat-content').innerHTML = '<div class="text-center py-4 text-stone-400 text-sm">Gagal memuat riwayat</div>';
-        }
-      } catch (ex) {
-        console.error('Load error:', ex);
-        document.getElementById('status-content').innerHTML = '<div class="text-center py-4 text-red-400 text-sm">Error: ' + ex.message + '</div>';
-      }
+        const [statusRes,rekapRes,shiftRes,riwayatRes] = await Promise.all([
+          fetch('/api/mobile/absensi/status?_='+Date.now()),
+          fetch('/api/mobile/absensi/rekap?_='+Date.now()),
+          fetch('/api/mobile/absensi/shift-saya?_='+Date.now()),
+          fetch('/api/mobile/absensi/riwayat?limit=5&_='+Date.now())
+        ]);
+        if (statusRes.ok) { absenStatus=await statusRes.json(); renderStatus(absenStatus); renderButtons(absenStatus); }
+        if (rekapRes.ok) { rekapData=await rekapRes.json(); renderStatistik(rekapData); }
+        if (shiftRes.ok) { renderShift(await shiftRes.json()); }
+        if (riwayatRes.ok) { renderRiwayat(await riwayatRes.json()); }
+        else { document.getElementById('riwayat-content').innerHTML='<div class="text-center py-6 text-slate-400 text-sm">Gagal memuat riwayat</div>'; showSkeleton('riwayat',false); }
+      } catch(ex) { console.error('Load error:',ex); showSkeleton('status',false); showSkeleton('statistik',false); showSkeleton('riwayat',false); showToast('Gagal memuat data: '+ex.message,'error'); }
     }
 
+    function showSkeleton(id, show) {
+      const s=document.getElementById(id+'-skeleton'), c=document.getElementById(id+'-content');
+      if(s) s.classList.toggle('hidden',!show); if(c) c.classList.toggle('hidden',show);
+    }
+
+    // Render Status
     function renderStatus(s) {
+      showSkeleton('status',false);
       const el = document.getElementById('status-content');
+      let warnHtml = '';
+      if (s.peringatan_bolos) {
+        warnHtml = '<div class="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-lg p-3.5">'
+          +'<svg class="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+          +'<div><div class="font-semibold text-red-700 text-sm">⚠ Peringatan Bolos!</div>'
+          +'<div class="text-red-600/70 text-xs mt-0.5">'+escapeHtml(s.pesan_bolos||'Shift sudah mulai, segera clock-in!')+'</div></div></div>';
+      }
       if (!s.sudah_absensi) {
-        el.innerHTML = `
-          <div class="flex items-center gap-3 bg-yellow-50/80 border border-yellow-200/60 rounded-xl p-4">
-            <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-              <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            </div>
-            <div>
-              <div class="font-semibold text-stone-700">Belum Absen</div>
-              <div class="text-xs text-stone-400">Silakan clock-in untuk memulai</div>
-            </div>
-          </div>`;
+        if (s.terkunci) {
+          el.innerHTML = '<div class="flex items-start gap-3 bg-slate-100 border border-slate-200 rounded-lg p-4">'
+            +'<div class="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">'
+            +'<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
+            +'<div><div class="font-semibold text-slate-600">Absen Terkunci</div><div class="text-xs text-slate-400 mt-0.5">Jam shift sudah lewat. Absen akan dibuka kembali besok.</div></div></div>';
+        } else {
+          el.innerHTML = warnHtml+'<div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">'
+            +'<div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">'
+            +'<svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>'
+            +'<div><div class="font-semibold text-slate-800">Belum Absen</div><div class="text-xs text-slate-500 mt-0.5">Silakan clock-in untuk memulai</div></div></div>';
+        }
         return;
       }
-      const d = s.data;
-      const sudahLengkap = d.jam_masuk && d.jam_keluar;
-      el.innerHTML = `
-        <div class="grid grid-cols-2 gap-3">
-          <div class="bg-green-50/80 border border-green-200/60 rounded-xl p-3 ${!d.jam_masuk ? 'opacity-40' : ''}">
-            <div class="text-xs text-green-500 font-medium">Clock In</div>
-            <div class="text-lg font-bold text-green-700 mt-0.5">${formatTime(d.jam_masuk)}</div>
-            <div class="text-xs text-green-400">${d.jam_masuk ? 'Sudah masuk' : '—'}</div>
-          </div>
-          <div class="${sudahLengkap ? 'bg-pink-50/80 border-pink-200/60' : 'bg-stone-50/80 border-stone-200/60'} border rounded-xl p-3 ${!d.jam_masuk ? 'opacity-40' : ''}">
-            <div class="text-xs ${sudahLengkap ? 'text-pink-500' : 'text-stone-400'} font-medium">Clock Out</div>
-            <div class="text-lg font-bold ${sudahLengkap ? 'text-pink-700' : 'text-stone-400'} mt-0.5">${formatTime(d.jam_keluar)}</div>
-            <div class="text-xs ${sudahLengkap ? 'text-pink-400' : 'text-stone-400'}">${sudahLengkap ? 'Sudah pulang' : d.jam_masuk ? 'Belum pulang' : '—'}</div>
-          </div>
-        </div>
-        ${d.status ? '<div class="text-center text-xs text-stone-400 pt-1">Status: <span class="font-medium text-stone-600">' + d.status + '</span></div>' : ''}`;
+      const d=s.data, ok=d.jam_masuk&&d.jam_keluar;
+      let badge='';
+      if (d.status) {
+        const m={'Hadir':'badge-hadir','Sakit':'badge-sakit','Izin':'badge-izin','Cuti':'badge-cuti','Alpha':'badge-alpha','Terlambat':'badge-terlambat','Butuh Koreksi':'badge-koreksi'};
+        badge='<span class="badge '+(m[d.status]||'badge-hadir')+'">'+escapeHtml(d.status)+'</span>';
+        if (s.butuh_koreksi && !badge.includes('Koreksi')) badge += '<span class="badge badge-koreksi ml-1">Perlu Koreksi</span>';
+      }
+      el.innerHTML = '<div class="flex items-center gap-4 py-1">'
+        +'<div class="flex flex-col items-center gap-1">'
+        +'<div class="w-3 h-3 rounded-full '+(d.jam_masuk?'bg-emerald-500':'bg-slate-200')+'"></div>'
+        +'<div class="w-0.5 h-8 '+(ok?'bg-emerald-300':d.jam_masuk?'bg-amber-300':'bg-slate-200')+'"></div>'
+        +'<div class="w-3 h-3 rounded-full '+(ok?'bg-emerald-500':'bg-slate-200')+'"></div></div>'
+        +'<div class="flex-1 space-y-3">'
+        +'<div class="flex items-center justify-between '+(d.jam_masuk?'':'opacity-40')+'">'
+        +'<div><div class="text-xs text-slate-500 font-medium">Clock In</div><div class="text-lg font-bold text-slate-800 font-mono mt-0.5">'+fmtFull(d.jam_masuk)+'</div></div>'
+        +'<div class="text-xs text-emerald-600">'+(d.jam_masuk?'✓ Sudah masuk':'Belum')+'</div></div>'
+        +'<div class="flex items-center justify-between '+(d.jam_masuk?(!d.jam_keluar?'opacity-60':''):'opacity-20')+'">'
+        +'<div><div class="text-xs text-slate-500 font-medium">Clock Out</div><div class="text-lg font-bold text-slate-800 font-mono mt-0.5">'+fmtFull(d.jam_keluar)+'</div></div>'
+        +'<div class="text-xs '+(ok?'text-emerald-600':d.jam_masuk?'text-amber-600':'text-slate-300')+'">'+(ok?'✓ Selesai':d.jam_masuk?'● Belum':'—')+'</div></div></div>'
+        +(badge?'<div class="self-start">'+badge+'</div>':'')+'</div>';
     }
 
+    // Render Buttons
     function renderButtons(s) {
-      const clockIn = document.getElementById('btn-clock-in');
-      const clockOut = document.getElementById('btn-clock-out');
-
-      clockIn.className = 'btn-absen relative overflow-hidden h-28 rounded-2xl shadow-md border-2 flex flex-col items-center justify-center gap-1 font-semibold text-sm transition';
-      clockOut.className = 'btn-absen relative overflow-hidden h-28 rounded-2xl shadow-md border-2 flex flex-col items-center justify-center gap-1 font-semibold text-sm transition';
-
-      if (!s.sudah_absensi || !s.sudah_masuk) {
-        clockIn.className += ' bg-gradient-to-br from-pink-400 to-pink-300 text-white border-pink-300 hover:from-pink-500 hover:to-pink-400 cursor-pointer shadow-sm';
-        clockIn.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Clock In</span>';
-        clockIn.disabled = false;
-        clockIn.onclick = () => confirmAbsen('in');
-
-        clockOut.className += ' bg-stone-100/80 text-stone-300 border-stone-200 cursor-not-allowed';
-        clockOut.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Clock Out</span>';
-        clockOut.disabled = true;
-        clockOut.onclick = null;
-      } else if (s.sudah_masuk && !s.sudah_keluar) {
-        clockIn.className += ' bg-green-50/80 text-green-500 border-green-200/60 cursor-default';
-        clockIn.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Sudah Clock In</span>';
-        clockIn.disabled = true;
-        clockIn.onclick = null;
-
-        clockOut.className += ' bg-gradient-to-br from-pink-400 to-pink-300 text-white border-pink-300 hover:from-pink-500 hover:to-pink-400 cursor-pointer shadow-sm';
-        clockOut.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Clock Out</span>';
-        clockOut.disabled = false;
-        clockOut.onclick = () => confirmAbsen('out');
-      } else {
-        clockIn.className += ' bg-green-50/80 text-green-500 border-green-200/60 cursor-default';
-        clockIn.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Selesai</span>';
-        clockIn.disabled = true;
-        clockIn.onclick = null;
-
-        clockOut.className += ' bg-green-50/80 text-green-500 border-green-200/60 cursor-default';
-        clockOut.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Selesai</span>';
-        clockOut.disabled = true;
-        clockOut.onclick = null;
-      }
-    }
-
-    function renderRiwayat(r) {
-      const el = document.getElementById('riwayat-content');
-      const btnLihat = document.getElementById('btn-lihat-semua');
-      if (!r.data || !r.data.length) {
-        el.innerHTML = '<div class="text-center py-6 text-stone-400 text-sm">Belum ada riwayat absen</div>';
-        btnLihat.classList.add('hidden');
+      const ci=document.getElementById('btn-clock-in'), co=document.getElementById('btn-clock-out');
+      
+      // Jika terkunci, disable kedua tombol
+      if (s.terkunci) {
+        ci.className='h-16 btn btn-outline text-slate-400 cursor-not-allowed';
+        ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Terkunci</span>';
+        ci.disabled=true; ci.onclick=null;
+        co.className='h-16 btn btn-outline text-slate-400 cursor-not-allowed';
+        co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Terkunci</span>';
+        co.disabled=true; co.onclick=null;
         return;
       }
-      btnLihat.classList.remove('hidden');
-      let riwayatExpanded = false;
-      btnLihat.onclick = async () => {
-        if (riwayatExpanded) return;
-        btnLihat.textContent = 'Memuat...';
-        btnLihat.disabled = true;
-        try {
-          const rRes = await fetch('/api/mobile/absensi/riwayat?limit=50&_=' + Date.now());
-          const rData = await rRes.json();
-          el.innerHTML = rData.data.map(a => {
-            const statusClass = a.status === 'Hadir' ? 'text-green-600 bg-green-50' : a.status === 'Sakit' ? 'text-yellow-600 bg-yellow-50' : a.status === 'Izin' ? 'text-blue-600 bg-blue-50' : 'text-pink-600 bg-pink-50';
-            return `<div class="flex items-center justify-between py-2.5 border-b border-stone-100 last:border-0">
-              <div class="flex items-center gap-3">
-                <span class="text-sm text-stone-700 w-24">${formatDate(a.tanggal)}</span>
-                <span class="text-xs px-2 py-0.5 rounded-full font-medium ${statusClass}">${a.status}</span>
-              </div>
-              <div class="text-xs text-stone-400">
-                ${formatTime(a.jam_masuk)} — ${formatTime(a.jam_keluar)}
-              </div>
-            </div>`;
-          }).join('');
-          btnLihat.textContent = 'Semua riwayat';
-          btnLihat.disabled = true;
-          riwayatExpanded = true;
-        } catch {
-          btnLihat.textContent = 'Gagal memuat';
-        }
-      };
-      el.innerHTML = r.data.map(a => {
-        const statusClass = a.status === 'Hadir' ? 'text-green-600 bg-green-50' : a.status === 'Sakit' ? 'text-yellow-600 bg-yellow-50' : a.status === 'Izin' ? 'text-blue-600 bg-blue-50' : 'text-pink-600 bg-pink-50';
-        return `<div class="flex items-center justify-between py-2.5 border-b border-stone-100 last:border-0">
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-stone-700 w-24">${formatDate(a.tanggal)}</span>
-            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${statusClass}">${a.status}</span>
-          </div>
-          <div class="text-xs text-stone-400">
-            ${formatTime(a.jam_masuk)} — ${formatTime(a.jam_keluar)}
-          </div>
-        </div>`;
-      }).join('');
+      
+      if (!s.sudah_absensi||!s.sudah_masuk) {
+        ci.className='h-16 btn btn-primary'; ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Clock In</span>'; ci.disabled=false; ci.onclick=()=>confirmAbsen('in');
+        co.className='h-16 btn btn-outline text-slate-400'; co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Clock Out</span>'; co.disabled=true; co.onclick=null;
+      } else if (s.sudah_masuk&&!s.sudah_keluar) {
+        ci.className='h-16 btn btn-success cursor-default'; ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Sudah Clock In</span>'; ci.disabled=true; ci.onclick=null;
+        co.className='h-16 btn btn-primary'; co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Clock Out</span>'; co.disabled=false; co.onclick=()=>confirmAbsen('out');
+      } else {
+        ci.className='h-16 btn btn-success cursor-default'; ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Selesai</span>'; ci.disabled=true; ci.onclick=null;
+        co.className='h-16 btn btn-success cursor-default'; co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Selesai</span>'; co.disabled=true; co.onclick=null;
+      }
     }
 
-    // ─── Konfirmasi Absen ───
+    // Render Shift
+    function renderShift(s) {
+      const card=document.getElementById('shift-card'), wrap=document.getElementById('shift-progress-wrap');
+      const nama=document.getElementById('shift-nama'), jam=document.getElementById('shift-jam'), label=document.getElementById('shift-jam-label');
+      if (!s.ada_shift||!s.data) {
+        nama.textContent='Tidak ada shift hari ini'; nama.className='text-slate-400 font-semibold text-sm';
+        jam.textContent='--:--'; label.textContent=''; if(wrap)wrap.classList.add('hidden'); card.classList.remove('hidden'); return;
+      }
+      if (!s.hari_kerja_hari_ini) {
+        nama.textContent=s.data.nama+' — Libur'; nama.className='text-slate-400 font-semibold text-sm';
+        const m=s.data.jam_masuk?s.data.jam_masuk.slice(0,5):'--:--', k=s.data.jam_keluar?s.data.jam_keluar.slice(0,5):'--:--';
+        jam.textContent=m+' — '+k; label.textContent='Libur'; if(wrap)wrap.classList.add('hidden'); card.classList.remove('hidden'); return;
+      }
+      nama.textContent=s.data.nama; nama.className='text-slate-800 font-semibold text-sm';
+      if(wrap)wrap.classList.remove('hidden');
+      const m=s.data.jam_masuk?s.data.jam_masuk.slice(0,5):'--:--', k=s.data.jam_keluar?s.data.jam_keluar.slice(0,5):'--:--';
+      jam.textContent=m; label.textContent='— '+k;
+      document.getElementById('shift-label-masuk').textContent=m; document.getElementById('shift-label-keluar').textContent=k;
+      if (s.data.jam_masuk&&s.data.jam_keluar) {
+        const n=new Date(), nm=n.getHours()*60+n.getMinutes(), sm=toMin(s.data.jam_masuk), em=toMin(s.data.jam_keluar), tm=em-sm;
+        if(tm>0){let p=Math.max(0,Math.min(100,((nm-sm)/tm)*100)); document.getElementById('shift-progress').style.width=p+'%';
+          const st=document.getElementById('shift-status-text');
+          if(p<25)st.textContent='Baru mulai';else if(p<50)st.textContent='Sedang berjalan';else if(p<75)st.textContent='Hampir selesai';else if(p<100)st.textContent='Sebentar lagi selesai';else st.textContent='Selesai ✓';}
+      }
+    }
+
+    // Render Statistik
+    function renderStatistik(r) {
+      document.getElementById('statistik-card').classList.remove('hidden'); showSkeleton('statistik',false);
+      document.getElementById('statistik-periode').textContent=r.periode||(r.bulan+'/'+r.tahun);
+      const st=r.statistik,t=st.total_hari||1,e=st.expected_hari||t,h=st.hadir||0,sk=st.sakit||0,iz=st.izin||0,al=st.alpha||0,bo=st.bolos||0;
+      document.getElementById('stat-hadir-val').textContent=h; document.getElementById('stat-sakit-val').textContent=sk; document.getElementById('stat-izin-val').textContent=iz;
+      const base=e||1; document.getElementById('stat-label-expected').textContent='dari '+e+' hari';
+      const ar=document.getElementById('stat-alpha-row'), br=document.getElementById('stat-bolos-row');
+      if(bo>0){if(ar)ar.classList.add('hidden');if(br)br.classList.remove('hidden');document.getElementById('stat-bolos-val').textContent=bo;}
+      else{if(ar)ar.classList.remove('hidden');if(br)br.classList.add('hidden');document.getElementById('stat-alpha-val').textContent=al;}
+      setTimeout(()=>{
+        document.getElementById('stat-hadir-bar').style.width=(h/base*100)+'%'; document.getElementById('stat-sakit-bar').style.width=(sk/base*100)+'%';
+        document.getElementById('stat-izin-bar').style.width=(iz/base*100)+'%';
+        if(bo>0)document.getElementById('stat-bolos-bar').style.width=(bo/base*100)+'%'; else document.getElementById('stat-alpha-bar').style.width=(al/base*100)+'%';
+      },100);
+      const aj=r.rata_rata_jam_kerja||0; document.getElementById('stat-rata-jam').textContent=aj.toFixed(1)+' jam';
+      const ring=document.getElementById('stat-ring'); if(ring){const max=12,pct=Math.min(1,aj/max),off=97.4*(1-pct); ring.style.strokeDashoffset=off;}
+    }
+
+    // Render Riwayat
+    function renderRiwayat(r) {
+      showSkeleton('riwayat',false); const el=document.getElementById('riwayat-content'),btn=document.getElementById('btn-lihat-semua');
+      if (!r.data||!r.data.length) { el.innerHTML='<div class="text-center py-8 text-slate-400 text-sm">Belum ada riwayat absen</div>'; btn.classList.add('hidden'); return; }
+      btn.classList.remove('hidden'); btn.onclick=async()=>{if(riwayatExpanded)return; btn.textContent='Memuat...'; btn.disabled=true; try{const rr=await fetch('/api/mobile/absensi/riwayat?limit=50&_='+Date.now()),rd=await rr.json(); renderRiwayatList(el,rd.data,true); btn.textContent='Semua riwayat ('+(rd.pagination?.total||rd.data.length)+')'; btn.disabled=true; riwayatExpanded=true;}catch{btn.textContent='Gagal memuat'; btn.disabled=false;}};
+      renderRiwayatList(el,r.data,false);
+    }
+    function renderRiwayatList(el,data,full) {
+      if(!data.length){el.innerHTML='<div class="text-center py-6 text-slate-400 text-sm">Belum ada riwayat</div>';return;}
+      const h=data.filter(a=>a.status==='Hadir').length,t=data.length,pct=t>0?Math.round(h/t*100):0;
+      let html='';
+      if(!full&&t>0)html+='<div class="flex items-center gap-2 text-[0.6rem] text-slate-400 mb-3 pb-3 border-b border-slate-100"><span class="text-emerald-600 font-semibold">'+h+'/'+t+' hadir</span><span class="text-slate-200">·</span><span>'+pct+'% kehadiran</span><div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden ml-1"><div class="h-full rounded-full bg-emerald-500" style="width:'+pct+'%"></div></div></div>';
+      data.forEach(a=>{
+        const cls=a.status==='Hadir'?'badge-hadir':a.status==='Sakit'?'badge-sakit':a.status==='Izin'?'badge-izin':a.status==='Cuti'?'badge-cuti':a.status==='Alpha'?'badge-alpha':'badge-hadir';
+        html+='<div class="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0"><div class="flex items-center gap-2.5 min-w-0"><span class="text-slate-600 text-xs font-medium w-20 shrink-0">'+escapeHtml(full?fmtDateFull(a.tanggal):fmtDate(a.tanggal))+'</span><span class="badge '+cls+'">'+escapeHtml(a.status)+'</span></div><div class="text-[0.65rem] text-slate-400 font-mono shrink-0 ml-2">'+fmt(a.jam_masuk)+' — '+fmt(a.jam_keluar)+'</div></div>';
+      });
+      el.innerHTML=html;
+    }
+
+    // Confirm Absen
     async function confirmAbsen(type) {
-      const overlay = document.getElementById('modal-overlay');
-      const icon = document.getElementById('modal-icon');
-      const title = document.getElementById('modal-title');
-      const desc = document.getElementById('modal-desc');
-      const locEl = document.getElementById('modal-location');
-      const locText = document.getElementById('modal-location-text');
-      const btnYa = document.getElementById('modal-ya');
+      const overlay=document.getElementById('modal-overlay'),icon=document.getElementById('modal-icon'),title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc'),locEl=document.getElementById('modal-location'),locText=document.getElementById('modal-location-text'),locSpin=locEl.querySelector('.spinner'),btnYa=document.getElementById('modal-ya');
+      const in_=type==='in';
+      icon.className='w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center '+(in_?'bg-amber-100':'bg-blue-100');
+      icon.innerHTML=in_?'<svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>':'<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+      title.textContent=in_?'Clock In':'Clock Out'; desc.textContent=in_?'Konfirmasi clock-in untuk memulai hari kerja?':'Konfirmasi clock-out untuk mengakhiri hari kerja?';
+      btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!'; btnYa.className='flex-1 h-11 btn btn-primary'; btnYa.disabled=false;
+      locEl.classList.remove('hidden'); if(locSpin)locSpin.classList.remove('hidden'); locText.textContent='Mendapatkan lokasi...';
+      const loc=await getLocation();
+      if(loc){currentLocation=loc;if(locSpin)locSpin.classList.add('hidden');locText.textContent='📍 '+loc.lat.toFixed(4)+', '+loc.lng.toFixed(4);}
+      else{currentLocation=null;if(locSpin)locSpin.classList.add('hidden');locText.textContent='📍 Lokasi tidak tersedia (absen tanpa lokasi)';}
+      overlay.classList.remove('hidden');
+      btnYa.onclick=async()=>{btnYa.disabled=true;btnYa.textContent='Memproses...';try{const body={};if(currentLocation){body.latitude=currentLocation.lat;body.longitude=currentLocation.lng;}const r=await fetch(in_?'/api/mobile/absensi/clock-in':'/api/mobile/absensi/clock-out',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Gagal');showToast(in_?'✅ Clock-in berhasil!':'✅ Clock-out berhasil!','success');overlay.classList.add('hidden');loadAll();}catch(ex){showToast('❌ '+ex.message,'error');btnYa.disabled=false;btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!';}};
+      document.getElementById('modal-batal').onclick=()=>{overlay.classList.add('hidden');btnYa.disabled=false;};
+      overlay.addEventListener('click',e=>{if(e.target===overlay){overlay.classList.add('hidden');btnYa.disabled=false;}});
+    }
 
-      const isIn = type === 'in';
-      icon.className = 'w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center ' + (isIn ? 'bg-pink-100' : 'bg-purple-100');
-      icon.innerHTML = isIn
-        ? '<svg class="w-8 h-8 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
-        : '<svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
-      title.textContent = isIn ? 'Clock In' : 'Clock Out';
-      desc.textContent = isIn ? 'Konfirmasi clock-in untuk hari ini?' : 'Konfirmasi clock-out untuk hari ini?';
-      btnYa.textContent = isIn ? 'Ya, Clock In!' : 'Ya, Clock Out!';
-      btnYa.className = 'flex-1 h-11 rounded-xl font-medium text-sm transition shadow-md text-white ' + (isIn ? 'bg-gradient-to-r from-pink-400 to-pink-300 hover:from-pink-500 hover:to-pink-400' : 'bg-gradient-to-r from-purple-400 to-purple-300 hover:from-purple-500 hover:to-purple-400');
+    // ─── Profile Modal ───
+    // Click pada avatar atau nama → buka profil
+    document.getElementById('avatar-container').style.cursor = 'pointer';
+    document.getElementById('avatar-container').addEventListener('click', openProfileModal);
+    document.getElementById('nama-karyawan').style.cursor = 'pointer';
+    document.getElementById('nama-karyawan').addEventListener('click', openProfileModal);
 
-      // Ambil lokasi
-      locEl.classList.remove('hidden');
-      locText.textContent = 'Mendapatkan lokasi...';
-      const loc = await getLocation();
-      if (loc) {
-        currentLocation = loc;
-        locText.textContent = 'Lokasi terdeteksi (' + loc.lat.toFixed(4) + ', ' + loc.lng.toFixed(4) + ')';
+    function openProfileModal() {
+      if (!karyawanData) {
+        showToast('Data belum dimuat', 'error');
+        return;
+      }
+      const d = karyawanData;
+      document.getElementById('profile-modal-nama').textContent = d.nama || '—';
+      document.getElementById('profile-modal-nik').textContent = d.nik || '—';
+      document.getElementById('profile-modal-jabatan').textContent = d.jabatan || '';
+      document.getElementById('profile-modal-departemen').textContent = d.departemen || '';
+      document.getElementById('profile-modal-phone').textContent = d.phone ? 'Telp: ' + d.phone : '';
+      
+      const ph = document.getElementById('profile-modal-photo');
+      const pl = document.getElementById('profile-modal-placeholder');
+      if (d.photo) {
+        ph.src = d.photo;
+        ph.classList.remove('hidden');
+        pl.classList.add('hidden');
       } else {
-        currentLocation = null;
-        locText.textContent = 'Lokasi tidak tersedia (absen tanpa lokasi)';
+        ph.classList.add('hidden');
+        pl.classList.remove('hidden');
       }
 
-      overlay.classList.remove('hidden');
+      // Reset form
+      document.getElementById('cuti-jenis').value = 'Izin';
+      document.getElementById('cuti-tanggal-mulai').value = new Date().toISOString().slice(0,10);
+      document.getElementById('cuti-tanggal-selesai').value = '';
+      document.getElementById('cuti-alasan').value = '';
+      hapusDokumenProfil();
+      toggleDokumenProfil();
 
-      btnYa.onclick = async () => {
-        btnYa.disabled = true;
-        btnYa.textContent = 'Memproses...';
-        try {
-          const body = {};
-          if (currentLocation) {
-            body.latitude = currentLocation.lat;
-            body.longitude = currentLocation.lng;
-          }
-          const endpoint = isIn ? '/api/mobile/absensi/clock-in' : '/api/mobile/absensi/clock-out';
-          const r = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          });
-          const data = await r.json();
-          if (!r.ok) throw new Error(data.error || 'Gagal');
-          showToast(isIn ? 'Clock-in berhasil!' : 'Clock-out berhasil!', 'success');
-          overlay.classList.add('hidden');
-          loadStatus();
-        } catch (ex) {
-          showToast(ex.message, 'error');
-          btnYa.disabled = false;
-          btnYa.textContent = isIn ? 'Ya, Clock In!' : 'Ya, Clock Out!';
-        }
-      };
-
-      document.getElementById('modal-batal').onclick = () => {
-        overlay.classList.add('hidden');
-        btnYa.disabled = false;
-      };
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-          overlay.classList.add('hidden');
-          btnYa.disabled = false;
-        }
-      });
+      document.getElementById('profile-modal').classList.remove('hidden');
+      document.getElementById('profile-modal').classList.add('flex');
     }
 
-    // ─── Logout ───
-    document.getElementById('btn-logout').addEventListener('click', async () => {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/absen';
+    function closeProfileModal() {
+      document.getElementById('profile-modal').classList.add('hidden');
+      document.getElementById('profile-modal').classList.remove('flex');
+    }
+
+    // ─── Ijin/Cuti Form ───
+    function toggleDokumenProfil() {
+      const jenis = document.getElementById('cuti-jenis')?.value;
+      const wrap = document.getElementById('cuti-dokumen-wrap-profil');
+      if (!wrap) return;
+      if (jenis === 'Izin') {
+        wrap.classList.remove('hidden');
+      } else {
+        wrap.classList.add('hidden');
+        hapusDokumenProfil();
+      }
+    }
+
+    function previewDokumenProfil(input) {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('Ukuran file maksimal 2MB', 'error');
+        input.value = '';
+        return;
+      }
+      document.getElementById('cuti-dokumen-name').textContent = file.name;
+      document.getElementById('cuti-dokumen-hapus').classList.remove('hidden');
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('cuti-dokumen').value = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function hapusDokumenProfil() {
+      document.getElementById('cuti-dokumen').value = '';
+      document.getElementById('cuti-dokumen-input').value = '';
+      document.getElementById('cuti-dokumen-name').textContent = '';
+      document.getElementById('cuti-dokumen-hapus').classList.add('hidden');
+    }
+
+    async function submitCutiProfil() {
+      const jenis = document.getElementById('cuti-jenis').value;
+      const tglMulai = document.getElementById('cuti-tanggal-mulai').value;
+      const tglSelesai = document.getElementById('cuti-tanggal-selesai').value;
+      const alasan = document.getElementById('cuti-alasan').value.trim();
+      const dokumen = document.getElementById('cuti-dokumen').value;
+
+      if (!tglMulai) {
+        showToast('Tanggal mulai wajib diisi', 'error');
+        return;
+      }
+      if (!alasan) {
+        showToast('Alasan wajib diisi', 'error');
+        return;
+      }
+
+      const btn = document.querySelector('#cuti-form-profil button[type="button"]');
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4"/></svg> Mengirim...';
+
+      try {
+        const body = {
+          jenis,
+          tanggal_mulai: tglMulai,
+          tanggal_selesai: tglSelesai || null,
+          alasan,
+          dokumen: dokumen || null
+        };
+        const r = await fetch('/api/mobile/ijin-cuti', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Gagal');
+        showToast('✅ Pengajuan berhasil dikirim', 'success');
+        closeProfileModal();
+      } catch (ex) {
+        showToast('❌ ' + ex.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14"/></svg> Ajukan Ijin/Cuti';
+      }
+    }
+
+    // Tutup modal profil jika klik backdrop
+    document.getElementById('profile-modal').addEventListener('click', function(e) {
+      if (e.target === this) closeProfileModal();
     });
 
-    // ─── Init ───
-    loadStatus();
+    // Logout & Refresh
+    document.getElementById('btn-logout').addEventListener('click',async()=>{await fetch('/api/auth/logout',{method:'POST'});window.location.href='/absen';});
+    document.getElementById('btn-refresh').addEventListener('click',()=>{loadAll();});
+
+    // Init
+    loadAll();
   </script>
 </body>
 </html>

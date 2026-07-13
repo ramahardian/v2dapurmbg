@@ -8,8 +8,11 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: Math.min(parseInt(process.env.DB_POOL_LIMIT) || 10, 50),
+  queueLimit: 0,
   decimalNumbers: true,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
 });
 
 module.exports = pool;

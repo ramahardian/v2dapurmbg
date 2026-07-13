@@ -33,8 +33,8 @@ async function showLap(tab) {
     rab: { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
     'rab-bulanan': { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
     'pengeluaran-bulanan': { active: 'bg-white text-sky-600 shadow-sm', inactive: 'bg-sky-100 text-sky-700 hover:bg-sky-200' },
-    'penggunaan-anggaran': { active: 'bg-white text-teal-600 shadow-sm', inactive: 'bg-teal-100 text-teal-700 hover:bg-teal-200' },
-    'bp-kas': { active: 'bg-white text-indigo-600 shadow-sm', inactive: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' },
+    'penggunaan-anggaran': { active: 'bg-white text-teal-600 shadow-sm', inactive: 'bg-teal-100 text-teal-700 hover:bg-teal-200' },      'bp-kas': { active: 'bg-white text-indigo-600 shadow-sm', inactive: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' },
+      'payroll-mingguan': { active: 'bg-white text-pink-600 shadow-sm', inactive: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
   };
   LAP_TABS.forEach(t => {
     const el = document.getElementById('lt-'+t);
@@ -207,6 +207,127 @@ async function showLap(tab) {
         ${statCard('Total Gaji', fmtIDR(r.stats.total_gaji), r.stats.periode_count + ' periode', 'bg-blue-50')}
         ${statCard('Rata-rata', fmtIDR(r.stats.total_karyawan ? Math.round(r.stats.total_gaji / r.stats.total_karyawan) : 0), '/karyawan', 'bg-violet-50')}
       </div>`;
+    } else if (tab === 'payroll-mingguan') {
+      const now = new Date();
+      const autoMinggu = Math.ceil(now.getDate() / 7);
+      const blnVal = lapState.pm_bulan || String(now.getMonth() + 1).padStart(2, '0');
+      const thnVal = lapState.pm_tahun || String(now.getFullYear());
+      const mggVal = lapState.pm_minggu || autoMinggu;
+
+      // Active tab styling
+      document.querySelectorAll('#lt-payroll-mingguan').forEach(el => {
+        el.className = 'px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 -mb-px bg-white text-pink-600 shadow-sm relative z-[2]';
+      });
+
+      // Filter bar
+      var pmFilterBar = '<div class="mb-4 flex flex-wrap items-center gap-3">' +
+        '<div class="flex items-center gap-2">' +
+        '<label class="text-xs font-medium text-stone-500">Bulan:</label>' +
+        '<select id="pm-bulan" onchange="pmGanti()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(blnVal)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
+        '</select>' +
+        '<select id="pm-tahun" onchange="pmGanti()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(thnVal)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
+        '</select>' +
+        '<select id="pm-minggu" onchange="pmGanti()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        [1,2,3,4,5].map(function(m) { return '<option value="' + m + '" ' + (parseInt(mggVal)===m?'selected':'') + '>Minggu ' + m + '</option>'; }).join('') +
+        '</select></div>' +
+        '<div class="flex gap-1.5">' +
+        '<span id="pm-export-btn"></span>' +
+        '<button onclick="bayarPayrollMingguanLap()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5">' +
+        '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' +
+        'Bayar & Jurnal</button>' +
+        '</div></div>';
+
+      try {
+        const res = await api.get('/payroll/mingguan?bulan=' + blnVal + '&tahun=' + thnVal + '&minggu_ke=' + mggVal);
+
+        if (!res || !res.karyawan || !res.karyawan.length) {
+          window._lapStatCards = pmFilterBar + '<div class="text-center py-12 text-stone-400">Tidak ada data payroll minggu ini</div>';
+          window._lapData = null;
+          renderLapPage();
+          return;
+        }
+
+        const { minggu, karyawan, totals } = res;
+        const tglNama = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+        const fmtIdr = fmtIDR;
+
+        // Export button
+        var exportBtn = '<button onclick="exportPayrollMingguanLap()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5">' +
+          '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
+          'Export XLSX</button>';
+        document.getElementById('pm-export-btn').innerHTML = exportBtn;
+
+        // Simpan data untuk export
+        window._pmExportData = { minggu, karyawan };
+
+        var totalHadir = 0, totalGaji = 0;
+        karyawan.forEach(function(k) { totalHadir += k.total_hadir; totalGaji += k.total_gaji; });
+
+        // Info header
+        var infoHtml = '<div class="flex items-center justify-between mb-3">' +
+          '<div class="text-sm font-medium">📅 ' + escHtml(minggu.label) + '</div>' +
+          '<div class="text-xs text-stone-500">' + karyawan.length + ' karyawan · ' + totalHadir + ' hadir · Total: ' + fmtIdr(totalGaji) + '</div>' +
+          '</div>';
+
+        // Table
+        var tableHtml = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto" style="max-height:70vh;overflow-y:auto"><table class="w-full min-w-[700px]">' +
+          '<thead class="bg-stone-50 sticky top-0 z-10"><tr>' +
+          '<th rowspan="2" class="text-left px-3 py-2 text-xs font-semibold uppercase min-w-[120px] border-r border-stone-200">Karyawan</th>' +
+          '<th rowspan="2" class="text-left px-2 py-2 text-xs font-semibold uppercase min-w-[70px] border-r border-stone-200">Jabatan</th>' +
+          '<th colspan="' + minggu.dates.length + '" class="text-center px-2 py-1 text-xs font-semibold uppercase">' + minggu.dates.length + ' Hari Kerja</th>' +
+          '<th rowspan="2" class="text-center px-2 py-2 text-xs font-semibold uppercase min-w-[50px] border-l border-stone-200">Hadir</th>' +
+          '<th rowspan="2" class="text-right px-2 py-2 text-xs font-semibold uppercase min-w-[65px]">Upah/Hr</th>' +
+          '<th rowspan="2" class="text-right px-2 py-2 text-xs font-semibold uppercase min-w-[80px]">Total</th></tr>' +
+          '<tr class="bg-stone-50">';
+        minggu.dates.forEach(function(tgl, i) {
+          var d = new Date(tgl + 'T00:00:00');
+          var hari = tglNama[d.getDay()];
+          var tglNum = tgl.slice(8, 10);
+          var isWeekend = [0, 6].includes(d.getDay());
+          tableHtml += '<th class="text-center px-1 py-1 text-[10px] font-semibold uppercase border-l border-stone-200 min-w-[60px] ' + (isWeekend ? 'text-red-400' : '') + '">' + hari + '<br><span class="text-xs">' + tglNum + '</span></th>';
+        });
+        tableHtml += '</tr></thead><tbody>';
+
+        karyawan.forEach(function(k) {
+          tableHtml += '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
+            '<td class="px-3 py-2 text-sm font-medium whitespace-nowrap">' + escHtml(k.nama) + '</td>' +
+            '<td class="px-2 py-2 text-xs text-stone-500 whitespace-nowrap border-r border-stone-200">' + escHtml(k.jabatan) + '</td>';
+          k.harian.forEach(function(h, i) {
+            var tgl = minggu.dates[i];
+            var d = new Date(tgl + 'T00:00:00');
+            var isWeekend = [0, 6].includes(d.getDay());
+            if (!h) {
+              tableHtml += '<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ' + (isWeekend ? 'bg-stone-50' : '') + '"><span class="text-stone-300">—</span></td>';
+            } else if (h.status === 'Hadir') {
+              tableHtml += '<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ' + (isWeekend ? 'bg-stone-50' : '') + '"><div class="text-emerald-600 font-medium">' + (h.masuk || '?') + '</div><div class="text-stone-400">' + (h.keluar || '?') + '</div></td>';
+            } else {
+              tableHtml += '<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ' + (isWeekend ? 'bg-stone-50' : '') + '"><span class="text-' + (h.status==='Sakit'?'amber':h.status==='Izin'?'blue':h.status==='Cuti'?'violet':'red') + '-600">' + h.status + '</span></td>';
+            }
+          });
+          tableHtml += '<td class="text-center px-2 py-2 text-sm font-bold border-l border-stone-200">' + k.total_hadir + 'x</td>' +
+            '<td class="text-right px-2 py-2 text-xs mono">' + fmtIdr(k.upah_per_hari) + '</td>' +
+            '<td class="text-right px-2 py-2 text-sm font-bold mono">' + fmtIdr(k.total_gaji) + '</td></tr>';
+        });
+
+        // Total row
+        tableHtml += '</tbody><tfoot class="bg-stone-50 font-medium"><tr>' +
+          '<td colspan="2" class="px-3 py-2 text-xs text-stone-500">TOTAL</td>';
+        minggu.dates.forEach(function() { tableHtml += '<td class="text-center px-1 py-2 text-xs"></td>'; });
+        tableHtml += '<td class="text-center px-2 py-2 text-xs font-bold border-l border-stone-200">' + totalHadir + '</td>' +
+          '<td class="px-2 py-2 text-xs"></td>' +
+          '<td class="text-right px-2 py-2 text-xs font-bold">' + fmtIdr(totalGaji) + '</td></tr></tfoot></table></div></div>';
+
+        window._lapStatCards = pmFilterBar + infoHtml + tableHtml;
+        window._lapData = null;
+      } catch (e) {
+        console.error('Payroll mingguan error:', e);
+        window._lapStatCards = pmFilterBar + '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat: ' + escHtml(e.message) + '</div>';
+        window._lapData = null;
+      }
+      renderLapPage();
+
     } else if (tab === 'laba-rugi') {
       const r = await api.get('/laporan/laba-rugi');
       const rows = r.rows || [];
@@ -678,6 +799,83 @@ function fmtDateIndonesia(dateStr) {
   const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   return hari[d.getDay()] + ', ' + d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
 }
+// ===== Payroll Mingguan Helpers =====
+function pmGanti() {
+  lapState.pm_bulan = document.getElementById('pm-bulan')?.value;
+  lapState.pm_tahun = document.getElementById('pm-tahun')?.value;
+  lapState.pm_minggu = parseInt(document.getElementById('pm-minggu')?.value || '1');
+  showLap('payroll-mingguan');
+}
+
+async function exportPayrollMingguanLap() {
+  var data = window._pmExportData;
+  if (!data || !data.karyawan || !data.karyawan.length) return showAlert('Tidak ada data', 'warning');
+
+  var { minggu, karyawan } = data;
+  var tglNama = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+
+  var headers = ['Nama Karyawan', 'Jabatan'];
+  minggu.dates.forEach(function(tgl) {
+    var d = new Date(tgl + 'T00:00:00');
+    var label = tglNama[d.getDay()] + ' ' + tgl.slice(8,10) + '/' + tgl.slice(5,7);
+    headers.push(label + ' Masuk', label + ' Keluar');
+  });
+  headers.push('Total Hadir', 'Upah/Hari', 'Total Gaji');
+
+  var rows = karyawan.map(function(k) {
+    var row = [k.nama, k.jabatan];
+    k.harian.forEach(function(h) {
+      if (h && h.status === 'Hadir') row.push(h.masuk || '-', h.keluar || '-');
+      else if (h) row.push(h.status, '-');
+      else row.push('-', '-');
+    });
+    row.push(k.total_hadir, k.upah_per_hari, k.total_gaji);
+    return row;
+  });
+
+  var totalHadir = karyawan.reduce(function(s, k) { return s + k.total_hadir; }, 0);
+  var totalGaji = karyawan.reduce(function(s, k) { return s + k.total_gaji; }, 0);
+  var totalRow = ['TOTAL', ''];
+  minggu.dates.forEach(function() { totalRow.push('', ''); });
+  totalRow.push(totalHadir, '', totalGaji);
+  rows.push(totalRow);
+
+  var wsData = [headers].concat(rows);
+  var ws = XLSX.utils.aoa_to_sheet(wsData);
+  var colWidths = [{ wch: 28 }, { wch: 18 }];
+  minggu.dates.forEach(function() { colWidths.push({ wch: 10 }, { wch: 10 }); });
+  colWidths.push({ wch: 10 }, { wch: 12 }, { wch: 14 });
+  ws['!cols'] = colWidths;
+
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Payroll Mingguan');
+  var filename = 'payroll-mingguan-' + minggu.label.replace(/[\s,()]/g, '_') + '.xlsx';
+  XLSX.writeFile(wb, filename);
+}
+
+async function bayarPayrollMingguanLap() {
+  var bln = document.getElementById('pm-bulan')?.value || '';
+  var thn = document.getElementById('pm-tahun')?.value || '';
+  var mgg = document.getElementById('pm-minggu')?.value || '1';
+  if (!bln || !thn) return showAlert('Pilih bulan & tahun', 'warning');
+
+  if (!await showConfirm('Bayar payroll mingguan ini? Jurnal otomatis akan dibuat di Kas Bank.', 'Ya, Bayar')) return;
+
+  try {
+    var res = await api.post('/payroll/mingguan/bayar', { bulan: parseInt(bln), tahun: parseInt(thn), minggu_ke: parseInt(mgg) });
+    if (res.ok) {
+      showToast('✅ ' + res.pesan, 'success');
+      showLap('payroll-mingguan'); // refresh
+    }
+  } catch (e) {
+    if (e.status === 409) {
+      showAlert('Jurnal sudah ada (No. ' + (e.data?.no_transaksi || '') + ')', 'warning');
+    } else {
+      showAlert('Gagal: ' + (e.message || ''), 'error');
+    }
+  }
+}
+
 function editSaldoAwal(current) {
   const amount = prompt('Masukkan Saldo Awal Buku (Rp):', fmtIDR(current).replace(/[^0-9]/g,''));
   if (amount === null) return;

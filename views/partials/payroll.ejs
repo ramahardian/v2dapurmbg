@@ -1,49 +1,144 @@
-<div class="mb-4 space-y-2">
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-    <select id="pay-filter-karyawan" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
-      <option value="">Semua Karyawan</option>
-    </select>
-    <div class="relative">
-      <span class="absolute -top-2 left-2 bg-white px-1 text-xs text-stone-500">Periode</span>
-      <input id="pay-filter-periode" type="date" class="h-10 px-3 border border-stone-200 rounded-md text-sm w-full" />
+<!-- Tabs: Bulanan / Mingguan -->
+<div class="mb-4">
+  <div class="flex gap-1 bg-stone-100 rounded-lg p-1 w-fit">
+    <button id="pay-tab-bulanan" class="tab-pay active px-4 py-1.5 text-sm font-medium rounded-md transition" onclick="switchPayTab('bulanan')"><svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Bulanan</button>
+    <button id="pay-tab-mingguan" class="tab-pay px-4 py-1.5 text-sm font-medium rounded-md transition" onclick="switchPayTab('mingguan')"><svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Mingguan</button>
+  </div>
+</div>
+
+<!-- ===== TAB BULANAN (existing) ===== -->
+<div id="pay-bulanan">
+  <div class="mb-4 space-y-2">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+      <select id="pay-filter-karyawan" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
+        <option value="">Semua Karyawan</option>
+      </select>
+      <div class="relative">
+        <span class="absolute -top-2 left-2 bg-white px-1 text-xs text-stone-500">Periode</span>
+        <input id="pay-filter-periode" type="date" class="h-10 px-3 border border-stone-200 rounded-md text-sm w-full" />
+      </div>
+      <select id="pay-filter-status" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
+        <option value="">Semua Status</option>
+        <option>Draft</option><option>Disetujui</option><option>Dibayar</option>
+      </select>
+      <div class="flex gap-2">
+        <button onclick="loadPayroll()" class="flex-1 px-4 py-2 border border-stone-200 rounded-md text-sm whitespace-nowrap hover:bg-stone-50">Filter</button>
+        <button onclick="openPayrollForm()" class="flex-1 bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap">+ Tambah</button>
+      </div>
     </div>
-    <select id="pay-filter-status" class="h-10 px-3 border border-stone-200 rounded-md text-sm">
-      <option value="">Semua Status</option>
-      <option>Draft</option><option>Disetujui</option><option>Dibayar</option>
-    </select>
-    <div class="flex gap-2">
-      <button onclick="loadPayroll()" class="flex-1 px-4 py-2 border border-stone-200 rounded-md text-sm whitespace-nowrap hover:bg-stone-50">Filter</button>
-      <button onclick="openPayrollForm()" class="flex-1 bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap">+ Tambah</button>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-stone-50">
+          <tr>
+            <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Bulan/Tahun</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama Karyawan</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Jabatan</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gaji Pokok</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Tunjangan</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Potongan</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Total Gaji</th>
+            <th class="text-center px-4 py-3 text-xs font-semibold uppercase">Status</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="9" class="text-center py-12 text-stone-400">Memuat data payroll...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
-<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
-  <div class="overflow-x-auto">
-    <table class="w-full">
-      <thead class="bg-stone-50">
-        <tr>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Bulan/Tahun</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama Karyawan</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Jabatan</th>
-          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gaji Pokok</th>
-          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Tunjangan</th>
-          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Potongan</th>
-          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Total Gaji</th>
-          <th class="text-center px-4 py-3 text-xs font-semibold uppercase">Status</th>
-          <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="9" class="text-center py-12 text-stone-400">Memuat data payroll...</td></tr>
-      </tbody>
-    </table>
+
+<!-- ===== TAB MINGGUAN ===== -->
+<div id="pay-mingguan" class="hidden">
+  <div class="mb-4 space-y-2">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+      <div class="relative">
+        <span class="absolute -top-2 left-2 bg-white px-1 text-xs text-stone-500">Bulan</span>
+        <select id="pm-filter-bulan" class="h-10 px-3 border border-stone-200 rounded-md text-sm w-full">
+          <% const BLN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']; %>
+          <% BLN.forEach((n,i) => { %>
+            <option value="<%= i+1 %>"><%= n %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="relative">
+        <span class="absolute -top-2 left-2 bg-white px-1 text-xs text-stone-500">Tahun</span>
+        <input id="pm-filter-tahun" type="number" class="h-10 px-3 border border-stone-200 rounded-md text-sm w-full" />
+      </div>
+      <div class="relative">
+        <span class="absolute -top-2 left-2 bg-white px-1 text-xs text-stone-500">Minggu Ke</span>
+        <select id="pm-filter-minggu" class="h-10 px-3 border border-stone-200 rounded-md text-sm w-full">
+          <option value="1">Minggu 1 (1-7)</option>
+          <option value="2">Minggu 2 (8-14)</option>
+          <option value="3">Minggu 3 (15-21)</option>
+          <option value="4">Minggu 4 (22-28)</option>
+          <option value="5">Minggu 5 (29-akhir)</option>
+        </select>
+      </div>
+      <div class="flex items-end">
+        <button onclick="loadPayrollMingguan()" class="w-full h-10 bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap"><svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Tampilkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header info -->
+  <div id="pm-info" class="flex items-center justify-between mb-3 text-sm text-stone-500 hidden">
+    <span id="pm-label">—</span>
+    <div class="flex items-center gap-2">
+      <span id="pm-total" class="font-medium">—</span>
+      <button onclick="exportPayrollMingguan()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Export XLSX
+      </button>
+      <button onclick="bayarPayrollMingguan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Bayar & Jurnal
+      </button>
+    </div>
+  </div>
+
+  <!-- Table wrap -->
+  <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
+    <div class="overflow-x-auto" style="max-height:75vh;overflow-y:auto">
+      <table class="w-full min-w-[800px]">
+        <thead id="pm-thead" class="bg-stone-50 sticky top-0 z-10">
+          <tr>
+            <th rowspan="2" class="text-left px-3 py-2 text-xs font-semibold uppercase min-w-[140px] border-r border-stone-200">Karyawan</th>
+            <th rowspan="2" class="text-left px-2 py-2 text-xs font-semibold uppercase min-w-[80px] border-r border-stone-200">Jabatan</th>
+            <th colspan="7" id="pm-header-days" class="text-center px-2 py-1 text-xs font-semibold uppercase">—</th>
+            <th rowspan="2" class="text-center px-2 py-2 text-xs font-semibold uppercase min-w-[64px] border-l border-stone-200">Hadir</th>
+            <th rowspan="2" class="text-right px-2 py-2 text-xs font-semibold uppercase min-w-[80px]">Upah/Hari</th>
+            <th rowspan="2" class="text-right px-2 py-2 text-xs font-semibold uppercase min-w-[100px]">Total Gaji</th>
+          </tr>
+          <tr id="pm-header-sub" class="bg-stone-50">
+            <!-- 7 day sub-headers will be injected here -->
+          </tr>
+        </thead>
+        <tbody id="pm-tbody">
+          <tr><td colspan="12" class="text-center py-12 text-stone-400">Pilih bulan & minggu, lalu klik Tampilkan</td></tr>
+        </tbody>
+        <tfoot id="pm-tfoot" class="bg-stone-50 font-medium hidden">
+          <tr>
+            <td colspan="2" class="px-3 py-2 text-xs text-stone-500">TOTAL</td>
+            <td colspan="7" class="px-2 py-2 text-xs text-center" id="pm-foot-hadir">—</td>
+            <td class="px-2 py-2 text-xs">—</td>
+            <td class="px-2 py-2 text-xs text-right font-bold" id="pm-foot-gaji">—</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   </div>
 </div>
+
+<!-- ===== MODAL (existing, for bulanan) ===== -->
 <div id="payroll-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
   <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
     <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-stone-200 flex justify-between items-center">
       <h3 id="payroll-modal-title" class="text-base font-bold">Tambah Payroll</h3>
-      <button onclick="closeModal('payroll-modal')" class="text-stone-400 hover:text-stone-700 text-xl">×</button>
+      <button onclick="closeModal('payroll-modal')" class="text-stone-400 hover:text-stone-700 p-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="p-4 sm:p-6 overflow-y-auto flex-1">
       <form id="payroll-form" class="space-y-4">
@@ -84,3 +179,5 @@
     </div>
   </div>
 </div>
+
+<style>.tab-pay{cursor:pointer}.tab-pay.active{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.06);color:#1e40af}</style>

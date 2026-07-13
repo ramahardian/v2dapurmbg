@@ -5,73 +5,285 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Absen Karyawan — Dapur Sukaluyu</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'IBM Plex Sans', sans-serif; }
-    h1,h2,h3 { font-family: 'Plus Jakarta Sans', sans-serif; }
-    .bg-pastel-gradient { background: linear-gradient(135deg, #fce4ec 0%, #f3e5f5 40%, #e8eaf6 70%, #e0f7fa 100%); }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #334155 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    h1,h2,h3 { font-family: 'Inter', sans-serif; }
+    
+    /* Card glassmorphism */
+    .glass-card {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    
+    /* Floating particles */
+    .particle {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0.15;
+    }
+    
+    /* Input styling */
+    .input-field {
+      width: 100%;
+      height: 3.25rem;
+      padding: 0 1rem 0 3rem;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 1rem;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    .input-field::placeholder { color: rgba(255,255,255,0.3); }
+    .input-field:focus {
+      border-color: rgba(251,191,36,0.4);
+      background: rgba(255,255,255,0.1);
+      box-shadow: 0 0 0 4px rgba(251,191,36,0.08);
+    }
+    .input-field:focus + .input-icon { color: #fbbf24; }
+    .input-field.error {
+      border-color: rgba(239,68,68,0.5);
+      background: rgba(239,68,68,0.08);
+    }
+    
+    .input-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255,255,255,0.3);
+      transition: color 0.3s ease;
+      pointer-events: none;
+    }
+    
+    /* Button */
+    .btn-primary {
+      width: 100%;
+      height: 3.25rem;
+      background: linear-gradient(135deg, #f59e0b, #fbbf24, #f59e0b);
+      background-size: 200% 200%;
+      border: none;
+      border-radius: 1rem;
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.4s ease;
+      position: relative;
+      overflow: hidden;
+      animation: shimmer 3s ease-in-out infinite;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px -8px rgba(251,191,36,0.3);
+    }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      animation: none;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.3);
+    }
+    @keyframes shimmer {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    
+    /* Slide transition */
+    .slide-content {
+      animation: slideUp 0.4s ease forwards;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Pulse dot */
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      display: inline-block;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+      50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+    }
+    
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(12px);
+      color: #fff;
+      padding: 0.75rem 1.5rem;
+      border-radius: 1rem;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      opacity: 0;
+      transition: all 0.4s ease;
+      z-index: 100;
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { border-color: rgba(239,68,68,0.3); }
+    .toast.success { border-color: rgba(34,197,94,0.3); }
+    
+    /* Loading spinner */
+    .spinner {
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 2px solid rgba(255,255,255,0.15);
+      border-top-color: #fbbf24;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    @media (max-width: 480px) {
+      body { padding: 0.75rem; }
+    }
   </style>
 </head>
-<body class="min-h-screen bg-pastel-gradient flex items-center justify-center p-4">
+<body>
+  <!-- Particles -->
+  <div class="particle" style="width:300px;height:300px;top:-80px;right:-80px;background:radial-gradient(circle,rgba(251,191,36,0.1),transparent)"></div>
+  <div class="particle" style="width:200px;height:200px;bottom:10%;left:-60px;background:radial-gradient(circle,rgba(59,130,246,0.08),transparent)"></div>
+  <div class="particle" style="width:150px;height:150px;bottom:-40px;right:25%;background:radial-gradient(circle,rgba(168,85,247,0.08),transparent)"></div>
+
   <div class="w-full max-w-sm">
-    <div class="text-center mb-8">
-      <div class="w-20 h-20 mx-auto mb-4 bg-white/80 rounded-2xl flex items-center justify-center shadow-md overflow-hidden p-1 backdrop-blur">
+    <!-- Logo & Header -->
+    <div class="text-center mb-8 slide-content">
+      <div class="w-20 h-20 mx-auto mb-4 rounded-2xl overflow-hidden bg-white/5 backdrop-blur border border-white/10 shadow-xl flex items-center justify-center p-1.5">
         <img src="/asset/logo.png" alt="Dapur Sukaluyu" class="w-full h-full object-contain" />
       </div>
-      <h1 class="text-2xl font-bold text-stone-700 mb-1">Absen Karyawan</h1>
-      <p class="text-stone-400 text-sm">Masuk menggunakan nomor telepon</p>
+      <h1 class="text-2xl font-bold text-white mb-1">Absen Karyawan</h1>
+      <p class="text-white/40 text-sm">Masuk untuk melakukan absensi</p>
     </div>
 
-    <div class="bg-white/90 backdrop-blur rounded-2xl shadow-lg p-6">
+    <!-- Card -->
+    <div class="glass-card rounded-2xl p-6 slide-content" style="animation-delay:0.1s">
+      
+      <!-- Form -->
       <form id="login-form" class="space-y-4">
-        <div>
-          <label class="text-sm font-medium text-stone-600">Nomor Telepon</label>
-          <div class="relative mt-1">
-            <div class="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-stone-400">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              <span class="text-stone-300 text-lg">|</span>
-              <span class="text-stone-400 text-sm font-medium">+62</span>
-            </div>
-            <input id="phone" type="tel" inputmode="numeric" required
+        <!-- Phone Input -->
+        <div id="phone-input-group" class="space-y-4 slide-content">
+          <div class="relative">
+            <svg class="input-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <input id="phone" type="tel" inputmode="numeric"
               placeholder="81234567890"
-              class="w-full h-12 pl-20 pr-3 border border-stone-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-pink-300/50 focus:border-pink-300 transition bg-stone-50/50"
+              class="input-field pl-[4.5rem]"
               autocomplete="tel" />
+            <div class="absolute left-12 top-1/2 -translate-y-1/2 text-white/20 select-none pointer-events-none">|</div>
+            <span class="absolute left-12 top-1/2 -translate-y-1/2 -ml-8 text-white/40 text-sm font-medium pointer-events-none">+62</span>
           </div>
-          <p class="text-xs text-stone-400 mt-1">Masukkan nomor tanpa angka 0 di depan (cth: 81234567890)</p>
+          <p class="text-white/25 text-xs pl-1">Nomor tanpa angka 0 di depan (cth: 81234567890)</p>
         </div>
 
-        <div id="err" class="text-sm text-red-600 hidden bg-red-50 border border-red-200 p-3 rounded-xl flex items-center gap-2">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span id="err-text"></span>
+        <!-- Error -->
+        <div id="err" class="hidden">
+          <div class="flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl p-3.5">
+            <svg class="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div>
+              <p class="text-red-300 text-sm font-medium" id="err-title">Gagal</p>
+              <p class="text-red-400/70 text-xs mt-0.5" id="err-detail"></p>
+            </div>
+          </div>
         </div>
 
+        <!-- Submit -->
         <button type="submit" id="btn-login" disabled
-          class="w-full h-12 bg-gradient-to-r from-pink-400 to-pink-300 hover:from-pink-500 hover:to-pink-400 disabled:from-stone-200 disabled:to-stone-200 disabled:cursor-not-allowed text-white disabled:text-stone-400 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 shadow-md">
+          class="btn-primary flex items-center justify-center gap-2">
           <span id="btn-text">Masuk & Absen</span>
-          <svg id="btn-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
+          <div id="btn-spinner" class="spinner hidden"></div>
         </button>
       </form>
+
+      <!-- Info -->
+      <div class="mt-6 pt-4 border-t border-white/5 text-center">
+        <p class="text-white/20 text-xs flex items-center justify-center gap-1.5">
+          <span class="pulse-dot"></span>
+          Sistem Absensi Dapur Sukaluyu
+        </p>
+      </div>
     </div>
 
-    <p class="text-center text-stone-400/60 text-xs mt-8">Dapur Sukaluyu &mdash; Absensi Karyawan</p>
+    <!-- Quick tips -->
+    <div class="mt-4 text-center slide-content" style="animation-delay:0.2s">
+      <button id="btn-bantuan" class="text-white/25 hover:text-white/50 text-xs transition inline-flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Hubungi admin jika nomor telepon tidak dikenali
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast">
+    <span id="toast-icon"></span>
+    <span id="toast-text"></span>
   </div>
 
   <script>
+    // ─── DOM refs ───
     const phoneInput = document.getElementById('phone');
     const btnLogin = document.getElementById('btn-login');
     const btnText = document.getElementById('btn-text');
     const btnSpinner = document.getElementById('btn-spinner');
     const err = document.getElementById('err');
-    const errText = document.getElementById('err-text');
+    const errTitle = document.getElementById('err-title');
+    const errDetail = document.getElementById('err-detail');
+    const toast = document.getElementById('toast');
+    const toastIcon = document.getElementById('toast-icon');
+    const toastText = document.getElementById('toast-text');
+
+    // ─── Input Validation ───
+    function validateInput() {
+      btnLogin.disabled = phoneInput.value.replace(/[^0-9]/g, '').length < 8;
+    }
 
     phoneInput.addEventListener('input', function() {
       this.value = this.value.replace(/[^0-9]/g, '');
-      btnLogin.disabled = this.value.length < 8;
+      err.classList.add('hidden');
+      this.classList.remove('error');
+      validateInput();
     });
 
+    // ─── Toast ───
+    function showToast(msg, type) {
+      toast.className = 'toast ' + (type || '');
+      toastIcon.innerHTML = type === 'error'
+        ? '<svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+        : '<svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+      toastText.textContent = msg;
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    // ─── Submit ───
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       err.classList.add('hidden');
@@ -81,32 +293,56 @@
 
       try {
         const phone = phoneInput.value.replace(/[^0-9]/g, '');
-        const r = await fetch('/api/auth/login-phone?_=' + Date.now(), {
+        if (phone.length < 8) {
+          showToast('Nomor telepon minimal 8 digit', 'error');
+          btnLogin.disabled = false;
+          btnText.textContent = 'Masuk & Absen';
+          btnSpinner.classList.add('hidden');
+          return;
+        }
+        const endpoint = '/api/auth/login-phone';
+        const body = JSON.stringify({ phone });
+
+        const r = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone })
+          body
         });
+
         const data = await r.json();
 
         if (!r.ok) {
           btnLogin.disabled = false;
           btnText.textContent = 'Masuk & Absen';
           btnSpinner.classList.add('hidden');
-          errText.textContent = data.error || 'Gagal login';
-          if (data.solusi) errText.textContent += '. ' + data.solusi;
+          
+          // Show inline error
           err.classList.remove('hidden');
+          errTitle.textContent = data.error || 'Gagal masuk';
+          errDetail.textContent = data.solusi || 'Silakan coba lagi atau hubungi admin';
+          
+          // Highlight input
+          phoneInput.classList.add('error');
           return;
         }
 
-        location.href = '/absen/dashboard';
+        // Success — redirect ke dashboard absensi
+        window.location.href = '/absen/dashboard';
       } catch (ex) {
         btnLogin.disabled = false;
         btnText.textContent = 'Masuk & Absen';
         btnSpinner.classList.add('hidden');
-        errText.textContent = 'Gagal terhubung ke server';
-        err.classList.remove('hidden');
+        showToast('Gagal terhubung ke server', 'error');
       }
     });
+
+    // ─── Bantuan ───
+    document.getElementById('btn-bantuan').addEventListener('click', () => {
+      showToast('Hubungi admin untuk bantuan login', 'error');
+    });
+
+    // ─── Init ───
+    phoneInput.focus();
   </script>
 </body>
 </html>
