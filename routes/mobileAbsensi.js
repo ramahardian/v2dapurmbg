@@ -481,8 +481,7 @@ router.get('/profile', ensureKaryawan, async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT k.id, k.nama, k.nik, k.departemen, k.email, k.phone, k.photo, k.status,
-              k.tanggal_masuk, k.address, j.name as jabatan,
-              (SELECT COUNT(*) FROM absensi a WHERE a.karyawan_id=k.id AND a.tanggal >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as absensi_30hari
+              k.tanggal_masuk, k.address, j.name as jabatan
        FROM karyawan k
        LEFT JOIN jabatan j ON j.id=k.jabatan_id
        WHERE k.id=? AND k.tenant_id=?`,
