@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Absen Karyawan — Dapur Sukaluyu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'IBM Plex Sans', sans-serif; }
+    h1,h2,h3 { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .bg-gradient-app { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-app flex items-center justify-center p-4">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-8">
+      <div class="w-20 h-20 mx-auto mb-4 bg-white rounded-2xl flex items-center justify-center shadow-lg overflow-hidden p-1">
+        <img src="/asset/logo.png" alt="Dapur Sukaluyu" class="w-full h-full object-contain" />
+      </div>
+      <h1 class="text-2xl font-bold text-white mb-1">Absen Karyawan</h1>
+      <p class="text-white/60 text-sm">Masuk menggunakan nomor telepon</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl p-6">
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="text-sm font-medium text-stone-700">Nomor Telepon</label>
+          <div class="relative mt-1">
+            <div class="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-stone-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              <span class="text-stone-300 text-lg">|</span>
+              <span class="text-stone-500 text-sm font-medium">+62</span>
+            </div>
+            <input id="phone" type="tel" inputmode="numeric" required
+              placeholder="81234567890"
+              class="w-full h-12 pl-20 pr-3 border border-stone-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+              autocomplete="tel" />
+          </div>
+          <p class="text-xs text-stone-400 mt-1">Masukkan nomor tanpa angka 0 di depan (cth: 81234567890)</p>
+        </div>
+
+        <div id="err" class="text-sm text-red-700 hidden bg-red-50 border border-red-200 p-3 rounded-xl flex items-center gap-2">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="err-text"></span>
+        </div>
+
+        <button type="submit" id="btn-login" disabled
+          class="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 shadow-md">
+          <span id="btn-text">Masuk & Absen</span>
+          <svg id="btn-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+        </button>
+      </form>
+
+      <div class="mt-6 pt-4 border-t border-stone-100">
+        <a href="/login" class="text-xs text-blue-600 hover:text-blue-700 flex items-center justify-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          Login Admin / Dashboard
+        </a>
+      </div>
+    </div>
+
+    <p class="text-center text-white/40 text-xs mt-8">Dapur Sukaluyu &mdash; Absensi Karyawan</p>
+  </div>
+
+  <script>
+    const phoneInput = document.getElementById('phone');
+    const btnLogin = document.getElementById('btn-login');
+    const btnText = document.getElementById('btn-text');
+    const btnSpinner = document.getElementById('btn-spinner');
+    const err = document.getElementById('err');
+    const errText = document.getElementById('err-text');
+
+    phoneInput.addEventListener('input', function() {
+      this.value = this.value.replace(/[^0-9]/g, '');
+      btnLogin.disabled = this.value.length < 8;
+    });
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.classList.add('hidden');
+      btnLogin.disabled = true;
+      btnText.textContent = 'Memproses...';
+      btnSpinner.classList.remove('hidden');
+
+      try {
+        const phone = phoneInput.value.replace(/[^0-9]/g, '');
+        const r = await fetch('/api/auth/login-phone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone })
+        });
+        const data = await r.json();
+
+        if (!r.ok) {
+          btnLogin.disabled = false;
+          btnText.textContent = 'Masuk & Absen';
+          btnSpinner.classList.add('hidden');
+          errText.textContent = data.error || 'Gagal login';
+          if (data.solusi) errText.textContent += '. ' + data.solusi;
+          err.classList.remove('hidden');
+          return;
+        }
+
+        location.href = '/absen/dashboard';
+      } catch (ex) {
+        btnLogin.disabled = false;
+        btnText.textContent = 'Masuk & Absen';
+        btnSpinner.classList.add('hidden');
+        errText.textContent = 'Gagal terhubung ke server';
+        err.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

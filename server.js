@@ -71,6 +71,17 @@ app.use('/api', apiRoutes);
 app.get('/login', (req, res) => res.render('login'));
 app.get('/signup', (req, res) => res.render('signup'));
 
+// Halaman absen karyawan (login via nomor telepon)
+app.get('/absen', (req, res) => {
+  // Jika sudah login, redirect ke dashboard
+  try {
+    const token = req.cookies?.access_token;
+    if (token) { jwt.verify(token, process.env.JWT_SECRET); return res.redirect('/absen/dashboard'); }
+  } catch {}
+  res.render('login-karyawan');
+});
+app.get('/absen/dashboard', requireKaryawanAuth, (req, res) => res.render('absen-karyawan'));
+
 function requirePageAuth(req, res, next) {
   const token = req.cookies?.access_token;
   if (!token) return res.redirect('/login');
@@ -79,6 +90,17 @@ function requirePageAuth(req, res, next) {
     next();
   } catch {
     return res.redirect('/login');
+  }
+}
+
+function requireKaryawanAuth(req, res, next) {
+  const token = req.cookies?.access_token;
+  if (!token) return res.redirect('/absen');
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    return res.redirect('/absen');
   }
 }
 
