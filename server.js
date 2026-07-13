@@ -5,7 +5,7 @@ const path = require('path');
 
 // ─── CLUSTER MODE ────────────────────────────
 // Manfaatkan semua CPU core untuk handle request paralel
-const WORKERS = parseInt(process.env.CLUSTER_WORKERS) || os.cpus().length;
+const WORKERS = parseInt(process.env.CLUSTER_WORKERS) || 1;
 
 if (cluster.isMaster && WORKERS > 1) {
   console.log(`🚀 Master PID ${process.pid} — Forking ${WORKERS} workers...`);
