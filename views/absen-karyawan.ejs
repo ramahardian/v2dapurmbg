@@ -162,14 +162,39 @@
       try {
         // Load profile
         const pRes = await fetch('/api/mobile/profile');
-        if (pRes.status === 401) { window.location.href = '/absen'; return; }
-        const pData = await pRes.json();
+        if (!pRes.ok) {
+          const pText = await pRes.text();
+          let pErr;
+          try { pErr = JSON.parse(pText); } catch (e) { pErr = {}; }
+          document.getElementById('status-content').innerHTML = '<div class="text-center py-4 text-red-400 text-sm">' + (pErr.error || pErr.solusi || 'Error ' + pRes.status) + '</div>';
+          if (pRes.status === 401) setTimeout(() => { window.location.href = '/absen'; }, 1500);
+          return;
+        }
+        const pText = await pRes.text();
+        let pData;
+        try { pData = JSON.parse(pText); } catch (e) {
+          document.getElementById('status-content').innerHTML = '<div class="text-center py-4 text-red-400 text-sm">Profil: ' + pText.substring(0, 120) + '</div>';
+          return;
+        }
         karyawanData = pData.data;
         document.getElementById('nama-karyawan').textContent = karyawanData.nama;
 
         // Load status
         const sRes = await fetch('/api/mobile/absensi/status');
-        const sData = await sRes.json();
+        if (!sRes.ok) {
+          const sText = await sRes.text();
+          let sErr;
+          try { sErr = JSON.parse(sText); } catch (e) { sErr = {}; }
+          document.getElementById('status-content').innerHTML = '<div class="text-center py-4 text-red-400 text-sm">' + (sErr.error || 'Error ' + sRes.status) + '</div>';
+          return;
+        }
+        const sText = await sRes.text();
+        let sData;
+        try { sData = JSON.parse(sText); } catch (e) {
+          document.getElementById('status-content').innerHTML = '<div class="text-center py-4 text-red-400 text-sm">Respons status: ' + sText.substring(0, 120) + '</div>';
+          console.error('Status response text:', sText);
+          return;
+        }
         absenStatus = sData;
 
         renderStatus(sData);
@@ -177,11 +202,15 @@
 
         // Load riwayat
         const rRes = await fetch('/api/mobile/absensi/riwayat?limit=10');
-        const rData = await rRes.json();
-        renderRiwayat(rData);
+        if (rRes.ok) {
+          const rData = await rRes.json();
+          renderRiwayat(rData);
+        } else {
+          document.getElementById('riwayat-content').innerHTML = '<div class="text-center py-4 text-stone-400 text-sm">Gagal memuat riwayat</div>';
+        }
       } catch (ex) {
         console.error('Load error:', ex);
-        document.getElementById('status-content').innerHTML = '<div class="text-center py-4 text-red-400 text-sm">Gagal memuat data</div>';
+        document.getElementById('status-content').innerHTML = '<div class="text-center py-4 text-red-400 text-sm">Error: ' + ex.message + '</div>';
       }
     }
 

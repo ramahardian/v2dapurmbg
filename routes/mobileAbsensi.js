@@ -23,10 +23,17 @@ router.use(requireAuth);
  * ────────────────────────────────────────────── */
 async function getKaryawanId(user) {
   // Cocokkan user email dengan email di tabel karyawan
+  // Handle jika tenant_id NULL (user belum punya tenant)
+  const params = [user.email];
+  let tenantFilter = '';
+  if (user.tenant_id) {
+    tenantFilter = 'AND tenant_id=?';
+    params.push(user.tenant_id);
+  }
   const [rows] = await db.query(
     `SELECT id, nama, nik, departemen, jabatan_id, photo, phone FROM karyawan 
-     WHERE tenant_id=? AND email=? AND status='Aktif' LIMIT 1`,
-    [user.tenant_id, user.email]
+     WHERE email=? AND status='Aktif' ${tenantFilter} LIMIT 1`,
+    params
   );
   if (!rows.length) return null;
   return rows[0];
