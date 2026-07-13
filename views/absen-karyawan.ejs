@@ -161,8 +161,7 @@
     async function loadStatus() {
       try {
         // Load profile
-        console.log('Fetching profile from:', window.location.origin + '/api/mobile/profile');
-        const pRes = await fetch('/api/mobile/profile');
+        const pRes = await fetch('/api/mobile/profile?_=' + Date.now());
         if (!pRes.ok) {
           const pText = await pRes.text();
           let pErr;
@@ -181,7 +180,7 @@
         document.getElementById('nama-karyawan').textContent = karyawanData.nama;
 
         // Load status
-        const sRes = await fetch('/api/mobile/absensi/status');
+        const sRes = await fetch('/api/mobile/absensi/status?_=' + Date.now());
         if (!sRes.ok) {
           const sText = await sRes.text();
           let sErr;
@@ -202,7 +201,7 @@
         renderButtons(sData);
 
         // Load riwayat
-        const rRes = await fetch('/api/mobile/absensi/riwayat?limit=10');
+        const rRes = await fetch('/api/mobile/absensi/riwayat?limit=10&_=' + Date.now());
         if (rRes.ok) {
           const rData = await rRes.json();
           renderRiwayat(rData);
@@ -303,7 +302,7 @@
         btnLihat.textContent = 'Memuat...';
         btnLihat.disabled = true;
         try {
-          const rRes = await fetch('/api/mobile/absensi/riwayat?limit=50');
+          const rRes = await fetch('/api/mobile/absensi/riwayat?limit=50&_=' + Date.now());
           const rData = await rRes.json();
           el.innerHTML = rData.data.map(a => {
             const statusClass = a.status === 'Hadir' ? 'text-green-600 bg-green-50' : a.status === 'Sakit' ? 'text-yellow-600 bg-yellow-50' : a.status === 'Izin' ? 'text-blue-600 bg-blue-50' : 'text-pink-600 bg-pink-50';

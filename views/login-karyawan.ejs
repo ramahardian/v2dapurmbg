@@ -81,7 +81,7 @@
 
       try {
         const phone = phoneInput.value.replace(/[^0-9]/g, '');
-        const r = await fetch('/api/auth/login-phone', {
+        const r = await fetch('/api/auth/login-phone?_=' + Date.now(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone })
