@@ -45,22 +45,9 @@ async function requireAuth(req, res, next) {
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ error: 'Tidak terautentikasi' });
-    
-    const sensitiveEndpoint = /hpp|kesehatan|kecukupan|gizi|sp\/(?:hitung|standar)/; 
-    
-    const sensitiveRoles = ['ahli_gizi', 'produksi', 'production', 'gudang'];
-    
     if (req.user.role === 'admin') return next();
     
-    if (sensitiveRoles.includes(req.user.role)) {
-      if (roles.includes('keuangan')) {
-        return res.status(403).json({ error: 'Akses ahli gizi diperlukan untuk endpoint nutrisi sensitif' });
-      }
-      if (roles.includes('SDM') && req.user.role !== 'SDM') {
-        return res.status(403).json({ error: 'Anda tidak diberikan akses ke SDM' });
-      }
-      return next();
-    }
+    const ahliGiziOnlyRoutes = ['siklus', 'standar-sp', 'sp-referensi', 'perhitungan-bdd', 'bdd-kalkulator', 'perencanaan', 'total-kebutuhan', 'panduan-ahli-gizi'];
     
     if (req.user.role === 'SDM' && roles.includes('ahli_gizi')) {
       return res.status(403).json({ error: 'SDM grup tidak diberikan akses untuk endpoint nutrisi sensitif' });
