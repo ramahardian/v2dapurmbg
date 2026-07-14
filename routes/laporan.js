@@ -5,6 +5,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
 router.use(requireAuth);
+router.use(requireRole('admin', 'keuangan'));
 
 /**
  * GET /laporan/keuangan

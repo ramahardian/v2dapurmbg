@@ -40,7 +40,7 @@ function renderNav() {
       if (key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'perencanaan' || key === 'total-kebutuhan' || key === 'standar-sp' || key === 'sp-referensi' || key === 'perhitungan-bdd' || key === 'bdd-kalkulator' || key === 'panduan-ahli-gizi') return isAdminOrAhliGizi;
       if (key === 'gudang') return isAdminOrGudang;
       if (key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun') return isAdminOrKeuangan;
-      if (key === 'laporan') return isAdminOrKeuangan || isAdminOrAhliGizi;
+      if (key === 'laporan') return isAdminOrKeuangan;
       if (key === 'penerima-manfaat') return isAdminOrKeuangan;
       if (key === 'karyawan' || key === 'absensi' || key === 'payroll' || key === 'shift' || key === 'divisi' || key === 'ijin-cuti') return isAdminOrKeuangan;
       if (key === 'supplier') return isAdminOrKeuanganOrGudang;
@@ -85,7 +85,7 @@ function route() {
   if ((key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun' || key === 'panduan-keuangan') && !isAdminOrKeuangan) {
     return showAccessDenied();
   }
-  if (key === 'laporan' && !isAdminOrKeuangan && !isAdminOrAhliGizi) {
+  if (key === 'laporan' && !isAdminOrKeuangan) {
     return showAccessDenied();
   }
   if ((key === 'shift' || key === 'jadwal' || key === 'divisi') && !isAdminOrKeuangan) {
