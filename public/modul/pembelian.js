@@ -32,17 +32,9 @@ async function renderPembelian() {
 
   const toolbar = document.querySelector('#content > div:first-child');
   if (!toolbar) return;
-  const group = document.createElement('div');
-  group.className = 'flex gap-2';
-  const btn = document.createElement('button');
-  btn.id = 'po-from-siklus-btn';
-  btn.className = 'bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm font-medium';
-  btn.textContent = '+ Buat dari Siklus';
-  btn.onclick = openSiklusPicker;
-  const addBtn = document.getElementById('add-btn');
-  toolbar.insertBefore(group, toolbar.firstChild);
-  group.appendChild(btn);
-  if (addBtn) group.appendChild(addBtn);
+  toolbar.innerHTML = `<div class="flex gap-2">
+    <button onclick="exportXlsx()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium">Export XLSX</button>
+  </div>`;
 
   const wrap = document.getElementById('table-wrap');
   if (wrap) {
