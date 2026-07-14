@@ -383,6 +383,17 @@ require('dotenv').config();
       console.log('  (skip migrasi penerima_manfaat_id distribusi)', e.message);
     }
 
+    // Migrasi kolom supplier_id di penerimaan_barang (referensi ke Supplier)
+    try {
+      const [supCol] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'penerimaan_barang' AND COLUMN_NAME = 'supplier_id'");
+      if (!supCol.length) {
+        await conn.query("ALTER TABLE penerimaan_barang ADD COLUMN supplier_id INT NULL AFTER tanggal_terima, ADD FOREIGN KEY (supplier_id) REFERENCES supplier(id) ON DELETE SET NULL");
+        console.log('✓ Migrasi penerimaan_barang: tambah kolom supplier_id');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi supplier_id penerimaan_barang)', e.message);
+    }
+
     // Seed admin tenant + user
     const [tExist] = await db.query('SELECT id FROM tenants LIMIT 1');
     if (!tExist.length) {

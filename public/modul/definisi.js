@@ -58,7 +58,7 @@ distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', ic
   penerimaan: { title: 'Penerimaan Barang', sub: 'Barang masuk dari supplier', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
     crud: { endpoint: '/penerimaan_barang', fields: [
       { k: 'no_dokumen', l: 'No Dokumen', req: true }, { k: 'tanggal_terima', l: 'Tanggal Terima', type: 'date', req: true },
-      { k: 'supplier_nama', l: 'Supplier' }, { k: 'ref_po', l: 'Ref PO' },
+      { k: 'supplier_id', l: 'Supplier', type: 'select-api', source: '/supplier', valueField: 'id', labelField: 'nama', req: true }, { k: 'ref_po', l: 'Ref PO' },
       { k: 'item', l: 'Detail Barang', type: 'textarea' },
       { k: 'total_nilai', l: 'Total Nilai (IDR)', type: 'number', fmt: 'idr' },
       { k: 'status_qc', l: 'Status QC', type: 'select', opts: ['Lolos','Retur Sebagian','Ditolak'] },
@@ -104,6 +104,7 @@ distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', ic
   siklus: { title: 'Siklus Menu', sub: 'Rencana menu berulang — untuk ahli gizi', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>', render: renderSiklus },
   'panduan-ahli-gizi': { title: 'Panduan Ahli Gizi', sub: 'Alur kerja dari SP hingga kebutuhan bahan', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', render: renderPanduanAhliGizi },
   'panduan-keuangan': { title: 'Panduan Keuangan', sub: 'Alur pembelian, pembayaran & laporan keuangan', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', render: renderPanduanKeuangan },
+  'panduan-sdm': { title: 'Panduan SDM', sub: 'Alur absensi, izin/cuti, payroll & shift karyawan', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', render: renderPanduanSDM },
   akun: { title: 'Akun Saya', sub: 'Kelola profil & kata sandi', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>', render: renderAkun },
   'kelola-user': { title: 'Kelola User', sub: 'Atur akun pengguna', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', render: renderKelolaUser },
   karyawan: { title: 'Karyawan', sub: 'Data master karyawan', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', render: renderKaryawan },
@@ -131,7 +132,7 @@ const NAV_GROUPS = [
   { label: 'Operasional', items: ['penerima-manfaat', 'bahan-baku', 'gudang', 'produksi', 'distribusi'] },
   { label: 'Pembelian', items: ['supplier', 'pembelian', 'penerimaan'] },
   { label: 'Akuntansi', items: ['budgeting', 'kas-bank', 'bp-operasional', 'daftar-akun', 'laporan', 'panduan-keuangan'] },
-  { label: 'SDM', items: ['karyawan', 'absensi', 'ijin-cuti', 'payroll', 'shift', 'divisi'] },
+  { label: 'SDM', items: ['karyawan', 'absensi', 'ijin-cuti', 'payroll', 'shift', 'divisi', 'panduan-sdm'] },
   { label: 'Ahli Gizi', items: ['menu', 'hpp', 'siklus', 'perencanaan', 'total-kebutuhan', 'standar-sp', 'sp-referensi', 'perhitungan-bdd', 'bdd-kalkulator', 'panduan-ahli-gizi'] },
   { label: 'Pengaturan', items: ['kelola-user'] },
 ];

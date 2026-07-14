@@ -19,7 +19,7 @@ const TABLES = {
   bahan_baku: ['kode', 'nama', 'kategori', 'kategori_sp', 'berat_1_sp', 'persen_bdd', 'berat_per_satuan', 'satuan', 'harga_satuan', 'harga_sebelumnya', 'stok_saat_ini', 'stok_minimum', 'kalori', 'protein', 'karbohidrat', 'lemak', 'serat'],
   supplier: ['nama', 'kategori_supply', 'kontak_person', 'telepon', 'email', 'alamat', 'npwp'],
   purchase_order: ['no_po', 'tanggal', 'supplier_id', 'supplier_nama', 'item', 'total_nilai', 'status', 'unit_dapur', 'catatan'],
-  penerimaan_barang: ['no_dokumen', 'tanggal_terima', 'supplier_nama', 'ref_po', 'item', 'total_nilai', 'status_qc', 'catatan'],
+  penerimaan_barang: ['no_dokumen', 'tanggal_terima', 'supplier_id', 'ref_po', 'item', 'total_nilai', 'status_qc', 'catatan'],
   produksi: ['tanggal_produksi', 'menu_id', 'menu_nama', 'kategori_penerima', 'jumlah_porsi', 'status', 'catatan'],
   distribusi: ['tanggal_distribusi', 'titik_distribusi', 'penerima_manfaat_id', 'kategori_penerima', 'jumlah_porsi', 'kurir', 'status', 'catatan'],
   budget: ['periode', 'kategori_penerima', 'jumlah_penerima', 'harga_per_porsi', 'biaya_operasional', 'total_budget', 'realisasi', 'catatan'],
@@ -158,6 +158,11 @@ const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (
       fromClause = `${table} d LEFT JOIN penerima_manfaat pm ON pm.id = d.penerima_manfaat_id AND pm.tenant_id = d.tenant_id`;
       whereClause = 'WHERE d.tenant_id=?';
       orderByClause = 'ORDER BY d.id DESC';
+    } else if (table === 'penerimaan_barang') {
+      selectClause = `pb.*, s.nama as supplier_nama`;
+      fromClause = `${table} pb LEFT JOIN supplier s ON s.id = pb.supplier_id AND s.tenant_id = pb.tenant_id`;
+      whereClause = 'WHERE pb.tenant_id=?';
+      orderByClause = 'ORDER BY pb.id DESC';
     }
     
     // Search: filter berdasarkan kolom yang sudah ditentukan

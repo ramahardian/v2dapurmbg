@@ -23,6 +23,7 @@ const FILES = [
   'sp-referensi.js',
   'panduan.js',
   'panduan-keuangan.js',
+  'panduan-sdm.js',
   'perhitungan-bdd.js',
   'bdd-kalkulator.js',
   'perencanaan.js',

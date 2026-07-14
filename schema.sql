@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS penerimaan_barang (
   tenant_id INT NOT NULL,
   no_dokumen VARCHAR(50) NOT NULL,
   tanggal_terima DATE NOT NULL,
+  supplier_id INT NULL,
   supplier_nama VARCHAR(200),
   ref_po VARCHAR(50),
   item TEXT,
@@ -143,6 +144,7 @@ CREATE TABLE IF NOT EXISTS penerimaan_barang (
   catatan TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  FOREIGN KEY (supplier_id) REFERENCES supplier(id) ON DELETE SET NULL,
   INDEX idx_tenant (tenant_id)
 ) ENGINE=InnoDB;
 
