@@ -8,10 +8,10 @@ async function renderCrud(cfg) {
   const c = document.getElementById('content');
   c.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-2 mb-4">
     <div class="flex items-center gap-2">
-      <input id="crud-search" placeholder="Cari..." class="h-10 px-3 border border-stone-200 rounded-md text-sm w-48">
       <button id="add-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah</button>
     </div>
-    <div class="flex gap-2">
+    <div class="flex items-center gap-2">
+      <input id="crud-search" placeholder="Cari..." class="h-10 px-3 border border-stone-200 rounded-md text-sm w-48">
       ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="border border-emerald-400 text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-md text-sm font-medium">${cfg.sync.label}</button>` : ''}
       ${cfg.extraButtons ? cfg.extraButtons.map(b => `<button onclick="${b.onclick}" class="${b.cls || 'border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium'}">${b.label}</button>`).join('') : ''}
       <button onclick="exportXlsx()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium">Export XLSX</button>
