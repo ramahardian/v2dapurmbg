@@ -220,6 +220,9 @@ async function showLap(tab) {
       });
 
       // Filter bar
+      var exportBtn = '<button onclick="exportPayrollMingguanLap()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5">' +
+        '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
+        'Export XLSX</button>';
       var pmFilterBar = '<div class="mb-4 flex flex-wrap items-center gap-3">' +
         '<div class="flex items-center gap-2">' +
         '<label class="text-xs font-medium text-stone-500">Bulan:</label>' +
@@ -233,7 +236,7 @@ async function showLap(tab) {
         [1,2,3,4,5].map(function(m) { return '<option value="' + m + '" ' + (parseInt(mggVal)===m?'selected':'') + '>Minggu ' + m + '</option>'; }).join('') +
         '</select></div>' +
         '<div class="flex gap-1.5">' +
-        '<span id="pm-export-btn"></span>' +
+        '<span id="pm-export-btn">' + exportBtn + '</span>' +
         '<button onclick="bayarPayrollMingguanLap()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5">' +
         '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' +
         'Bayar & Jurnal</button>' +
@@ -257,46 +260,11 @@ async function showLap(tab) {
         var exportBtn = '<button onclick="exportPayrollMingguanLap()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5">' +
           '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
           'Export XLSX</button>';
-        document.getElementById('pm-export-btn').innerHTML = exportBtn;
 
         // Simpan data untuk export
         window._pmExportData = { minggu, karyawan };
 
         var totalHadir = 0, totalGaji = 0;
-        karyawan.forEach(function(k) { totalHadir += k.total_hadir; totalGaji += k.total_gaji; });
-
-        // Info header
-        var infoHtml = '<div class="flex items-center justify-between mb-3">' +
-          '<div class="text-sm font-medium">📅 ' + escHtml(minggu.label) + '</div>' +
-          '<div class="text-xs text-stone-500">' + karyawan.length + ' karyawan · ' + totalHadir + ' hadir · Total: ' + fmtIdr(totalGaji) + '</div>' +
-          '</div>';
-
-        // Table
-        var tableHtml = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto" style="max-height:70vh;overflow-y:auto"><table class="w-full min-w-[700px]">' +
-          '<thead class="bg-stone-50 sticky top-0 z-10"><tr>' +
-          '<th rowspan="2" class="text-left px-3 py-2 text-xs font-semibold uppercase min-w-[120px] border-r border-stone-200">Karyawan</th>' +
-          '<th rowspan="2" class="text-left px-2 py-2 text-xs font-semibold uppercase min-w-[70px] border-r border-stone-200">Jabatan</th>' +
-          '<th colspan="' + minggu.dates.length + '" class="text-center px-2 py-1 text-xs font-semibold uppercase">' + minggu.dates.length + ' Hari Kerja</th>' +
-          '<th rowspan="2" class="text-center px-2 py-2 text-xs font-semibold uppercase min-w-[50px] border-l border-stone-200">Hadir</th>' +
-          '<th rowspan="2" class="text-right px-2 py-2 text-xs font-semibold uppercase min-w-[65px]">Upah/Hr</th>' +
-          '<th rowspan="2" class="text-right px-2 py-2 text-xs font-semibold uppercase min-w-[80px]">Total</th></tr>' +
-          '<tr class="bg-stone-50">';
-        minggu.dates.forEach(function(tgl, i) {
-          var d = new Date(tgl + 'T00:00:00');
-          var hari = tglNama[d.getDay()];
-          var tglNum = tgl.slice(8, 10);
-          var isWeekend = [0, 6].includes(d.getDay());
-          tableHtml += '<th class="text-center px-1 py-1 text-[10px] font-semibold uppercase border-l border-stone-200 min-w-[60px] ' + (isWeekend ? 'text-red-400' : '') + '">' + hari + '<br><span class="text-xs">' + tglNum + '</span></th>';
-        });
-        tableHtml += '</tr></thead><tbody>';
-
-        karyawan.forEach(function(k) {
-          tableHtml += '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
-            '<td class="px-3 py-2 text-sm font-medium whitespace-nowrap">' + escHtml(k.nama) + '</td>' +
-            '<td class="px-2 py-2 text-xs text-stone-500 whitespace-nowrap border-r border-stone-200">' + escHtml(k.jabatan) + '</td>';
-          k.harian.forEach(function(h, i) {
-            var tgl = minggu.dates[i];
-            var d = new Date(tgl + 'T00:00:00');
             var isWeekend = [0, 6].includes(d.getDay());
             if (!h) {
               tableHtml += '<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ' + (isWeekend ? 'bg-stone-50' : '') + '"><span class="text-stone-300">—</span></td>';
