@@ -10,21 +10,31 @@ async function renderLaporan() {
       throw new Error(err.error || 'Gagal memuat laporan');
     }
     c.innerHTML = await r.text();
-    showLap('siklus');
+    showLap(getLapTabsForRole()[0]);
   } catch (err) {
     console.error('Laporan error:', err);
     if (err.message.includes('Akses ditolak') || err.message.includes('Forbidden')) return showAccessDenied();
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
   }
 }
-const LAP_TABS = ['siklus', 'hpp', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas'];
+const LAP_TABS = ['siklus', 'hpp', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan'];
 const LAP_PAGE_SIZE = 10;
 let lapState = { tab: 'siklus', page: 1 };
 
+function getLapTabsForRole() {
+  const role = currentUser?.role || '';
+  if (role === 'keuangan') {
+    return LAP_TABS.filter(t => t !== 'siklus');
+  }
+  return LAP_TABS;
+}
+
 async function showLap(tab) {
+  const tabs = getLapTabsForRole();
+  if (!tabs.includes(tab)) tab = tabs[0];
   lapState.tab = tab;
   lapState.page = 1;
-  const tabColors = {
+const tabColors = {
     persediaan: { active: 'bg-white text-amber-600 shadow-sm', inactive: 'bg-amber-100 text-amber-700 hover:bg-amber-200' },
     distribusi: { active: 'bg-white text-violet-600 shadow-sm', inactive: 'bg-violet-100 text-violet-700 hover:bg-violet-200' },
     siklus: { active: 'bg-white text-rose-600 shadow-sm', inactive: 'bg-rose-100 text-rose-700 hover:bg-rose-200' },
@@ -33,17 +43,24 @@ async function showLap(tab) {
     rab: { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
     'rab-bulanan': { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
     'pengeluaran-bulanan': { active: 'bg-white text-sky-600 shadow-sm', inactive: 'bg-sky-100 text-sky-700 hover:bg-sky-200' },
-    'penggunaan-anggaran': { active: 'bg-white text-teal-600 shadow-sm', inactive: 'bg-teal-100 text-teal-700 hover:bg-teal-200' },      'bp-kas': { active: 'bg-white text-indigo-600 shadow-sm', inactive: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' },
-      'payroll-mingguan': { active: 'bg-white text-pink-600 shadow-sm', inactive: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
+    'penggunaan-anggaran': { active: 'bg-white text-teal-600 shadow-sm', inactive: 'bg-teal-100 text-teal-700 hover:bg-teal-200' },
+    'bp-kas': { active: 'bg-white text-indigo-600 shadow-sm', inactive: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' },
+    payroll: { active: 'bg-white text-pink-600 shadow-sm', inactive: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
+    'payroll-mingguan': { active: 'bg-white text-pink-600 shadow-sm', inactive: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
   };
-  LAP_TABS.forEach(t => {
-    const el = document.getElementById('lt-'+t);
+  getLapTabsForRole().forEach(t => {
+    const el = document.getElementById('lt-' + t);
+    if (!el) return;
     const c = tabColors[t];
     const base = 'px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 -mb-px';
     const extra = t === tab ? ' relative z-[2]' : '';
     el.className = base + ' ' + (t === tab ? c.active : c.inactive) + extra;
   });
   const wrap = document.getElementById('lap-content');
+  if (!wrap) {
+    console.error('lap-content element not found');
+    return;
+  }
   wrap.innerHTML = '<div class="flex items-center justify-center py-16"><svg class="animate-spin h-8 w-8 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
     if (tab === 'persediaan') {
@@ -214,11 +231,6 @@ async function showLap(tab) {
       const thnVal = lapState.pm_tahun || String(now.getFullYear());
       const mggVal = lapState.pm_minggu || autoMinggu;
 
-      // Active tab styling
-      document.querySelectorAll('#lt-payroll-mingguan').forEach(el => {
-        el.className = 'px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-stone-200 -mb-px bg-white text-pink-600 shadow-sm relative z-[2]';
-      });
-
       // Filter bar
       var exportBtn = '<button onclick="exportPayrollMingguanLap()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5">' +
         '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
@@ -256,16 +268,41 @@ async function showLap(tab) {
         const tglNama = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
         const fmtIdr = fmtIDR;
 
-        // Export button
-        var exportBtn = '<button onclick="exportPayrollMingguanLap()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5">' +
-          '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
-          'Export XLSX</button>';
+        // Info header
+        var infoHtml = '<div class="mb-4">' +
+          '<div class="flex items-center gap-2 text-sm font-medium text-stone-700">' +
+          '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ' + minggu.label + '</div>' +
+          '<div class="text-xs text-stone-500 mt-1">' + totals.total_karyawan + ' karyawan · ' + totals.total_hadir + ' hadir · Total: ' + fmtIdr(totals.total_gaji) + '</div>' +
+          '</div>';
 
-        // Simpan data untuk export
-        window._pmExportData = { minggu, karyawan };
+        // Table header
+        var tableHtml = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-[11px]"><thead class="bg-stone-50"><tr>' +
+          '<th class="text-left px-3 py-2 font-semibold border-r border-stone-200 whitespace-nowrap">Nama</th>' +
+          '<th class="text-left px-2 py-2 font-semibold border-r border-stone-200 whitespace-nowrap text-stone-500">Jabatan</th>';
+        minggu.dates.forEach(function(tgl, i) {
+          const d = new Date(tgl + 'T00:00:00');
+          const hari = tglNama[d.getDay()];
+          const tglNum = tgl.slice(8, 10);
+          tableHtml += '<th class="text-center px-1 py-1 font-semibold border-l border-stone-200 min-w-[72px] ' + ([0,6].includes(d.getDay()) ? 'text-red-400' : '') + '">' + hari + '<br><span class="text-xs">' + tglNum + '</span></th>';
+        });
+        tableHtml += '<th class="text-center px-2 py-2 font-semibold border-l border-stone-200 whitespace-nowrap">Hadir</th>' +
+          '<th class="text-right px-2 py-2 font-semibold whitespace-nowrap mono">Upah/Hari</th>' +
+          '<th class="text-right px-2 py-2 font-semibold whitespace-nowrap mono">Total</th></tr></thead><tbody>';
 
         var totalHadir = 0, totalGaji = 0;
-            var isWeekend = [0, 6].includes(d.getDay());
+
+        karyawan.forEach(function(k) {
+          totalHadir += k.total_hadir;
+          totalGaji += k.total_gaji;
+
+          tableHtml += '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
+            '<td class="px-3 py-2 font-medium whitespace-nowrap">' + k.nama + '</td>' +
+            '<td class="px-2 py-2 text-xs text-stone-500 whitespace-nowrap border-r border-stone-200">' + k.jabatan + '</td>';
+
+          k.harian.forEach(function(h, i) {
+            const tgl = minggu.dates[i];
+            const d = new Date(tgl + 'T00:00:00');
+            const isWeekend = [0, 6].includes(d.getDay());
             if (!h) {
               tableHtml += '<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ' + (isWeekend ? 'bg-stone-50' : '') + '"><span class="text-stone-300">—</span></td>';
             } else if (h.status === 'Hadir') {
@@ -274,6 +311,7 @@ async function showLap(tab) {
               tableHtml += '<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ' + (isWeekend ? 'bg-stone-50' : '') + '"><span class="text-' + (h.status==='Sakit'?'amber':h.status==='Izin'?'blue':h.status==='Cuti'?'violet':'red') + '-600">' + h.status + '</span></td>';
             }
           });
+
           tableHtml += '<td class="text-center px-2 py-2 text-sm font-bold border-l border-stone-200">' + k.total_hadir + 'x</td>' +
             '<td class="text-right px-2 py-2 text-xs mono">' + fmtIdr(k.upah_per_hari) + '</td>' +
             '<td class="text-right px-2 py-2 text-sm font-bold mono">' + fmtIdr(k.total_gaji) + '</td></tr>';
@@ -287,6 +325,7 @@ async function showLap(tab) {
           '<td class="px-2 py-2 text-xs"></td>' +
           '<td class="text-right px-2 py-2 text-xs font-bold">' + fmtIdr(totalGaji) + '</td></tr></tfoot></table></div></div>';
 
+        window._pmExportData = { minggu, karyawan };
         window._lapStatCards = pmFilterBar + infoHtml + tableHtml;
         window._lapData = null;
       } catch (e) {
@@ -621,12 +660,15 @@ async function showLap(tab) {
     renderLapPage();
   } catch (err) {
     console.error('showLap error:', err);
-    wrap.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
+    if (wrap) {
+      wrap.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
+    }
   }
 }
 
 function renderLapPage() {
   const wrap = document.getElementById('lap-content');
+  if (!wrap) return;
   const ld = window._lapData;
   if (!ld) {
     if (window._lapStatCards) wrap.innerHTML = window._lapStatCards;

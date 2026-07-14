@@ -6,8 +6,15 @@ const { mapJenjang, hitungSP, getSpMapByJenjang } = require('../services/spBddCa
 const router = express.Router();
 router.use(requireAuth);
 
-// 1. Laporan Pembelian (PO)
-router.get('/laporan/pembelian', async (req, res) => {
+// Role middleware helpers
+const roleFinance = requireRole('admin', 'keuangan');
+const roleOps = requireRole('admin', 'keuangan', 'produksi', 'gudang', 'pimpinan');
+const roleWarehouse = requireRole('admin', 'gudang', 'produksi', 'keuangan');
+const roleHR = requireRole('admin', 'keuangan', 'hrd', 'pimpinan');
+const roleAll = requireRole('admin', 'keuangan', 'produksi', 'gudang', 'pimpinan', 'hrd');
+
+// 1. Laporan Pembelian (PO) - Gudang/Admin
+router.get('/laporan/pembelian', roleWarehouse, async (req, res) => {
   const [rows] = await db.query(
     `SELECT * FROM purchase_order WHERE tenant_id=? ORDER BY tanggal DESC`,
     [req.user.tenant_id]
@@ -23,8 +30,8 @@ router.get('/laporan/pembelian', async (req, res) => {
   res.json({ rows, stats });
 });
 
-// 2. Laporan Penerimaan Barang
-router.get('/laporan/penerimaan', async (req, res) => {
+// 2. Laporan Penerimaan Barang - Gudang/Admin
+router.get('/laporan/penerimaan', roleWarehouse, async (req, res) => {
   const [rows] = await db.query(
     `SELECT * FROM penerimaan_barang WHERE tenant_id=? ORDER BY tanggal_terima DESC`,
     [req.user.tenant_id]
@@ -39,8 +46,8 @@ router.get('/laporan/penerimaan', async (req, res) => {
   res.json({ rows, stats });
 });
 
-// 3. Mutasi Stok
-router.get('/laporan/mutasi-stok', async (req, res) => {
+// 3. Mutasi Stok - Gudang/Admin
+router.get('/laporan/mutasi-stok', roleWarehouse, async (req, res) => {
   const [masuk] = await db.query(
     `SELECT sm.*, bb.nama as bahan_nama, bb.satuan FROM stok_masuk sm
      JOIN bahan_baku bb ON bb.id=sm.bahan_baku_id
@@ -64,8 +71,8 @@ router.get('/laporan/mutasi-stok', async (req, res) => {
   res.json({ rows, stats });
 });
 
-// 4. Laporan Produksi
-router.get('/laporan/produksi', async (req, res) => {
+// 4. Laporan Produksi - Operasional/Produksi/Admin
+router.get('/laporan/produksi', roleOps, async (req, res) => {
   const [rows] = await db.query(
     `SELECT * FROM produksi WHERE tenant_id=? ORDER BY tanggal_produksi DESC`,
     [req.user.tenant_id]
@@ -80,8 +87,8 @@ router.get('/laporan/produksi', async (req, res) => {
   res.json({ rows, stats });
 });
 
-// 5. Laporan Payroll
-router.get('/laporan/payroll', async (req, res) => {
+// 5. Laporan Payroll - Keuangan/Admin
+router.get('/laporan/payroll', roleFinance, async (req, res) => {
   const [rows] = await db.query(
     `SELECT p.*, CONCAT(p.tahun, '-', LPAD(p.bulan,2,'0')) as periode,
             k.nama as karyawan_nama, k.jabatan
@@ -94,8 +101,8 @@ router.get('/laporan/payroll', async (req, res) => {
   res.json({ rows, stats: { total_karyawan: rows.length, total_gaji, periode_count: uniqPeriods.length } });
 });
 
-// 6. Laba/Rugi
-router.get('/laporan/laba-rugi', async (req, res) => {
+// 6. Laba/Rugi - Keuangan/Admin
+router.get('/laporan/laba-rugi', roleFinance, async (req, res) => {
   const [kasMasuk] = await db.query(
     `SELECT DATE_FORMAT(tanggal,'%Y-%m') as periode, SUM(jumlah) as total
      FROM kas_bank WHERE tenant_id=? AND tipe='masuk' GROUP BY periode ORDER BY periode DESC`,
@@ -119,8 +126,8 @@ router.get('/laporan/laba-rugi', async (req, res) => {
   res.json({ rows, totalPendapatan, totalBiayaAll: totalBiaya, labaRugi: totalPendapatan - totalBiaya });
 });
 
-// 7. HPP per Menu
-router.get('/laporan/hpp', async (req, res) => {
+// 7. HPP per Menu - Keuangan/Admin
+router.get('/laporan/hpp', roleFinance, async (req, res) => {
   const [menus] = await db.query(
     `SELECT m.id, m.nama, m.gramasi_total, m.kategori_penerima,
             COALESCE(SUM(mb.jumlah * bb.harga_satuan), 0) as total_biaya_bahan
@@ -139,8 +146,8 @@ router.get('/laporan/hpp', async (req, res) => {
   res.json({ rows, stats: { total_menu: rows.length, rata_hpp: rataHPP, total_biaya: rows.reduce((s, r) => s + Number(r.total_biaya_bahan), 0) } });
 });
 
-// 8. RAB Bulanan (agregat per periode)
-router.get('/laporan/rab-bulanan', async (req, res) => {
+// 8. RAB Bulanan (agregat per periode) - Operasional/Produksi/Admin
+router.get('/laporan/rab-bulanan', roleOps, async (req, res) => {
   const [rows] = await db.query(
     `SELECT periode,
             COUNT(*) as item_count,
@@ -170,8 +177,8 @@ router.get('/laporan/rab-bulanan', async (req, res) => {
   res.json({ rows, stats });
 });
 
-// 9. Laporan Perhitungan Kebutuhan Pangan (per Program Makan / siklus)
-router.get('/laporan/kebutuhan-pangan/:siklus_id', async (req, res) => {
+// 9. Laporan Perhitungan Kebutuhan Pangan (per Program Makan / siklus) - Gudang/Operasional/Admin
+router.get('/laporan/kebutuhan-pangan/:siklus_id', roleWarehouse, async (req, res) => {
   const { siklus_id } = req.params;
   const jumlahSiswa = parseInt(req.query.jumlah_siswa) || 0;
 
@@ -259,8 +266,8 @@ router.get('/laporan/kebutuhan-pangan/:siklus_id', async (req, res) => {
   });
 });
 
-// 10. Buku Pembantu Operasional
-router.get('/laporan/bp-operasional', async (req, res) => {
+// 10. Buku Pembantu Operasional - Keuangan/Admin
+router.get('/laporan/bp-operasional', roleFinance, async (req, res) => {
   const t = req.user.tenant_id;
   const { bulan, tahun } = req.query;
   const now = new Date();
@@ -360,8 +367,8 @@ router.get('/laporan/bp-operasional', async (req, res) => {
   });
 });
 
-// 11. Catatan Pengeluaran Bulanan
-router.get('/laporan/pengeluaran-bulanan', async (req, res) => {
+// 11. Catatan Pengeluaran Bulanan - Keuangan/Admin
+router.get('/laporan/pengeluaran-bulanan', roleFinance, async (req, res) => {
   const t = req.user.tenant_id;
   const { bulan, tahun } = req.query;
   const now = new Date();
@@ -439,8 +446,8 @@ router.get('/laporan/pengeluaran-bulanan', async (req, res) => {
   });
 });
 
-// 12. Laporan Penggunaan Anggaran
-router.get('/laporan/penggunaan-anggaran', async (req, res) => {
+// 12. Laporan Penggunaan Anggaran - Keuangan/Admin
+router.get('/laporan/penggunaan-anggaran', roleFinance, async (req, res) => {
   const t = req.user.tenant_id;
   const { bulan, tahun } = req.query;
   const now = new Date();
@@ -503,8 +510,8 @@ router.get('/laporan/penggunaan-anggaran', async (req, res) => {
   });
 });
 
-// 13. Buku Pembantu BP Kas
-router.get('/laporan/bp-kas', async (req, res) => {
+// 13. Buku Pembantu BP Kas - Keuangan/Admin
+router.get('/laporan/bp-kas', roleFinance, async (req, res) => {
   const t = req.user.tenant_id;
   const { bulan, tahun } = req.query;
   const now = new Date();
