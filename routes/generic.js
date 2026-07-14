@@ -179,7 +179,7 @@ const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (
     }
     
     // Hitung total sebelum pagination
-    const countFrom = table === 'distribusi' ? `${table} d` : table;
+    const countFrom = table === 'distribusi' ? `${table} d` : table === 'penerimaan_barang' ? `${table} pb` : table;
     const [countResult] = await db.query(`SELECT COUNT(*) as count FROM ${countFrom} ${whereClause}`, params);
     const total = countResult[0].count;
     
