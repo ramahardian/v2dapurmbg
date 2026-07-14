@@ -198,6 +198,7 @@ CREATE TABLE IF NOT EXISTS distribusi (
   tenant_id INT NOT NULL,
   tanggal_distribusi DATE NOT NULL,
   titik_distribusi VARCHAR(200),
+  penerima_manfaat_id INT NULL,
   kategori_penerima VARCHAR(50),
   jumlah_porsi INT DEFAULT 0,
   kurir VARCHAR(100),
@@ -205,6 +206,7 @@ CREATE TABLE IF NOT EXISTS distribusi (
   catatan TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  FOREIGN KEY (penerima_manfaat_id) REFERENCES penerima_manfaat(id) ON DELETE SET NULL,
   INDEX idx_tenant (tenant_id)
 ) ENGINE=InnoDB;
 

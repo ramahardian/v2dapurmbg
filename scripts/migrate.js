@@ -372,6 +372,17 @@ require('dotenv').config();
       console.log('  (skip migrasi mobile absensi)', e.message);
     }
 
+    // Migrasi kolom penerima_manfaat_id di distribusi (referensi ke PM)
+    try {
+      const [pmCol] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'distribusi' AND COLUMN_NAME = 'penerima_manfaat_id'");
+      if (!pmCol.length) {
+        await conn.query("ALTER TABLE distribusi ADD COLUMN penerima_manfaat_id INT NULL AFTER titik_distribusi, ADD FOREIGN KEY (penerima_manfaat_id) REFERENCES penerima_manfaat(id) ON DELETE SET NULL");
+        console.log('✓ Migrasi distribusi: tambah kolom penerima_manfaat_id');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi penerima_manfaat_id distribusi)', e.message);
+    }
+
     // Seed admin tenant + user
     const [tExist] = await db.query('SELECT id FROM tenants LIMIT 1');
     if (!tExist.length) {

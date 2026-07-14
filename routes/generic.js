@@ -21,7 +21,7 @@ const TABLES = {
   purchase_order: ['no_po', 'tanggal', 'supplier_id', 'supplier_nama', 'item', 'total_nilai', 'status', 'unit_dapur', 'catatan'],
   penerimaan_barang: ['no_dokumen', 'tanggal_terima', 'supplier_nama', 'ref_po', 'item', 'total_nilai', 'status_qc', 'catatan'],
   produksi: ['tanggal_produksi', 'menu_id', 'menu_nama', 'kategori_penerima', 'jumlah_porsi', 'status', 'catatan'],
-  distribusi: ['tanggal_distribusi', 'titik_distribusi', 'kategori_penerima', 'jumlah_porsi', 'kurir', 'status', 'catatan'],
+  distribusi: ['tanggal_distribusi', 'titik_distribusi', 'penerima_manfaat_id', 'kategori_penerima', 'jumlah_porsi', 'kurir', 'status', 'catatan'],
   budget: ['periode', 'kategori_penerima', 'jumlah_penerima', 'harga_per_porsi', 'biaya_operasional', 'total_budget', 'realisasi', 'catatan'],
   kas_bank: ['tanggal', 'no_transaksi', 'tipe', 'kategori', 'akun', 'akun_id', 'deskripsi', 'jumlah'],
   divisi: ['nama'],
@@ -70,7 +70,7 @@ const SEARCHABLE_FIELDS = {
   purchase_order: ['no_po', 'supplier_nama', 'status'],
   penerimaan_barang: ['no_dokumen', 'supplier_nama', 'status_qc'],
   produksi: ['menu_nama', 'kategori_penerima', 'status'],
-  distribusi: ['titik_distribusi', 'kategori_penerima', 'status', 'kurir'],
+  distribusi: ['titik_distribusi', 'kategori_penerima', 'status', 'kurir', 'pm_nama', 'pm_alamat'],
   budget: ['periode', 'kategori_penerima'],
   kas_bank: ['tipe', 'kategori', 'akun', 'deskripsi', 'no_transaksi'],
   akun: ['kode', 'nama', 'bp'],
@@ -139,19 +139,31 @@ for (const table of Object.keys(TABLES)) {
     akun: ['admin', 'keuangan']
   };
   
-  const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (req, res, next) => next();
-    
+const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (req, res, next) => next();
+     
   // 1. READ ALL (GET /nama_tabel)
   router.get(`/${table}`, roleMiddleware, async (req, res) => {
     const { search, page, limit, bp } = req.query;
     const searchable = SEARCHABLE_FIELDS[table] || [];
     
+    // Special query for distribusi - join with penerima_manfaat
+    let selectClause = '*';
+    let fromClause = `${table}`;
     let whereClause = 'WHERE tenant_id=?';
+    let orderByClause = 'ORDER BY id DESC';
     const params = [req.user.tenant_id];
+    
+    if (table === 'distribusi') {
+      selectClause = `d.*, pm.nama_kelompok as pm_nama, pm.lokasi as pm_alamat`;
+      fromClause = `${table} d LEFT JOIN penerima_manfaat pm ON pm.id = d.penerima_manfaat_id AND pm.tenant_id = d.tenant_id`;
+      whereClause = 'WHERE d.tenant_id=?';
+      orderByClause = 'ORDER BY d.id DESC';
+    }
     
     // Search: filter berdasarkan kolom yang sudah ditentukan
     if (search && searchable.length) {
-      const conditions = searchable.map(f => `${f} LIKE ?`);
+      const prefix = table === 'distribusi' ? 'd.' : '';
+      const conditions = searchable.map(f => `${prefix}${f} LIKE ?`);
       whereClause += ` AND (${conditions.join(' OR ')})`;
       searchable.forEach(() => params.push(`%${search}%`));
     }
@@ -162,7 +174,8 @@ for (const table of Object.keys(TABLES)) {
     }
     
     // Hitung total sebelum pagination
-    const [countResult] = await db.query(`SELECT COUNT(*) as count FROM ${table} ${whereClause}`, params);
+    const countFrom = table === 'distribusi' ? `${table} d` : table;
+    const [countResult] = await db.query(`SELECT COUNT(*) as count FROM ${countFrom} ${whereClause}`, params);
     const total = countResult[0].count;
     
     // Pagination
@@ -172,7 +185,7 @@ for (const table of Object.keys(TABLES)) {
       const offset = (pageNum - 1) * limitNum;
       
       const [rows] = await db.query(
-        `SELECT * FROM ${table} ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
+        `SELECT ${selectClause} FROM ${fromClause} ${whereClause} ${orderByClause} LIMIT ? OFFSET ?`,
         [...params, limitNum, offset]
       );
       
@@ -187,7 +200,7 @@ for (const table of Object.keys(TABLES)) {
       });
     } else {
       // Tanpa pagination: return array biasa (backward compatible)
-      const [rows] = await db.query(`SELECT * FROM ${table} ${whereClause} ORDER BY id DESC`, params);
+      const [rows] = await db.query(`SELECT ${selectClause} FROM ${fromClause} ${whereClause} ${orderByClause}`, params);
       res.json(rows);
     }
   });
