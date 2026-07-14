@@ -85,7 +85,7 @@
   <script>
     // Load hero stats
     fetch('/api/public/stats').then(function(r) { return r.json(); }).then(function(d) {
-      document.getElementById('stat-porsi').textContent = d.porsi_per_hari + '+';
+      document.getElementById('stat-porsi').textContent = d.porsi_per_hari && d.porsi_per_hari > 0 ? d.porsi_per_hari + '+' : '0';
       document.getElementById('stat-menu').textContent = d.total_menu;
       document.getElementById('stat-kategori').textContent = d.total_kategori;
     }).catch(function() {});

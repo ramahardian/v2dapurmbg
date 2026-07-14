@@ -9,12 +9,13 @@
           <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
           <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Email</th>
           <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Role</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Karyawan</th>
           <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Bergabung</th>
           <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
         </tr>
       </thead>
       <tbody id="user-table-body">
-        <tr><td colspan="5" class="text-center py-12 text-stone-400">Memuat data...</td></tr>
+        <tr><td colspan="6" class="text-center py-12 text-stone-400">Memuat data...</td></tr>
       </tbody>
     </table>
   </div>
@@ -49,6 +50,13 @@
           <option value="ahli_gizi">Ahli Gizi</option>
           <option value="admin">Admin</option>
         </select>
+      </div>
+      <div>
+        <label class="text-sm font-medium text-stone-700">Karyawan (opsional)</label>
+        <select id="user-karyawan" class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm bg-white">
+          <option value="">-- Tidak terhubung --</option>
+        </select>
+        <p class="text-xs text-stone-400 mt-1">Hubungkan ke data karyawan agar bisa absen via web/mobile</p>
       </div>
     </div>
     <div class="px-6 pb-4 flex justify-end gap-2">

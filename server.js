@@ -102,12 +102,12 @@ if (cluster.isMaster && WORKERS > 1) {
       const [[prod]] = await db.query('SELECT COALESCE(SUM(jumlah_porsi),0) AS total, COUNT(DISTINCT DATE(tanggal_produksi)) AS days FROM produksi WHERE tenant_id=?', [tenantId]);
       const porsiPerHari = prod.days > 0 ? Math.round(prod.total / prod.days) : 0;
       res.json({
-        porsi_per_hari: porsiPerHari || 1000,
-        total_menu: Number(menuCount.total) || 39,
-        total_kategori: Number(katCount.total) || 5
+        porsi_per_hari: porsiPerHari,
+        total_menu: Number(menuCount.total),
+        total_kategori: Number(katCount.total)
       });
     } catch (e) {
-      res.json({ porsi_per_hari: 1000, total_menu: 39, total_kategori: 5 });
+      res.json({ porsi_per_hari: 0, total_menu: 0, total_kategori: 0 });
     }
   });
 

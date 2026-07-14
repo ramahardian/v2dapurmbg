@@ -394,6 +394,27 @@ require('dotenv').config();
       console.log('  (skip migrasi supplier_id penerimaan_barang)', e.message);
     }
 
+    // Migrasi kolom karyawan_id di users (hubungan langsung user → karyawan)
+    try {
+      const [krCol] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'karyawan_id'");
+      if (!krCol.length) {
+        await conn.query("ALTER TABLE users ADD COLUMN karyawan_id INT DEFAULT NULL AFTER role, ADD INDEX idx_users_karyawan (karyawan_id)");
+        console.log('✓ Migrasi users: tambah kolom karyawan_id');
+      }
+      // Cek apakah FK sudah ada sebelum menambah
+      const [fkExists] = await conn.query(
+        "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'karyawan_id' AND REFERENCED_TABLE_NAME IS NOT NULL"
+      );
+      if (!fkExists.length) {
+        await conn.query("ALTER TABLE users ADD FOREIGN KEY (karyawan_id) REFERENCES karyawan(id) ON DELETE SET NULL");
+        console.log('✓ Migrasi users: FK karyawan_id ditambahkan');
+      } else {
+        console.log('✓ Migrasi users: FK karyawan_id sudah ada');
+      }
+    } catch (e) {
+      console.log('  (skip migrasi karyawan_id users)', e.message);
+    }
+
     // Seed admin tenant + user
     const [tExist] = await db.query('SELECT id FROM tenants LIMIT 1');
     if (!tExist.length) {

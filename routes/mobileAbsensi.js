@@ -147,9 +147,25 @@ function countWorkDays(bulan, tahun, hariKerjaStr, tglMulai, tglSelesai) {
  * Helper: cari karyawan_id dari user yang login
  * ────────────────────────────────────────────── */
 async function getKaryawanId(user) {
-  console.log('🔐 [getKaryawanId] 🔍 Mencari karyawan — user.email:', user.email, '| user.tenant_id:', user.tenant_id, '| user.id:', user.id);
+  console.log('🔐 [getKaryawanId] 🔍 Mencari karyawan — user.email:', user.email, '| user.tenant_id:', user.tenant_id, '| user.id:', user.id, '| user.karyawan_id:', user.karyawan_id);
 
-  // 1) Coba exact match: email + tenant_id (jika user punya tenant_id)
+  // 1) Jika user punya karyawan_id langsung, gunakan itu
+  if (user.karyawan_id) {
+    console.log('🔐 [getKaryawanId] 🔎 Mencoba direct match — karyawan_id:', user.karyawan_id);
+    const [direct] = await db.query(
+      `SELECT id, tenant_id, nama, nik, departemen, jabatan_id, photo, phone FROM karyawan 
+       WHERE id=? AND status='Aktif' LIMIT 1`,
+      [user.karyawan_id]
+    );
+    console.log('🔐 [getKaryawanId] 📊 Direct match — ditemukan:', direct.length, 'data:', JSON.stringify(direct[0] || null));
+    if (direct.length) {
+      console.log('🔐 [getKaryawanId] ✅ Cocok via karyawan_id! Karyawan:', direct[0].nama, '| tenant_id:', direct[0].tenant_id);
+      return direct[0];
+    }
+    console.log('🔐 [getKaryawanId] ⚠️ Direct match gagal (karyawan mungkin nonaktif), fallback ke email');
+  }
+
+  // 2) Coba exact match: email + tenant_id (jika user punya tenant_id)
   if (user.tenant_id) {
     console.log('🔐 [getKaryawanId] 🔎 Mencoba exact match — email:', user.email, '+ tenant_id:', user.tenant_id);
     const [rows] = await db.query(
@@ -165,7 +181,7 @@ async function getKaryawanId(user) {
     console.log('🔐 [getKaryawanId] ⚠️ Exact match gagal, fallback cari tanpa tenant_id');
   }
 
-  // 2) Fallback: cari berdasarkan email saja (tanpa filter tenant_id)
+  // 3) Fallback: cari berdasarkan email saja (tanpa filter tenant_id)
   console.log('🔐 [getKaryawanId] 🔎 Fallback — cari karyawan dengan email:', user.email, '(tanpa filter tenant_id)');
   const [fallback] = await db.query(
     `SELECT id, tenant_id, nama, nik, departemen, jabatan_id, photo, phone FROM karyawan 
@@ -232,8 +248,6 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
 
     // Cek shift efektif hari ini untuk deteksi bolos & terkunci
     const shift = await getEffectiveShift(req.karyawan, req.user.tenant_id, today, dayOfWeek);
-    let peringatan_bolos = false;
-    let pesan_bolos = '';
     let terkunci = false;
 
     if (shift && !rows.length) {
@@ -243,16 +257,12 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         const shiftEnd = parseTimeToMinutes(shift.jam_keluar);
         const isCrossDay = shiftEnd <= shiftStart;
         const awalBolehMasuk = (shiftStart - 60 + 1440) % 1440;   // 1 jam SEBELUM shift
-        const toleransiTelat = (shiftStart + 15) % 1440;          // 15 menit toleransi
-        let sudahMulai = false;
 
         if (!isCrossDay) {
           // Normal: PAGI 08:00-16:00
           if (currentMinutes >= awalBolehMasuk && currentMinutes <= shiftEnd) {
             // Dalam jendela absen (1 jam sebelum shift sampai shift selesai)
-            if (currentMinutes > toleransiTelat) {
-              sudahMulai = true;  // lewat toleransi 15 menit
-            }
+            // tidak ada peringatan
           } else if (currentMinutes > shiftEnd) {
             // Lewat shift dan belum check-in → kunci tombol sampai 1 jam sebelum shift besok
             terkunci = true;
@@ -261,16 +271,10 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
           // Lintas hari: SORE 19:00-03:00
           if (currentMinutes >= awalBolehMasuk || currentMinutes < shiftEnd) {
             // Masih dalam jendela absen
-            if (currentMinutes > toleransiTelat) sudahMulai = true;
           } else {
             // Lewat shift dan belum check-in → kunci
             terkunci = true;
           }
-        }
-
-        if (sudahMulai) {
-          peringatan_bolos = true;
-          pesan_bolos = `⚠️ Shift ${shift.nama} mulai ${shift.jam_masuk.slice(0,5)} — Anda belum clock-in! (Toleransi 15 menit)`;
         }
       }
     }
@@ -281,28 +285,55 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         sudah_masuk: false,
         sudah_keluar: false,
         data: null,
-        peringatan_bolos,
-        pesan_bolos,
+        peringatan_bolos: false,
+        pesan_bolos: '',
         terkunci,
         shift_hari_ini: shift ? {
           nama: shift.nama,
           jam_masuk: shift.jam_masuk?.slice(0,5),
           jam_keluar: shift.jam_keluar?.slice(0,5)
         } : null,
-        pesan: peringatan_bolos ? pesan_bolos : 'Belum absen hari ini'
+        pesan: terkunci ? 'Jam shift sudah lewat' : 'Belum absen hari ini'
       });
     }
 
     const a = rows[0];
     const butuhKoreksi = a.status === 'Butuh Koreksi' || (a.keterangan && a.keterangan.includes('Butuh Koreksi'));
 
+    // Cek deadline clock-out: 1 jam sebelum shift berikutnya
+    let terkunciKeluar = false;
+    let pesanDeadline = '';
+    if (shift && a.jam_masuk && !a.jam_keluar) {
+      const hariKerja = (shift.hari_kerja || '1,2,3,4,5,6,7').split(',').map(Number);
+      if (hariKerja.includes(dayOfWeek)) {
+        const sStart = parseTimeToMinutes(shift.jam_masuk);
+        const sEnd = parseTimeToMinutes(shift.jam_keluar);
+        const isCrossDay = sEnd <= sStart;
+        const deadline = (sStart - 60 + 1440) % 1440;
+
+        if (!isCrossDay) {
+          if (currentMinutes >= deadline && currentMinutes < sStart) {
+            terkunciKeluar = true;
+            pesanDeadline = 'Batas waktu clock-out sudah lewat (1 jam sebelum shift berikutnya)';
+          }
+        } else {
+          if (currentMinutes >= deadline || currentMinutes < sEnd) {
+            terkunciKeluar = true;
+            pesanDeadline = 'Batas waktu clock-out sudah lewat';
+          }
+        }
+      }
+    }
+
     res.json({
       sudah_absensi: true,
       sudah_masuk: !!a.jam_masuk,
       sudah_keluar: !!a.jam_keluar,
       peringatan_bolos: false,
-      terkunci: false,
+      terkunci: terkunciKeluar,
       butuh_koreksi: butuhKoreksi,
+      deadline_lewat: terkunciKeluar,
+      pesan_deadline: pesanDeadline,
       data: {
         id: a.id,
         tanggal: a.tanggal,
@@ -319,7 +350,7 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
       pesan: a.jam_masuk && a.jam_keluar
         ? (butuhKoreksi ? 'Clock-out selesai — perlu koreksi admin' : 'Absensi hari ini sudah lengkap')
         : a.jam_masuk
-          ? 'Sudah clock-in, silakan clock-out'
+          ? (terkunciKeluar ? pesanDeadline : 'Sudah clock-in, silakan clock-out')
           : 'Belum absen hari ini'
     });
   } catch (err) {
@@ -335,15 +366,37 @@ function parseTimeToMinutes(t) {
   return parseInt(p[0]) * 60 + parseInt(p[1]);
 }
 
+// Helper: verifikasi selisih waktu client vs server (cegah spoofing jam HP)
+function verifyClientTime(clientTimeStr, maxDiffMinutes = 5) {
+  if (!clientTimeStr) return { ok: false, pesan: 'Waktu perangkat tidak dikirim' };
+  const clientTime = new Date(clientTimeStr);
+  if (isNaN(clientTime.getTime())) return { ok: false, pesan: 'Format waktu perangkat tidak valid' };
+  const serverTime = new Date();
+  const diffMs = Math.abs(serverTime.getTime() - clientTime.getTime());
+  const diffMinutes = diffMs / 60000;
+  if (diffMinutes > maxDiffMinutes) {
+    return { ok: false, pesan: `Waktu perangkat Anda berbeda ${Math.round(diffMinutes)} menit dari server. Setel jam HP ke otomatis lalu coba lagi.` };
+  }
+  return { ok: true };
+}
+
 /* ──────────────────────────────────────────────
  * POST /api/mobile/absensi/clock-in — Absen masuk
  * Body:
+ *   client_time (string ISO) — waktu dari perangkat
  *   latitude? (number), longitude? (number)
  *   foto? (base64 string) — foto selfie waktu masuk
  *   keterangan? (string)
  * ────────────────────────────────────────────── */
 router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
   try {
+    // Verifikasi selisih waktu client vs server
+    const { client_time } = req.body;
+    const timeCheck = verifyClientTime(client_time);
+    if (!timeCheck.ok) {
+      return res.status(403).json({ error: timeCheck.pesan });
+    }
+
     const { keterangan } = req.body;
     const tenant_id = req.user.tenant_id;
     const karyawan_id = req.karyawan.id;
@@ -454,6 +507,13 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
  * ────────────────────────────────────────────── */
 router.post('/absensi/clock-out', ensureKaryawan, async (req, res) => {
   try {
+    // Verifikasi selisih waktu client vs server
+    const { client_time } = req.body;
+    const timeCheck = verifyClientTime(client_time);
+    if (!timeCheck.ok) {
+      return res.status(403).json({ error: timeCheck.pesan });
+    }
+
     const { keterangan } = req.body;
     const tenant_id = req.user.tenant_id;
     const karyawan_id = req.karyawan.id;

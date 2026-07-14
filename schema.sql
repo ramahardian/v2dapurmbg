@@ -17,19 +17,6 @@ CREATE TABLE IF NOT EXISTS tenants (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- Users (per tenant)
-CREATE TABLE IF NOT EXISTS users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  tenant_id INT NOT NULL,
-  email VARCHAR(150) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
-  nama VARCHAR(150) NOT NULL,
-  role ENUM('admin','ahli_gizi','gudang','keuangan','produksi') DEFAULT 'produksi',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-  INDEX idx_email (email),
-  INDEX idx_users_tenant (tenant_id)
-) ENGINE=InnoDB;
 
 -- Penerima Manfaat
 CREATE TABLE IF NOT EXISTS penerima_manfaat (
@@ -301,6 +288,23 @@ CREATE TABLE IF NOT EXISTS karyawan (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   INDEX idx_tenant (tenant_id)
+) ENGINE=InnoDB;
+
+-- Users (per tenant) — dipindah setelah karyawan agar FK karyawan_id bisa inline
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  email VARCHAR(150) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  nama VARCHAR(150) NOT NULL,
+  role ENUM('admin','ahli_gizi','gudang','keuangan','produksi') DEFAULT 'produksi',
+  karyawan_id INT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  FOREIGN KEY (karyawan_id) REFERENCES karyawan(id) ON DELETE SET NULL,
+  INDEX idx_email (email),
+  INDEX idx_users_tenant (tenant_id),
+  INDEX idx_users_karyawan (karyawan_id)
 ) ENGINE=InnoDB;
 
 -- Absensi

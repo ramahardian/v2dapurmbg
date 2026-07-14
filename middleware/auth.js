@@ -23,7 +23,7 @@ async function requireAuth(req, res, next) {
   }
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const [rows] = await db.query('SELECT id, tenant_id, email, nama, role, foto FROM users WHERE id=?', [payload.uid]);
+    const [rows] = await db.query('SELECT id, tenant_id, email, nama, role, foto, karyawan_id FROM users WHERE id=?', [payload.uid]);
     if (!rows.length) {
       return res.status(401).json({ error: 'User tidak ditemukan' });
     }

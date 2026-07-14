@@ -457,13 +457,6 @@
     function renderStatus(s) {
       showSkeleton('status',false);
       const el = document.getElementById('status-content');
-      let warnHtml = '';
-      if (s.peringatan_bolos) {
-        warnHtml = '<div class="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-lg p-3.5">'
-          +'<svg class="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
-          +'<div><div class="font-semibold text-red-700 text-sm">⚠ Peringatan Bolos!</div>'
-          +'<div class="text-red-600/70 text-xs mt-0.5">'+escapeHtml(s.pesan_bolos||'Shift sudah mulai, segera clock-in!')+'</div></div></div>';
-      }
       if (!s.sudah_absensi) {
         if (s.terkunci) {
           el.innerHTML = '<div class="flex items-start gap-3 bg-slate-100 border border-slate-200 rounded-lg p-4">'
@@ -471,7 +464,7 @@
             +'<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
             +'<div><div class="font-semibold text-slate-600">Absen Terkunci</div><div class="text-xs text-slate-400 mt-0.5">Jam shift sudah lewat. Absen akan dibuka kembali besok.</div></div></div>';
         } else {
-          el.innerHTML = warnHtml+'<div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">'
+          el.innerHTML = '<div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">'
             +'<div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">'
             +'<svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>'
             +'<div><div class="font-semibold text-slate-800">Belum Absen</div><div class="text-xs text-slate-500 mt-0.5">Silakan clock-in untuk memulai</div></div></div>';
@@ -497,12 +490,27 @@
         +'<div class="flex items-center justify-between '+(d.jam_masuk?(!d.jam_keluar?'opacity-60':''):'opacity-20')+'">'
         +'<div><div class="text-xs text-slate-500 font-medium">Clock Out</div><div class="text-lg font-bold text-slate-800 font-mono mt-0.5">'+fmtFull(d.jam_keluar)+'</div></div>'
         +'<div class="text-xs '+(ok?'text-emerald-600':d.jam_masuk?'text-amber-600':'text-slate-300')+'">'+(ok?'✓ Selesai':d.jam_masuk?'● Belum':'—')+'</div></div></div>'
-        +(badge?'<div class="self-start">'+badge+'</div>':'')+'</div>';
+        +(badge?'<div class="self-start">'+badge+'</div>':'')+'</div>'
+        +(s.deadline_lewat?'<div class="mt-2 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">'
+          +'<svg class="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+          +'<div><div class="font-semibold text-red-700 text-sm">Batas Clock-Out Habis</div>'
+          +'<div class="text-red-600/70 text-xs mt-0.5">'+escapeHtml(s.pesan_deadline||'Batas waktu clock-out sudah lewat. Hubungi admin untuk koreksi.')+'</div></div></div>':'');
     }
 
     // Render Buttons
     function renderButtons(s) {
       const ci=document.getElementById('btn-clock-in'), co=document.getElementById('btn-clock-out');
+      
+      // Deadline lewat: sudah clock-in tapi batas clock-out habis
+      if (s.deadline_lewat) {
+        ci.className='h-16 btn btn-success cursor-default';
+        ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Sudah Clock In</span>';
+        ci.disabled=true; ci.onclick=null;
+        co.className='h-16 btn btn-outline text-red-400 cursor-not-allowed';
+        co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Batas Habis</span>';
+        co.disabled=true; co.onclick=null;
+        return;
+      }
       
       // Jika terkunci, disable kedua tombol
       if (s.terkunci) {
@@ -604,7 +612,7 @@
       if(loc){currentLocation=loc;if(locSpin)locSpin.classList.add('hidden');locText.textContent='📍 '+loc.lat.toFixed(4)+', '+loc.lng.toFixed(4);}
       else{currentLocation=null;if(locSpin)locSpin.classList.add('hidden');locText.textContent='📍 Lokasi tidak tersedia (absen tanpa lokasi)';}
       overlay.classList.remove('hidden');
-      btnYa.onclick=async()=>{btnYa.disabled=true;btnYa.textContent='Memproses...';try{const body={};if(currentLocation){body.latitude=currentLocation.lat;body.longitude=currentLocation.lng;}const r=await fetch(in_?'/api/mobile/absensi/clock-in':'/api/mobile/absensi/clock-out',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Gagal');showToast(in_?'✅ Clock-in berhasil!':'✅ Clock-out berhasil!','success');overlay.classList.add('hidden');loadAll();}catch(ex){showToast('❌ '+ex.message,'error');btnYa.disabled=false;btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!';}};
+      btnYa.onclick=async()=>{btnYa.disabled=true;btnYa.textContent='Memproses...';try{const body={client_time:new Date().toISOString()};if(currentLocation){body.latitude=currentLocation.lat;body.longitude=currentLocation.lng;}const r=await fetch(in_?'/api/mobile/absensi/clock-in':'/api/mobile/absensi/clock-out',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Gagal');showToast(in_?'✅ Clock-in berhasil!':'✅ Clock-out berhasil!','success');overlay.classList.add('hidden');loadAll();}catch(ex){showToast('❌ '+ex.message,'error');btnYa.disabled=false;btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!';}};
       document.getElementById('modal-batal').onclick=()=>{overlay.classList.add('hidden');btnYa.disabled=false;};
       overlay.addEventListener('click',e=>{if(e.target===overlay){overlay.classList.add('hidden');btnYa.disabled=false;}});
     }

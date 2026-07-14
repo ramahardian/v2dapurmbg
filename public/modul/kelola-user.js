@@ -20,7 +20,7 @@ async function loadUsers() {
     const rows = await api.get('/users');
     const tbody = document.getElementById('user-table-body');
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-stone-400">Belum ada user</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-stone-400">Belum ada user</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(function(u) {
@@ -29,6 +29,7 @@ async function loadUsers() {
         '<td class="px-4 py-3 text-sm">' + (u.nama || '') + '</td>' +
         '<td class="px-4 py-3 text-sm text-stone-500">' + (u.email || '') + '</td>' +
         '<td class="px-4 py-3 text-sm capitalize">' + u.role.replace('_', ' ') + '</td>' +
+        '<td class="px-4 py-3 text-sm text-stone-500">' + (u.karyawan_nama || '-') + '</td>' +
         '<td class="px-4 py-3 text-sm text-stone-500">' + tanggal + '</td>' +
         '<td class="px-4 py-3 text-sm text-right whitespace-nowrap">' +
           '<button onclick="openUserForm(' + u.id + ')" class="text-blue-600 hover:text-blue-800 text-xs font-medium mr-3">Edit</button>' +
@@ -48,6 +49,7 @@ function openUserForm(id) {
   document.getElementById('user-email').value = '';
   document.getElementById('user-password').value = '';
   document.getElementById('user-role-select').value = 'produksi';
+  document.getElementById('user-karyawan').innerHTML = '<option value="">-- Tidak terhubung --</option>';
   var passLabel = document.getElementById('pass-label');
   if (id) {
     passLabel.textContent = '(kosongkan jika tidak diganti)';
@@ -58,10 +60,21 @@ function openUserForm(id) {
       document.getElementById('user-nama').value = u.nama;
       document.getElementById('user-email').value = u.email;
       document.getElementById('user-role-select').value = u.role;
+      if (u.karyawan_id) {
+        document.getElementById('user-karyawan').value = u.karyawan_id;
+      }
     });
   } else {
     passLabel.textContent = '*';
   }
+  // Load karyawan list
+  api.get('/karyawan').then(function(list) {
+    var sel = document.getElementById('user-karyawan');
+    var currentVal = sel.value;
+    sel.innerHTML = '<option value="">-- Tidak terhubung --</option>' +
+      list.map(function(k) { return '<option value="' + k.id + '">' + k.nama + (k.nik ? ' (' + k.nik + ')' : '') + '</option>'; }).join('');
+    if (currentVal) sel.value = currentVal;
+  }).catch(function() {});
   document.getElementById('user-modal').classList.remove('hidden');
   document.getElementById('user-modal').classList.add('flex');
 }
@@ -77,17 +90,18 @@ async function simpanUser() {
   var email = document.getElementById('user-email').value.trim();
   var password = document.getElementById('user-password').value;
   var role = document.getElementById('user-role-select').value;
+  var karyawan_id = document.getElementById('user-karyawan').value || null;
   if (!nama) return showAlert('Nama wajib diisi', 'warning');
   if (!email) return showAlert('Email wajib diisi', 'warning');
   if (!id && (!password || password.length < 6)) return showAlert('Password minimal 6 karakter', 'warning');
   try {
     if (id) {
-      var payload = { nama: nama, email: email, role: role };
+      var payload = { nama: nama, email: email, role: role, karyawan_id: karyawan_id };
       if (password) payload.password = password;
       await api.put('/users/' + id, payload);
       showToast('User diperbarui', 'success');
     } else {
-      await api.post('/users', { nama: nama, email: email, password: password, role: role });
+      await api.post('/users', { nama: nama, email: email, password: password, role: role, karyawan_id: karyawan_id });
       showToast('User ditambahkan', 'success');
     }
     closeUserModal();
