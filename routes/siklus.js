@@ -22,7 +22,10 @@ function saveBase64Foto(base64Data) {
 const router = express.Router();
 
 router.use(requireAuth);
-router.use(requireRole('admin', 'ahli_gizi'));
+router.use((req, res, next) => {
+  if (req.path.startsWith('/siklus') || req.path.startsWith('/bahan')) return requireRole('admin', 'ahli_gizi')(req, res, next);
+  next();
+});
 
 /**
  * GET /siklus

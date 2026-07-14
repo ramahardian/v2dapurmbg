@@ -7,8 +7,11 @@ const router = express.Router();
 
 // Terapkan perlindungan endpoint agar hanya bisa diakses oleh pengguna yang sudah login
 router.use(requireAuth);
-// Terapkan role-based access control: hanya admin dan ahli_gizi yang bisa akses
-router.use(requireRole('admin', 'ahli_gizi'));
+// Role check hanya untuk route milik router ini (/hpp), bukan semua request
+router.use((req, res, next) => {
+  if (req.path.startsWith('/hpp')) return requireRole('admin', 'ahli_gizi')(req, res, next);
+  next();
+});
 
 /**
  * POST /hpp/calculate

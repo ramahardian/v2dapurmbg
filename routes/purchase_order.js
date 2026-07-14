@@ -4,7 +4,10 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(requireAuth);
-router.use(requireRole('admin', 'keuangan', 'ahli_gizi'));
+router.use((req, res, next) => {
+  if (req.path.startsWith('/purchase_order')) return requireRole('admin', 'keuangan', 'ahli_gizi')(req, res, next);
+  next();
+});
 
 router.post('/purchase_order/generate-from-siklus', async (req, res) => {
   try {

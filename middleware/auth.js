@@ -38,19 +38,7 @@ function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ error: 'Tidak terautentikasi' });
     if (req.user.role === 'admin') return next();
-    
-    const ahliGiziOnlyRoutes = ['siklus', 'standar-sp', 'sp-referensi', 'perhitungan-bdd', 'bdd-kalkulator', 'perencanaan', 'total-kebutuhan', 'panduan-ahli-gizi'];
-    
-    if (req.user.role === 'SDM' && roles.includes('ahli_gizi')) {
-      return res.status(403).json({ error: 'SDM grup tidak diberikan akses untuk endpoint nutrisi sensitif' });
-    }
-    
-    if (req.user.role === 'keuangan' && roles.includes('ahli_gizi')) {
-      return res.status(403).json({ error: 'Akuntansi tidak diberikan akses untuk endpoint nutrisi sensitif' });
-    }
-    
     if (roles.includes(req.user.role)) return next();
-    
     return res.status(403).json({ error: 'Akses ditolak' });
   };
 }
