@@ -5,13 +5,12 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
 router.use(requireAuth);
-router.use(requireRole('admin', 'keuangan'));
 
 /**
  * GET /laporan/keuangan
  * Ringkasan arus kas termasuk saldo awal & grouping per Buku Pembantu.
  */
-router.get('/laporan/keuangan', async (req, res) => {
+router.get('/laporan/keuangan', requireRole('admin', 'keuangan'), async (req, res) => {
   const t = req.user.tenant_id;
 
   const [[{ masuk } = { masuk: 0 }]] = await db.query(
@@ -54,7 +53,7 @@ router.get('/laporan/keuangan', async (req, res) => {
  * GET /keuangan/saldo-awal
  * Ambil saldo awal buku tenant saat ini.
  */
-router.get('/keuangan/saldo-awal', async (req, res) => {
+router.get('/keuangan/saldo-awal', requireRole('admin', 'keuangan'), async (req, res) => {
   const [[row]] = await db.query('SELECT saldo_awal FROM tenants WHERE id=?', [req.user.tenant_id]);
   res.json({ saldo_awal: Number(row?.saldo_awal || 0) });
 });
