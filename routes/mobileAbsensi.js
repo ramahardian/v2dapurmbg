@@ -254,41 +254,36 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
     if (shift && !rows.length) {
       const hariKerja = (shift.hari_kerja || '1,2,3,4,5,6,7').split(',').map(Number);
       if (!hariKerja.includes(dayOfWeek)) {
-        // Hari ini bukan hari kerja → libur
         terkunci = true;
         hariLibur = true;
       } else {
         const shiftStart = parseTimeToMinutes(shift.jam_masuk);
         const shiftEnd = parseTimeToMinutes(shift.jam_keluar);
         const isCrossDay = shiftEnd <= shiftStart;
-        const awalBolehMasuk = (shiftStart - 30 + 1440) % 1440;   // 30 menit SEBELUM shift
-        const batasTelat = (shiftStart + 15 + 1440) % 1440;        // 15 menit toleransi
+        const awalBolehMasuk = (shiftStart - 30 + 1440) % 1440;
+        const batasTelat = (shiftStart + 15 + 1440) % 1440;
 
         if (!isCrossDay) {
-          // Normal: PAGI 08:00-16:00
           if (currentMinutes >= awalBolehMasuk && currentMinutes < shiftEnd) {
-            // Dalam jendela absen (30 menit sebelum shift sampai shift selesai)
-            // Peringatan: terlambat jika setelah batas toleransi
             if (currentMinutes > batasTelat) {
               // akan ditampilkan sebagai peringatan di frontend
             }
           } else if (currentMinutes >= shiftEnd) {
-            // Sudah lewat shift end tanpa clock-in → bolos
             terkunci = true;
           } else {
-            // Di luar jendela absen → kunci tombol
             terkunci = true;
           }
         } else {
-          // Lintas hari: SORE 19:00-03:00
           if (currentMinutes >= awalBolehMasuk || currentMinutes < shiftEnd) {
             // Masih dalam jendela absen
           } else {
-            // Lewat shift dan belum check-in → kunci
             terkunci = true;
           }
         }
       }
+    } else if (!rows.length) {
+      // Tidak ada shift — kunci clock-in
+      terkunci = true;
     }
 
     if (!rows.length) {
@@ -299,10 +294,18 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         const sStart = parseTimeToMinutes(shift.jam_masuk);
         const sEnd = parseTimeToMinutes(shift.jam_keluar);
         const isCross = sEnd <= sStart;
+        const awalBolehMasuk = (sStart - 30 + 1440) % 1440;
+        const batasTelat = (sStart + 15 + 1440) % 1440;
         if (!isCross) {
           if (currentMinutes >= sEnd) {
             bolos = true;
-          } else if (currentMinutes > sStart + 15) {
+          } else if (currentMinutes > batasTelat) {
+            peringatan_terlambat = true;
+          }
+        } else {
+          if (currentMinutes < awalBolehMasuk && currentMinutes >= sEnd) {
+            bolos = true;
+          } else if (currentMinutes >= awalBolehMasuk && currentMinutes > batasTelat) {
             peringatan_terlambat = true;
           }
         }
