@@ -250,7 +250,7 @@ function renderAbsensiTable(list, pagination) {
         <td class="px-4 py-3 text-sm whitespace-nowrap">${fmtDate(a.tanggal)}</td>
         <td class="px-4 py-3 text-sm font-medium">${a.nama_karyawan}</td>
         <td class="px-4 py-3 text-sm">${a.jabatan || '-'}</td>
-        <td class="px-4 py-3 text-sm text-center">${a.status}</td>
+        <td class="px-4 py-3 text-sm text-center"><span class="badge ${a.status==='Hadir'?'badge-hadir':a.status==='Sakit'?'badge-sakit':a.status==='Izin'?'badge-izin':a.status==='Cuti'?'badge-cuti':a.status==='Alpha'?'badge-alpha':a.status==='Terlambat'?'badge-terlambat':'badge-hadir'}">${a.status}</span></td>
         <td class="px-4 py-3 text-sm text-center mono">${a.jam_masuk || '-'}</td>
         <td class="px-4 py-3 text-sm text-center mono">${a.jam_keluar || '-'}</td>
         <td class="px-4 py-3 text-sm">${a.keterangan || '-'}</td>
