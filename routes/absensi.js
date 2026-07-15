@@ -5,11 +5,57 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
+async function generateAlpha(tenantId, tanggalAwal, tanggalAkhir) {
+  const start = tanggalAwal || new Date().toISOString().slice(0, 10);
+  const end = tanggalAkhir || start;
+
+  // Semua karyawan aktif
+  const [karyawan] = await db.query(
+    `SELECT id FROM karyawan WHERE tenant_id=? AND status='Aktif'`,
+    [tenantId]
+  );
+
+  // Semua tanggal dalam rentang
+  const tglList = [];
+  let d = new Date(start);
+  const endDate = new Date(end);
+  while (d <= endDate) {
+    tglList.push(d.toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 1);
+  }
+
+  let created = 0;
+  for (const k of karyawan) {
+    // Ambil tanggal yang sudah ada absensi untuk karyawan ini
+    const [exist] = await db.query(
+      `SELECT tanggal FROM absensi WHERE tenant_id=? AND karyawan_id=? AND tanggal>=? AND tanggal<=?`,
+      [tenantId, k.id, start, end]
+    );
+    const existSet = new Set(exist.map(r => r.tanggal.toISOString().slice(0, 10)));
+    for (const tgl of tglList) {
+      if (!existSet.has(tgl)) {
+        await db.query(
+          `INSERT INTO absensi (tenant_id, karyawan_id, tanggal, status) VALUES (?,?,?,'Alpha')`,
+          [tenantId, k.id, tgl]
+        );
+        created++;
+      }
+    }
+  }
+  return created;
+}
+
 router.get('/absensi', requireRole('admin', 'keuangan'), async (req, res) => {
   const { karyawan_id, tanggal_awal, tanggal_akhir, status, page = '1', limit = '50' } = req.query;
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(500, Math.max(1, parseInt(limit)));
   const offset = (pageNum - 1) * limitNum;
+
+  // Auto-generate Alpha records
+  if (!karyawan_id) {
+    await generateAlpha(req.user.tenant_id, tanggal_awal, tanggal_akhir).catch(() => {});
+  }
+
   let where = 'WHERE a.tenant_id=?';
   const params = [req.user.tenant_id];
   if (karyawan_id) { where += ` AND a.karyawan_id=?`; params.push(karyawan_id); }
