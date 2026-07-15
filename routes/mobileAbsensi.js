@@ -261,13 +261,20 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         const shiftStart = parseTimeToMinutes(shift.jam_masuk);
         const shiftEnd = parseTimeToMinutes(shift.jam_keluar);
         const isCrossDay = shiftEnd <= shiftStart;
-        const awalBolehMasuk = (shiftStart - 60 + 1440) % 1440;   // 1 jam SEBELUM shift
+        const awalBolehMasuk = (shiftStart - 30 + 1440) % 1440;   // 30 menit SEBELUM shift
+        const batasTelat = (shiftStart + 15 + 1440) % 1440;        // 15 menit toleransi
 
         if (!isCrossDay) {
           // Normal: PAGI 08:00-16:00
-          if (currentMinutes >= awalBolehMasuk && currentMinutes <= shiftEnd) {
-            // Dalam jendela absen (1 jam sebelum shift sampai shift selesai)
-            // tidak ada peringatan
+          if (currentMinutes >= awalBolehMasuk && currentMinutes < shiftEnd) {
+            // Dalam jendela absen (30 menit sebelum shift sampai shift selesai)
+            // Peringatan: terlambat jika setelah batas toleransi
+            if (currentMinutes > batasTelat) {
+              // akan ditampilkan sebagai peringatan di frontend
+            }
+          } else if (currentMinutes >= shiftEnd) {
+            // Sudah lewat shift end tanpa clock-in → bolos
+            terkunci = true;
           } else {
             // Di luar jendela absen → kunci tombol
             terkunci = true;
@@ -285,13 +292,41 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
     }
 
     if (!rows.length) {
+      // Deteksi apakah sudah lewat shiftEnd (bolos)
+      let bolos = false;
+      let peringatan_terlambat = false;
+      if (shift) {
+        const sStart = parseTimeToMinutes(shift.jam_masuk);
+        const sEnd = parseTimeToMinutes(shift.jam_keluar);
+        const isCross = sEnd <= sStart;
+        if (!isCross) {
+          if (currentMinutes >= sEnd) {
+            bolos = true;
+          } else if (currentMinutes > sStart + 15) {
+            peringatan_terlambat = true;
+          }
+        }
+      }
+
+      let pesan = 'Belum absen hari ini';
+      if (hariLibur) {
+        pesan = 'Hari ini libur';
+      } else if (bolos) {
+        pesan = 'Anda bolos hari ini';
+      } else if (terkunci && !bolos) {
+        pesan = 'Belum waktunya absen. Clock-in dibuka 30 menit sebelum shift';
+      } else if (peringatan_terlambat) {
+        pesan = 'Anda terlambat! Silakan clock-in';
+      }
+
       return res.json({
         sudah_absensi: false,
         sudah_masuk: false,
         sudah_keluar: false,
         data: null,
-        peringatan_bolos: false,
-        pesan_bolos: '',
+        bolos,
+        peringatan_terlambat,
+        pesan_bolos: bolos ? 'Anda tidak melakukan clock-in hari ini' : '',
         terkunci,
         shift_hari_ini: shift ? {
           nama: shift.nama,
@@ -299,7 +334,7 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
           jam_keluar: shift.jam_keluar?.slice(0,5)
         } : null,
         hari_libur: hariLibur,
-        pesan: hariLibur ? 'Hari ini libur' : (terkunci ? 'Jam shift sudah lewat' : 'Belum absen hari ini')
+        pesan
       });
     }
 
@@ -319,12 +354,13 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         const sStart = parseTimeToMinutes(shift.jam_masuk);
         const sEnd = parseTimeToMinutes(shift.jam_keluar);
         const isCrossDay = sEnd <= sStart;
-        const deadline = (sStart - 60 + 1440) % 1440;
+        // Deadline clock-out: sampai waktu clock-in shift berikutnya (shiftStart)
+        const deadline = sStart;
 
         if (!isCrossDay) {
-          if (currentMinutes >= deadline && currentMinutes < sStart) {
+          if (currentMinutes >= deadline) {
             terkunciKeluar = true;
-            pesanDeadline = 'Batas waktu clock-out sudah lewat (1 jam sebelum shift berikutnya)';
+            pesanDeadline = 'Batas waktu clock-out sudah lewat (shift sudah berganti)';
           }
         } else {
           if (currentMinutes >= deadline || currentMinutes < sEnd) {
@@ -467,31 +503,40 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
       const sEnd = parseTimeToMinutes(shiftCheck.jam_keluar);
       const nowMinCheck = nowTimeCheck.getHours() * 60 + nowTimeCheck.getMinutes();
       const isCrossDay = sEnd <= sStart;
-      const awalBolehMasuk = (sStart - 60 + 1440) % 1440;  // 1 jam SEBELUM shift
+      const awalBolehMasuk = (sStart - 30 + 1440) % 1440;  // 30 menit SEBELUM shift
+      const batasTelat = (sStart + 15 + 1440) % 1440;       // 15 menit toleransi
       let bolehMasuk = false;
+      let terlambat = false;
       
       if (!isCrossDay) {
-        // Normal 08:00-16:00 — boleh dari 1 jam sebelum shift sampai shift selesai
-        if (nowMinCheck >= awalBolehMasuk && nowMinCheck <= sEnd) {
+        // Normal 08:00-16:00 — boleh dari 30 menit sebelum shift sampai shift selesai
+        if (nowMinCheck >= awalBolehMasuk && nowMinCheck < sEnd) {
           bolehMasuk = true;
+          if (nowMinCheck > batasTelat) {
+            terlambat = true;
+          }
         }
       } else {
         // Lintas hari 19:00-03:00
         if (nowMinCheck >= awalBolehMasuk || nowMinCheck < sEnd) {
           bolehMasuk = true;
+          // Untuk cross-day, terlambat jika clock-in setelah batasTelat
+          if (nowMinCheck > batasTelat && nowMinCheck < sStart) {
+            terlambat = true;
+          }
         }
       }
       
       if (!bolehMasuk) {
         return res.status(403).json({
-          error: 'Belum waktunya absen. Clock-in dibuka 1 jam sebelum shift dimulai.',
+          error: 'Belum waktunya absen. Clock-in dibuka 30 menit sebelum shift dimulai.',
           solusi: 'Silakan coba lagi mendekati jam shift Anda.'
         });
       }
     }
 
-    // Buat record baru
-    const status = 'Hadir';
+    // Tentukan status: Terlambat jika clock-in setelah toleransi 15 menit
+    const status = terlambat ? 'Terlambat' : 'Hadir';
 
     const [r] = await db.query(
       `INSERT INTO absensi (tenant_id, karyawan_id, tanggal, status, jam_masuk, keterangan)
@@ -600,24 +645,20 @@ router.post('/absensi/clock-out', ensureKaryawan, async (req, res) => {
           });
         }
 
-        // Cek deadline: 1 jam sebelum shift besok
-        // Shift besok = shift hari ini + 24 jam (waktu yang sama)
-        // Deadline = sStart - 60 (dalam menit, dengan wrap-around)
-        const deadline = (sStart - 60 + 1440) % 1440;
+        // Cek deadline: sampai waktu clock-in shift berikutnya (shiftStart)
+        // Deadline = sStart (waktu shift clock-in)
+        const deadline = sStart;
         let lewatDeadline = false;
 
         if (tanggalAbsen === today) {
-          // Masih hari yang sama — deadline besok pagi
-          if (nowMinutes >= deadline && nowMinutes < sStart) {
+          // Masih hari yang sama — deadline saat shift clock-in berikutnya
+          if (nowMinutes >= deadline) {
             lewatDeadline = true;
           }
         } else {
           // Besoknya — cek apakah lewat deadline
           if (!isCrossDay) {
-            if (nowMinutes >= deadline && nowMinutes < sStart) {
-              lewatDeadline = true;
-            } else if (nowMinutes >= sStart) {
-              // Sudah masuk shift baru — lewat deadline
+            if (nowMinutes >= deadline) {
               lewatDeadline = true;
             }
           } else {
@@ -628,7 +669,7 @@ router.post('/absensi/clock-out', ensureKaryawan, async (req, res) => {
 
         if (lewatDeadline) {
           return res.status(403).json({
-            error: 'Batas waktu clock-out sudah lewat (1 jam sebelum shift berikutnya).',
+            error: 'Batas waktu clock-out sudah lewat (shift sudah berganti).',
             solusi: 'Hubungi admin untuk koreksi absensi.'
           });
         }

@@ -464,12 +464,22 @@
               +'<div class="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">'
               +'<svg class="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>'
               +'<div><div class="font-semibold text-violet-700">Hari Libur</div><div class="text-xs text-violet-500 mt-0.5">Hari ini libur. Silakan nikmati hari libur Anda! 🎉</div></div></div>';
+          } else if (s.bolos) {
+            el.innerHTML = '<div class="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">'
+              +'<div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">'
+              +'<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>'
+              +'<div><div class="font-semibold text-red-700">Bolos</div><div class="text-xs text-red-500 mt-0.5">Anda tidak melakukan clock-in hari ini. Silakan hubungi admin untuk koreksi.</div></div></div>';
           } else {
             el.innerHTML = '<div class="flex items-start gap-3 bg-slate-100 border border-slate-200 rounded-lg p-4">'
               +'<div class="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">'
               +'<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
-              +'<div><div class="font-semibold text-slate-600">Absen Terkunci</div><div class="text-xs text-slate-400 mt-0.5">Jam shift sudah lewat. Absen akan dibuka kembali saat jam shift yang sudah di tentukan.</div></div></div>';
+              +'<div><div class="font-semibold text-slate-600">Absen Terkunci</div><div class="text-xs text-slate-400 mt-0.5">Belum waktunya absen. Clock-in dibuka 30 menit sebelum shift dimulai.</div></div></div>';
           }
+        } else if (s.peringatan_terlambat) {
+          el.innerHTML = '<div class="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-lg p-4">'
+            +'<div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">'
+            +'<svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>'
+            +'<div><div class="font-semibold text-orange-700">Terlambat!</div><div class="text-xs text-orange-500 mt-0.5">Anda melewati batas toleransi 15 menit. Clock-in sekarang akan dicatat sebagai TERLAMBAT.</div></div></div>';
         } else {
           el.innerHTML = '<div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">'
             +'<div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">'
@@ -529,6 +539,13 @@
           co.className='h-16 btn btn-outline text-violet-400 cursor-not-allowed';
           co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Hari Libur</span>';
           co.disabled=true; co.onclick=null;
+        } else if (s.bolos) {
+          ci.className='h-16 btn btn-outline text-red-400 cursor-not-allowed';
+          ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><span>Bolos</span>';
+          ci.disabled=true; ci.onclick=null;
+          co.className='h-16 btn btn-outline text-red-400 cursor-not-allowed';
+          co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><span>Bolos</span>';
+          co.disabled=true; co.onclick=null;
         } else {
           ci.className='h-16 btn btn-outline text-slate-400 cursor-not-allowed';
           ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Terkunci</span>';
@@ -537,6 +554,13 @@
           co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Terkunci</span>';
           co.disabled=true; co.onclick=null;
         }
+        return;
+      }
+      
+      // Jika peringatan terlambat: tombol tetap aktif tapi dengan peringatan
+      if (s.peringatan_terlambat && (!s.sudah_absensi||!s.sudah_masuk)) {
+        ci.className='h-16 btn btn-primary'; ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Clock In (Terlambat)</span>'; ci.disabled=false; ci.onclick=()=>confirmAbsen('in');
+        co.className='h-16 btn btn-outline text-slate-400'; co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Clock Out</span>'; co.disabled=true; co.onclick=null;
         return;
       }
       
