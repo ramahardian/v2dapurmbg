@@ -268,8 +268,8 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
           if (currentMinutes >= awalBolehMasuk && currentMinutes <= shiftEnd) {
             // Dalam jendela absen (1 jam sebelum shift sampai shift selesai)
             // tidak ada peringatan
-          } else if (currentMinutes > shiftEnd) {
-            // Lewat shift dan belum check-in → kunci tombol sampai 1 jam sebelum shift besok
+          } else {
+            // Di luar jendela absen → kunci tombol
             terkunci = true;
           }
         } else {
