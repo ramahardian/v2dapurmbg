@@ -490,6 +490,9 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
     const todayCheck = nowTimeCheck.toISOString().slice(0, 10);
     const dayOfWeekCheck = nowTimeCheck.getDay() + 1;
     const shiftCheck = await getEffectiveShift(req.karyawan, req.user.tenant_id, todayCheck, dayOfWeekCheck);
+    let bolehMasuk = false;
+    let terlambat = false;
+
     if (shiftCheck && !existing.length) {
       const hariKerjaCheck = (shiftCheck.hari_kerja || '1,2,3,4,5,6,7').split(',').map(Number);
       
@@ -508,8 +511,6 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
       const isCrossDay = sEnd <= sStart;
       const awalBolehMasuk = (sStart - 30 + 1440) % 1440;  // 30 menit SEBELUM shift
       const batasTelat = (sStart + 15 + 1440) % 1440;       // 15 menit toleransi
-      let bolehMasuk = false;
-      let terlambat = false;
       
       if (!isCrossDay) {
         // Normal 08:00-16:00 — boleh dari 30 menit sebelum shift sampai shift selesai
