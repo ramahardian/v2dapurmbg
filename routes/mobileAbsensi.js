@@ -249,10 +249,15 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
     // Cek shift efektif hari ini untuk deteksi bolos & terkunci
     const shift = await getEffectiveShift(req.karyawan, req.user.tenant_id, today, dayOfWeek);
     let terkunci = false;
+    let hariLibur = false;
 
     if (shift && !rows.length) {
       const hariKerja = (shift.hari_kerja || '1,2,3,4,5,6,7').split(',').map(Number);
-      if (hariKerja.includes(dayOfWeek)) {
+      if (!hariKerja.includes(dayOfWeek)) {
+        // Hari ini bukan hari kerja → libur
+        terkunci = true;
+        hariLibur = true;
+      } else {
         const shiftStart = parseTimeToMinutes(shift.jam_masuk);
         const shiftEnd = parseTimeToMinutes(shift.jam_keluar);
         const isCrossDay = shiftEnd <= shiftStart;
@@ -293,7 +298,8 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
           jam_masuk: shift.jam_masuk?.slice(0,5),
           jam_keluar: shift.jam_keluar?.slice(0,5)
         } : null,
-        pesan: terkunci ? 'Jam shift sudah lewat' : 'Belum absen hari ini'
+        hari_libur: hariLibur,
+        pesan: hariLibur ? 'Hari ini libur' : (terkunci ? 'Jam shift sudah lewat' : 'Belum absen hari ini')
       });
     }
 
@@ -305,7 +311,11 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
     let pesanDeadline = '';
     if (shift && a.jam_masuk && !a.jam_keluar) {
       const hariKerja = (shift.hari_kerja || '1,2,3,4,5,6,7').split(',').map(Number);
-      if (hariKerja.includes(dayOfWeek)) {
+      if (!hariKerja.includes(dayOfWeek)) {
+        // Hari ini libur — tidak perlu clock-out
+        terkunciKeluar = true;
+        pesanDeadline = 'Hari ini libur, tidak perlu clock-out';
+      } else {
         const sStart = parseTimeToMinutes(shift.jam_masuk);
         const sEnd = parseTimeToMinutes(shift.jam_keluar);
         const isCrossDay = sEnd <= sStart;
@@ -436,39 +446,47 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
       });
     }
 
-    // Cek apakah shift sudah lewat (terkunci)
+    // Cek apakah shift sudah lewat (terkunci) atau hari libur
     const nowTimeCheck = new Date();
     const todayCheck = nowTimeCheck.toISOString().slice(0, 10);
     const dayOfWeekCheck = nowTimeCheck.getDay() + 1;
     const shiftCheck = await getEffectiveShift(req.karyawan, req.user.tenant_id, todayCheck, dayOfWeekCheck);
     if (shiftCheck && !existing.length) {
       const hariKerjaCheck = (shiftCheck.hari_kerja || '1,2,3,4,5,6,7').split(',').map(Number);
-      if (hariKerjaCheck.includes(dayOfWeekCheck)) {
-        const sStart = parseTimeToMinutes(shiftCheck.jam_masuk);
-        const sEnd = parseTimeToMinutes(shiftCheck.jam_keluar);
-        const nowMinCheck = nowTimeCheck.getHours() * 60 + nowTimeCheck.getMinutes();
-        const isCrossDay = sEnd <= sStart;
-        const awalBolehMasuk = (sStart - 60 + 1440) % 1440;  // 1 jam SEBELUM shift
-        let bolehMasuk = false;
-        
-        if (!isCrossDay) {
-          // Normal 08:00-16:00 — boleh dari 1 jam sebelum shift sampai shift selesai
-          if (nowMinCheck >= awalBolehMasuk && nowMinCheck <= sEnd) {
-            bolehMasuk = true;
-          }
-        } else {
-          // Lintas hari 19:00-03:00
-          if (nowMinCheck >= awalBolehMasuk || nowMinCheck < sEnd) {
-            bolehMasuk = true;
-          }
+      
+      // Cek dulu apakah hari ini libur
+      if (!hariKerjaCheck.includes(dayOfWeekCheck)) {
+        return res.status(403).json({
+          error: 'Hari ini libur. Tidak perlu absen.',
+          solusi: 'Nikmati hari libur Anda!'
+        });
+      }
+      
+      // Baru cek timing clock-in
+      const sStart = parseTimeToMinutes(shiftCheck.jam_masuk);
+      const sEnd = parseTimeToMinutes(shiftCheck.jam_keluar);
+      const nowMinCheck = nowTimeCheck.getHours() * 60 + nowTimeCheck.getMinutes();
+      const isCrossDay = sEnd <= sStart;
+      const awalBolehMasuk = (sStart - 60 + 1440) % 1440;  // 1 jam SEBELUM shift
+      let bolehMasuk = false;
+      
+      if (!isCrossDay) {
+        // Normal 08:00-16:00 — boleh dari 1 jam sebelum shift sampai shift selesai
+        if (nowMinCheck >= awalBolehMasuk && nowMinCheck <= sEnd) {
+          bolehMasuk = true;
         }
-        
-        if (!bolehMasuk) {
-          return res.status(403).json({
-            error: 'Belum waktunya absen. Clock-in dibuka 1 jam sebelum shift dimulai.',
-            solusi: 'Silakan coba lagi mendekati jam shift Anda.'
-          });
+      } else {
+        // Lintas hari 19:00-03:00
+        if (nowMinCheck >= awalBolehMasuk || nowMinCheck < sEnd) {
+          bolehMasuk = true;
         }
+      }
+      
+      if (!bolehMasuk) {
+        return res.status(403).json({
+          error: 'Belum waktunya absen. Clock-in dibuka 1 jam sebelum shift dimulai.',
+          solusi: 'Silakan coba lagi mendekati jam shift Anda.'
+        });
       }
     }
 

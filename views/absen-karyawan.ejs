@@ -459,10 +459,17 @@
       const el = document.getElementById('status-content');
       if (!s.sudah_absensi) {
         if (s.terkunci) {
-          el.innerHTML = '<div class="flex items-start gap-3 bg-slate-100 border border-slate-200 rounded-lg p-4">'
-            +'<div class="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">'
-            +'<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
-            +'<div><div class="font-semibold text-slate-600">Absen Terkunci</div><div class="text-xs text-slate-400 mt-0.5">Jam shift sudah lewat. Absen akan dibuka kembali saat jam shift yang sudah di tentukan.</div></div></div>';
+          if (s.hari_libur) {
+            el.innerHTML = '<div class="flex items-start gap-3 bg-violet-50 border border-violet-200 rounded-lg p-4">'
+              +'<div class="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">'
+              +'<svg class="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>'
+              +'<div><div class="font-semibold text-violet-700">Hari Libur</div><div class="text-xs text-violet-500 mt-0.5">Hari ini libur. Silakan nikmati hari libur Anda! 🎉</div></div></div>';
+          } else {
+            el.innerHTML = '<div class="flex items-start gap-3 bg-slate-100 border border-slate-200 rounded-lg p-4">'
+              +'<div class="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">'
+              +'<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
+              +'<div><div class="font-semibold text-slate-600">Absen Terkunci</div><div class="text-xs text-slate-400 mt-0.5">Jam shift sudah lewat. Absen akan dibuka kembali saat jam shift yang sudah di tentukan.</div></div></div>';
+          }
         } else {
           el.innerHTML = '<div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">'
             +'<div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">'
@@ -514,12 +521,21 @@
       
       // Jika terkunci, disable kedua tombol
       if (s.terkunci) {
-        ci.className='h-16 btn btn-outline text-slate-400 cursor-not-allowed';
-        ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Terkunci</span>';
-        ci.disabled=true; ci.onclick=null;
-        co.className='h-16 btn btn-outline text-slate-400 cursor-not-allowed';
-        co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Terkunci</span>';
-        co.disabled=true; co.onclick=null;
+        if (s.hari_libur) {
+          ci.className='h-16 btn btn-outline text-violet-400 cursor-not-allowed';
+          ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Hari Libur</span>';
+          ci.disabled=true; ci.onclick=null;
+          co.className='h-16 btn btn-outline text-violet-400 cursor-not-allowed';
+          co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Hari Libur</span>';
+          co.disabled=true; co.onclick=null;
+        } else {
+          ci.className='h-16 btn btn-outline text-slate-400 cursor-not-allowed';
+          ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Terkunci</span>';
+          ci.disabled=true; ci.onclick=null;
+          co.className='h-16 btn btn-outline text-slate-400 cursor-not-allowed';
+          co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Terkunci</span>';
+          co.disabled=true; co.onclick=null;
+        }
         return;
       }
       
