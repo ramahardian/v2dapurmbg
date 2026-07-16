@@ -358,7 +358,6 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         const sStart = parseTimeToMinutes(shift.jam_masuk);
         const sEnd = parseTimeToMinutes(shift.jam_keluar);
         const isCrossDay = sEnd <= sStart;
-        const deadline = sStart;
 
         if (!isCrossDay) {
           // Shift normal (misal 08:00-16:00)
@@ -366,8 +365,10 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
             // Belum waktunya clock-out — shift belum selesai
             terkunciKeluar = true;
             pesanEarly = 'Belum waktunya clock-out. Shift Anda selesai pukul ' + (shift.jam_keluar?.slice(0,5) || '--:--') + '.';
-          } else if (currentMinutes >= deadline) {
-            // Sudah lewat deadline (shift berikutnya sudah mulai)
+          } else if (currentMinutes >= (sStart + 1440 - 30)) {
+            // Deadline: 30 menit SEBELUM shift berikutnya dimulai (shift berikut = sStart besok)
+            // (sStart + 1440 - 30) selalu > 1440, jadi dalam hari yang sama tidak akan terpenuhi
+            // Artinya: setelah shift selesai, clock-out selalu bisa dilakukan hari ini
             terkunciKeluar = true;
             pesanDeadline = 'Batas waktu clock-out sudah lewat (shift sudah berganti). Hubungi admin untuk koreksi.';
           }
@@ -382,8 +383,8 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
             } else {
               pesanEarly = 'Belum waktunya clock-out. Shift Anda selesai pukul ' + jamSelesai + '.';
             }
-          } else if (currentMinutes >= deadline) {
-            // Sudah lewat deadline
+          } else if (currentMinutes >= (sStart - 30 + 1440) % 1440) {
+            // Deadline: 30 menit SEBELUM shift berikutnya dimulai
             terkunciKeluar = true;
             pesanDeadline = 'Batas waktu clock-out sudah lewat (shift sudah berganti). Hubungi admin untuk koreksi.';
           }
@@ -667,24 +668,22 @@ router.post('/absensi/clock-out', ensureKaryawan, async (req, res) => {
           });
         }
 
-        // Cek deadline: sampai waktu clock-in shift berikutnya (shiftStart)
-        // Deadline = sStart (waktu shift clock-in)
-        const deadline = sStart;
+        // Cek deadline: clock-out bisa dilakukan sampai 30 menit SEBELUM shift berikutnya
+        // Untuk shift normal: shift berikutnya = besok jam sStart
+        // Untuk cross-day: shift berikutnya = hari ini jam sStart
         let lewatDeadline = false;
 
         if (tanggalAbsen === today) {
-          // Masih hari yang sama — deadline saat shift clock-in berikutnya
-          if (nowMinutes >= deadline) {
+          // Hari yang sama: deadline = 30 menit SEBELUM shift berikutnya (besok jam sStart)
+          // (sStart + 1440 - 30) selalu > 1440, tidak akan terpenuhi di hari yang sama
+          // Artinya: setelah shift selesai, clock-out selalu bisa dilakukan hari ini
+          if (nowMinutes >= (sStart + 1440 - 30)) {
             lewatDeadline = true;
           }
         } else {
-          // Besoknya — cek apakah lewat deadline
-          if (!isCrossDay) {
-            if (nowMinutes >= deadline) {
-              lewatDeadline = true;
-            }
-          } else {
-            // Cross-day sudah lewat
+          // Hari berikutnya: deadline = 30 menit sebelum shift berikutnya
+          const deadlineNext = (sStart - 30 + 1440) % 1440;
+          if (nowMinutes >= deadlineNext) {
             lewatDeadline = true;
           }
         }
