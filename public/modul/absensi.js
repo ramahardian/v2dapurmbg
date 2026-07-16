@@ -9,17 +9,22 @@ async function renderAbsensi() {
     }
     c.innerHTML = await r.text();
     try {
-      const karyawanData = await api.get('/karyawan?status=Aktif');
-      const list = Array.isArray(karyawanData) ? karyawanData : [];
-      const opts = '<option value="">Semua Karyawan</option>' +
-        list.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+      // Filter dropdown: hanya karyawan yang punya data absensi
+      const filterData = await api.get('/karyawan?status=Aktif&has_absensi=1');
+      const filterList = Array.isArray(filterData) ? filterData : [];
+      const filterOpts = '<option value="">Semua Karyawan</option>' +
+        filterList.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
       const absFilter = document.getElementById('abs-filter-karyawan');
-      if (absFilter) absFilter.innerHTML = opts;
+      if (absFilter) absFilter.innerHTML = filterOpts;
+
+      // Form input: semua karyawan aktif (agar bisa input absensi untuk siapa saja)
+      const allData = await api.get('/karyawan?status=Aktif');
+      const allList = Array.isArray(allData) ? allData : [];
       const absForm = document.getElementById('absensi-karyawan');
       if (absForm) absForm.innerHTML = '<option value="">— Pilih —</option>' +
-        list.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+        allList.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
       // Set global karyawanOptions agar form edit absensi juga bisa akses
-      window.karyawanOptions = list;
+      window.karyawanOptions = allList;
     } catch (e) {
       console.error('Gagal load karyawan:', e);
     }

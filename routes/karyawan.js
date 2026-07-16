@@ -23,13 +23,14 @@ function saveBase64Photo(base64Data) {
 
 router.get('/karyawan', requireRole('admin', 'keuangan'), async (req, res) => {
   try {
-    const { status, departemen, jabatan, search, page, limit } = req.query;
+    const { status, departemen, jabatan, search, page, limit, has_absensi } = req.query;
     let where = ' WHERE 1=1';
     const params = [];
     if (status) { where += ' AND k.status=?'; params.push(status); }
     if (departemen) { where += ' AND k.departemen=?'; params.push(departemen); }
     if (jabatan) { where += ' AND j.name LIKE ?'; params.push(`%${jabatan}%`); }
     if (search) { where += ' AND (k.nama LIKE ? OR k.nik LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
+    if (has_absensi) { where += ' AND k.id IN (SELECT DISTINCT karyawan_id FROM absensi WHERE tenant_id=?)'; params.push(req.user.tenant_id); }
 
     if (page && limit) {
       const pageNum = parseInt(page);
