@@ -344,9 +344,10 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
     const a = rows[0];
     const butuhKoreksi = a.status === 'Butuh Koreksi' || (a.keterangan && a.keterangan.includes('Butuh Koreksi'));
 
-    // Cek deadline clock-out: 1 jam sebelum shift berikutnya
+    // Cek apakah sudah boleh clock-out
     let terkunciKeluar = false;
     let pesanDeadline = '';
+    let pesanEarly = '';
     if (shift && a.jam_masuk && !a.jam_keluar) {
       const hariKerja = (shift.hari_kerja || '1,2,3,4,5,6,7').split(',').map(Number);
       if (!hariKerja.includes(dayOfWeek)) {
@@ -357,18 +358,34 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         const sStart = parseTimeToMinutes(shift.jam_masuk);
         const sEnd = parseTimeToMinutes(shift.jam_keluar);
         const isCrossDay = sEnd <= sStart;
-        // Deadline clock-out: sampai waktu clock-in shift berikutnya (shiftStart)
         const deadline = sStart;
 
         if (!isCrossDay) {
-          if (currentMinutes >= deadline) {
+          // Shift normal (misal 08:00-16:00)
+          if (currentMinutes < sEnd) {
+            // Belum waktunya clock-out — shift belum selesai
             terkunciKeluar = true;
-            pesanDeadline = 'Batas waktu clock-out sudah lewat (shift sudah berganti)';
+            pesanEarly = 'Belum waktunya clock-out. Shift Anda selesai pukul ' + (shift.jam_keluar?.slice(0,5) || '--:--') + '.';
+          } else if (currentMinutes >= deadline) {
+            // Sudah lewat deadline (shift berikutnya sudah mulai)
+            terkunciKeluar = true;
+            pesanDeadline = 'Batas waktu clock-out sudah lewat (shift sudah berganti). Hubungi admin untuk koreksi.';
           }
         } else {
-          if (currentMinutes >= deadline || currentMinutes < sEnd) {
+          // Shift lintas hari (misal 19:00-03:00)
+          if (currentMinutes >= sStart || currentMinutes < sEnd) {
+            // Masih dalam jam shift
             terkunciKeluar = true;
-            pesanDeadline = 'Batas waktu clock-out sudah lewat';
+            const jamSelesai = shift.jam_keluar?.slice(0,5) || '--:--';
+            if (currentMinutes >= sStart && currentMinutes < 1440) {
+              pesanEarly = 'Belum waktunya clock-out. Shift Anda selesai pukul ' + jamSelesai + ' besok.';
+            } else {
+              pesanEarly = 'Belum waktunya clock-out. Shift Anda selesai pukul ' + jamSelesai + '.';
+            }
+          } else if (currentMinutes >= deadline) {
+            // Sudah lewat deadline
+            terkunciKeluar = true;
+            pesanDeadline = 'Batas waktu clock-out sudah lewat (shift sudah berganti). Hubungi admin untuk koreksi.';
           }
         }
       }
@@ -381,8 +398,9 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
       peringatan_bolos: false,
       terkunci: terkunciKeluar,
       butuh_koreksi: butuhKoreksi,
-      deadline_lewat: terkunciKeluar,
+      deadline_lewat: !!pesanDeadline,
       pesan_deadline: pesanDeadline,
+      pesan_early: pesanEarly,
       data: {
         id: a.id,
         tanggal: a.tanggal,
@@ -916,19 +934,25 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
       }
 
       if (tglMulaiEfektif) {
-        // Batasi akhir hitungan: min(shift.tanggal_selesai, hari ini)
-        const tglSelesai = shift.tanggal_selesai && shift.tanggal_selesai < hariIni
-          ? shift.tanggal_selesai : hariIni;
+        // Hanya hitung bolos jika ada data absensi di bulan ini
+        // Jika total_hari = 0, skip kalkulasi bolos (karyawan mungkin baru)
+        if (Number(stats?.total_hari || 0) > 0) {
+          // Batasi akhir hitungan: min(shift.tanggal_selesai, hari ini)
+          const tglSelesai = shift.tanggal_selesai && shift.tanggal_selesai < hariIni
+            ? shift.tanggal_selesai : hariIni;
 
-        expected_hari = countWorkDays(
-          bulan, tahun,
-          shift.hari_kerja || '1,2,3,4,5,6',
-          tglMulaiEfektif,
-          tglSelesai
-        );
-        const realHadir = Number(stats?.hadir || 0) + Number(stats?.sakit || 0)
-          + Number(stats?.izin || 0) + Number(stats?.cuti || 0);
-        bolos = Math.max(0, expected_hari - realHadir);
+          expected_hari = countWorkDays(
+            bulan, tahun,
+            shift.hari_kerja || '1,2,3,4,5,6',
+            tglMulaiEfektif,
+            tglSelesai
+          );
+          const realHadir = Number(stats?.hadir || 0) + Number(stats?.sakit || 0)
+            + Number(stats?.izin || 0) + Number(stats?.cuti || 0);
+          bolos = Math.max(0, expected_hari - realHadir);
+        }
+        // Jika total_hari = 0, expected_hari & bolos tetap 0
+        // sehingga statistik tidak menampilkan Alpha/bolos palsu
       }
     }
 

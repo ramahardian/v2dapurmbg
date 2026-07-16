@@ -313,7 +313,7 @@ CREATE TABLE IF NOT EXISTS absensi (
   tenant_id INT NOT NULL,
   karyawan_id INT NOT NULL,
   tanggal DATE NOT NULL,
-  status ENUM('Hadir','Sakit','Izin','Cuti','Alpha') DEFAULT 'Hadir',
+  status ENUM('Hadir','Sakit','Izin','Cuti','Alpha','Terlambat') DEFAULT 'Hadir',
   jam_masuk TIME,
   jam_keluar TIME,
   keterangan TEXT,

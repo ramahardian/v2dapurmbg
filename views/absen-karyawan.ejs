@@ -511,18 +511,32 @@
         +(s.deadline_lewat?'<div class="mt-2 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">'
           +'<svg class="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
           +'<div><div class="font-semibold text-red-700 text-sm">Batas Clock-Out Habis</div>'
-          +'<div class="text-red-600/70 text-xs mt-0.5">'+escapeHtml(s.pesan_deadline||'Batas waktu clock-out sudah lewat. Hubungi admin untuk koreksi.')+'</div></div></div>':'');
+          +'<div class="text-red-600/70 text-xs mt-0.5">'+escapeHtml(s.pesan_deadline||'Batas waktu clock-out sudah lewat. Hubungi admin untuk koreksi.')+'</div></div></div>':'')
+        +(s.pesan_early?'<div class="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">'
+          +'<svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
+          +'<div><div class="font-semibold text-amber-700 text-sm">Belum Waktunya Clock-Out</div>'
+          +'<div class="text-amber-600/70 text-xs mt-0.5">'+escapeHtml(s.pesan_early)+'</div></div></div>':'');
     }
 
     // Render Buttons
     function renderButtons(s) {
       const ci=document.getElementById('btn-clock-in'), co=document.getElementById('btn-clock-out');
       
+      // Case: sudah clock-in, belum clock-out, tapi belum waktunya
+      if (s.pesan_early && s.sudah_masuk && !s.sudah_keluar) {
+        ci.className='h-16 btn btn-success cursor-default';
+        ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Sudah Clock In</span>';
+        ci.disabled=true; ci.onclick=null;
+        co.className='h-16 btn btn-outline text-amber-500 cursor-not-allowed';
+        co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Belum Waktunya</span>';
+        co.disabled=true; co.onclick=null;
+        return;
+      }
+      
       // Deadline lewat: sudah clock-in tapi batas clock-out habis
       if (s.deadline_lewat) {
         ci.className='h-16 btn btn-success cursor-default';
         ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Sudah Clock In</span>';
-        ci.disabled=true; ci.onclick=null;
         ci.disabled=true; ci.onclick=null;
         co.className='h-16 btn btn-outline text-red-400 cursor-not-allowed';
         co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Batas Habis</span>';
@@ -604,11 +618,19 @@
 
     // Render Statistik
     function renderStatistik(r) {
-      document.getElementById('statistik-card').classList.remove('hidden'); showSkeleton('statistik',false);
       document.getElementById('statistik-periode').textContent=r.periode||(r.bulan+'/'+r.tahun);
-      const st=r.statistik,t=st.total_hari||1,e=st.expected_hari||t,h=st.hadir||0,sk=st.sakit||0,iz=st.izin||0,al=st.alpha||0,bo=st.bolos||0;
+      const st=r.statistik,t=st.total_hari||0,e=st.expected_hari||0,h=st.hadir||0,sk=st.sakit||0,iz=st.izin||0,al=st.alpha||0,bo=st.bolos||0;
+      
+      // Jika belum ada data absensi bulan ini, sembunyikan kartu statistik
+      if (t === 0 && e === 0) {
+        document.getElementById('statistik-card').classList.add('hidden');
+        showSkeleton('statistik',false);
+        return;
+      }
+      
+      document.getElementById('statistik-card').classList.remove('hidden'); showSkeleton('statistik',false);
       document.getElementById('stat-hadir-val').textContent=h; document.getElementById('stat-sakit-val').textContent=sk; document.getElementById('stat-izin-val').textContent=iz;
-      const base=e||1; document.getElementById('stat-label-expected').textContent='dari '+e+' hari';
+      const base=Math.max(e||1,1); document.getElementById('stat-label-expected').textContent='dari '+(e||t)+' hari';
       const ar=document.getElementById('stat-alpha-row'), br=document.getElementById('stat-bolos-row');
       if(bo>0){if(ar)ar.classList.add('hidden');if(br)br.classList.remove('hidden');document.getElementById('stat-bolos-val').textContent=bo;}
       else{if(ar)ar.classList.remove('hidden');if(br)br.classList.add('hidden');document.getElementById('stat-alpha-val').textContent=al;}
