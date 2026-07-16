@@ -30,6 +30,7 @@ if (cluster.isMaster && WORKERS > 1) {
   const cookieParser = require('cookie-parser');
   const jwt = require('jsonwebtoken');
   const whatsappBot = require('./services/whatsappBot');
+  const { requireAuth, requireRole } = require('./middleware/auth');
   const authRoutes = require('./routes/auth');
   const apiRoutes = require('./routes/api');
   const db = require('./db');
@@ -155,6 +156,47 @@ if (cluster.isMaster && WORKERS > 1) {
   })();
   app.get('/', requirePageAuth, (req, res) => res.render('app', { distVer }));
   app.get(/^\/(?!api).*/, requirePageAuth, (req, res) => res.render('app', { distVer }));
+
+  // ── MIGRASI / UTILITY ──────────────────────
+  // Endpoint untuk alter ENUM absensi via browser (admin only)
+  app.get('/api/migrate/absensi-status-terlambat', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      // Cek apakah 'Terlambat' sudah ada di ENUM
+      const [cols] = await db.query(
+        `SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'absensi'
+           AND COLUMN_NAME = 'status'`
+      );
+      const currentType = cols[0]?.COLUMN_TYPE || '';
+      if (currentType.includes("'Terlambat'")) {
+        return res.send(`
+          <div style="font-family:sans-serif;padding:2rem;text-align:center">
+            <h2 style="color:#16a34a">✅ Status ENUM sudah mengandung Terlambat</h2>
+            <p style="color:#6b7280;margin-top:0.5rem">Tidak perlu diubah.</p>
+          </div>`);
+      }
+
+      await db.query(
+        `ALTER TABLE absensi MODIFY COLUMN status
+         ENUM('Hadir','Sakit','Izin','Cuti','Alpha','Terlambat') DEFAULT 'Hadir'`
+      );
+
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#16a34a">✅ ALTER TABLE BERHASIL!</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">
+            Status ENUM sekarang: <code>Hadir, Sakit, Izin, Cuti, Alpha, Terlambat</code>
+          </p>
+        </div>`);
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#dc2626">❌ Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+        </div>`);
+    }
+  });
 
   // ── ERROR HANDLING ──────────────────────
   process.on('unhandledRejection', (err) => console.error('Unhandled Rejection:', err));
