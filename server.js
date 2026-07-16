@@ -161,7 +161,6 @@ if (cluster.isMaster && WORKERS > 1) {
   // Endpoint untuk alter ENUM absensi via browser (admin only)
   app.get('/api/migrate/absensi-status-terlambat', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-      // Cek apakah 'Terlambat' sudah ada di ENUM
       const [cols] = await db.query(
         `SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
          WHERE TABLE_SCHEMA = DATABASE()
@@ -188,6 +187,54 @@ if (cluster.isMaster && WORKERS > 1) {
           <p style="color:#6b7280;margin-top:0.5rem">
             Status ENUM sekarang: <code>Hadir, Sakit, Izin, Cuti, Alpha, Terlambat</code>
           </p>
+        </div>`);
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#dc2626">❌ Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+        </div>`);
+    }
+  });
+
+  // Endpoint hapus SEMUA data absensi (admin only)
+  app.get('/api/migrate/hapus-absensi', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [[{ total }]] = await db.query('SELECT COUNT(*) AS total FROM absensi');
+
+      if (req.query.confirm !== '1') {
+        return res.send(`
+          <div style="font-family:sans-serif;padding:2rem;text-align:center;max-width:480px;margin:auto">
+            <h2 style="color:#dc2626;margin-bottom:1rem">⚠️ Hapus Semua Data Absensi</h2>
+            <p style="color:#6b7280;margin-bottom:0.5rem">
+              Total data absensi: <strong style="font-size:1.5rem;color:#111827">${total}</strong> records
+            </p>
+            <p style="color:#9ca3af;font-size:0.875rem;margin-bottom:2rem">
+              Tindakan ini <strong>tidak bisa dibatalkan</strong>.
+              Semua data clock-in, clock-out, dan status absensi akan hilang permanen.
+            </p>
+            <a href="?confirm=1"
+               style="display:inline-block;padding:0.75rem 2rem;background:#dc2626;color:white;
+                      text-decoration:none;border-radius:0.5rem;font-weight:600">
+              🗑️ Ya, Hapus Semua (${total} records)
+            </a>
+            <br><br>
+            <a href="/" style="color:#6b7280;font-size:0.875rem">Batal</a>
+          </div>`);
+      }
+
+      await db.query('DELETE FROM absensi');
+
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#16a34a">✅ Berhasil!</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">
+            <strong>${total}</strong> data absensi telah dihapus.
+          </p>
+          <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;
+             background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">
+            Kembali ke Dashboard
+          </a>
         </div>`);
     } catch (e) {
       res.status(500).send(`
