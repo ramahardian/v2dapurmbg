@@ -5,93 +5,11 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
-async function getHariKerja(karyawanId, tenantId) {
-  // Priority 1: jadwal_karyawan
-  const [jk] = await db.query(
-    `SELECT hari_kerja FROM jadwal_karyawan
-     WHERE karyawan_id=? AND tenant_id=?
-       AND tanggal_mulai <= CURDATE()
-       AND (tanggal_selesai IS NULL OR tanggal_selesai >= CURDATE())
-     ORDER BY tanggal_mulai DESC LIMIT 1`,
-    [karyawanId, tenantId]
-  );
-  if (jk.length) return jk[0].hari_kerja;
-
-  // Priority 2: jabatan.shift_id
-  const [j] = await db.query(
-    `SELECT 1 FROM jabatan j JOIN shift s ON s.id=j.shift_id
-     WHERE j.id=(SELECT jabatan_id FROM karyawan WHERE id=?) AND s.tenant_id=?`,
-    [karyawanId, tenantId]
-  );
-  if (j.length) return '1,2,3,4,5,6';
-
-  // Priority 3: shift_divisi via departemen
-  const [d] = await db.query(
-    `SELECT 1 FROM shift_divisi sd
-     JOIN divisi d ON d.id=sd.divisi_id
-     JOIN karyawan k ON k.departemen=d.nama
-     WHERE k.id=? AND sd.tenant_id=?`,
-    [karyawanId, tenantId]
-  );
-  if (d.length) return '1,2,3,4,5,6';
-
-  return null;
-}
-
-async function generateAlpha(tenantId, tanggalAwal, tanggalAkhir) {
-  const start = tanggalAwal || new Date().toISOString().slice(0, 10);
-  const end = tanggalAkhir || start;
-
-  const [karyawan] = await db.query(
-    `SELECT id FROM karyawan WHERE tenant_id=? AND status='Aktif'`,
-    [tenantId]
-  );
-
-  const tglList = [];
-  let d = new Date(start);
-  const endDate = new Date(end);
-  while (d <= endDate) {
-    tglList.push({ date: d.toISOString().slice(0, 10), day: d.getDay() + 1 });
-    d.setDate(d.getDate() + 1);
-  }
-
-  let created = 0;
-  for (const k of karyawan) {
-    const hariKerjaStr = await getHariKerja(k.id, tenantId);
-    if (!hariKerjaStr) continue;
-    const hariKerja = hariKerjaStr.split(',').map(Number);
-
-    const [exist] = await db.query(
-      `SELECT tanggal FROM absensi WHERE tenant_id=? AND karyawan_id=? AND tanggal>=? AND tanggal<=?`,
-      [tenantId, k.id, start, end]
-    );
-    const existSet = new Set(exist.map(r => {
-      const t = r.tanggal;
-      return typeof t === 'string' ? t.slice(0, 10) : new Date(t).toISOString().slice(0, 10);
-    }));
-    for (const { date: tgl, day } of tglList) {
-      if (hariKerja.includes(day) && !existSet.has(tgl)) {
-        await db.query(
-          `INSERT INTO absensi (tenant_id, karyawan_id, tanggal, status) VALUES (?,?,?,'Alpha')`,
-          [tenantId, k.id, tgl]
-        );
-        created++;
-      }
-    }
-  }
-  return created;
-}
-
 router.get('/absensi', requireRole('admin', 'keuangan'), async (req, res) => {
   const { karyawan_id, tanggal_awal, tanggal_akhir, status, page = '1', limit = '50' } = req.query;
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(500, Math.max(1, parseInt(limit)));
   const offset = (pageNum - 1) * limitNum;
-
-  // Auto-generate Alpha records
-  if (!karyawan_id) {
-    await generateAlpha(req.user.tenant_id, tanggal_awal, tanggal_akhir).catch(() => {});
-  }
 
   let where = 'WHERE a.tenant_id=?';
   const params = [req.user.tenant_id];
