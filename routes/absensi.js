@@ -10,6 +10,7 @@ async function getHariKerja(karyawanId, tenantId) {
   const [jk] = await db.query(
     `SELECT hari_kerja FROM jadwal_karyawan
      WHERE karyawan_id=? AND tenant_id=?
+       AND tanggal_mulai <= CURDATE()
        AND (tanggal_selesai IS NULL OR tanggal_selesai >= CURDATE())
      ORDER BY tanggal_mulai DESC LIMIT 1`,
     [karyawanId, tenantId]
