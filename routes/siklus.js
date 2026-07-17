@@ -457,12 +457,15 @@ router.post('/siklus', async (req, res) => {
  * Strategi yang digunakan untuk detail item adalah "Delete & Re-insert" (Hapus semua item lama, lalu masukkan yang baru).
  */
 router.put('/siklus/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id || isNaN(id)) return res.status(400).json({ error: 'ID siklus tidak valid' });
+
   const { nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, items } = req.body;
   if (nama !== undefined && (!nama || !nama.trim())) return res.status(400).json({ error: 'Nama siklus wajib diisi' });
   
   // Cek duplikat nama saat update (kecuali dirinya sendiri)
   if (nama !== undefined) {
-    const [existing] = await db.query('SELECT id FROM siklus_menu WHERE nama=? AND tenant_id=? AND id!=?', [nama.trim(), req.user.tenant_id, req.params.id]);
+    const [existing] = await db.query('SELECT id FROM siklus_menu WHERE nama=? AND tenant_id=? AND id!=?',       [nama.trim(), req.user.tenant_id, id]);
     if (existing.length) return res.status(409).json({ error: 'Siklus dengan nama "' + nama.trim() + '" sudah ada' });
   }
   
@@ -474,11 +477,11 @@ router.put('/siklus/:id', async (req, res) => {
     // 1. Update data header siklus
     await conn.query(
       `UPDATE siklus_menu SET nama=?, kategori_penerima=?, jumlah_porsi=?, total_hari=?, status=?, catatan=? WHERE id=? AND tenant_id=?`,
-      [nama, kategori_penerima || null, jumlah_porsi || 0, total_hari || 7, status || 'Draft', catatan || null, req.params.id, req.user.tenant_id]
+      [nama, kategori_penerima || null, jumlah_porsi || 0, total_hari || 7, status || 'Draft', catatan || null, id, req.user.tenant_id]
     );
     
     // 2. Hapus semua detail item lama berdasarkan siklus_id
-    await conn.query('DELETE FROM siklus_menu_item WHERE siklus_id=?', [req.params.id]);
+    await conn.query('DELETE FROM siklus_menu_item WHERE siklus_id=?', [id]);
     
     // 3. Masukkan kembali detail item yang baru
     if (Array.isArray(items) && items.length) {
@@ -486,7 +489,7 @@ router.put('/siklus/:id', async (req, res) => {
         await conn.query(
           `INSERT INTO siklus_menu_item (siklus_id, hari_ke, hari_nama, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat)
            VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-          [req.params.id, it.hari_ke, it.hari_nama, it.menu_id || null, it.menu_nama || null, it.jumlah_porsi || 0,
+          [id, it.hari_ke, it.hari_nama, it.menu_id || null, it.menu_nama || null, it.jumlah_porsi || 0,
            it.kalori || 0, it.protein || 0, it.karbohidrat || 0, it.lemak || 0, it.serat || 0]
         );
       }

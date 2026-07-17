@@ -445,7 +445,7 @@ async function editSiklus(id) {
 }
 
 async function openSiklusForm(editing) {
-  const isEdit = !!editing;
+  const isEdit = !!(editing && editing.id);
   const s = editing || { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 7, status: 'Draft', catatan: '', items: HARI_OPTIONS.slice(0,7).map((h,i) => ({ hari_ke: i+1, hari_nama: h, menu_nama: '', jumlah_porsi: 0 })) };
   // Preserve existing metadata when re-rendering (e.g. from saveGridPicker / hariChange)
   const prevMeta = window._siklusMeta;
