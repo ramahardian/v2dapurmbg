@@ -161,18 +161,35 @@ router.post('/menu', async (req, res) => {
     // 2. Jika ada data bahan baku, simpan ke tabel relasi (menu_bahan)
     if (Array.isArray(bahan)) {
       for (const b of bahan) {
-        if (!b.bahan_baku_id) continue;
+        let idBahan = Number(b.bahan_baku_id) || 0;
+        // Auto-create bahan_baku jika ID tidak ditemukan tapi nama tersedia
+        if (!idBahan && b.nama) {
+          const [existingBb] = await db.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [req.user.tenant_id, b.nama]);
+          if (existingBb.length) {
+            idBahan = existingBb[0].id;
+          } else {
+            const [bbInsert] = await db.query(
+              `INSERT INTO bahan_baku (tenant_id, nama, satuan, kategori_sp, berat_1_sp, persen_bdd, berat_per_satuan, kalori, protein, karbohidrat, lemak, serat)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+              [req.user.tenant_id, b.nama, b.satuan || 'g', b.kategori_sp || null,
+               Number(b.berat_1_sp) || 0, Number(b.persen_bdd) || 100, Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 0,
+               Number(b.kalori) || 0, Number(b.protein) || 0, Number(b.karbohidrat) || 0, Number(b.lemak) || 0, Number(b.serat) || 0]
+            );
+            idBahan = bbInsert.insertId;
+          }
+        }
+        if (!idBahan) continue;
         let jumlah = Number(b.jumlah) || 0;
         // Auto-calculate from SP if bahan has SP data and we have a matching SP value
         if (jumlah === 0 && b.kategori_sp && spMap[b.kategori_sp]) {
           const spVal = spMap[b.kategori_sp];
-          const namaBahan = b.nama || bbNamaMap[b.bahan_baku_id] || '';
+          const namaBahan = b.nama || bbNamaMap[idBahan] || '';
           const refData = spRefMap[namaBahan] || {};
           const berat1Sp = refData.berat_bersih || Number(b.berat_1_sp) || 0;
           jumlah = berat1Sp * spVal * (jumlahPorsi || 1);
         }
         if (jumlah > 0) {
-          await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)', [r.insertId, b.bahan_baku_id, jumlah]);
+          await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)', [r.insertId, idBahan, jumlah]);
         }
       }
     }
@@ -247,18 +264,35 @@ router.put('/menu/:id', async (req, res) => {
       
       // Masukkan ulang data bahan baku yang baru dikirimkan dari client
       for (const b of f.bahan) {
-        if (!b.bahan_baku_id) continue;
+        let idBahan = Number(b.bahan_baku_id) || 0;
+        // Auto-create bahan_baku jika ID tidak ditemukan tapi nama tersedia
+        if (!idBahan && b.nama) {
+          const [existingBb] = await db.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [req.user.tenant_id, b.nama]);
+          if (existingBb.length) {
+            idBahan = existingBb[0].id;
+          } else {
+            const [bbInsert] = await db.query(
+              `INSERT INTO bahan_baku (tenant_id, nama, satuan, kategori_sp, berat_1_sp, persen_bdd, berat_per_satuan, kalori, protein, karbohidrat, lemak, serat)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+              [req.user.tenant_id, b.nama, b.satuan || 'g', b.kategori_sp || null,
+               Number(b.berat_1_sp) || 0, Number(b.persen_bdd) || 100, Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 0,
+               Number(b.kalori) || 0, Number(b.protein) || 0, Number(b.karbohidrat) || 0, Number(b.lemak) || 0, Number(b.serat) || 0]
+            );
+            idBahan = bbInsert.insertId;
+          }
+        }
+        if (!idBahan) continue;
         let jumlah = Number(b.jumlah) || 0;
         // Auto-calculate from SP if bahan has SP data and we have a matching SP value
         if (jumlah === 0 && b.kategori_sp && spMap[b.kategori_sp]) {
           const spVal = spMap[b.kategori_sp];
-          const namaBahan = b.nama || bbNamaMap[b.bahan_baku_id] || '';
+          const namaBahan = b.nama || bbNamaMap[idBahan] || '';
           const refData = spRefMap[namaBahan] || {};
           const berat1Sp = refData.berat_bersih || Number(b.berat_1_sp) || 0;
           jumlah = berat1Sp * spVal * (jumlahPorsi || 1);
         }
         if (jumlah > 0) {
-          await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)', [req.params.id, b.bahan_baku_id, jumlah]);
+          await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)', [req.params.id, idBahan, jumlah]);
         }
       }
     }
@@ -291,44 +325,6 @@ router.post('/menu/bulk-delete', async (req, res) => {
   const placeholders = ids.map(() => '?').join(',');
   await db.query(`DELETE FROM menu WHERE id IN (${placeholders}) AND tenant_id=?`, [...ids, req.user.tenant_id]);
   res.json({ ok: true, deleted: ids.length });
-});
-
-/**
- * GET /menu/:id
- * Mengambil detail menu beserta bahan-bahannya untuk diedit.
- */
-router.get('/menu/:id', async (req, res) => {
-  const [menus] = await db.query(
-    `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.foto,
-        mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
-        FROM menu m
-        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
-        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
-        WHERE m.id=? AND m.tenant_id=?`,
-    [req.params.id, req.user.tenant_id]
-  );
-  if (!menus.length) return res.status(404).json({ error: 'Menu tidak ditemukan' });
-  
-  const m = {
-    id: menus[0].id,
-    nama: menus[0].nama,
-    kategori_penerima: menus[0].kategori_penerima,
-    deskripsi: menus[0].deskripsi,
-    gramasi_total: menus[0].gramasi_total,
-    kalori: menus[0].kalori,
-    protein: menus[0].protein,
-    karbohidrat: menus[0].karbohidrat,
-    lemak: menus[0].lemak,
-    serat: menus[0].serat,
-    foto: menus[0].foto,
-    bahan: []
-  };
-  menus.forEach(row => {
-    if (row.bahan_baku_id) {
-      m.bahan.push({ bahan_baku_id: row.bahan_baku_id, nama: row.bahan_nama, satuan: row.satuan, kategori_sp: row.kategori_sp, berat_1_sp: row.berat_1_sp, persen_bdd: row.persen_bdd, berat_per_satuan: row.berat_per_satuan, jumlah: row.jumlah });
-    }
-  });
-  res.json(m);
 });
 
 /**
@@ -404,6 +400,44 @@ router.get('/menu/by-siklus', async (req, res) => {
     total_menu: allMenus.length,
     used_in_siklus: usedMenuIds.size,
   });
+});
+
+/**
+ * GET /menu/:id
+ * Mengambil detail menu beserta bahan-bahannya untuk diedit.
+ */
+router.get('/menu/:id', async (req, res) => {
+  const [menus] = await db.query(
+    `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.foto,
+        mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
+        FROM menu m
+        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
+        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+        WHERE m.id=? AND m.tenant_id=?`,
+    [req.params.id, req.user.tenant_id]
+  );
+  if (!menus.length) return res.status(404).json({ error: 'Menu tidak ditemukan' });
+  
+  const m = {
+    id: menus[0].id,
+    nama: menus[0].nama,
+    kategori_penerima: menus[0].kategori_penerima,
+    deskripsi: menus[0].deskripsi,
+    gramasi_total: menus[0].gramasi_total,
+    kalori: menus[0].kalori,
+    protein: menus[0].protein,
+    karbohidrat: menus[0].karbohidrat,
+    lemak: menus[0].lemak,
+    serat: menus[0].serat,
+    foto: menus[0].foto,
+    bahan: []
+  };
+  menus.forEach(row => {
+    if (row.bahan_baku_id) {
+      m.bahan.push({ bahan_baku_id: row.bahan_baku_id, nama: row.bahan_nama, satuan: row.satuan, kategori_sp: row.kategori_sp, berat_1_sp: row.berat_1_sp, persen_bdd: row.persen_bdd, berat_per_satuan: row.berat_per_satuan, jumlah: row.jumlah });
+    }
+  });
+  res.json(m);
 });
 
 // Hitung ulang nutrisi semua menu — prioritaskan sp_referensi_bahan, fallback ke bahan_baku

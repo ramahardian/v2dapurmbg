@@ -348,9 +348,7 @@ function attachMenuHandlers() {
   document.querySelectorAll('.edit-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const menuId = this.getAttribute('data-menu-id');
-      fetch('/api/menu/' + menuId)
-        .then(r => r.json())
-        .then(menu => openMenuForm(menu));
+      editMenuById(menuId);
     });
   });
   document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -627,7 +625,7 @@ function closeBahanDropdown(i) {
   if (d) d.classList.add('hidden');
 }
 
-function selectBahan(i, nama) {
+async function selectBahan(i, nama) {
   var ref = window._spRefMap && window._spRefMap[nama];
   if (!ref) return;
   var spItem = (window._spRefList || []).find(function(r) { return r.nama === nama; });
@@ -635,12 +633,39 @@ function selectBahan(i, nama) {
   var berat1Sp = ref.berat_bersih;
   var perPorsi = window._spMap && window._spMap[kat] ? window._spMap[kat] * berat1Sp : 0;
   var bb = (window._bahanBaku || []).find(function(b) { return b.nama.toLowerCase() === nama.toLowerCase(); });
+  if (!bb) {
+    // Auto-create bahan_baku jika belum ada di master
+    try {
+      var created = await api.post('/bahan_baku', {
+        nama: nama,
+        satuan: 'g',
+        kategori_sp: kat || '',
+        berat_1_sp: berat1Sp,
+        persen_bdd: Math.round(ref.bdd_persen * 100),
+        berat_per_satuan: berat1Sp,
+        kalori: ref.energi || 0,
+        protein: ref.protein || 0,
+        karbohidrat: ref.karbohidrat || 0,
+        lemak: ref.lemak || 0,
+        serat: ref.serat || 0,
+      });
+      window._bahanBaku.push(created);
+      bb = created;
+    } catch (e) {
+      console.warn('Gagal auto-create bahan_baku:', e.message);
+    }
+  }
   window._menuBahan[i].bahan_baku_id = bb ? bb.id : '';
   window._menuBahan[i].nama = nama;
   window._menuBahan[i].satuan = 'g';
   window._menuBahan[i].kategori_sp = kat;
   window._menuBahan[i].berat_1_sp = berat1Sp;
   window._menuBahan[i].persen_bdd = Math.round(ref.bdd_persen * 100);
+  window._menuBahan[i].kalori = ref.energi || 0;
+  window._menuBahan[i].protein = ref.protein || 0;
+  window._menuBahan[i].karbohidrat = ref.karbohidrat || 0;
+  window._menuBahan[i].lemak = ref.lemak || 0;
+  window._menuBahan[i].serat = ref.serat || 0;
   window._menuBahan[i].jumlah = perPorsi;
   window._menuBahan[i]._autoJumlah = perPorsi;
   var input = document.getElementById('b-input-' + i);
