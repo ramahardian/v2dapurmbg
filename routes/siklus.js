@@ -474,6 +474,24 @@ router.get('/siklus/:id', async (req, res) => {
   // Mark items that have ingredients even without menu_id
   for (const it of items) {
     it._has_bahan = (bahanMap[it.hari_ke] || 0) > 0;
+    // Fix up existing manual items: set porsi from siklus header and default menu name
+    if (it._has_bahan && !it.menu_id) {
+      if (!it.jumlah_porsi || it.jumlah_porsi === 0) {
+        it.jumlah_porsi = Number(siklus.jumlah_porsi) || 1;
+      }
+      if (!it.menu_nama || !it.menu_nama.trim()) {
+        if (it.resep_map) {
+          try {
+            const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
+            const names = Object.values(map).filter(v => v && v.trim());
+            if (names.length) it.menu_nama = names.join(', ');
+          } catch (e) { /* ignore */ }
+        }
+        if (!it.menu_nama || !it.menu_nama.trim()) {
+          it.menu_nama = 'Menu Hari ' + it.hari_ke;
+        }
+      }
+    }
   }
   
   // Gabungkan header dan detail item ke dalam satu response
@@ -642,6 +660,27 @@ router.get('/siklus/:id/laporan', async (req, res) => {
   // Mark items that have ingredients even without menu_id
   for (const it of items) {
     it._has_bahan = (bahanMap[it.hari_ke] || 0) > 0;
+    // Fix up existing manual items (saved before frontend fix)
+    if (it._has_bahan && !it.menu_id) {
+      // Set jumlah_porsi from siklus header if missing
+      if (!it.jumlah_porsi || it.jumlah_porsi === 0) {
+        it.jumlah_porsi = Number(siklus.jumlah_porsi) || 1;
+      }
+      // Construct menu_nama from resep_map if available
+      if (!it.menu_nama || !it.menu_nama.trim()) {
+        if (it.resep_map) {
+          try {
+            const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
+            const names = Object.values(map).filter(v => v && v.trim());
+            if (names.length) it.menu_nama = names.join(', ');
+          } catch (e) { /* ignore */ }
+        }
+        // Final fallback
+        if (!it.menu_nama || !it.menu_nama.trim()) {
+          it.menu_nama = 'Menu Hari ' + it.hari_ke;
+        }
+      }
+    }
   }
   
   const filledDays = items.filter(it => it.menu_id || it._has_bahan).length; // Hari yang sudah diisi

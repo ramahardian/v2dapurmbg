@@ -661,7 +661,13 @@ async function openSiklusForm(editing) {
       }
     }
     var meta = window._siklusMeta || {};
-    var payload = { nama, kategori_penerima: meta.kategori_penerima || '', jumlah_porsi: meta.jumlah_porsi || 0, total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', items };
+    var jumlahPorsi = meta.jumlah_porsi || 0;
+    // Perbaiki jumlah_porsi item yang diisi manual (sebelumnya 0)
+    for (var ii = 0; ii < items.length; ii++) {
+      items[ii].jumlah_porsi = jumlahPorsi;
+      if (!items[ii].menu_nama) items[ii].menu_nama = 'Manual Hari ' + items[ii].hari_ke;
+    }
+    var payload = { nama, kategori_penerima: meta.kategori_penerima || '', jumlah_porsi: jumlahPorsi, total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', items };
     // Collect resep_map from Identifikasi Resep inputs
     var resepMap = {};
     var resepInputs = document.querySelectorAll('input[data-field="resep"]');
