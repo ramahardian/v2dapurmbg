@@ -194,7 +194,7 @@ function renderMenuBySiklusHtml(data) {
                     </div>
                   </td>
                   <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
-                  <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.gramasi_total}g</td>
+                  <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
                   <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.kalori}</td>
                   <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.protein}</td>
                   <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.karbohidrat}</td>
@@ -251,6 +251,45 @@ function kategoriBadge(kat) {
   return `<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style="background:${c.bg};">${kat}</span>`;
 }
 
+function renderBahanCell(bahan) {
+  if (!bahan || !bahan.length) {
+    return '<span class="text-stone-300">-</span>';
+  }
+  const names = bahan.map(function(b) { return b.nama; }).filter(Boolean);
+  if (!names.length) {
+    return '<span class="text-stone-300">-</span>';
+  }
+  const count = names.length;
+  var display = names.slice(0, 2).join(', ');
+  if (count > 2) display += ', ...';
+  return '<span class="inline-flex items-center gap-1.5" title="' + escHtml(names.join(', ')) + '">' +
+    '<span class="truncate max-w-[140px] block text-stone-600">' + escHtml(display) + '</span>' +
+    '<span class="shrink-0 bg-stone-100 text-stone-500 text-[10px] font-medium px-1.5 py-0.5 rounded-full">' + count + '</span>' +
+  '</span>';
+}
+
+function sumBahanGramasi(bahan) {
+  if (!bahan || !bahan.length) return 0;
+  return bahan.reduce(function(sum, b) { return sum + (Number(b.jumlah) || 0); }, 0);
+}
+
+function renderGramasiCell(gramasiTotal, bahan) {
+  var displayGramasi = Number(gramasiTotal) || 0;
+  var calculated = sumBahanGramasi(bahan);
+  if (displayGramasi === 0 && calculated > 0) {
+    displayGramasi = calculated;
+  }
+  if (displayGramasi === 0) {
+    return '<span class="text-stone-300">0g</span>';
+  }
+  var rounded = Math.round(displayGramasi * 10) / 10;
+  var title = '';
+  if (calculated > 0 && Math.abs(calculated - Number(gramasiTotal)) > 0.01) {
+    title = ' title="Tersimpan: ' + Number(gramasiTotal) + 'g, Terhitung: ' + Math.round(calculated * 10) / 10 + 'g" class="cursor-help"';
+  }
+  return '<span' + title + '>' + rounded + 'g</span>';
+}
+
 function renderMenuHtml(menus) {
   return `<div class="flex flex-wrap justify-between gap-2 mb-4">
     <div class="flex flex-wrap items-center gap-2">
@@ -299,9 +338,9 @@ function renderMenuHtml(menus) {
                 </div>
               </td>
               <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
-              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.gramasi_total}g</td>
+              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.kalori} kkal</td>
-              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${(m.bahan && m.bahan.length) || 0}</td>
+              <td class="px-4 py-3 text-sm text-left whitespace-nowrap">${renderBahanCell(m.bahan)}</td>
               <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
                 <button data-menu-id="${m.id}" class="edit-btn text-stone-500 hover:text-stone-900 mr-2" title="Edit"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                 <button data-menu-id="${m.id}" class="delete-btn text-red-600 hover:text-red-800" title="Hapus"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>

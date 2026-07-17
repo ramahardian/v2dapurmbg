@@ -54,40 +54,28 @@ router.get('/menu', async (req, res) => {
   );
   const totalCount = totalCountResult[0].count;
   
-  // Get menus with ingredients using a single JOIN query
-  const sql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.foto,
-        mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
+  // Get paginated menus (tanpa JOIN, agar LIMIT/OFFSET tepat)
+  const menuSql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.foto
         FROM menu m
-        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
-        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
         ${whereClause}
         ORDER BY m.id DESC
         LIMIT ? OFFSET ?`;
+  const [menus] = await db.query(menuSql, [...queryParams, Number(limit), Number(offset)]);
   
-  queryParams.push(Number(limit), Number(offset));
-  const [rows] = await db.query(sql, queryParams);
-  
-  // Group ingredients by menu
-  const menusMap = {};
-  rows.forEach(row => {
-    if (!menusMap[row.id]) {
-      menusMap[row.id] = {
-        id: row.id,
-        nama: row.nama,
-        kategori_penerima: row.kategori_penerima,
-        deskripsi: row.deskripsi,
-        gramasi_total: row.gramasi_total,
-        kalori: row.kalori,
-        protein: row.protein,
-        karbohidrat: row.karbohidrat,
-        lemak: row.lemak,
-        serat: row.serat,
-        foto: row.foto,
-        bahan: []
-      };
-    }
-    if (row.bahan_baku_id) {
-      menusMap[row.id].bahan.push({
+  // Batch-fetch bahan untuk semua menu di halaman ini
+  const menuIds = menus.map(m => m.id);
+  const bahanMap = {};
+  if (menuIds.length > 0) {
+    const [bahanRows] = await db.query(
+      `SELECT mb.menu_id, mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
+       FROM menu_bahan mb
+       LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+       WHERE mb.menu_id IN (${menuIds.map(() => '?').join(',')})`,
+      menuIds
+    );
+    bahanRows.forEach(row => {
+      if (!bahanMap[row.menu_id]) bahanMap[row.menu_id] = [];
+      bahanMap[row.menu_id].push({
         bahan_baku_id: row.bahan_baku_id,
         nama: row.bahan_nama,
         satuan: row.satuan,
@@ -97,13 +85,17 @@ router.get('/menu', async (req, res) => {
         berat_per_satuan: row.berat_per_satuan,
         jumlah: row.jumlah
       });
-    }
-  });
+    });
+  }
   
-  const menus = Object.values(menusMap);
+  // Attach bahan to each menu
+  const menuList = menus.map(m => ({
+    ...m,
+    bahan: bahanMap[m.id] || []
+  }));
   
   res.json({
-    data: menus,
+    data: menuList,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
