@@ -143,7 +143,7 @@ router.post('/menu', async (req, res) => {
   }
   // Load sp_referensi_bahan dan bahan_baku untuk lookup nama
   const spRefMap = {};
-  try { const [spRefRows] = await db.query('SELECT nama, berat_bersih FROM sp_referensi_bahan'); for (const r of spRefRows) spRefMap[r.nama] = Number(r.berat_bersih) || 0; } catch (e) { /* table optional */ }
+  try { const [spRefRows] = await db.query('SELECT nama, berat_bersih, energi, protein, lemak, karbohidrat, serat FROM sp_referensi_bahan'); for (const r of spRefRows) spRefMap[r.nama] = { berat_bersih: Number(r.berat_bersih) || 0, energi: Number(r.energi) || 0, protein: Number(r.protein) || 0, lemak: Number(r.lemak) || 0, karbohidrat: Number(r.karbohidrat) || 0, serat: Number(r.serat) || 0 }; } catch (e) { /* table optional */ }
   const [bbRows] = await db.query('SELECT id, nama FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
   const bbNamaMap = {};
   for (const r of bbRows) bbNamaMap[r.id] = r.nama;
@@ -167,7 +167,8 @@ router.post('/menu', async (req, res) => {
         if (jumlah === 0 && b.kategori_sp && spMap[b.kategori_sp]) {
           const spVal = spMap[b.kategori_sp];
           const namaBahan = b.nama || bbNamaMap[b.bahan_baku_id] || '';
-          const berat1Sp = spRefMap[namaBahan] || Number(b.berat_1_sp) || 0;
+          const refData = spRefMap[namaBahan] || {};
+          const berat1Sp = refData.berat_bersih || Number(b.berat_1_sp) || 0;
           jumlah = berat1Sp * spVal * (jumlahPorsi || 1);
         }
         if (jumlah > 0) {
@@ -220,7 +221,7 @@ router.put('/menu/:id', async (req, res) => {
       jumlahPorsi = Number(pmRow[0].total);
     }
     const spRefMap = {};
-    try { const [spRefRows] = await db.query('SELECT nama, berat_bersih FROM sp_referensi_bahan'); for (const r of spRefRows) spRefMap[r.nama] = Number(r.berat_bersih) || 0; } catch (e) { /* table optional */ }
+    try { const [spRefRows] = await db.query('SELECT nama, berat_bersih, energi, protein, lemak, karbohidrat, serat FROM sp_referensi_bahan'); for (const r of spRefRows) spRefMap[r.nama] = { berat_bersih: Number(r.berat_bersih) || 0, energi: Number(r.energi) || 0, protein: Number(r.protein) || 0, lemak: Number(r.lemak) || 0, karbohidrat: Number(r.karbohidrat) || 0, serat: Number(r.serat) || 0 }; } catch (e) { /* table optional */ }
     const [bbRows] = await db.query('SELECT id, nama FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
     const bbNamaMap = {};
     for (const r of bbRows) bbNamaMap[r.id] = r.nama;
@@ -252,7 +253,8 @@ router.put('/menu/:id', async (req, res) => {
         if (jumlah === 0 && b.kategori_sp && spMap[b.kategori_sp]) {
           const spVal = spMap[b.kategori_sp];
           const namaBahan = b.nama || bbNamaMap[b.bahan_baku_id] || '';
-          const berat1Sp = spRefMap[namaBahan] || Number(b.berat_1_sp) || 0;
+          const refData = spRefMap[namaBahan] || {};
+          const berat1Sp = refData.berat_bersih || Number(b.berat_1_sp) || 0;
           jumlah = berat1Sp * spVal * (jumlahPorsi || 1);
         }
         if (jumlah > 0) {
@@ -404,29 +406,39 @@ router.get('/menu/by-siklus', async (req, res) => {
   });
 });
 
-// Hitung ulang nutrisi semua menu berdasarkan bahan_baku terkini
+// Hitung ulang nutrisi semua menu — prioritaskan sp_referensi_bahan, fallback ke bahan_baku
 router.post('/menu/recalculate-nutrisi', async (req, res) => {
   try {
     const tenantId = req.user.tenant_id;
+    // Load sp_referensi_bahan for nutrition lookup
+    const spRefNutri = {};
+    try { const [rows] = await db.query('SELECT nama, energi, protein, lemak, karbohidrat, serat FROM sp_referensi_bahan'); for (const r of rows) spRefNutri[r.nama] = r; } catch (e) {}
+    const [menuBahanJoin] = await db.query(
+      `SELECT DISTINCT mb.menu_id, mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
+       FROM menu_bahan mb
+       JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+       WHERE mb.menu_id IN (SELECT id FROM menu WHERE tenant_id=?)`,
+      [tenantId]
+    );
+    const bahanByMenu = {};
+    for (const b of menuBahanJoin) {
+      if (!bahanByMenu[b.menu_id]) bahanByMenu[b.menu_id] = [];
+      bahanByMenu[b.menu_id].push(b);
+    }
     const [menus] = await db.query('SELECT id FROM menu WHERE tenant_id=?', [tenantId]);
     let recalculated = 0;
     for (const menu of menus) {
-      const [bahan] = await db.query(
-        `SELECT mb.jumlah, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
-         FROM menu_bahan mb
-         JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
-         WHERE mb.menu_id=?`,
-        [menu.id]
-      );
+      const bahan = bahanByMenu[menu.id] || [];
       let gramasi = 0, kalori = 0, protein = 0, karbohidrat = 0, lemak = 0, serat = 0;
       for (const b of bahan) {
         const jml = Number(b.jumlah) || 0;
+        const ref = spRefNutri[b.nama] || {};
         gramasi += jml;
-        kalori += jml / 100 * (Number(b.kalori) || 0);
-        protein += jml / 100 * (Number(b.protein) || 0);
-        karbohidrat += jml / 100 * (Number(b.karbohidrat) || 0);
-        lemak += jml / 100 * (Number(b.lemak) || 0);
-        serat += jml / 100 * (Number(b.serat) || 0);
+        kalori += jml / 100 * (Number(ref.energi || b.kalori) || 0);
+        protein += jml / 100 * (Number(ref.protein || b.protein) || 0);
+        karbohidrat += jml / 100 * (Number(ref.karbohidrat || b.karbohidrat) || 0);
+        lemak += jml / 100 * (Number(ref.lemak || b.lemak) || 0);
+        serat += jml / 100 * (Number(ref.serat || b.serat) || 0);
       }
       await db.query(
         `UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?`,

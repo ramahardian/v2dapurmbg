@@ -367,8 +367,8 @@ function openMenuForm(editing) {
     </div>
     <div class="mt-3"><label class="text-sm">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
     <div class="flex items-center justify-between mt-3">
-      <div class="flex-1 grid grid-cols-5 gap-2">
-        ${[['gramasi_total','Total Gramasi'],['kalori','Kalori'],['protein','Protein'],['karbohidrat','Karbo'],['lemak','Lemak']].map(([k,l]) =>
+      <div class="flex-1 grid grid-cols-6 gap-2">
+        ${[['gramasi_total','Gramasi'],['kalori','Kalori'],['protein','Protein'],['karbohidrat','Karbo'],['lemak','Lemak'],['serat','Serat']].map(([k,l]) =>
           `<div><label class="text-xs">${l}</label><input id="m-${k}" type="number" value="${m[k] || 0}" class="mt-1 w-full h-9 px-2 border border-stone-200 rounded-md mono text-sm" /></div>`).join('')}
       </div>
       <button type="button" onclick="hitungNutrisiAI()" class="ml-2 mt-5 shrink-0 px-3 h-9 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100 whitespace-nowrap" title="Hitung nutrisi pakai AI">AI</button>
@@ -424,6 +424,7 @@ function openMenuForm(editing) {
       protein: +document.getElementById('m-protein').value || 0,
       karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
       lemak: +document.getElementById('m-lemak').value || 0,
+      serat: +document.getElementById('m-serat').value || 0,
       foto: document.getElementById('m-foto').value || undefined,
       bahan: window._menuBahan.filter(b => b.bahan_baku_id && (b.jumlah || b.kategori_sp)),
     };
@@ -445,22 +446,24 @@ function gramasiKeGram(jml, satuan, beratPerSatuan) {
 }
 
 function hitungNutrisi() {
-  var totalGramasi = 0, totalKalori = 0, totalProtein = 0, totalKarbo = 0, totalLemak = 0;
+  var totalGramasi = 0, totalKalori = 0, totalProtein = 0, totalKarbo = 0, totalLemak = 0, totalSerat = 0;
   (window._menuBahan || []).forEach(function(b) {
     if (!b.bahan_baku_id || !b.jumlah) return;
     var bb = (window._bahanBaku || []).find(function(x) { return x.id == b.bahan_baku_id; });
     if (!bb) return;
+    var ref = window._spRefMap && window._spRefMap[bb.nama];
     var jml = +b.jumlah || 0;
     var gram = gramasiKeGram(jml, bb.satuan, +bb.berat_per_satuan || 0);
     totalGramasi += gram;
-    totalKalori += gram / 100 * (+bb.kalori || 0);
-    totalProtein += gram / 100 * (+bb.protein || 0);
-    totalKarbo += gram / 100 * (+bb.karbohidrat || 0);
-    totalLemak += gram / 100 * (+bb.lemak || 0);
+    totalKalori += gram / 100 * (ref ? ref.energi : (+bb.kalori || 0));
+    totalProtein += gram / 100 * (ref ? ref.protein : (+bb.protein || 0));
+    totalKarbo += gram / 100 * (ref ? ref.karbohidrat : (+bb.karbohidrat || 0));
+    totalLemak += gram / 100 * (ref ? ref.lemak : (+bb.lemak || 0));
+    totalSerat += gram / 100 * (ref ? ref.serat : (+bb.serat || 0));
   });
-  ['gramasi_total','kalori','protein','karbohidrat','lemak'].forEach(function(k) {
+  ['gramasi_total','kalori','protein','karbohidrat','lemak','serat'].forEach(function(k) {
     var el = document.getElementById('m-' + k);
-    if (el) el.value = Math.round(({gramasi_total: totalGramasi, kalori: totalKalori, protein: totalProtein, karbohidrat: totalKarbo, lemak: totalLemak}[k]) * 100) / 100;
+    if (el) el.value = Math.round(({gramasi_total: totalGramasi, kalori: totalKalori, protein: totalProtein, karbohidrat: totalKarbo, lemak: totalLemak, serat: totalSerat}[k]) * 100) / 100;
   });
 }
 
@@ -477,7 +480,7 @@ async function hitungNutrisiAI() {
   });
   try {
     var res = await api.post('/ai/hitung-nutrisi', { nama_menu: nama, bahan: bahanData });
-    ['gramasi_total','kalori','protein','karbohidrat','lemak'].forEach(function(k) {
+    ['gramasi_total','kalori','protein','karbohidrat','lemak','serat'].forEach(function(k) {
       var el = document.getElementById('m-' + k);
       if (el && res[k] != null) el.value = Math.round(res[k] * 100) / 100;
     });
@@ -507,7 +510,15 @@ async function loadSpMap(kategori) {
     try {
       var spRef = await api.get('/sp_referensi_bahan');
       if (Array.isArray(spRef)) {
-        for (const r of spRef) window._spRefMap[r.nama] = { berat_bersih: Number(r.berat_bersih), bdd_persen: Number(r.bdd_persen) };
+        for (const r of spRef) window._spRefMap[r.nama] = {
+          berat_bersih: Number(r.berat_bersih),
+          bdd_persen: Number(r.bdd_persen),
+          energi: Number(r.energi) || 0,
+          protein: Number(r.protein) || 0,
+          lemak: Number(r.lemak) || 0,
+          karbohidrat: Number(r.karbohidrat) || 0,
+          serat: Number(r.serat) || 0,
+        };
       }
     } catch (e) { console.warn('sp_referensi_bahan tidak termuat (gunakan berat_1_sp dari bahan baku):', e.message); }
     window._jumlahPorsi = Number(pm.total) || 0;
@@ -579,13 +590,17 @@ function renderBahanList() {
   document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
     var bb = (window._bahanBaku || []).find(x => x.id == b.bahan_baku_id);
     var spInfo = '';
-    if (bb && bb.kategori_sp && bb.berat_1_sp > 0) {
+    var berat1Sp = b.berat_1_sp || (bb ? +bb.berat_1_sp : 0);
+    var persenBdd = b.persen_bdd || (bb ? +bb.persen_bdd : 100);
+    if (bb && bb.kategori_sp && berat1Sp > 0) {
       var extras = [];
-      extras.push('1SP=' + bb.berat_1_sp + 'g');
+      var ref = window._spRefMap && window._spRefMap[bb.nama];
+      extras.push('1SP=' + berat1Sp + 'g');
       if (+bb.berat_per_satuan > 0) extras.push('1' + bb.satuan + '=' + bb.berat_per_satuan + 'g');
-      var perPorsi = window._spMap && window._spMap[bb.kategori_sp] ? window._spMap[bb.kategori_sp] * (+bb.berat_1_sp) : 0;
+      if (ref) extras.push('BDD=' + Math.round(ref.bdd_persen * 100) + '%');
+      var perPorsi = window._spMap && window._spMap[bb.kategori_sp] ? window._spMap[bb.kategori_sp] * berat1Sp : 0;
       var totalGram = b.jumlah || 0;
-      spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">' + bb.kategori_sp + ' · ' + extras.join(' · ') + ' · BDD=' + bb.persen_bdd + '%' + (perPorsi ? ' · <span class="text-emerald-600 font-medium">' + perPorsi + 'g/porsi</span>' : '') + (totalGram ? ' · total <span class="text-emerald-700 font-medium">' + Math.round(totalGram) + 'g</span>' : '') + '</div>';
+      spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">' + bb.kategori_sp + ' · ' + extras.join(' · ') + (perPorsi ? ' · <span class="text-emerald-600 font-medium">' + perPorsi + 'g/porsi</span>' : '') + (totalGram ? ' · total <span class="text-emerald-700 font-medium">' + Math.round(totalGram) + 'g</span>' : '') + '</div>';
     } else if (bb && +bb.berat_per_satuan > 0) {
       spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">1 ' + bb.satuan + ' = ' + bb.berat_per_satuan + 'g</div>';
     }
