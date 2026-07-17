@@ -7,9 +7,25 @@ async function renderMenu() {
   if (!c) return;
   c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
-    // Load bahan baku regardless of view mode
-    const bahan = await api.get('/bahan_baku');
+    // Load bahan baku and sp_referensi_bahan regardless of view mode
+    const [bahan, spRef] = await Promise.all([
+      api.get('/bahan_baku'),
+      api.get('/sp_referensi_bahan').catch(() => []),
+    ]);
     window._bahanBaku = bahan;
+    window._spRefList = Array.isArray(spRef) ? spRef : [];
+    window._spRefMap = {};
+    (window._spRefList || []).forEach(function(r) {
+      window._spRefMap[r.nama] = {
+        berat_bersih: Number(r.berat_bersih),
+        bdd_persen: Number(r.bdd_persen),
+        energi: Number(r.energi) || 0,
+        protein: Number(r.protein) || 0,
+        lemak: Number(r.lemak) || 0,
+        karbohidrat: Number(r.karbohidrat) || 0,
+        serat: Number(r.serat) || 0,
+      };
+    });
 
     if (menuViewMode === 'siklus') {
       await renderMenuBySiklus(c);
@@ -426,7 +442,7 @@ function openMenuForm(editing) {
       lemak: +document.getElementById('m-lemak').value || 0,
       serat: +document.getElementById('m-serat').value || 0,
       foto: document.getElementById('m-foto').value || undefined,
-      bahan: window._menuBahan.filter(b => b.bahan_baku_id && (b.jumlah || b.kategori_sp)),
+      bahan: window._menuBahan.filter(function(b) { return b.bahan_baku_id && (b.jumlah || b.kategori_sp); }),
     };
     if (editing) await api.put('/menu/' + editing.id, payload);
     else await api.post('/menu', payload);
@@ -435,7 +451,7 @@ function openMenuForm(editing) {
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
 }
-function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '' }); renderBahanList(); hitungNutrisi(); }
+function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '', nama: '' }); renderBahanList(); hitungNutrisi(); }
 function removeBahanRow(i) { window._menuBahan.splice(i, 1); renderBahanList(); hitungNutrisi(); }
 function gramasiKeGram(jml, satuan, beratPerSatuan) {
   var s = (satuan || '').toLowerCase();
@@ -448,18 +464,20 @@ function gramasiKeGram(jml, satuan, beratPerSatuan) {
 function hitungNutrisi() {
   var totalGramasi = 0, totalKalori = 0, totalProtein = 0, totalKarbo = 0, totalLemak = 0, totalSerat = 0;
   (window._menuBahan || []).forEach(function(b) {
-    if (!b.bahan_baku_id || !b.jumlah) return;
-    var bb = (window._bahanBaku || []).find(function(x) { return x.id == b.bahan_baku_id; });
-    if (!bb) return;
-    var ref = window._spRefMap && window._spRefMap[bb.nama];
+    if (!b.jumlah) return;
     var jml = +b.jumlah || 0;
-    var gram = gramasiKeGram(jml, bb.satuan, +bb.berat_per_satuan || 0);
+    var gram = jml;
+    var bb = b.bahan_baku_id ? (window._bahanBaku || []).find(function(x) { return x.id == b.bahan_baku_id; }) : null;
+    var ref = window._spRefMap && (bb ? window._spRefMap[bb.nama] : window._spRefMap[b.nama]);
+    if (bb && !ref) {
+      gram = gramasiKeGram(jml, bb.satuan, +bb.berat_per_satuan || 0);
+    }
     totalGramasi += gram;
-    totalKalori += gram / 100 * (ref ? ref.energi : (+bb.kalori || 0));
-    totalProtein += gram / 100 * (ref ? ref.protein : (+bb.protein || 0));
-    totalKarbo += gram / 100 * (ref ? ref.karbohidrat : (+bb.karbohidrat || 0));
-    totalLemak += gram / 100 * (ref ? ref.lemak : (+bb.lemak || 0));
-    totalSerat += gram / 100 * (ref ? ref.serat : (+bb.serat || 0));
+    totalKalori += gram / 100 * (ref ? ref.energi : (bb ? (+bb.kalori || 0) : 0));
+    totalProtein += gram / 100 * (ref ? ref.protein : (bb ? (+bb.protein || 0) : 0));
+    totalKarbo += gram / 100 * (ref ? ref.karbohidrat : (bb ? (+bb.karbohidrat || 0) : 0));
+    totalLemak += gram / 100 * (ref ? ref.lemak : (bb ? (+bb.lemak || 0) : 0));
+    totalSerat += gram / 100 * (ref ? ref.serat : (bb ? (+bb.serat || 0) : 0));
   });
   ['gramasi_total','kalori','protein','karbohidrat','lemak','serat'].forEach(function(k) {
     var el = document.getElementById('m-' + k);
@@ -505,22 +523,25 @@ async function loadSpMap(kategori) {
     try { pm = await api.get('/penerima_manfaat/total?kategori_penerima=' + encodeURIComponent(pmKategori)); } catch (e) { console.warn('Gagal load penerima_manfaat/total:', e.message); }
     window._spMap = {};
     for (const r of rows) window._spMap[r.kategori_sp] = Number(r.sp_value);
-    // Load sp_referensi_bahan (optional — fallback jika gagal/terlarang)
-    window._spRefMap = {};
-    try {
-      var spRef = await api.get('/sp_referensi_bahan');
-      if (Array.isArray(spRef)) {
-        for (const r of spRef) window._spRefMap[r.nama] = {
-          berat_bersih: Number(r.berat_bersih),
-          bdd_persen: Number(r.bdd_persen),
-          energi: Number(r.energi) || 0,
-          protein: Number(r.protein) || 0,
-          lemak: Number(r.lemak) || 0,
-          karbohidrat: Number(r.karbohidrat) || 0,
-          serat: Number(r.serat) || 0,
-        };
-      }
-    } catch (e) { console.warn('sp_referensi_bahan tidak termuat (gunakan berat_1_sp dari bahan baku):', e.message); }
+    // Load sp_referensi_bahan — skip jika sudah dimuat renderMenu()
+    if (!window._spRefList || !window._spRefList.length) {
+      window._spRefMap = {};
+      try {
+        var spRef = await api.get('/sp_referensi_bahan');
+        if (Array.isArray(spRef)) {
+          window._spRefList = spRef;
+          for (const r of spRef) window._spRefMap[r.nama] = {
+            berat_bersih: Number(r.berat_bersih),
+            bdd_persen: Number(r.bdd_persen),
+            energi: Number(r.energi) || 0,
+            protein: Number(r.protein) || 0,
+            lemak: Number(r.lemak) || 0,
+            karbohidrat: Number(r.karbohidrat) || 0,
+            serat: Number(r.serat) || 0,
+          };
+        }
+      } catch (e) { console.warn('sp_referensi_bahan tidak termuat (gunakan berat_1_sp dari bahan baku):', e.message); }
+    }
     window._jumlahPorsi = Number(pm.total) || 0;
     const el = document.getElementById('m-jumlah-porsi');
     if (el) el.value = window._jumlahPorsi;
@@ -587,32 +608,33 @@ function updateBahan(i, k, v) {
 function renderBahanList() {
   var mKat = document.getElementById('m-kategori')?.value || '';
   var datalistId = 'dl-bahan-' + Date.now();
+  // Show sp_referensi_bahan names only
+  var allNames = (window._spRefList || []).filter(function(r) { return r.nama; }).map(function(r) { return { nama: r.nama, label: 'SP: ' + (r.kategori || '') }; });
   document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
-    var bb = (window._bahanBaku || []).find(x => x.id == b.bahan_baku_id);
+    var bb = b.bahan_baku_id ? (window._bahanBaku || []).find(x => x.id == b.bahan_baku_id) : null;
+    var displayNama = bb ? bb.nama : (b.nama || '');
+    var ref = window._spRefMap && (bb ? window._spRefMap[bb.nama] : window._spRefMap[b.nama]);
+    var berat1Sp = ref ? ref.berat_bersih : (b.berat_1_sp || (bb ? +bb.berat_1_sp : 0));
+    var kategoriSp = b.kategori_sp || (bb ? bb.kategori_sp : '');
     var spInfo = '';
-    var berat1Sp = b.berat_1_sp || (bb ? +bb.berat_1_sp : 0);
-    var persenBdd = b.persen_bdd || (bb ? +bb.persen_bdd : 100);
-    if (bb && bb.kategori_sp && berat1Sp > 0) {
+    if (kategoriSp && berat1Sp > 0) {
       var extras = [];
-      var ref = window._spRefMap && window._spRefMap[bb.nama];
       extras.push('1SP=' + berat1Sp + 'g');
-      if (+bb.berat_per_satuan > 0) extras.push('1' + bb.satuan + '=' + bb.berat_per_satuan + 'g');
-      if (ref) extras.push('BDD=' + Math.round(ref.bdd_persen * 100) + '%');
-      var perPorsi = window._spMap && window._spMap[bb.kategori_sp] ? window._spMap[bb.kategori_sp] * berat1Sp : 0;
+      if (bb && +bb.berat_per_satuan > 0) extras.push('1' + bb.satuan + '=' + bb.berat_per_satuan + 'g');
+      extras.push('BDD=' + Math.round(ref ? ref.bdd_persen * 100 : (b.persen_bdd || 100)) + '%');
+      var perPorsi = window._spMap && window._spMap[kategoriSp] ? window._spMap[kategoriSp] * berat1Sp : 0;
       var totalGram = b.jumlah || 0;
-      spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">' + bb.kategori_sp + ' · ' + extras.join(' · ') + (perPorsi ? ' · <span class="text-emerald-600 font-medium">' + perPorsi + 'g/porsi</span>' : '') + (totalGram ? ' · total <span class="text-emerald-700 font-medium">' + Math.round(totalGram) + 'g</span>' : '') + '</div>';
-    } else if (bb && +bb.berat_per_satuan > 0) {
-      spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">1 ' + bb.satuan + ' = ' + bb.berat_per_satuan + 'g</div>';
+      spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">' + kategoriSp + ' · ' + extras.join(' · ') + (perPorsi ? ' · <span class="text-emerald-600 font-medium">' + Math.round(perPorsi*10)/10 + 'g/porsi</span>' : '') + (totalGram ? ' · total <span class="text-emerald-700 font-medium">' + Math.round(totalGram) + 'g</span>' : '') + '</div>';
     }
     return '<div class="grid grid-cols-12 gap-1.5 items-center">' +
       '<div class="col-span-5 relative">' +
-        '<input list="dl-' + i + '" value="' + (bb ? bb.nama : '') + '" placeholder="Cari bahan..." oninput="onBahanInput(' + i + ', this)" onfocus="this.select()" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
+        '<input list="dl-' + i + '" value="' + displayNama + '" placeholder="Cari bahan (SP)..." oninput="onBahanInput(' + i + ', this)" onfocus="this.select()" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
         '<datalist id="dl-' + i + '">' +
-          window._bahanBaku.map(function(x) { return '<option value="' + x.nama + '" data-id="' + x.id + '"></option>'; }).join('') +
+          allNames.map(function(x) { return '<option value="' + x.nama + '">' + (x.label ? ' [' + x.label + ']' : '') + '</option>'; }).join('') +
         '</datalist>' +
       '</div>' +
-      '<input type="text" value="' + (b.satuan || '') + '" readonly class="col-span-1 h-9 px-2 border border-stone-200 rounded-md text-sm bg-stone-50 text-stone-500" placeholder="unit" />' +
-      '<input type="number" value="' + (b.jumlah || '') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" placeholder="' + (bb ? bb.satuan : 'gram') + '" class="col-span-3 h-9 px-2 border border-stone-200 rounded-md text-sm mono" />' +
+      '<input type="text" value="' + (bb ? (bb.satuan || '') : (b.satuan || '')) + '" readonly class="col-span-1 h-9 px-2 border border-stone-200 rounded-md text-sm bg-stone-50 text-stone-500" placeholder="unit" />' +
+      '<input type="number" value="' + (b.jumlah || '') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" placeholder="gram" class="col-span-3 h-9 px-2 border border-stone-200 rounded-md text-sm mono" />' +
       (spInfo || '<div class="col-span-2"></div>') +
       '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2">×</button>' +
     '</div>';
@@ -621,12 +643,33 @@ function renderBahanList() {
 
 function onBahanInput(i, el) {
   var val = el.value;
-  var bahan = (window._bahanBaku || []).find(function(x) { return x.nama === val; });
-  if (bahan) {
-    updateBahan(i, 'bahan_baku_id', bahan.id);
-  } else if (val === '') {
-    updateBahan(i, 'bahan_baku_id', '');
+  var ref = window._spRefMap && window._spRefMap[val];
+  if (ref) {
+    var kat = (window._spRefList || []).find(function(r) { return r.nama === val; })?.kategori || '';
+    var berat1Sp = ref.berat_bersih;
+    var perPorsi = window._spMap && window._spMap[kat] ? window._spMap[kat] * berat1Sp : 0;
+    var jumlah = perPorsi * (window._jumlahPorsi || 1);
+    window._menuBahan[i].bahan_baku_id = '';
+    window._menuBahan[i].nama = val;
+    window._menuBahan[i].satuan = 'g';
+    window._menuBahan[i].kategori_sp = kat;
+    window._menuBahan[i].berat_1_sp = berat1Sp;
+    window._menuBahan[i].persen_bdd = Math.round(ref.bdd_persen * 100);
+    window._menuBahan[i].jumlah = jumlah;
+    window._menuBahan[i]._autoJumlah = jumlah;
+    renderBahanList();
+    hitungNutrisi();
+    return;
   }
+  if (val === '') {
+    updateBahan(i, 'bahan_baku_id', '');
+    return;
+  }
+  // Manual input
+  window._menuBahan[i].bahan_baku_id = '';
+  window._menuBahan[i].nama = val;
+  window._menuBahan[i].satuan = 'g';
+  renderBahanList();
 }
 async function deleteMenu(id) { if (!await showConfirm('Hapus menu?')) return; await api.del('/menu/' + id); renderMenu(); }
 
