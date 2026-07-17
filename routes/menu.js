@@ -131,10 +131,22 @@ router.post('/menu', async (req, res) => {
   
   // Pre-load SP values if menu has kategori_penerima
   let spMap = {};
+  let jumlahPorsi = 0;
   if (kategori_penerima) {
-    const [spRows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?', [kategori_penerima]);
+    const spJenjang = kategori_penerima === 'Paket Kecil' ? 'Balita' : kategori_penerima;
+    const [spRows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?', [spJenjang]);
     for (const r of spRows) spMap[r.kategori_sp] = Number(r.sp_value);
+    // Hitung jumlah_porsi dari penerima_manfaat
+    const pmKats = kategori_penerima === 'Paket Kecil' ? ['Balita','TK/PAUD','SD 1-3'] : [kategori_penerima];
+    const [pmRow] = await db.query(`SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${pmKats.map(()=>'?').join(',')})`, [req.user.tenant_id, ...pmKats]);
+    jumlahPorsi = Number(pmRow[0].total);
   }
+  // Load sp_referensi_bahan dan bahan_baku untuk lookup nama
+  const spRefMap = {};
+  try { const [spRefRows] = await db.query('SELECT nama, berat_bersih FROM sp_referensi_bahan'); for (const r of spRefRows) spRefMap[r.nama] = Number(r.berat_bersih) || 0; } catch (e) { /* table optional */ }
+  const [bbRows] = await db.query('SELECT id, nama FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
+  const bbNamaMap = {};
+  for (const r of bbRows) bbNamaMap[r.id] = r.nama;
   
   try {
     await conn.beginTransaction(); // Memulai transaksi
@@ -154,8 +166,9 @@ router.post('/menu', async (req, res) => {
         // Auto-calculate from SP if bahan has SP data and we have a matching SP value
         if (jumlah === 0 && b.kategori_sp && spMap[b.kategori_sp]) {
           const spVal = spMap[b.kategori_sp];
-          const berat1Sp = Number(b.berat_1_sp) || 0;
-          jumlah = berat1Sp * spVal;
+          const namaBahan = b.nama || bbNamaMap[b.bahan_baku_id] || '';
+          const berat1Sp = spRefMap[namaBahan] || Number(b.berat_1_sp) || 0;
+          jumlah = berat1Sp * spVal * (jumlahPorsi || 1);
         }
         if (jumlah > 0) {
           await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)', [r.insertId, b.bahan_baku_id, jumlah]);
@@ -197,10 +210,20 @@ router.put('/menu/:id', async (req, res) => {
     
     // Pre-load SP values if menu has kategori_penerima
     let spMap = {};
+    let jumlahPorsi = 0;
     if (f.kategori_penerima) {
-      const [spRows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?', [f.kategori_penerima]);
+      const spJenjang = f.kategori_penerima === 'Paket Kecil' ? 'Balita' : f.kategori_penerima;
+      const [spRows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?', [spJenjang]);
       for (const r of spRows) spMap[r.kategori_sp] = Number(r.sp_value);
+      const pmKats = f.kategori_penerima === 'Paket Kecil' ? ['Balita','TK/PAUD','SD 1-3'] : [f.kategori_penerima];
+      const [pmRow] = await db.query(`SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${pmKats.map(()=>'?').join(',')})`, [req.user.tenant_id, ...pmKats]);
+      jumlahPorsi = Number(pmRow[0].total);
     }
+    const spRefMap = {};
+    try { const [spRefRows] = await db.query('SELECT nama, berat_bersih FROM sp_referensi_bahan'); for (const r of spRefRows) spRefMap[r.nama] = Number(r.berat_bersih) || 0; } catch (e) { /* table optional */ }
+    const [bbRows] = await db.query('SELECT id, nama FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
+    const bbNamaMap = {};
+    for (const r of bbRows) bbNamaMap[r.id] = r.nama;
     
     // 1. Update data header menu sesuai ID dan kepemilikan tenant
     const fotoUrl = f.foto ? saveBase64Foto(f.foto) : undefined;
@@ -228,8 +251,9 @@ router.put('/menu/:id', async (req, res) => {
         // Auto-calculate from SP if bahan has SP data and we have a matching SP value
         if (jumlah === 0 && b.kategori_sp && spMap[b.kategori_sp]) {
           const spVal = spMap[b.kategori_sp];
-          const berat1Sp = Number(b.berat_1_sp) || 0;
-          jumlah = berat1Sp * spVal;
+          const namaBahan = b.nama || bbNamaMap[b.bahan_baku_id] || '';
+          const berat1Sp = spRefMap[namaBahan] || Number(b.berat_1_sp) || 0;
+          jumlah = berat1Sp * spVal * (jumlahPorsi || 1);
         }
         if (jumlah > 0) {
           await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)', [req.params.id, b.bahan_baku_id, jumlah]);

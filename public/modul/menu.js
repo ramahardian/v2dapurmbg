@@ -497,10 +497,9 @@ async function loadSpMap(kategori) {
       spJenjang = 'Balita';
       pmKategori = 'Balita,TK/PAUD,SD 1-3';
     }
-    const [rows, pm] = await Promise.all([
-      api.get('/sp/standar/' + encodeURIComponent(spJenjang)),
-      api.get('/penerima_manfaat/total?kategori_penerima=' + encodeURIComponent(pmKategori))
-    ]);
+    var rows = []; var pm = { total: 0 };
+    try { rows = await api.get('/sp/standar/' + encodeURIComponent(spJenjang)); } catch (e) { console.warn('Gagal load standar_sp:', e.message); }
+    try { pm = await api.get('/penerima_manfaat/total?kategori_penerima=' + encodeURIComponent(pmKategori)); } catch (e) { console.warn('Gagal load penerima_manfaat/total:', e.message); }
     window._spMap = {};
     for (const r of rows) window._spMap[r.kategori_sp] = Number(r.sp_value);
     // Load sp_referensi_bahan (optional — fallback jika gagal/terlarang)
