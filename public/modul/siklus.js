@@ -174,7 +174,6 @@ async function loadSiklusDetail(id) {
           const totalK = Number(it.kalori || 0) + Number(it.protein || 0) + Number(it.karbohidrat || 0) + Number(it.lemak || 0) + Number(it.serat || 0);
           return `<div class="border border-stone-200 rounded-lg p-4">
             <div class="text-xs font-semibold uppercase text-stone-500 mb-2">Hari ${it.hari_ke} — ${it.hari_nama}</div>
-            ${it.foto ? `<div class="mb-2"><img src="${it.foto}" class="w-full h-32 object-cover rounded-lg border border-stone-200" alt="${it.menu_nama || 'Menu'}" /></div>` : ''}
             <div class="font-bold text-sm mb-1">${it.menu_nama || '<span class="text-stone-400">Belum diisi</span>'}</div>
             <div class="text-xs text-stone-500 mb-2">${fmtNum(it.jumlah_porsi)} porsi</div>
             ${it.menu_nama ? `<div class="grid grid-cols-3 gap-1 text-[10px] mb-2">
@@ -494,7 +493,7 @@ async function openSiklusForm(editing) {
     for (const it of formData.items) {
       const hk = it.hari_ke;
       const existingItem = isEdit && s.items ? s.items.find(i => i.hari_ke === hk) : null;
-      gridData[hk] = { hari_ke: hk, hari_nama: it.hari_nama, menu_nama: it.menu_nama || '', bahan: {}, resep_map: (existingGrid[hk] && existingGrid[hk].resep_map) || {}, foto: existingItem ? existingItem.foto : null };
+      gridData[hk] = { hari_ke: hk, hari_nama: it.hari_nama, menu_nama: it.menu_nama || '', bahan: {}, resep_map: (existingGrid[hk] && existingGrid[hk].resep_map) || {} };
       for (const rk of ROW_KEYS) {
         const existing = existingGrid[hk] && existingGrid[hk].bahan && existingGrid[hk].bahan[rk];
         gridData[hk].bahan[rk] = (existing || []).map(b => ({ ...b }));
@@ -536,11 +535,7 @@ async function openSiklusForm(editing) {
         <div class="overflow-x-auto"><table class="w-full" style="min-width:${Math.max(600, formData.items.length * 130 + 100)}px"><thead><tr>
           <th class="w-[100px] min-w-[100px] px-3 py-3 text-left text-xs font-semibold text-stone-400 bg-stone-50 border-b border-r border-stone-200">Kelompok</th>${formData.items.map(it => {
             const dt = getDate(it.hari_ke);
-            const existingFoto = gridData[it.hari_ke] && gridData[it.hari_ke].foto ? gridData[it.hari_ke].foto : null;
-            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top"><div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div><div class="inline-block my-1 px-2 py-0.5 rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">Menu ' + it.hari_ke + '</div><div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div>' +
-              (existingFoto ? '<div class="relative mt-1 group"><img src="' + existingFoto + '" class="w-16 h-16 object-cover rounded-lg mx-auto border border-stone-200" /><button type="button" onclick="removeSiklusFoto(' + it.hari_ke + ')" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs leading-none opacity-0 group-hover:opacity-100 transition-opacity">&times;</button></div>' : '') +
-              '<button type="button" onclick="uploadSiklusFoto(' + (isEdit ? s.id : 'null') + ', ' + it.hari_ke + ')" class="mt-1 text-[10px] text-blue-600 hover:text-blue-800 hover:underline">' + (existingFoto ? 'Ganti' : '+ Foto') + '</button>' +
-              '</th>';
+            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top"><div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div><div class="inline-block my-1 px-2 py-0.5 rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">Menu ' + it.hari_ke + '</div><div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div></th>';
           }).join('')}
         </tr></thead><tbody>
           ${ROW_KEYS.map(rk => {
@@ -601,8 +596,7 @@ async function openSiklusForm(editing) {
     for (var i = 0; i < hkKeys.length; i++) {
       var hk = Number(hkKeys[i]), day = gd[hk];
       if (!day) continue;
-      var fotoVal = day.foto || null;
-      items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: '', menu_nama: day.menu_nama || '', jumlah_porsi: 0, foto: fotoVal });
+      items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: '', menu_nama: day.menu_nama || '', jumlah_porsi: 0 });
       for (var ri = 0; ri < rowKeys.length; ri++) {
         var rk = rowKeys[ri], ids = (day.bahan[rk] || []).map(function(b) { return b.id; });
         gridPayload.push({ hari_ke: hk, kategori_sp: rk, bahan_baku_ids: ids });
@@ -681,97 +675,6 @@ function saveGridPicker(hk, rk) {
 function closeGridPicker() { var m = document.getElementById('siklus-modal'); if (m) m.remove(); _gridPickerOpen = false; }
 
 // Photo upload for siklus menu items
-function uploadSiklusFoto(siklusId, hariKe) {
-  var input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/png,image/jpeg,image/jpg,image/gif,image/webp';
-  input.onchange = async function(e) {
-    var file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      showAlert('Ukuran foto maksimal 5MB', 'warning');
-      return;
-    }
-    var reader = new FileReader();
-    reader.onload = async function(ev) {
-      var base64 = ev.target.result;
-      // If editing existing siklus, upload directly via API
-      if (siklusId) {
-        try {
-          var res = await fetch('/api/siklus/' + siklusId + '/foto', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hari_ke: hariKe, foto: base64 }),
-            credentials: 'include'
-          });
-          if (!res.ok) { var err = await res.json(); throw new Error(err.error || 'Gagal upload'); }
-          var data = await res.json();
-          // Update gridData
-          if (window._gridData && window._gridData[hariKe]) {
-            window._gridData[hariKe].foto = data.foto;
-          }
-          window._gridDirty = true;
-          showToast('Foto berhasil diupload', 'success');
-          // Re-render the form
-          var curNama = document.getElementById('sk-nama')?.value;
-          var curStatus = document.getElementById('sk-status')?.value;
-          var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
-          var items = hkKeys.map(function(hk) {
-            var d = window._gridData[Number(hk)];
-            return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
-          });
-          openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, total_hari: items.length, status: curStatus, items: items } : { nama: curNama, total_hari: items.length, status: curStatus, items: items });
-        } catch (err) {
-          showAlert(err.message, 'error');
-        }
-      } else {
-        // New siklus - store foto in grid data and re-render
-        if (window._gridData && window._gridData[hariKe]) {
-          window._gridData[hariKe].foto = base64;
-        }
-        window._gridDirty = true;
-        var curNama = document.getElementById('sk-nama')?.value;
-        var curStatus = document.getElementById('sk-status')?.value;
-        var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
-        var items = hkKeys.map(function(hk) {
-          var d = window._gridData[Number(hk)];
-          return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
-        });
-        openSiklusForm({ nama: curNama, total_hari: items.length, status: curStatus, items: items });
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-  input.click();
-}
-
-function removeSiklusFoto(hariKe) {
-  var siklusId = window._siklusFormId;
-  if (siklusId) {
-    if (!confirm('Hapus foto ini?')) return;
-    fetch('/api/siklus/' + siklusId + '/foto/' + hariKe, {
-      method: 'DELETE',
-      credentials: 'include'
-    }).then(function(r) { return r.json(); }).then(function(data) {
-      if (data.ok) {
-        if (window._gridData && window._gridData[hariKe]) {
-          window._gridData[hariKe].foto = null;
-        }
-        window._gridDirty = true;
-        var curNama = document.getElementById('sk-nama')?.value;
-        var curStatus = document.getElementById('sk-status')?.value;
-        var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
-        var items = hkKeys.map(function(hk) {
-          var d = window._gridData[Number(hk)];
-          return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
-        });
-        openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, total_hari: items.length, status: curStatus, items: items } : { nama: curNama, total_hari: items.length, status: curStatus, items: items });
-        showToast('Foto berhasil dihapus', 'success');
-      }
-    }).catch(function() { showAlert('Gagal menghapus foto', 'error'); });
-  }
-}
-
 async function openSiklusFormHariChange(input) {
   var newTotal = Math.min(14, Math.max(1, +input.value || 1));
 

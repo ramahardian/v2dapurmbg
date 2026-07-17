@@ -1,23 +1,7 @@
 const express = require('express');
 const db = require('../db');
-const fs = require('fs');
-const path = require('path');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { FIXED_KATEGORI, KATEGORI_MAP_DISPLAY, mapToDisplay, hitungBDD } = require('../services/spBddCalculator');
-
-function saveBase64Foto(base64Data) {
-  if (!base64Data || !base64Data.startsWith('data:image')) return base64Data || null;
-  const matches = base64Data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);
-  if (!matches) return null;
-  try {
-    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-    const buffer = Buffer.from(matches[2], 'base64');
-    const filename = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
-    const filepath = path.join(__dirname, '..', 'public', 'uploads', 'siklus', filename);
-    fs.writeFileSync(filepath, buffer);
-    return '/uploads/siklus/' + filename;
-  } catch { return null; }
-}
 
 const router = express.Router();
 
@@ -446,12 +430,11 @@ router.post('/siklus', async (req, res) => {
     // 2. Insert detail menu per hari (jika array items tersedia)
     if (Array.isArray(items) && items.length) {
       for (const it of items) {
-        const fotoUrl = it.foto ? saveBase64Foto(it.foto) : null;
         await conn.query(
-          `INSERT INTO siklus_menu_item (siklus_id, hari_ke, hari_nama, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, foto)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+          `INSERT INTO siklus_menu_item (siklus_id, hari_ke, hari_nama, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
           [r.insertId, it.hari_ke, it.hari_nama, it.menu_id || null, it.menu_nama || null, it.jumlah_porsi || 0,
-           it.kalori || 0, it.protein || 0, it.karbohidrat || 0, it.lemak || 0, it.serat || 0, fotoUrl]
+           it.kalori || 0, it.protein || 0, it.karbohidrat || 0, it.lemak || 0, it.serat || 0]
         );
       }
     }
@@ -500,12 +483,11 @@ router.put('/siklus/:id', async (req, res) => {
     // 3. Masukkan kembali detail item yang baru
     if (Array.isArray(items) && items.length) {
       for (const it of items) {
-        const fotoUrl = it.foto ? saveBase64Foto(it.foto) : null;
         await conn.query(
-          `INSERT INTO siklus_menu_item (siklus_id, hari_ke, hari_nama, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, foto)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+          `INSERT INTO siklus_menu_item (siklus_id, hari_ke, hari_nama, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
           [req.params.id, it.hari_ke, it.hari_nama, it.menu_id || null, it.menu_nama || null, it.jumlah_porsi || 0,
-           it.kalori || 0, it.protein || 0, it.karbohidrat || 0, it.lemak || 0, it.serat || 0, fotoUrl]
+           it.kalori || 0, it.protein || 0, it.karbohidrat || 0, it.lemak || 0, it.serat || 0]
         );
       }
     }
@@ -972,47 +954,6 @@ router.post('/siklus/:id/bahan-grid', async (req, res) => {
     res.status(400).json({ error: 'Gagal menyimpan grid' });
   } finally {
     conn.release();
-  }
-});
-
-/**
- * POST /siklus/:id/foto
- * Upload foto untuk item tertentu dalam siklus berdasarkan hari_ke.
- * Body: { hari_ke: number, foto: "data:image/...;base64,..." }
- */
-router.post('/siklus/:id/foto', async (req, res) => {
-  const { hari_ke, foto } = req.body;
-  if (!hari_ke || !foto) return res.status(400).json({ error: 'Parameter hari_ke dan foto harus diisi' });
-  const fotoUrl = saveBase64Foto(foto);
-  if (!fotoUrl) return res.status(400).json({ error: 'Format foto tidak valid' });
-  try {
-    const [result] = await db.query(
-      'UPDATE siklus_menu_item SET foto=? WHERE siklus_id=? AND hari_ke=?',
-      [fotoUrl, req.params.id, hari_ke]
-    );
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Item tidak ditemukan' });
-    res.json({ ok: true, foto: fotoUrl });
-  } catch (e) {
-    console.error(e);
-    res.status(400).json({ error: 'Gagal menyimpan foto' });
-  }
-});
-
-/**
- * DELETE /siklus/:id/foto/:hariKe
- * Menghapus foto dari item tertentu dalam siklus.
- */
-router.delete('/siklus/:id/foto/:hariKe', async (req, res) => {
-  try {
-    const [result] = await db.query(
-      'UPDATE siklus_menu_item SET foto=NULL WHERE siklus_id=? AND hari_ke=?',
-      [req.params.id, req.params.hariKe]
-    );
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Item tidak ditemukan' });
-    res.json({ ok: true });
-  } catch (e) {
-    console.error(e);
-    res.status(400).json({ error: 'Gagal menghapus foto' });
   }
 });
 
