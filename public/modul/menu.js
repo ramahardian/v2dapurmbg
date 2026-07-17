@@ -497,17 +497,20 @@ async function loadSpMap(kategori) {
       spJenjang = 'Balita';
       pmKategori = 'Balita,TK/PAUD,SD 1-3';
     }
-    const [rows, pm, spRef] = await Promise.all([
+    const [rows, pm] = await Promise.all([
       api.get('/sp/standar/' + encodeURIComponent(spJenjang)),
-      api.get('/penerima_manfaat/total?kategori_penerima=' + encodeURIComponent(pmKategori)),
-      api.get('/sp_referensi_bahan')
+      api.get('/penerima_manfaat/total?kategori_penerima=' + encodeURIComponent(pmKategori))
     ]);
     window._spMap = {};
     for (const r of rows) window._spMap[r.kategori_sp] = Number(r.sp_value);
+    // Load sp_referensi_bahan (optional — fallback jika gagal/terlarang)
     window._spRefMap = {};
-    if (Array.isArray(spRef)) {
-      for (const r of spRef) window._spRefMap[r.nama] = { berat_bersih: Number(r.berat_bersih), bdd_persen: Number(r.bdd_persen) };
-    }
+    try {
+      var spRef = await api.get('/sp_referensi_bahan');
+      if (Array.isArray(spRef)) {
+        for (const r of spRef) window._spRefMap[r.nama] = { berat_bersih: Number(r.berat_bersih), bdd_persen: Number(r.bdd_persen) };
+      }
+    } catch (e) { console.warn('sp_referensi_bahan tidak termuat (gunakan berat_1_sp dari bahan baku):', e.message); }
     window._jumlahPorsi = Number(pm.total) || 0;
     const el = document.getElementById('m-jumlah-porsi');
     if (el) el.value = window._jumlahPorsi;
