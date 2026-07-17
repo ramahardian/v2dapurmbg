@@ -14,6 +14,12 @@ router.get('/sp/standar', requireRole('admin', 'ahli_gizi'), async (req, res) =>
   res.json(rows);
 });
 
+// GET /sp/standar/:jenjang - get SP values for a specific jenjang
+router.get('/sp/standar/:jenjang', async (req, res) => {
+  const [rows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?', [req.params.jenjang]);
+  res.json(rows);
+});
+
 // PUT /sp/standar/:id - update a standar SP value
 router.put('/sp/standar/:id', requireRole('admin', 'ahli_gizi'), async (req, res) => {
   const { sp_value } = req.body;
