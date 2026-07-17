@@ -348,8 +348,11 @@ router.get('/penerima_manfaat/total', async (req, res) => {
   const { kategori, kategori_penerima } = req.query;
   let sql = 'SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=?';
   const params = [req.user.tenant_id];
-  if (kategori_penerima) { sql += ' AND kategori_penerima=?'; params.push(kategori_penerima); }
-  else if (kategori) { sql += ' AND (nama_kelompok LIKE ? OR lokasi LIKE ?)'; const s = `%${kategori}%`; params.push(s, s); }
+  if (kategori_penerima) {
+    const kats = kategori_penerima.split(',').map(s => s.trim()).filter(Boolean);
+    if (kats.length > 1) { sql += ' AND kategori_penerima IN (' + kats.map(() => '?').join(',') + ')'; params.push(...kats); }
+    else if (kats.length === 1) { sql += ' AND kategori_penerima=?'; params.push(kats[0]); }
+  } else if (kategori) { sql += ' AND (nama_kelompok LIKE ? OR lokasi LIKE ?)'; const s = `%${kategori}%`; params.push(s, s); }
   const [[row]] = await db.query(sql, params);
   res.json({ total: Number(row.total) });
 });

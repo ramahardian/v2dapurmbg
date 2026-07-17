@@ -224,9 +224,7 @@ async function editMenuById(id) {
 const KATEGORI_COLORS = {
   'Ibu Hamil': { bg: '#be123c' },
   'Ibu Menyusui': { bg: '#6d28d9' },
-  'Balita': { bg: '#0e7490' },
-  'TK/PAUD': { bg: '#047857' },
-  'SD 1-3': { bg: '#c2410c' },
+  'Paket Kecil': { bg: '#0e7490' },
   'SD 4-6': { bg: '#d97706' },
   'SMP': { bg: '#1d4ed8' },
   'SMA': { bg: '#7c3aed' },
@@ -361,7 +359,7 @@ function openMenuForm(editing) {
       </div>
       <div><label class="text-sm">Kategori Penerima</label>
         <select id="m-kategori" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
-          <option value="">—</option>${['Ibu Hamil','Ibu Menyusui','Balita','TK/PAUD','SD 1-3','SD 4-6','SMP','SMA'].map(o => `<option value="${o}" ${m.kategori_penerima === o ? 'selected':''}>${o}</option>`).join('')}
+          <option value="">—</option>${['Ibu Hamil','Ibu Menyusui','Paket Kecil','SD 4-6','SMP','SMA'].map(o => `<option value="${o}" ${m.kategori_penerima === o ? 'selected':''}>${o}</option>`).join('')}
         </select></div>
       <div><label class="text-sm">Jumlah Porsi <span id="m-porsi-label" class="text-stone-400 font-normal">(dari penerima manfaat)</span></label>
         <input id="m-jumlah-porsi" type="number" readonly value="0" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md bg-stone-50 text-sm font-semibold" />
@@ -490,11 +488,17 @@ async function hitungNutrisiAI() {
 }
 
 async function loadSpMap(kategori) {
-  if (!kategori) { window._spMap = {}; window._jumlahPorsi = 0; document.getElementById('sp-ref-table') && (document.getElementById('sp-ref-table').classList.add('hidden')); return; }
+  if (!kategori) { window._spMap = {}; window._jumlahPorsi = 0; var tbl = document.getElementById('sp-ref-table'); if (tbl) tbl.classList.add('hidden'); return; }
   try {
+    var spJenjang = kategori;
+    var pmKategori = kategori;
+    if (kategori === 'Paket Kecil') {
+      spJenjang = 'Balita';
+      pmKategori = 'Balita,TK/PAUD,SD 1-3';
+    }
     const [rows, pm] = await Promise.all([
-      api.get('/sp/standar/' + encodeURIComponent(kategori)),
-      api.get('/penerima_manfaat/total?kategori_penerima=' + encodeURIComponent(kategori))
+      api.get('/sp/standar/' + encodeURIComponent(spJenjang)),
+      api.get('/penerima_manfaat/total?kategori_penerima=' + encodeURIComponent(pmKategori))
     ]);
     window._spMap = {};
     for (const r of rows) window._spMap[r.kategori_sp] = Number(r.sp_value);
@@ -504,8 +508,8 @@ async function loadSpMap(kategori) {
     // Populate SP reference table
     var tbl = document.getElementById('sp-ref-table');
     var title = document.getElementById('sp-ref-title');
-    if (tbl) { tbl.classList.remove('hidden'); }
-    if (title) { title.textContent = kategori; }
+    if (tbl) tbl.classList.remove('hidden');
+    if (title) title.textContent = kategori + (kategori === 'Paket Kecil' ? ' (mengacu SP Balita)' : '');
     for (const kat of ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak']) {
       var cel = document.getElementById('sp-val-' + kat.replace(/\s/g,''));
       if (cel) cel.textContent = window._spMap[kat] != null ? window._spMap[kat] : '-';
@@ -721,7 +725,7 @@ function openAIDialog() {
   document.getElementById('modal-body').innerHTML = `
     <div><label class="text-sm">Kategori Penerima</label>
       <select id="ai-kat" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
-        ${['Ibu Hamil','Ibu Menyusui','Balita','TK/PAUD','SD 1-3','SD 4-6','SMP','SMA'].map(o => `<option>${o}</option>`).join('')}
+        ${['Ibu Hamil','Ibu Menyusui','Paket Kecil','SD 4-6','SMP','SMA'].map(o => `<option>${o}</option>`).join('')}
       </select></div>
     <div class="mt-3"><label class="text-sm">Catatan (opsional)</label>
       <textarea id="ai-note" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md" placeholder="Mis. hindari kacang, bahan lokal Jawa Tengah"></textarea></div>
