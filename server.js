@@ -411,32 +411,27 @@ CREATE TABLE siklus_menu_item (
           </div>`);
       }
 
-      // Jalankan seed via child process (exec agar output tertangkap semua)
-      const { exec } = require('child_process');
-      const seedPath = path.join(__dirname, 'scripts', 'seed-dummy.js');
+      // Jalankan seed inline (tanpa child_process, langsung di proses yang sama)
+      const { runSeed } = require('./scripts/seed-dummy');
 
-      exec(`node "${seedPath}"`, { cwd: __dirname, timeout: 60000 }, (error, stdout, stderr) => {
-        const output = stdout + (stderr ? '\n\n--- STDERR ---\n' + stderr : '');
-        const escapedOutput = output
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-        const success = !error;
+      const logs = await runSeed(1);
+      const output = logs.join('\n');
+      const escapedOutput = output
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 
-        res.send(`
-          <div style="font-family:sans-serif;padding:2rem;max-width:700px;margin:auto;background:#f5f5f4">
-            <h2 style="color:${success ? '#16a34a' : '#dc2626'}">
-              ${success ? '✅' : '❌'} ${success ? 'Seed Selesai!' : 'Seed Gagal'}
-            </h2>
-            <pre style="background:#1c1917;color:#a3e635;padding:1rem;border-radius:0.5rem;overflow-x:auto;font-size:0.8rem;line-height:1.5;white-space:pre-wrap">${escapedOutput}</pre>
-            ${success ? '<p style="color:#6b7280;margin-top:0.5rem">✅ 18 menu + 4 siklus + 154 menu_bahan berhasil dibuat.</p>' : `<p style="color:#dc2626;margin-top:0.5rem">${error.message}</p>`}
-            <div style="margin-top:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap">
-              <a href="/api/migrate/cek-data-siklus" style="padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">📊 Cek Data Siklus</a>
-              <a href="/api/migrate/cek-tabel" style="padding:0.5rem 1.5rem;background:#6366f1;color:white;text-decoration:none;border-radius:0.5rem">📋 Cek Tabel</a>
-              <a href="/" style="padding:0.5rem 1.5rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a>
-            </div>
-          </div>`);
-      });
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;max-width:700px;margin:auto;background:#f5f5f4">
+          <h2 style="color:#16a34a">✅ Seed Selesai!</h2>
+          <pre style="background:#1c1917;color:#a3e635;padding:1rem;border-radius:0.5rem;overflow-x:auto;font-size:0.8rem;line-height:1.5;white-space:pre-wrap">${escapedOutput}</pre>
+          <p style="color:#6b7280;margin-top:0.5rem">✅ ${logs.length - 1} langkah selesai. Data dummy berhasil dibuat.</p>
+          <div style="margin-top:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap">
+            <a href="/api/migrate/cek-data-siklus" style="padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">📊 Cek Data Siklus</a>
+            <a href="/api/migrate/cek-tabel" style="padding:0.5rem 1.5rem;background:#6366f1;color:white;text-decoration:none;border-radius:0.5rem">📋 Cek Tabel</a>
+            <a href="/" style="padding:0.5rem 1.5rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a>
+          </div>
+        </div>`);
 
     } catch (e) {
       res.status(500).send(`

@@ -326,124 +326,137 @@ const SIKLUS_PLANS = [
   { nama: 'Siklus Balita — Siklus 1 (10 Hari)', kategori: 'Balita', porsi: 30, hari: 10, status: 'Aktif' },
 ];
 
-(async () => {
-  try {
-    console.log('=== SEED DUMMY DATA ===\n');
+async function runSeed(tenantId = 1) {
+  const logs = [];
+  const log = (msg) => { console.log(msg); logs.push(msg); };
 
-    // 1. Update kategori_penerima pada existing penerima_manfaat
-    console.log('1. Update kategori_penerima penerima manfaat...');
-    const [pmList] = await db.query('SELECT id, nama_kelompok, kategori_penerima FROM penerima_manfaat WHERE tenant_id=?', [TENANT_ID]);
-    let updated = 0;
-    for (const pm of pmList) {
-      if (!pm.kategori_penerima) {
-        const detected = detectKategori(pm.nama_kelompok);
-        if (detected) {
-          await db.query('UPDATE penerima_manfaat SET kategori_penerima=? WHERE id=?', [detected, pm.id]);
-          console.log(`  -> ${pm.nama_kelompok} => ${detected}`);
-          updated++;
-        }
+  log('=== SEED DUMMY DATA ===\n');
+
+  // 1. Update kategori_penerima pada existing penerima_manfaat
+  log('1. Update kategori_penerima penerima manfaat...');
+  const [pmList] = await db.query('SELECT id, nama_kelompok, kategori_penerima FROM penerima_manfaat WHERE tenant_id=?', [tenantId]);
+  let updated = 0;
+  for (const pm of pmList) {
+    if (!pm.kategori_penerima) {
+      const detected = detectKategori(pm.nama_kelompok);
+      if (detected) {
+        await db.query('UPDATE penerima_manfaat SET kategori_penerima=? WHERE id=?', [detected, pm.id]);
+        log(`  -> ${pm.nama_kelompok} => ${detected}`);
+        updated++;
       }
     }
-    console.log(`  Updated ${updated} records\n`);
-
-    // 2. Tambah penerima manfaat baru untuk kategori yang belum ada
-    console.log('2. Menambah penerima manfaat baru...');
-    const NEW_PM = [
-      { nama: 'SDN NEGLASARI', paket_besar: 200, paket_kecil: 120, kategori: 'SD' },
-      { nama: 'SDN CIKARET', paket_besar: 180, paket_kecil: 95, kategori: 'SD' },
-      { nama: 'SDN BABAKAN', paket_besar: 150, paket_kecil: 80, kategori: 'SD' },
-      { nama: 'PAUD MELATI INDAH', paket_besar: 15, paket_kecil: 40, kategori: 'TK/PAUD' },
-      { nama: 'TK PERTIWI', paket_besar: 12, paket_kecil: 35, kategori: 'TK/PAUD' },
-      { nama: 'TK PEMBINA', paket_besar: 10, paket_kecil: 30, kategori: 'TK/PAUD' },
-      { nama: 'POSYANDU DAHLIA', paket_besar: 25, paket_kecil: 20, kategori: 'Ibu Hamil' },
-      { nama: 'POSYANDU ANGGREK', paket_besar: 20, paket_kecil: 15, kategori: 'Ibu Hamil' },
-      { nama: 'POSYANDU IBU HAMIL', paket_besar: 30, paket_kecil: 0, kategori: 'Ibu Hamil' },
-      { nama: 'POSYANDU BALITA SEHAT', paket_besar: 0, paket_kecil: 45, kategori: 'Balita' },
-      { nama: 'PAUD BALITA CERIA', paket_besar: 0, paket_kecil: 30, kategori: 'Balita' },
-    ];
-    for (const p of NEW_PM) {
-      await db.query(
-        'INSERT INTO penerima_manfaat (tenant_id, nama_kelompok, paket_besar, paket_kecil, lokasi, kategori_penerima) VALUES (?,?,?,?,?,?)',
-        [TENANT_ID, p.nama, p.paket_besar, p.paket_kecil, 'BOGOR', p.kategori]
-      );
-    }
-    console.log(`  Added ${NEW_PM.length} new records\n`);
-
-    // 3. Hapus menu existing (agar bersih) lalu buat menu baru
-    console.log('3. Membuat menu dan komposisi bahan...');
-    await db.query('DELETE FROM menu_bahan WHERE menu_id IN (SELECT id FROM menu WHERE tenant_id=?)', [TENANT_ID]);
-    await db.query('DELETE FROM menu WHERE tenant_id=?', [TENANT_ID]);
-
-    const createdMenuIds = {};
-    for (const tmpl of MENU_TEMPLATES) {
-      const [r] = await db.query(
-        `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat)
-         VALUES (?,?,?,?,?,?,?,?,?,?)`,
-        [TENANT_ID, tmpl.nama, tmpl.kategori, '', tmpl.gramasi, tmpl.kalori, tmpl.protein, tmpl.karbohidrat, tmpl.lemak, tmpl.serat]
-      );
-      const menuId = r.insertId;
-
-      for (const b of tmpl.bahan) {
-        await db.query(
-          'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)',
-          [menuId, b.id, b.jumlah]
-        );
-      }
-
-      if (!createdMenuIds[tmpl.kategori]) createdMenuIds[tmpl.kategori] = [];
-      createdMenuIds[tmpl.kategori].push({ id: menuId, nama: tmpl.nama, kalori: tmpl.kalori, protein: tmpl.protein, karbohidrat: tmpl.karbohidrat, lemak: tmpl.lemak, serat: tmpl.serat });
-      console.log(`  -> Menu: ${tmpl.nama} (${tmpl.kategori})`);
-    }
-    console.log(`  Created ${MENU_TEMPLATES.length} menus\n`);
-
-    // 4. Buat siklus menu
-    console.log('4. Membuat siklus menu...');
-    await db.query('DELETE FROM siklus_menu_item WHERE siklus_id IN (SELECT id FROM siklus_menu WHERE tenant_id=?)', [TENANT_ID]);
-    await db.query('DELETE FROM siklus_menu WHERE tenant_id=?', [TENANT_ID]);
-
-    const getMenusForKategori = (kat) => {
-      const exact = createdMenuIds[kat] || [];
-      if (exact.length > 0) return exact;
-
-      if (kat === 'SD') return createdMenuIds['SD'] || [];
-      if (kat === 'TK/PAUD') return createdMenuIds['TK/PAUD'] || [];
-      if (kat === 'Ibu Hamil') return createdMenuIds['Ibu Hamil'] || [];
-      if (kat === 'Balita') return createdMenuIds['Balita'] || [];
-      return [];
-    };
-
-    for (const plan of SIKLUS_PLANS) {
-      const pool = getMenusForKategori(plan.kategori);
-      if (!pool.length) {
-        console.log(`  Skip ${plan.nama} (no menus for ${plan.kategori})`);
-        continue;
-      }
-
-      const [r] = await db.query(
-        `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan)
-         VALUES (?,?,?,?,?,?,?)`,
-        [TENANT_ID, plan.nama, plan.kategori, plan.porsi, plan.hari, plan.status, '']
-      );
-      const siklusId = r.insertId;
-
-      for (let d = 0; d < plan.hari; d++) {
-        const m = pool[d % pool.length];
-        await db.query(
-          `INSERT INTO siklus_menu_item (siklus_id, hari_ke, hari_nama, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-          [siklusId, d + 1, HARI[d % 7], m.id, m.nama, plan.porsi,
-           m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat]
-        );
-      }
-      console.log(`  -> ${plan.nama}: ${plan.hari} hari, ${plan.porsi} porsi, status=${plan.status}`);
-    }
-    console.log(`  Created ${SIKLUS_PLANS.length} siklus\n`);
-
-    console.log('=== SELESAI! Data siap digunakan ===');
-    process.exit(0);
-  } catch (e) {
-    console.error('Seed failed:', e.message);
-    console.error(e);
-    process.exit(1);
   }
-})();
+  log(`  Updated ${updated} records\n`);
+
+  // 2. Tambah penerima manfaat baru untuk kategori yang belum ada
+  log('2. Menambah penerima manfaat baru...');
+  const NEW_PM = [
+    { nama: 'SDN NEGLASARI', paket_besar: 200, paket_kecil: 120, kategori: 'SD' },
+    { nama: 'SDN CIKARET', paket_besar: 180, paket_kecil: 95, kategori: 'SD' },
+    { nama: 'SDN BABAKAN', paket_besar: 150, paket_kecil: 80, kategori: 'SD' },
+    { nama: 'PAUD MELATI INDAH', paket_besar: 15, paket_kecil: 40, kategori: 'TK/PAUD' },
+    { nama: 'TK PERTIWI', paket_besar: 12, paket_kecil: 35, kategori: 'TK/PAUD' },
+    { nama: 'TK PEMBINA', paket_besar: 10, paket_kecil: 30, kategori: 'TK/PAUD' },
+    { nama: 'POSYANDU DAHLIA', paket_besar: 25, paket_kecil: 20, kategori: 'Ibu Hamil' },
+    { nama: 'POSYANDU ANGGREK', paket_besar: 20, paket_kecil: 15, kategori: 'Ibu Hamil' },
+    { nama: 'POSYANDU IBU HAMIL', paket_besar: 30, paket_kecil: 0, kategori: 'Ibu Hamil' },
+    { nama: 'POSYANDU BALITA SEHAT', paket_besar: 0, paket_kecil: 45, kategori: 'Balita' },
+    { nama: 'PAUD BALITA CERIA', paket_besar: 0, paket_kecil: 30, kategori: 'Balita' },
+  ];
+  for (const p of NEW_PM) {
+    await db.query(
+      'INSERT INTO penerima_manfaat (tenant_id, nama_kelompok, paket_besar, paket_kecil, lokasi, kategori_penerima) VALUES (?,?,?,?,?,?)',
+      [tenantId, p.nama, p.paket_besar, p.paket_kecil, 'BOGOR', p.kategori]
+    );
+  }
+  log(`  Added ${NEW_PM.length} new records\n`);
+
+  // 3. Hapus menu existing (agar bersih) lalu buat menu baru
+  log('3. Membuat menu dan komposisi bahan...');
+  await db.query('DELETE FROM menu_bahan WHERE menu_id IN (SELECT id FROM menu WHERE tenant_id=?)', [tenantId]);
+  await db.query('DELETE FROM menu WHERE tenant_id=?', [tenantId]);
+
+  const createdMenuIds = {};
+  for (const tmpl of MENU_TEMPLATES) {
+    const [r] = await db.query(
+      `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      [tenantId, tmpl.nama, tmpl.kategori, '', tmpl.gramasi, tmpl.kalori, tmpl.protein, tmpl.karbohidrat, tmpl.lemak, tmpl.serat]
+    );
+    const menuId = r.insertId;
+
+    for (const b of tmpl.bahan) {
+      await db.query(
+        'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)',
+        [menuId, b.id, b.jumlah]
+      );
+    }
+
+    if (!createdMenuIds[tmpl.kategori]) createdMenuIds[tmpl.kategori] = [];
+    createdMenuIds[tmpl.kategori].push({ id: menuId, nama: tmpl.nama, kalori: tmpl.kalori, protein: tmpl.protein, karbohidrat: tmpl.karbohidrat, lemak: tmpl.lemak, serat: tmpl.serat });
+    log(`  -> Menu: ${tmpl.nama} (${tmpl.kategori})`);
+  }
+  log(`  Created ${MENU_TEMPLATES.length} menus\n`);
+
+  // 4. Buat siklus menu
+  log('4. Membuat siklus menu...');
+  await db.query('DELETE FROM siklus_menu_item WHERE siklus_id IN (SELECT id FROM siklus_menu WHERE tenant_id=?)', [tenantId]);
+  await db.query('DELETE FROM siklus_menu WHERE tenant_id=?', [tenantId]);
+
+  const getMenusForKategori = (kat) => {
+    const exact = createdMenuIds[kat] || [];
+    if (exact.length > 0) return exact;
+
+    if (kat === 'SD') return createdMenuIds['SD'] || [];
+    if (kat === 'TK/PAUD') return createdMenuIds['TK/PAUD'] || [];
+    if (kat === 'Ibu Hamil') return createdMenuIds['Ibu Hamil'] || [];
+    if (kat === 'Balita') return createdMenuIds['Balita'] || [];
+    return [];
+  };
+
+  for (const plan of SIKLUS_PLANS) {
+    const pool = getMenusForKategori(plan.kategori);
+    if (!pool.length) {
+      log(`  Skip ${plan.nama} (no menus for ${plan.kategori})`);
+      continue;
+    }
+
+    const [r] = await db.query(
+      `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan)
+       VALUES (?,?,?,?,?,?,?)`,
+      [tenantId, plan.nama, plan.kategori, plan.porsi, plan.hari, plan.status, '']
+    );
+    const siklusId = r.insertId;
+
+    for (let d = 0; d < plan.hari; d++) {
+      const m = pool[d % pool.length];
+      await db.query(
+        `INSERT INTO siklus_menu_item (siklus_id, hari_ke, hari_nama, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        [siklusId, d + 1, HARI[d % 7], m.id, m.nama, plan.porsi,
+         m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat]
+      );
+    }
+    log(`  -> ${plan.nama}: ${plan.hari} hari, ${plan.porsi} porsi, status=${plan.status}`);
+  }
+  log(`  Created ${SIKLUS_PLANS.length} siklus\n`);
+
+  log('=== SELESAI! Data siap digunakan ===');
+  return logs;
+}
+
+module.exports = { runSeed };
+
+// Jalankan langsung jika dipanggil dari CLI
+if (require.main === module) {
+  (async () => {
+    try {
+      await runSeed(TENANT_ID);
+      process.exit(0);
+    } catch (e) {
+      console.error('Seed failed:', e.message);
+      console.error(e);
+      process.exit(1);
+    }
+  })();
+}
