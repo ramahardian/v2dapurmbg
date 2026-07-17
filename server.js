@@ -196,6 +196,51 @@ if (cluster.isMaster && WORKERS > 1) {
     }
   });
 
+  // Endpoint alter bahan_baku: tambah kolom sumber (admin only)
+  app.get('/api/migrate/bahan-baku-sumber', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [cols] = await db.query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'bahan_baku'
+           AND COLUMN_NAME = 'sumber'`
+      );
+
+      if (cols.length) {
+        return res.send(`
+          <div style="font-family:sans-serif;padding:2rem;text-align:center">
+            <h2 style="color:#16a34a">✅ Kolom sumber sudah ada</h2>
+            <p style="color:#6b7280;margin-top:0.5rem">Tidak perlu diubah.</p>
+          </div>`);
+      }
+
+      await db.query(
+        `ALTER TABLE bahan_baku
+         ADD COLUMN sumber VARCHAR(20) DEFAULT NULL
+         COMMENT 'sumber permintaan: ahli_gizi' AFTER stok_minimum`
+      );
+
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#16a34a">✅ ALTER TABLE BERHASIL!</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">
+            Kolom <code>sumber</code> berhasil ditambahkan ke <code>bahan_baku</code>
+            (VARCHAR(20), NULL, AFTER stok_minimum)
+          </p>
+          <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;
+             background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">
+            Kembali ke Dashboard
+          </a>
+        </div>`);
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#dc2626">❌ Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+        </div>`);
+    }
+  });
+
   // Endpoint hapus SEMUA data absensi (admin only)
   app.get('/api/migrate/hapus-absensi', requireAuth, requireRole('admin'), async (req, res) => {
     try {

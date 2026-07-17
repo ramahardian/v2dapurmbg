@@ -5,6 +5,50 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
+// Update kolom sumber bahan baku (untuk menandai permintaan ahli gizi)
+router.put('/bahan-baku/:id/sumber', requireRole('admin', 'ahli_gizi', 'gudang'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { sumber } = req.body;
+
+    // Validasi: hanya 'ahli_gizi' atau null/kosong
+    if (sumber !== undefined && sumber !== null && sumber !== '' && sumber !== 'ahli_gizi') {
+      return res.status(400).json({ error: 'Nilai sumber tidak valid. Gunakan "ahli_gizi" atau kosongkan.' });
+    }
+
+    // Cek bahan baku exist
+    const [existing] = await db.query(
+      'SELECT id, nama FROM bahan_baku WHERE id=? AND tenant_id=?',
+      [id, req.user.tenant_id]
+    );
+    if (!existing.length) {
+      return res.status(404).json({ error: 'Bahan baku tidak ditemukan' });
+    }
+
+    const nilaiSumber = sumber === 'ahli_gizi' ? 'ahli_gizi' : null;
+    await db.query(
+      'UPDATE bahan_baku SET sumber=? WHERE id=? AND tenant_id=?',
+      [nilaiSumber, id, req.user.tenant_id]
+    );
+
+    const [[updated]] = await db.query(
+      'SELECT id, nama, sumber FROM bahan_baku WHERE id=?',
+      [id]
+    );
+
+    res.json({
+      ok: true,
+      message: sumber === 'ahli_gizi'
+        ? `${existing[0].nama} ditandai sebagai permintaan Ahli Gizi`
+        : `Tanda permintaan Ahli Gizi dihapus dari ${existing[0].nama}`,
+      data: updated
+    });
+  } catch (e) {
+    console.error('Update sumber bahan baku error:', e);
+    res.status(500).json({ error: 'Gagal update sumber: ' + e.message });
+  }
+});
+
 router.post('/bahan-baku/sync', requireRole('admin', 'ahli_gizi'), async (req, res) => {
   try {
     const response = await fetch('https://koperasi.mealify.id/api/bahan_baku.php');
