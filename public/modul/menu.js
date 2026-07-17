@@ -475,10 +475,7 @@ function updateBahan(i, k, v) {
     window._menuBahan[i].berat_per_satuan = bb ? (+bb.berat_per_satuan || 0) : 0;
     // Auto-calculate jumlah from SP/berat_per_satuan
     if (bb) {
-      var katPenerima = document.getElementById('m-kategori')?.value;
-      if (bb.kategori_sp && bb.berat_1_sp > 0 && katPenerima) {
-        window._menuBahan[i].jumlah = +bb.berat_1_sp;
-      } else if (+bb.berat_per_satuan > 0 && !window._menuBahan[i].jumlah) {
+      if (+bb.berat_per_satuan > 0 && !window._menuBahan[i].jumlah) {
         window._menuBahan[i].jumlah = +bb.berat_per_satuan;
       }
     }
@@ -497,9 +494,7 @@ function renderBahanList() {
       extras.push('1SP=' + bb.berat_1_sp + 'g');
       if (+bb.berat_per_satuan > 0) extras.push('1' + bb.satuan + '=' + bb.berat_per_satuan + 'g');
       spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">' + bb.kategori_sp + ' · ' + extras.join(' · ') + ' · BDD=' + bb.persen_bdd + '%</div>';
-      if (!b.jumlah && bb.berat_1_sp > 0) {
-        window._menuBahan[i].jumlah = +bb.berat_1_sp;
-      }
+      // biar backend auto-hitung: sp_value x berat_1_sp
     } else if (bb && +bb.berat_per_satuan > 0) {
       spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">1 ' + bb.satuan + ' = ' + bb.berat_per_satuan + 'g</div>';
     }
