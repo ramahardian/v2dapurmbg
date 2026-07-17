@@ -368,6 +368,63 @@ CREATE TABLE siklus_menu_item (
     }
   });
 
+  // Endpoint cek data siklus menu (admin only)
+  app.get('/api/migrate/cek-data-siklus', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [siklus] = await db.query('SELECT id, nama, kategori_penerima, jumlah_porsi, total_hari, status FROM siklus_menu ORDER BY id DESC LIMIT 10');
+      
+      let html = `
+        <div style="font-family:sans-serif;padding:2rem;max-width:900px;margin:auto">
+          <h2 style="margin-bottom:1rem">📊 Cek Data Siklus Menu</h2>
+          <p style="color:#6b7280;margin-bottom:1.5rem">Total siklus: <b>${siklus.length}</b></p>`;
+
+      if (siklus.length === 0) {
+        html += `<div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:1rem;border-radius:0.5rem">❌ Tidak ada data siklus menu! Jalankan seed: <code>node scripts/seed-dummy.js</code></div>`;
+      } else {
+        for (const s of siklus) {
+          const [items] = await db.query(
+            'SELECT COUNT(*) as total, SUM(CASE WHEN menu_id IS NOT NULL THEN 1 ELSE 0 END) as filled FROM siklus_menu_item WHERE siklus_id=?',
+            [s.id]
+          );
+          const total = Number(items[0].total);
+          const filled = Number(items[0].filled);
+          const pct = total > 0 ? Math.round(filled / total * 100) : 0;
+          const color = pct >= 100 ? '#16a34a' : pct > 0 ? '#d97706' : '#dc2626';
+          
+          html += `
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:0.75rem;padding:1rem 1.25rem;margin-bottom:0.75rem">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem">
+                <div>
+                  <div style="font-weight:600;color:#111827">${s.nama}</div>
+                  <div style="font-size:0.8rem;color:#6b7280;margin-top:0.25rem">
+                    ${s.kategori_penerima || '-'} · ${s.jumlah_porsi} porsi · ${s.total_hari} hari · Status: <b>${s.status}</b>
+                  </div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:1.5rem;font-weight:700;color:${color}">${filled}/${total}</div>
+                  <div style="font-size:0.8rem;color:#6b7280">menu terisi</div>
+                </div>
+              </div>
+              <div style="margin-top:0.75rem;background:#e5e7eb;border-radius:999px;height:8px;overflow:hidden">
+                <div style="background:${color};height:100%;width:${pct}%;border-radius:999px;transition:width 0.3s"></div>
+              </div>
+              <div style="font-size:0.75rem;color:#6b7280;margin-top:0.25rem;text-align:right">${pct}% coverage</div>
+            </div>`;
+        }
+      }
+      
+      html += `
+          <div style="margin-top:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap">
+            <a href="/api/migrate/cek-tabel" style="padding:0.5rem 1.25rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem;font-size:0.875rem">Cek Tabel</a>
+            <a href="/" style="padding:0.5rem 1.25rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem;font-size:0.875rem">Dashboard</a>
+          </div>
+        </div>`;
+      res.send(html);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#dc2626">❌ Error</h2><p style="color:#6b7280">${e.message}</p></div>`);
+    }
+  });
+
   // Endpoint cek kesesuaian tabel database (admin only)
   app.get('/api/migrate/cek-tabel', requireAuth, requireRole('admin'), async (req, res) => {
     try {
