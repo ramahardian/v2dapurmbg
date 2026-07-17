@@ -81,6 +81,37 @@ router.post('/ai/suggest-nutrisi', async (req, res) => {
   }
 });
 
+router.post('/ai/hitung-nutrisi', async (req, res) => {
+  const { nama_menu, bahan } = req.body;
+  if (!bahan || !bahan.length) return res.status(400).json({ error: 'Data bahan wajib diisi' });
+
+  const daftarBahan = bahan.map(b => '- ' + b.nama + (b.jumlah ? ' ' + b.jumlah + 'g' : '')).join('\n');
+  const prompt = 'Menu: ' + (nama_menu || 'Tanpa Nama') + '\nBahan:\n' + daftarBahan;
+
+  try {
+    const text = await askHF(prompt, {
+      system: 'Anda ahli gizi. Hitung total nutrisi berdasarkan nama menu dan daftar bahan dengan jumlahnya. Jawab JSON valid tanpa teks lain: { "gramasi_total":0, "kalori":0, "protein":0, "karbohidrat":0, "lemak":0 }',
+      maxTokens: 300,
+      temperature: 0.3
+    });
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return res.status(500).json({ error: 'AI tidak menghasilkan JSON valid', raw: text.slice(0, 300) });
+    }
+    const data = JSON.parse(jsonMatch[0]);
+    res.json({
+      gramasi_total: Number(data.gramasi_total) || 0,
+      kalori: Number(data.kalori) || 0,
+      protein: Number(data.protein) || 0,
+      karbohidrat: Number(data.karbohidrat) || 0,
+      lemak: Number(data.lemak) || 0,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/ai/tanya', async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) return res.status(400).json({ error: 'Prompt wajib diisi' });

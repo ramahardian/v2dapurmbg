@@ -364,9 +364,12 @@ function openMenuForm(editing) {
         </select></div>
     </div>
     <div class="mt-3"><label class="text-sm">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
-    <div class="grid grid-cols-5 gap-2 mt-3">
-      ${[['gramasi_total','Gramasi'],['kalori','Kalori'],['protein','Protein'],['karbohidrat','Karbo'],['lemak','Lemak']].map(([k,l]) =>
-        `<div><label class="text-xs">${l}</label><input id="m-${k}" type="number" value="${m[k] || 0}" class="mt-1 w-full h-9 px-2 border border-stone-200 rounded-md mono text-sm" /></div>`).join('')}
+    <div class="flex items-center justify-between mt-3">
+      <div class="flex-1 grid grid-cols-5 gap-2">
+        ${[['gramasi_total','Gramasi'],['kalori','Kalori'],['protein','Protein'],['karbohidrat','Karbo'],['lemak','Lemak']].map(([k,l]) =>
+          `<div><label class="text-xs">${l}</label><input id="m-${k}" type="number" value="${m[k] || 0}" class="mt-1 w-full h-9 px-2 border border-stone-200 rounded-md mono text-sm" /></div>`).join('')}
+      </div>
+      <button type="button" onclick="hitungNutrisiAI()" class="ml-2 mt-5 shrink-0 px-3 h-9 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100 whitespace-nowrap" title="Hitung nutrisi pakai AI">AI</button>
     </div>
     <div class="mt-3"><label class="text-sm">Foto Menu</label>
       <div class="flex items-center gap-3 mt-1">
@@ -436,6 +439,29 @@ function hitungNutrisi() {
     var el = document.getElementById('m-' + k);
     if (el) el.value = Math.round(({gramasi_total: totalGramasi, kalori: totalKalori, protein: totalProtein, karbohidrat: totalKarbo, lemak: totalLemak}[k]) * 100) / 100;
   });
+}
+
+async function hitungNutrisiAI() {
+  var nama = document.getElementById('m-nama')?.value.trim();
+  var bahan = (window._menuBahan || []).filter(function(b) { return b.bahan_baku_id; });
+  if (!bahan.length) {
+    showAlert('Tambahkan bahan terlebih dahulu', 'warning');
+    return;
+  }
+  var bahanData = bahan.map(function(b) {
+    var bb = (window._bahanBaku || []).find(function(x) { return x.id == b.bahan_baku_id; });
+    return { nama: bb ? bb.nama : '?', jumlah: b.jumlah || 0, satuan: bb ? bb.satuan : '' };
+  });
+  try {
+    var res = await api.post('/ai/hitung-nutrisi', { nama_menu: nama, bahan: bahanData });
+    ['gramasi_total','kalori','protein','karbohidrat','lemak'].forEach(function(k) {
+      var el = document.getElementById('m-' + k);
+      if (el && res[k] != null) el.value = Math.round(res[k] * 100) / 100;
+    });
+    showToast('Nutrisi terisi dari AI', 'success');
+  } catch (e) {
+    showAlert('Gagal hitung AI: ' + e.message, 'error');
+  }
 }
 
 function updateBahan(i, k, v) {
