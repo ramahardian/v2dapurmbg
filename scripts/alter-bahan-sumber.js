@@ -9,7 +9,6 @@ const mysql = require('mysql2/promise');
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
   });
-
   try {
     const [cols] = await conn.query(
       "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'sumber'"
