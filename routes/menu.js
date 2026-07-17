@@ -305,6 +305,81 @@ router.get('/menu/:id', async (req, res) => {
   res.json(m);
 });
 
+/**
+ * GET /menu/by-siklus
+ * Mengembalikan menu yang dikelompokkan berdasarkan siklus (jika ada),
+ * plus menu yang tidak terpakai di siklus manapun (standalone).
+ */
+router.get('/menu/by-siklus', async (req, res) => {
+  // 1. Ambil semua siklus dengan itemnya
+  const [siklusList] = await db.query(
+    'SELECT id, nama, kategori_penerima, jumlah_porsi, total_hari, status FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
+    [req.user.tenant_id]
+  );
+
+  // 2. Ambil semua menu milik tenant
+  const [allMenus] = await db.query(
+    'SELECT id, nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat, foto FROM menu WHERE tenant_id=? ORDER BY nama ASC',
+    [req.user.tenant_id]
+  );
+
+  // 3. Untuk setiap siklus, ambil item dan menu yang dipakai
+  const siklusGroups = [];
+  const usedMenuIds = new Set();
+
+  for (const s of siklusList) {
+    const [items] = await db.query(
+      `SELECT si.hari_ke, si.hari_nama, si.menu_id, si.menu_nama, si.jumlah_porsi, si.kalori, si.protein, si.karbohidrat, si.lemak, si.serat,
+              m.nama AS menu_nama_lengkap, m.gramasi_total, m.foto, m.kategori_penerima AS menu_kategori
+       FROM siklus_menu_item si
+       LEFT JOIN menu m ON m.id = si.menu_id
+       WHERE si.siklus_id=?
+       ORDER BY si.hari_ke ASC`,
+      [s.id]
+    );
+
+    const days = items.map(it => ({
+      hari_ke: it.hari_ke,
+      hari_nama: it.hari_nama,
+      menu_id: it.menu_id,
+      menu_nama: it.menu_nama || it.menu_nama_lengkap || '-',
+      jumlah_porsi: Number(it.jumlah_porsi) || 0,
+      kalori: Number(it.kalori || it.kalori) || 0,
+      gramasi_total: Number(it.gramasi_total) || 0,
+      foto: it.foto,
+    }));
+
+    if (it.menu_id) usedMenuIds.add(it.menu_id);
+
+    siklusGroups.push({
+      id: s.id,
+      nama: s.nama,
+      kategori_penerima: s.kategori_penerima,
+      jumlah_porsi: Number(s.jumlah_porsi) || 0,
+      total_hari: Number(s.total_hari) || 7,
+      status: s.status,
+      days,
+      menu_count: new Set(items.filter(it => it.menu_id).map(it => it.menu_id)).size,
+    });
+  }
+
+  // 4. Menu yang tidak dipakai di siklus manapun
+  const standaloneMenus = allMenus.filter(m => !usedMenuIds.has(m.id));
+
+  // 5. Siapkan juga data menu lengkap dengan bahannya untuk kemudahan
+  const menuDetails = {};
+  for (const m of allMenus) {
+    menuDetails[m.id] = m;
+  }
+
+  res.json({
+    siklus_groups: siklusGroups,
+    standalone: standaloneMenus,
+    total_menu: allMenus.length,
+    used_in_siklus: usedMenuIds.size,
+  });
+});
+
 // Hitung ulang nutrisi semua menu berdasarkan bahan_baku terkini
 router.post('/menu/recalculate-nutrisi', async (req, res) => {
   try {

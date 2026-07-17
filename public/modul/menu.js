@@ -1,11 +1,21 @@
 // ===== Menu (custom with bahan) =====
 let menuState = { page: 1, limit: 10, search: '', total: 0, totalPages: 1 };
+let menuViewMode = 'list'; // 'list' | 'siklus'
 
 async function renderMenu() {
   const c = document.getElementById('content');
   if (!c) return;
   c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
+    // Load bahan baku regardless of view mode
+    const bahan = await api.get('/bahan_baku');
+    window._bahanBaku = bahan;
+
+    if (menuViewMode === 'siklus') {
+      await renderMenuBySiklus(c);
+      return;
+    }
+
     const params = new URLSearchParams({ page: menuState.page, limit: menuState.limit, search: menuState.search });
     const r = await fetch('/api/menu?' + params, { credentials: 'include' });
     if (!r.ok) {
@@ -16,15 +26,198 @@ async function renderMenu() {
     const pagination = data.pagination || { total: data.length || 0, totalPages: 1, page: menuState.page };
     menuState = { ...menuState, total: pagination.total, totalPages: pagination.totalPages, page: pagination.page };
     
-    const bahan = await api.get('/bahan_baku');
-    window._bahanBaku = bahan;
-    
     c.innerHTML = renderMenuHtml(Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []));
     renderPagination();
     attachMenuHandlers();
   } catch (err) {
     console.error('Menu error:', err);
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat menu: ${err.message}</div>`;
+  }
+}
+
+async function renderMenuBySiklus(c) {
+  try {
+    const r = await fetch('/api/menu/by-siklus', { credentials: 'include' });
+    if (!r.ok) throw new Error('Gagal memuat data');
+    const data = await r.json();
+    c.innerHTML = renderMenuBySiklusHtml(data);
+    attachMenuBySiklusHandlers();
+  } catch (err) {
+    console.error('Menu by siklus error:', err);
+    c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat menu berdasarkan siklus: ${err.message}</div>`;
+  }
+}
+
+function renderMenuBySiklusHtml(data) {
+  const groups = data.siklus_groups || [];
+  const standalone = data.standalone || [];
+  const totalMenu = data.total_menu || 0;
+  const usedInSiklus = data.used_in_siklus || 0;
+
+  // Tab navigation
+  const tabsHtml = `<div class="flex items-center gap-1 mb-5 bg-stone-100 rounded-xl p-1 w-fit border border-stone-200">
+    <button onclick="switchMenuView('list')" class="px-4 py-2 text-sm font-medium rounded-lg transition-all ${menuViewMode === 'list' ? 'bg-white text-stone-900 shadow-sm border border-stone-200' : 'text-stone-500 hover:text-stone-700'}">
+      <svg class="w-4 h-4 inline -mt-0.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
+      Semua Menu
+    </button>
+    <button onclick="switchMenuView('siklus')" class="px-4 py-2 text-sm font-medium rounded-lg transition-all ${menuViewMode === 'siklus' ? 'bg-white text-stone-900 shadow-sm border border-stone-200' : 'text-stone-500 hover:text-stone-700'}">
+      <svg class="w-4 h-4 inline -mt-0.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Berdasarkan Siklus
+    </button>
+  </div>`;
+
+  // Stats cards
+  const statsHtml = `<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div class="bg-white border border-stone-200 rounded-xl p-4">
+      <div class="text-xs uppercase tracking-wider text-stone-500 font-medium">Total Menu</div>
+      <div class="text-2xl font-bold text-stone-800 mt-1">${totalMenu}</div>
+    </div>
+    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
+      <div class="text-xs uppercase tracking-wider text-blue-700 font-medium">Digunakan di Siklus</div>
+      <div class="text-2xl font-bold text-blue-800 mt-1">${usedInSiklus}</div>
+    </div>
+    <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+      <div class="text-xs uppercase tracking-wider text-emerald-700 font-medium">Standalone</div>
+      <div class="text-2xl font-bold text-emerald-800 mt-1">${standalone.length}</div>
+    </div>
+    <div class="bg-amber-50 border border-amber-100 rounded-xl p-4">
+      <div class="text-xs uppercase tracking-wider text-amber-700 font-medium">Siklus Aktif</div>
+      <div class="text-2xl font-bold text-amber-800 mt-1">${groups.filter(g => g.status === 'Aktif').length}</div>
+    </div>
+  </div>`;
+
+  // Siklus groups
+  let siklusHtml = '';
+  if (groups.length === 0) {
+    siklusHtml = `<div class="col-span-full text-center py-12 text-stone-400">
+      <svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <div>Belum ada siklus menu</div>
+      <div class="text-sm mt-1">Buat siklus terlebih dahulu di menu Siklus</div>
+    </div>`;
+  } else {
+    siklusHtml = groups.map(s => {
+      const statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-600';
+      const filledDays = s.days.filter(d => d.menu_id).length;
+      const coverage = s.total_hari ? Math.round((filledDays / s.total_hari) * 100) : 0;
+
+      return `<div class="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+        <!-- Siklus Header -->
+        <div class="px-5 py-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-stone-800">${s.nama}</h3>
+              <span class="text-[10px] px-2.5 py-1 rounded-full font-medium ${statusColor} capitalize">${s.status}</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 mt-1 text-xs text-stone-500">
+              <span>${s.kategori_penerima || 'Semua'}</span>
+              <span>${s.jumlah_porsi} porsi/hari</span>
+              <span>${s.total_hari} hari</span>
+              <span class="${coverage >= 100 ? 'text-emerald-600 font-semibold' : coverage > 0 ? 'text-amber-600' : 'text-stone-400'}">${coverage}% terisi</span>
+              <span>${s.menu_count} menu unik</span>
+            </div>
+          </div>
+          <a href="#" onclick="navigate('siklus');return false" class="text-xs text-[#1e40af] hover:text-[#1d4ed8] font-medium hover:underline whitespace-nowrap">
+            Kelola Siklus →
+          </a>
+        </div>
+        <!-- Days Grid -->
+        <div class="p-4">
+          <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
+            ${s.days.map(d => {
+              return `<div class="border border-stone-200 rounded-lg p-3 ${d.menu_id ? 'hover:border-[#1e40af]/30 hover:shadow-sm' : 'border-dashed bg-stone-50/50'} transition-all">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-[10px] font-semibold uppercase text-stone-400">Hari ${d.hari_ke}</span>
+                  <span class="text-[10px] text-stone-400">${d.hari_nama}</span>
+                </div>
+                ${d.foto ? `<img src="${d.foto}" class="w-full h-20 object-cover rounded-lg mb-2 border border-stone-100" alt="${d.menu_nama}" />` : ''}
+                ${d.menu_id ? `
+                  <div class="font-medium text-sm text-stone-800 truncate" title="${d.menu_nama}">${d.menu_nama}</div>
+                  <div class="flex items-center gap-2 mt-1.5 text-[10px] text-stone-500">
+                    <span>${d.jumlah_porsi} porsi</span>
+                    ${d.kalori ? `<span class="mono">${fmtNum(d.kalori)} kkal</span>` : ''}
+                    ${d.gramasi_total ? `<span class="mono">${fmtNum(d.gramasi_total)}g</span>` : ''}
+                  </div>
+                ` : `<div class="text-sm text-stone-400 italic">Belum diisi</div>`}
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>`;
+    }).join('<div class="h-3"></div>');
+  }
+
+  // Standalone menus section
+  let standaloneHtml = '';
+  if (standalone.length > 0) {
+    standaloneHtml = `<div class="mt-6">
+      <div class="flex items-center gap-2 mb-3">
+        <h3 class="font-bold text-stone-700">Menu Tidak Terpakai</h3>
+        <span class="bg-stone-100 text-stone-500 text-xs px-2.5 py-0.5 rounded-full font-medium">${standalone.length}</span>
+      </div>
+      <div class="bg-white border border-stone-200 rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-stone-50">
+              <tr>
+                <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Kategori</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gramasi</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kalori</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Protein</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Karbo</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${standalone.length > 0 ? standalone.map(m => `
+                <tr class="border-t border-stone-100 hover:bg-stone-50/50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium">
+                    <div class="flex items-center gap-2">
+                      ${m.foto ? `<img src="${m.foto}" class="w-8 h-8 rounded object-cover border border-stone-200 shrink-0" />` : ''}
+                      <span class="truncate max-w-[180px]" title="${m.nama}">${m.nama}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
+                  <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.gramasi_total}g</td>
+                  <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.kalori}</td>
+                  <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.protein}</td>
+                  <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.karbohidrat}</td>
+                  <td class="px-4 py-3 text-sm text-right">
+                    <button onclick="switchMenuView('list');editMenuById(${m.id})" class="text-xs text-blue-600 hover:text-blue-800 hover:underline">Edit</button>
+                  </td>
+                </tr>
+              `).join('') : ''}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  return `<div>
+    ${tabsHtml}
+    ${statsHtml}
+    ${siklusHtml}
+    ${standaloneHtml}
+  </div>`;
+}
+
+function attachMenuBySiklusHandlers() {
+  const addBtn = document.getElementById('add-menu-btn');
+  if (addBtn) addBtn.onclick = () => openMenuForm(null);
+}
+
+function switchMenuView(mode) {
+  menuViewMode = mode;
+  renderMenu();
+}
+
+async function editMenuById(id) {
+  try {
+    const menu = await api.get('/menu/' + id);
+    openMenuForm(menu);
+  } catch (e) {
+    showAlert('Gagal memuat menu: ' + e.message, 'error');
   }
 }
 
