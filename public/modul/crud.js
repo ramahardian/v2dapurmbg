@@ -186,6 +186,17 @@ function openForm(cfg, editing) {
     body.innerHTML = cfg.fields.map(f => renderField(f, editing)).join('');
   }
 
+  // AI button for nutrition fields (sp-referensi)
+  var aiFields = cfg.fields.filter(function(f) { return f.ai; });
+  if (aiFields.length) {
+    var aiBtn = document.createElement('div');
+    aiBtn.className = 'flex items-center justify-between pt-2';
+    aiBtn.innerHTML = '<div class="text-xs text-stone-400">Isi gizi dengan AI berdasarkan nama bahan</div>' +
+      '<button type="button" onclick="fillAiNutrisiSp()" class="px-4 py-2 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100">Isi AI</button>';
+    body.appendChild(aiBtn);
+    window._aiFields = aiFields;
+  }
+
   apiSelects.forEach(f => {
     const sel = document.getElementById('f-' + f.k);
     api.get(f.source).then(rows => {
@@ -255,6 +266,30 @@ function openForm(cfg, editing) {
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
 }
+window.fillAiNutrisiSp = async function() {
+  var namaEl = document.getElementById('f-nama');
+  if (!namaEl || !namaEl.value.trim()) {
+    showAlert('Isi Nama Bahan terlebih dahulu', 'warning');
+    return;
+  }
+  var btn = document.querySelector('button[onclick="fillAiNutrisiSp()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    var res = await api.post('/ai/suggest-nutrisi', { nama: namaEl.value.trim() });
+    var mapping = { energi: 'kalori', protein: 'protein', lemak: 'lemak', karbohidrat: 'karbohidrat', serat: 'serat' };
+    (window._aiFields || []).forEach(function(f) {
+      var el = document.getElementById('f-' + f.k);
+      var srcKey = mapping[f.k];
+      if (el && res[srcKey] != null) el.value = Number(res[srcKey]).toFixed(f.decimals != null ? f.decimals : 1);
+    });
+    showToast('Gizi terisi dari AI', 'success');
+  } catch (e) {
+    showAlert('Gagal: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Isi AI'; }
+  }
+};
+
 function showConfirm(msg, okLabel) {
   return new Promise((resolve) => {
     const modal = document.getElementById('confirm-modal');
