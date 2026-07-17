@@ -385,6 +385,25 @@ function openMenuForm(editing) {
       </div>
     </div>
     <div class="border-t border-stone-200 mt-4 pt-3">
+      <div onclick="var n=document.getElementById('sp-ref-table');n.classList.toggle('hidden');this.querySelector('svg').classList.toggle('rotate-180')" class="flex items-center gap-2 cursor-pointer select-none mb-2">
+        <svg class="w-3.5 h-3.5 text-stone-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        <span class="text-xs font-semibold text-stone-400 uppercase tracking-wider">Standar Satuan Penukar (SP) — <span id="sp-ref-title" class="text-stone-500">pilih kategori</span></span>
+      </div>
+      <div id="sp-ref-table" class="hidden overflow-x-auto mb-3">
+        <table class="w-full text-[11px] border-collapse">
+          <thead><tr class="bg-stone-100">
+            <th class="px-3 py-1.5 text-left font-semibold text-stone-500 border border-stone-200">Kategori</th>
+            <th class="px-3 py-1.5 text-right font-semibold text-stone-500 border border-stone-200">SP</th>
+          </tr></thead>
+          <tbody id="sp-ref-body">
+            ${['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'].map(k => 
+              '<tr><td class="px-3 py-1.5 border border-stone-200 text-stone-600">' + k + '</td><td id="sp-val-' + k.replace(/\s/g,'') + '" class="px-3 py-1.5 border border-stone-200 text-right mono font-medium text-stone-700">-</td></tr>'
+            ).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="border-t border-stone-200 mt-4 pt-3">
       <div class="flex justify-between items-center mb-2">
         <div class="font-semibold text-sm">Bahan & Gramasi</div>
         <button type="button" onclick="addBahanRow()" class="text-xs border border-stone-300 px-3 py-1 rounded">+ Tambah Bahan</button>
@@ -471,7 +490,7 @@ async function hitungNutrisiAI() {
 }
 
 async function loadSpMap(kategori) {
-  if (!kategori) { window._spMap = {}; window._jumlahPorsi = 0; return; }
+  if (!kategori) { window._spMap = {}; window._jumlahPorsi = 0; document.getElementById('sp-ref-table') && (document.getElementById('sp-ref-table').classList.add('hidden')); return; }
   try {
     const [rows, pm] = await Promise.all([
       api.get('/sp/standar/' + encodeURIComponent(kategori)),
@@ -482,6 +501,15 @@ async function loadSpMap(kategori) {
     window._jumlahPorsi = Number(pm.total) || 0;
     const el = document.getElementById('m-jumlah-porsi');
     if (el) el.value = window._jumlahPorsi;
+    // Populate SP reference table
+    var tbl = document.getElementById('sp-ref-table');
+    var title = document.getElementById('sp-ref-title');
+    if (tbl) { tbl.classList.remove('hidden'); }
+    if (title) { title.textContent = kategori; }
+    for (const kat of ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak']) {
+      var cel = document.getElementById('sp-val-' + kat.replace(/\s/g,''));
+      if (cel) cel.textContent = window._spMap[kat] != null ? window._spMap[kat] : '-';
+    }
     // Recalculate existing bahan items with new SP data
     for (var i = 0; i < window._menuBahan.length; i++) {
       var b = window._menuBahan[i];
