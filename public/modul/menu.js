@@ -476,7 +476,7 @@ function hitungNutrisi() {
 
 async function hitungNutrisiAI() {
   var nama = document.getElementById('m-nama')?.value.trim();
-  var bahan = (window._menuBahan || []).filter(function(b) { return b.bahan_baku_id; });
+  var bahan = (window._menuBahan || []).filter(function(b) { return b.bahan_baku_id || b.nama; });
   if (!bahan.length) {
     showAlert('Tambahkan bahan terlebih dahulu', 'warning');
     return;
