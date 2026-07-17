@@ -290,6 +290,64 @@ if (cluster.isMaster && WORKERS > 1) {
     }
   });
 
+  // Endpoint CREATE TABLE menu_bahan (admin only)
+  app.get('/api/migrate/create-menu-bahan', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      // Cek apakah tabel sudah ada
+      const [tables] = await db.query("SHOW TABLES LIKE 'menu_bahan'");
+      if (tables.length > 0) {
+        return res.send(`
+          <div style="font-family:sans-serif;padding:2rem;text-align:center">
+            <h2 style="color:#16a34a">✅ Tabel menu_bahan sudah ada</h2>
+            <p style="color:#6b7280;margin-top:0.5rem">Tidak perlu dibuat ulang.</p>
+            <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;
+               background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">
+              Kembali ke Dashboard
+            </a>
+          </div>`);
+      }
+
+      await db.query(`
+        CREATE TABLE menu_bahan (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          menu_id INT NOT NULL,
+          bahan_baku_id INT NOT NULL,
+          jumlah DECIMAL(15,3) NOT NULL,
+          FOREIGN KEY (menu_id) REFERENCES menu(id) ON DELETE CASCADE,
+          FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#16a34a">✅ CREATE TABLE BERHASIL!</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">
+            Tabel <code>menu_bahan</code> berhasil dibuat dengan struktur:
+          </p>
+          <pre style="background:#f5f5f4;padding:1rem;border-radius:0.5rem;text-align:left;margin-top:1rem;font-size:0.8rem;overflow-x:auto">
+CREATE TABLE menu_bahan (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  menu_id INT NOT NULL,
+  bahan_baku_id INT NOT NULL,
+  jumlah DECIMAL(15,3) NOT NULL,
+  FOREIGN KEY (menu_id) REFERENCES menu(id) ON DELETE CASCADE,
+  FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id) ON DELETE CASCADE
+) ENGINE=InnoDB CHARSET=utf8mb4
+          </pre>
+          <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;
+             background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">
+            Kembali ke Dashboard
+          </a>
+        </div>`);
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#dc2626">❌ Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+        </div>`);
+    }
+  });
+
   // ── ERROR HANDLING ──────────────────────
   process.on('unhandledRejection', (err) => console.error('Unhandled Rejection:', err));
   app.use((err, req, res, next) => {
