@@ -290,6 +290,84 @@ if (cluster.isMaster && WORKERS > 1) {
     }
   });
 
+  // Endpoint CREATE TABLE siklus_menu_item (admin only)
+  app.get('/api/migrate/create-siklus-menu-item', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      // Cek apakah tabel sudah ada
+      const [tables] = await db.query("SHOW TABLES LIKE 'siklus_menu_item'");
+      if (tables.length > 0) {
+        return res.send(`
+          <div style="font-family:sans-serif;padding:2rem;text-align:center">
+            <h2 style="color:#16a34a">✅ Tabel siklus_menu_item sudah ada</h2>
+            <p style="color:#6b7280;margin-top:0.5rem">Tidak perlu dibuat ulang.</p>
+            <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;
+               background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">
+              Kembali ke Dashboard
+            </a>
+          </div>`);
+      }
+
+      await db.query(`
+        CREATE TABLE siklus_menu_item (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          siklus_id INT NOT NULL,
+          hari_ke INT NOT NULL,
+          hari_nama VARCHAR(20) NOT NULL,
+          menu_id INT DEFAULT NULL,
+          menu_nama VARCHAR(200) DEFAULT NULL,
+          resep_map TEXT DEFAULT NULL,
+          jumlah_porsi INT DEFAULT 0,
+          kalori DECIMAL(10,2) DEFAULT 0.00,
+          protein DECIMAL(10,2) DEFAULT 0.00,
+          karbohidrat DECIMAL(10,2) DEFAULT 0.00,
+          lemak DECIMAL(10,2) DEFAULT 0.00,
+          serat DECIMAL(10,2) DEFAULT 0.00,
+          foto VARCHAR(255) DEFAULT NULL,
+          FOREIGN KEY (siklus_id) REFERENCES siklus_menu(id) ON DELETE CASCADE,
+          INDEX idx_siklus (siklus_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#16a34a">✅ CREATE TABLE BERHASIL!</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">
+            Tabel <code>siklus_menu_item</code> berhasil dibuat dengan struktur:
+          </p>
+          <pre style="background:#f5f5f4;padding:1rem;border-radius:0.5rem;text-align:left;margin-top:1rem;font-size:0.75rem;overflow-x:auto">
+CREATE TABLE siklus_menu_item (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  siklus_id INT NOT NULL,
+  hari_ke INT NOT NULL,
+  hari_nama VARCHAR(20) NOT NULL,
+  menu_id INT DEFAULT NULL,
+  menu_nama VARCHAR(200) DEFAULT NULL,
+  resep_map TEXT DEFAULT NULL,
+  jumlah_porsi INT DEFAULT 0,
+  kalori DECIMAL(10,2) DEFAULT 0.00,
+  protein DECIMAL(10,2) DEFAULT 0.00,
+  karbohidrat DECIMAL(10,2) DEFAULT 0.00,
+  lemak DECIMAL(10,2) DEFAULT 0.00,
+  serat DECIMAL(10,2) DEFAULT 0.00,
+  foto VARCHAR(255) DEFAULT NULL,
+  FOREIGN KEY (siklus_id) REFERENCES siklus_menu(id) ON DELETE CASCADE,
+  INDEX idx_siklus (siklus_id)
+) ENGINE=InnoDB CHARSET=utf8mb4
+          </pre>
+          <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;
+             background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">
+            Kembali ke Dashboard
+          </a>
+        </div>`);
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#dc2626">❌ Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+        </div>`);
+    }
+  });
+
   // Endpoint CREATE TABLE menu_bahan (admin only)
   app.get('/api/migrate/create-menu-bahan', requireAuth, requireRole('admin'), async (req, res) => {
     try {
