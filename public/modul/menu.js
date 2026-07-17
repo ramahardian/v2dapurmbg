@@ -225,8 +225,7 @@ const KATEGORI_COLORS = {
   'Ibu Hamil': { bg: '#be123c' },
   'Ibu Menyusui': { bg: '#6d28d9' },
   'Balita': { bg: '#0e7490' },
-  'PAUD': { bg: '#047857' },
-  'TK': { bg: '#b45309' },
+  'TK/PAUD': { bg: '#047857' },
   'SD': { bg: '#c2410c' },
   'SMP': { bg: '#1d4ed8' },
 };
@@ -360,7 +359,7 @@ function openMenuForm(editing) {
       </div>
       <div><label class="text-sm">Kategori Penerima</label>
         <select id="m-kategori" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
-          <option value="">—</option>${['Ibu Hamil','Ibu Menyusui','Balita','PAUD','TK','SD','SMP'].map(o => `<option value="${o}" ${m.kategori_penerima === o ? 'selected':''}>${o}</option>`).join('')}
+          <option value="">—</option>${['Ibu Hamil','Ibu Menyusui','Balita','TK/PAUD','SD','SMP'].map(o => `<option value="${o}" ${m.kategori_penerima === o ? 'selected':''}>${o}</option>`).join('')}
         </select></div>
       <div><label class="text-sm">Jumlah Porsi <span id="m-porsi-label" class="text-stone-400 font-normal">(dari penerima manfaat)</span></label>
         <input id="m-jumlah-porsi" type="number" readonly value="0" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md bg-stone-50 text-sm font-semibold" />
@@ -682,7 +681,7 @@ function openAIDialog() {
   document.getElementById('modal-body').innerHTML = `
     <div><label class="text-sm">Kategori Penerima</label>
       <select id="ai-kat" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
-        ${['Ibu Hamil','Ibu Menyusui','Balita','PAUD','TK','SD','SMP'].map(o => `<option>${o}</option>`).join('')}
+        ${['Ibu Hamil','Ibu Menyusui','Balita','TK/PAUD','SD','SMP'].map(o => `<option>${o}</option>`).join('')}
       </select></div>
     <div class="mt-3"><label class="text-sm">Catatan (opsional)</label>
       <textarea id="ai-note" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md" placeholder="Mis. hindari kacang, bahan lokal Jawa Tengah"></textarea></div>
