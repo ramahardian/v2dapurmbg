@@ -279,9 +279,7 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
     }
 
     if (!rows.length) {
-      // Deteksi bolos: lewat shift end = bolos, 4 jam setelah start = peringatan
       let bolos = false;
-      let peringatan_bolos = false;
       let peringatan_terlambat = false;
       if (shift) {
         const sStart = parseTimeToMinutes(shift.jam_masuk);
@@ -289,22 +287,15 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         const isCross = sEnd <= sStart;
         const awalBolehMasuk = (sStart - 30 + 1440) % 1440;
         const batasTelat = (sStart + 15 + 1440) % 1440;
-        const batasBolos = isCross
-          ? (sStart + 240) % 1440
-          : Math.min(sEnd, sStart + 240);
         if (!isCross) {
           if (currentMinutes >= sEnd) {
             bolos = true;
-          } else if (currentMinutes >= batasBolos) {
-            peringatan_bolos = true;
           } else if (currentMinutes > batasTelat) {
             peringatan_terlambat = true;
           }
         } else {
           if (currentMinutes < awalBolehMasuk && currentMinutes >= sEnd) {
             bolos = true;
-          } else if ((currentMinutes >= batasBolos || currentMinutes < sEnd) && currentMinutes < awalBolehMasuk) {
-            peringatan_bolos = true;
           } else if (currentMinutes >= awalBolehMasuk && currentMinutes > batasTelat) {
             peringatan_terlambat = true;
           }
@@ -316,8 +307,6 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         pesan = 'Hari ini libur';
       } else if (bolos) {
         pesan = 'Anda bolos hari ini';
-      } else if (peringatan_bolos) {
-        pesan = 'Anda melebihi 4 jam dari jam shift! Clock-in sekarang akan dicatat sebagai BOLOS.';
       } else if (terkunci && !bolos) {
         pesan = 'Tidak ada jadwal shift hari ini';
       } else if (peringatan_terlambat) {
@@ -330,7 +319,6 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         sudah_keluar: false,
         data: null,
         bolos,
-        peringatan_bolos,
         peringatan_terlambat,
         pesan_bolos: bolos ? 'Anda tidak melakukan clock-in hari ini' : '',
         terkunci,

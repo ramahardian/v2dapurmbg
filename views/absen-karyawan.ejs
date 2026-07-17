@@ -480,11 +480,6 @@
               +'<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
               +'<div><div class="font-semibold text-slate-600">Absen Terkunci</div><div class="text-xs text-slate-400 mt-0.5">Belum waktunya absen. Clock-in dibuka 30 menit sebelum shift dimulai.</div></div></div>';
           }
-        } else if (s.peringatan_bolos) {
-          el.innerHTML = '<div class="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-lg p-4">'
-            +'<div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">'
-            +'<svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>'
-            +'<div><div class="font-semibold text-orange-700">Peringatan Bolos!</div><div class="text-xs text-orange-500 mt-0.5">Anda melebihi 4 jam dari jam shift. Clock-in sekarang akan dicatat sebagai BOLOS.</div></div></div>'
         } else if (s.peringatan_terlambat) {
           el.innerHTML = '<div class="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-lg p-4">'
             +'<div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">'
@@ -584,13 +579,6 @@
       // Jika peringatan terlambat: tombol tetap aktif tapi dengan peringatan
       if (s.peringatan_terlambat && (!s.sudah_absensi||!s.sudah_masuk)) {
         ci.className='h-16 btn btn-primary'; ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Clock In (Terlambat)</span>'; ci.disabled=false; ci.onclick=()=>confirmAbsen('in');
-        co.className='h-16 btn btn-outline text-slate-400'; co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Clock Out</span>'; co.disabled=true; co.onclick=null;
-        return;
-      }
-      
-      // Jika peringatan bolos: tombol tetap aktif, status sdh ditampilkan di kartu
-      if (s.peringatan_bolos && (!s.sudah_absensi||!s.sudah_masuk)) {
-        ci.className='h-16 btn btn-primary'; ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Clock In (Bolos)</span>'; ci.disabled=false; ci.onclick=()=>confirmAbsen('in');
         co.className='h-16 btn btn-outline text-slate-400'; co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Clock Out</span>'; co.disabled=true; co.onclick=null;
         return;
       }
