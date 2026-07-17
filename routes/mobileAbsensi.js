@@ -262,16 +262,13 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         const isCrossDay = shiftEnd <= shiftStart;
         const awalBolehMasuk = (shiftStart - 30 + 1440) % 1440;
         const batasTelat = (shiftStart + 15 + 1440) % 1440;
-        const batasBolos = isCrossDay
-          ? (shiftStart + 240) % 1440
-          : Math.min(shiftEnd, shiftStart + 240);
 
         if (!isCrossDay) {
-          if (currentMinutes >= batasBolos) {
+          if (currentMinutes >= shiftEnd) {
             terkunci = true;
           }
         } else {
-          if ((currentMinutes >= batasBolos || currentMinutes < shiftEnd) && currentMinutes < awalBolehMasuk) {
+          if (currentMinutes < awalBolehMasuk && currentMinutes >= shiftEnd) {
             terkunci = true;
           }
         }
@@ -282,8 +279,9 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
     }
 
     if (!rows.length) {
-      // Deteksi bolos: 4 jam setelah shift start (atau shift end, mana yg lebih dulu)
+      // Deteksi bolos: lewat shift end = bolos, 4 jam setelah start = peringatan
       let bolos = false;
+      let peringatan_bolos = false;
       let peringatan_terlambat = false;
       if (shift) {
         const sStart = parseTimeToMinutes(shift.jam_masuk);
@@ -295,14 +293,18 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
           ? (sStart + 240) % 1440
           : Math.min(sEnd, sStart + 240);
         if (!isCross) {
-          if (currentMinutes >= batasBolos) {
+          if (currentMinutes >= sEnd) {
             bolos = true;
+          } else if (currentMinutes >= batasBolos) {
+            peringatan_bolos = true;
           } else if (currentMinutes > batasTelat) {
             peringatan_terlambat = true;
           }
         } else {
-          if ((currentMinutes >= batasBolos || currentMinutes < sEnd) && currentMinutes < awalBolehMasuk) {
+          if (currentMinutes < awalBolehMasuk && currentMinutes >= sEnd) {
             bolos = true;
+          } else if ((currentMinutes >= batasBolos || currentMinutes < sEnd) && currentMinutes < awalBolehMasuk) {
+            peringatan_bolos = true;
           } else if (currentMinutes >= awalBolehMasuk && currentMinutes > batasTelat) {
             peringatan_terlambat = true;
           }
@@ -314,6 +316,8 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         pesan = 'Hari ini libur';
       } else if (bolos) {
         pesan = 'Anda bolos hari ini';
+      } else if (peringatan_bolos) {
+        pesan = 'Anda melebihi 4 jam dari jam shift! Clock-in sekarang akan dicatat sebagai BOLOS.';
       } else if (terkunci && !bolos) {
         pesan = 'Tidak ada jadwal shift hari ini';
       } else if (peringatan_terlambat) {
@@ -326,6 +330,7 @@ router.get('/absensi/status', ensureKaryawan, async (req, res) => {
         sudah_keluar: false,
         data: null,
         bolos,
+        peringatan_bolos,
         peringatan_terlambat,
         pesan_bolos: bolos ? 'Anda tidak melakukan clock-in hari ini' : '',
         terkunci,
@@ -526,22 +531,22 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
       const sEnd = parseTimeToMinutes(shiftCheck.jam_keluar);
       const nowMinCheck = nowTimeCheck.getHours() * 60 + nowTimeCheck.getMinutes();
       const isCrossDay = sEnd <= sStart;
-      const batasTelat = (sStart + 15 + 1440) % 1440;       // 15 menit toleransi
+      const batasTelat = (sStart + 15 + 1440) % 1440;
       const batasBolos = isCrossDay
         ? (sStart + 240) % 1440
         : Math.min(sEnd, sStart + 240);
       
       if (!isCrossDay) {
-        if (nowMinCheck < batasBolos) {
+        if (nowMinCheck < sEnd) {
           bolehMasuk = true;
           if (nowMinCheck > batasTelat) {
             terlambat = true;
           }
         }
       } else {
-        if (nowMinCheck >= sStart && nowMinCheck < batasBolos) {
+        if (nowMinCheck >= sStart || nowMinCheck < sEnd) {
           bolehMasuk = true;
-          if (nowMinCheck > batasTelat) {
+          if (nowMinCheck > batasTelat && nowMinCheck < sStart) {
             terlambat = true;
           }
         }
@@ -549,8 +554,7 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
       
       if (!bolehMasuk) {
         return res.status(403).json({
-          error: 'Waktu clock-in sudah lewat (sudah melebihi 4 jam dari jam shift).',
-          solusi: 'Anda akan dicatat sebagai BOLOS. Hubungi admin jika ini adalah kesalahan.'
+          error: 'Waktu absen sudah lewat (shift sudah selesai). Anda akan dicatat sebagai BOLOS.'
         });
       }
     }
