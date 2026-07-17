@@ -362,11 +362,14 @@ function openMenuForm(editing) {
         <select id="m-kategori" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
           <option value="">—</option>${['Ibu Hamil','Ibu Menyusui','Balita','PAUD','TK','SD','SMP'].map(o => `<option value="${o}" ${m.kategori_penerima === o ? 'selected':''}>${o}</option>`).join('')}
         </select></div>
+      <div><label class="text-sm">Jumlah Porsi <span id="m-porsi-label" class="text-stone-400 font-normal">(dari penerima manfaat)</span></label>
+        <input id="m-jumlah-porsi" type="number" readonly value="0" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md bg-stone-50 text-sm font-semibold" />
+      </div>
     </div>
     <div class="mt-3"><label class="text-sm">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
     <div class="flex items-center justify-between mt-3">
       <div class="flex-1 grid grid-cols-5 gap-2">
-        ${[['gramasi_total','Gramasi'],['kalori','Kalori'],['protein','Protein'],['karbohidrat','Karbo'],['lemak','Lemak']].map(([k,l]) =>
+        ${[['gramasi_total','Total Gramasi'],['kalori','Kalori'],['protein','Protein'],['karbohidrat','Karbo'],['lemak','Lemak']].map(([k,l]) =>
           `<div><label class="text-xs">${l}</label><input id="m-${k}" type="number" value="${m[k] || 0}" class="mt-1 w-full h-9 px-2 border border-stone-200 rounded-md mono text-sm" /></div>`).join('')}
       </div>
       <button type="button" onclick="hitungNutrisiAI()" class="ml-2 mt-5 shrink-0 px-3 h-9 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100 whitespace-nowrap" title="Hitung nutrisi pakai AI">AI</button>
@@ -467,12 +470,18 @@ async function hitungNutrisiAI() {
 }
 
 async function loadSpMap(kategori) {
-  if (!kategori) { window._spMap = {}; return; }
+  if (!kategori) { window._spMap = {}; window._jumlahPorsi = 0; return; }
   try {
-    const rows = await api.get('/sp/standar/' + encodeURIComponent(kategori));
+    const [rows, pm] = await Promise.all([
+      api.get('/sp/standar/' + encodeURIComponent(kategori)),
+      api.get('/penerima_manfaat/total?kategori_penerima=' + encodeURIComponent(kategori))
+    ]);
     window._spMap = {};
     for (const r of rows) window._spMap[r.kategori_sp] = Number(r.sp_value);
-  } catch { window._spMap = {}; }
+    window._jumlahPorsi = Number(pm.total) || 0;
+    const el = document.getElementById('m-jumlah-porsi');
+    if (el) el.value = window._jumlahPorsi;
+  } catch { window._spMap = {}; window._jumlahPorsi = 0; }
 }
 
 function updateBahan(i, k, v) {
@@ -484,9 +493,10 @@ function updateBahan(i, k, v) {
     window._menuBahan[i].berat_1_sp = bb ? (+bb.berat_1_sp || 0) : 0;
     window._menuBahan[i].persen_bdd = bb ? (+bb.persen_bdd || 100) : 100;
     window._menuBahan[i].berat_per_satuan = bb ? (+bb.berat_per_satuan || 0) : 0;
-    // Auto-calculate jumlah from SP
+    // Auto-calculate jumlah from SP × jumlah porsi
     if (bb && bb.kategori_sp && bb.berat_1_sp > 0 && window._spMap && window._spMap[bb.kategori_sp]) {
-      window._menuBahan[i].jumlah = window._spMap[bb.kategori_sp] * (+bb.berat_1_sp);
+      var perPorsi = window._spMap[bb.kategori_sp] * (+bb.berat_1_sp);
+      window._menuBahan[i].jumlah = perPorsi * (window._jumlahPorsi || 1);
     }
     renderBahanList();
   }
@@ -502,7 +512,9 @@ function renderBahanList() {
       var extras = [];
       extras.push('1SP=' + bb.berat_1_sp + 'g');
       if (+bb.berat_per_satuan > 0) extras.push('1' + bb.satuan + '=' + bb.berat_per_satuan + 'g');
-      spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">' + bb.kategori_sp + ' · ' + extras.join(' · ') + ' · BDD=' + bb.persen_bdd + '%</div>';
+      var perPorsi = window._spMap && window._spMap[bb.kategori_sp] ? window._spMap[bb.kategori_sp] * (+bb.berat_1_sp) : 0;
+      var totalGram = b.jumlah || 0;
+      spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">' + bb.kategori_sp + ' · ' + extras.join(' · ') + ' · BDD=' + bb.persen_bdd + '%' + (perPorsi ? ' · <span class="text-emerald-600 font-medium">' + perPorsi + 'g/porsi</span>' : '') + (totalGram ? ' · total <span class="text-emerald-700 font-medium">' + Math.round(totalGram) + 'g</span>' : '') + '</div>';
     } else if (bb && +bb.berat_per_satuan > 0) {
       spInfo = '<div class="col-span-2 text-[10px] text-stone-400 leading-tight">1 ' + bb.satuan + ' = ' + bb.berat_per_satuan + 'g</div>';
     }
