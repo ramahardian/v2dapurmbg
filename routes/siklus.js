@@ -67,9 +67,19 @@ router.get('/siklus/laporan', async (req, res) => {
       'SELECT * FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke ASC',
       [s.id]
     );
+    
+    // Also check which items have manually-assigned ingredients via grid picker
+    const [bahanCounts] = await db.query(
+      'SELECT hari_ke, COUNT(*) as bahan_count FROM siklus_menu_item_bahan WHERE siklus_id=? GROUP BY hari_ke',
+      [s.id]
+    );
+    const bahanMap = {};
+    for (const bc of bahanCounts) {
+      bahanMap[bc.hari_ke] = bc.bahan_count;
+    }
 
     const totalHari = s.total_hari || items.length || 7;
-    const filledDays = items.filter(it => it.menu_id).length;
+    const filledDays = items.filter(it => it.menu_id || (bahanMap[it.hari_ke] || 0) > 0).length;
     const coverage = totalHari ? Math.round((filledDays / totalHari) * 100) : 0;
     const uniqueMenus = new Set(items.filter(it => it.menu_id).map(it => it.menu_id));
 
@@ -582,7 +592,22 @@ router.get('/siklus/:id/laporan', async (req, res) => {
 
   // 3. Kalkulasi metrik kelengkapan siklus
   const totalDays = siklus.total_hari || items.length; // Total target hari dalam siklus
-  const filledDays = items.filter(it => it.menu_id).length; // Hari yang sudah diisi menu
+  
+  // Also check which items have manually-assigned ingredients via grid picker
+  const [bahanCounts] = await db.query(
+    'SELECT hari_ke, COUNT(*) as bahan_count FROM siklus_menu_item_bahan WHERE siklus_id=? GROUP BY hari_ke',
+    [req.params.id]
+  );
+  const bahanMap = {};
+  for (const bc of bahanCounts) {
+    bahanMap[bc.hari_ke] = bc.bahan_count;
+  }
+  // Mark items that have ingredients even without menu_id
+  for (const it of items) {
+    it._has_bahan = (bahanMap[it.hari_ke] || 0) > 0;
+  }
+  
+  const filledDays = items.filter(it => it.menu_id || it._has_bahan).length; // Hari yang sudah diisi
   const emptyDays = totalDays - filledDays; // Hari yang masih kosong
   const uniqueMenus = new Set(items.filter(it => it.menu_id).map(it => it.menu_id)).size; // Jumlah menu unik (menghindari duplikasi)
   const coverage = totalDays ? Math.round((filledDays / totalDays) * 100) : 0; // Persentase kelengkapan (%)
@@ -1152,12 +1177,50 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
       for (const it of items) {
         menuCounter++;
         if (!it.menu_id) {
+          // For manually-assigned items (no menu_id), try to fetch bahan from siklus_menu_item_bahan
+          const [gridBahan] = await db.query(
+            `SELECT b.id, b.nama, b.kategori_sp, b.persen_bdd, b.berat_1_sp
+             FROM siklus_menu_item_bahan sb
+             JOIN bahan_baku b ON b.id = sb.bahan_baku_id
+             WHERE sb.siklus_id=? AND sb.hari_ke=?`,
+            [s.id, it.hari_ke]
+          );
+          
+          const bahanList = [];
+          for (const b of gridBahan) {
+            const namaLower = b.nama.trim().toLowerCase();
+            const spRef = spRefByName[namaLower];
+            const persenBdd = spRef ? spRef.bdd_persen : Number(b.persen_bdd || 100);
+            const beratBersih = 0; // Grid assignments don't store weight — will be calculated from SP
+            const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
+            const kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
+            const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || null) : null;
+
+            let namaDisplay = b.nama;
+            if (spValue !== null) {
+              namaDisplay = b.nama + ' ' + String(spValue).replace('.', ',') + ' SP';
+            }
+
+            bahanList.push({
+              nama_display: namaDisplay,
+              nama: b.nama,
+              kategori_sp: b.kategori_sp,
+              sp_value: spValue,
+              berat_1_sp: Number(b.berat_1_sp || 0),
+              berat_bersih: beratBersih,
+              persen_bdd: persenBdd,
+              berat_kotor: beratKotor,
+              sumber_bdd: spRef ? 'sp_referensi' : 'bahan_baku',
+              kebutuhan_kg: kebutuhanKg,
+            });
+          }
+
           hariList.push({
             hari_ke: it.hari_ke,
             hari_nama: it.hari_nama,
             menu_label: 'MENU ' + menuCounter,
             menu_nama: it.menu_nama || '-',
-            bahan: [],
+            bahan: bahanList,
           });
           continue;
         }
