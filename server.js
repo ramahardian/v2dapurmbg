@@ -368,6 +368,85 @@ CREATE TABLE siklus_menu_item (
     }
   });
 
+  // Endpoint jalankan seed dummy data (admin only)
+  app.get('/api/migrate/seed-dummy', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      if (req.query.confirm !== '1') {
+        // Cek jumlah data yang akan terhapus
+        const [menuCount] = await db.query('SELECT COUNT(*) AS total FROM menu');
+        const [siklusCount] = await db.query('SELECT COUNT(*) AS total FROM siklus_menu');
+        const [itemCount] = await db.query('SELECT COUNT(*) AS total FROM siklus_menu_item');
+        const [bahanCount] = await db.query('SELECT COUNT(*) AS total FROM menu_bahan');
+
+        return res.send(`
+          <div style="font-family:sans-serif;padding:2rem;text-align:center;max-width:560px;margin:auto">
+            <h2 style="color:#d97706;margin-bottom:1rem">⚠️ Seed Data Dummy</h2>
+            <p style="color:#6b7280;margin-bottom:1.5rem">
+              Aksi ini akan <strong>MENGHAPUS</strong> data yang ada dan mengisi data contoh:
+            </p>
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:0.75rem;padding:1rem;margin-bottom:1.5rem;text-align:left">
+              <div style="display:flex;justify-content:space-between;padding:0.375rem 0">
+                <span>📋 Menu existing:</span><b>${menuCount[0].total}</b>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.375rem 0">
+                <span>📦 Menu bahan:</span><b>${bahanCount[0].total}</b>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.375rem 0">
+                <span>🔄 Siklus:</span><b>${siklusCount[0].total}</b>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.375rem 0">
+                <span>📅 Item siklus:</span><b>${itemCount[0].total}</b>
+              </div>
+            </div>
+            <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:0.75rem 1rem;border-radius:0.5rem;margin-bottom:1.5rem;font-size:0.875rem">
+              ⚠️ Semua data menu, menu_bahan, siklus_menu, siklus_menu_item akan dihapus dan diganti data contoh!
+            </div>
+            <a href="?confirm=1"
+               style="display:inline-block;padding:0.75rem 2rem;background:#d97706;color:white;
+                      text-decoration:none;border-radius:0.5rem;font-weight:600">
+              🚀 Ya, Jalankan Seed!
+            </a>
+            <br><br>
+            <a href="/" style="color:#6b7280;font-size:0.875rem">Batal</a>
+          </div>`);
+      }
+
+      // Jalankan seed via child process (exec agar output tertangkap semua)
+      const { exec } = require('child_process');
+      const seedPath = path.join(__dirname, 'scripts', 'seed-dummy.js');
+
+      exec(`node "${seedPath}"`, { cwd: __dirname, timeout: 60000 }, (error, stdout, stderr) => {
+        const output = stdout + (stderr ? '\n\n--- STDERR ---\n' + stderr : '');
+        const escapedOutput = output
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const success = !error;
+
+        res.send(`
+          <div style="font-family:sans-serif;padding:2rem;max-width:700px;margin:auto;background:#f5f5f4">
+            <h2 style="color:${success ? '#16a34a' : '#dc2626'}">
+              ${success ? '✅' : '❌'} ${success ? 'Seed Selesai!' : 'Seed Gagal'}
+            </h2>
+            <pre style="background:#1c1917;color:#a3e635;padding:1rem;border-radius:0.5rem;overflow-x:auto;font-size:0.8rem;line-height:1.5;white-space:pre-wrap">${escapedOutput}</pre>
+            ${success ? '<p style="color:#6b7280;margin-top:0.5rem">✅ 18 menu + 4 siklus + 154 menu_bahan berhasil dibuat.</p>' : `<p style="color:#dc2626;margin-top:0.5rem">${error.message}</p>`}
+            <div style="margin-top:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap">
+              <a href="/api/migrate/cek-data-siklus" style="padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">📊 Cek Data Siklus</a>
+              <a href="/api/migrate/cek-tabel" style="padding:0.5rem 1.5rem;background:#6366f1;color:white;text-decoration:none;border-radius:0.5rem">📋 Cek Tabel</a>
+              <a href="/" style="padding:0.5rem 1.5rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a>
+            </div>
+          </div>`);
+      });
+
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#dc2626">❌ Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+        </div>`);
+    }
+  });
+
   // Endpoint cek data siklus menu (admin only)
   app.get('/api/migrate/cek-data-siklus', requireAuth, requireRole('admin'), async (req, res) => {
     try {
