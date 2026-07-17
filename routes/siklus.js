@@ -1501,42 +1501,84 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     const jenjangSp = spByJenjang[displayJenjang] || {};
 
     for (const s of matchingSiklus) {
+      // Ambil semua item — termasuk yang tanpa menu_id (item grid manual)
       const [items] = await db.query(
         `SELECT si.*, m.nama as menu_nama_lengkap
          FROM siklus_menu_item si
          LEFT JOIN menu m ON m.id = si.menu_id
-         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL
+         WHERE si.siklus_id=?
          ORDER BY si.hari_ke ASC`,
         [s.id]
       );
 
+      // Cek item mana yang punya bahan dari grid (siklus_menu_item_bahan)
+      const [bahanCounts] = await db.query(
+        'SELECT hari_ke, COUNT(*) as bahan_count FROM siklus_menu_item_bahan WHERE siklus_id=? GROUP BY hari_ke',
+        [s.id]
+      );
+      const bahanMap = {};
+      for (const bc of bahanCounts) {
+        bahanMap[bc.hari_ke] = bc.bahan_count;
+      }
+
       for (const it of items) {
         const hk = it.hari_ke;
+        const isManual = !it.menu_id && (bahanMap[hk] || 0) > 0;
+
+        // Skip item yang benar-benar kosong (tanpa menu_id dan tanpa grid bahan)
+        if (!it.menu_id && !isManual) continue;
+
         if (!hariMap[hk]) hariMap[hk] = {};
         if (!hariMap[hk][displayJenjang]) hariMap[hk][displayJenjang] = {};
         if (!totalPorsiByHari[hk]) totalPorsiByHari[hk] = 0;
         totalPorsiByHari[hk] += penerimaCount;
         if (!menuNamesByHari[hk]) menuNamesByHari[hk] = [];
-        if (it.menu_nama_lengkap && !menuNamesByHari[hk].includes(it.menu_nama_lengkap)) {
-          menuNamesByHari[hk].push(it.menu_nama_lengkap);
+        const menuNama = it.menu_nama_lengkap || it.menu_nama || '';
+        if (menuNama && !menuNamesByHari[hk].includes(menuNama)) {
+          menuNamesByHari[hk].push(menuNama);
         }
 
-        // Get menu bahan
-        const [bahanRows] = await db.query(
-          `SELECT b.id, b.nama, b.kategori_sp, b.persen_bdd, b.berat_1_sp, mb.jumlah as berat_bersih
-           FROM menu_bahan mb
-           JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-           WHERE mb.menu_id=?`,
-          [it.menu_id]
-        );
+        let bahanRows;
+        if (it.menu_id) {
+          // Menu tradisional — ambil bahan dari menu_bahan
+          [bahanRows] = await db.query(
+            `SELECT b.id, b.nama, b.kategori_sp, b.persen_bdd, b.berat_1_sp, mb.jumlah as berat_bersih
+             FROM menu_bahan mb
+             JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+             WHERE mb.menu_id=?`,
+            [it.menu_id]
+          );
+        } else {
+          // Item grid manual — ambil bahan dari siklus_menu_item_bahan
+          [bahanRows] = await db.query(
+            `SELECT b.id, b.nama, b.kategori_sp, b.persen_bdd, b.berat_1_sp, 0 as berat_bersih
+             FROM siklus_menu_item_bahan sb
+             JOIN bahan_baku b ON b.id = sb.bahan_baku_id
+             WHERE sb.siklus_id=? AND sb.hari_ke=?`,
+            [s.id, it.hari_ke]
+          );
+        }
 
         for (const b of bahanRows) {
           const namaLower = b.nama.trim().toLowerCase();
           const spRef = spRefByName[namaLower];
           const persenBdd = spRef ? spRef.bdd_persen : Number(b.persen_bdd || 100);
-          const beratBersih = Number(b.berat_bersih || 0);
-          const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
-          const kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
+
+          let beratBersih, beratKotor, kebutuhanKg;
+
+          if (it.menu_id) {
+            // Menu tradisional: pakai berat dari menu_bahan
+            beratBersih = Number(b.berat_bersih || 0);
+            beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
+            kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
+          } else {
+            // Grid manual: estimasi berat dari SP value × berat_1_sp
+            const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || 0) : 0;
+            const estWeightPerPerson = spValue * Number(b.berat_1_sp || 0);
+            beratBersih = estWeightPerPerson;
+            beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
+            kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
+          }
 
           const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || null) : null;
           let namaDisplay = b.nama;
