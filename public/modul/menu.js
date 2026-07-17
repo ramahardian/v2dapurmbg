@@ -489,6 +489,7 @@ async function hitungNutrisiAI() {
 
 async function loadSpMap(kategori) {
   if (!kategori) { window._spMap = {}; window._jumlahPorsi = 0; var tbl = document.getElementById('sp-ref-table'); if (tbl) tbl.classList.add('hidden'); return; }
+  window._spMap = {};
   try {
     var spJenjang = kategori;
     var pmKategori = kategori;
@@ -514,18 +515,23 @@ async function loadSpMap(kategori) {
       var cel = document.getElementById('sp-val-' + kat.replace(/\s/g,''));
       if (cel) cel.textContent = window._spMap[kat] != null ? window._spMap[kat] : '-';
     }
-    // Recalculate existing bahan items with new SP data (hanya yang belum diedit manual)
+    // Recalculate existing bahan items with new SP data
+    // - _autoJumlah terisi: re-auto-kalkulasi (sebelumnya auto)
+    // - jumlah === 0: belum sempat terisi (ditambah sebelum SP termuat)
+    // - lainnya: diedit manual, skip
     for (var i = 0; i < window._menuBahan.length; i++) {
       var b = window._menuBahan[i];
-      if (b._autoJumlah !== undefined && b.bahan_baku_id && b.kategori_sp && b.berat_1_sp > 0 && window._spMap && window._spMap[b.kategori_sp]) {
-        var perPorsi = window._spMap[b.kategori_sp] * (+b.berat_1_sp);
-        b.jumlah = perPorsi * (window._jumlahPorsi || 1);
-        b._autoJumlah = b.jumlah;
+      if (b.bahan_baku_id && b.kategori_sp && b.berat_1_sp > 0 && window._spMap && window._spMap[b.kategori_sp]) {
+        if (b._autoJumlah !== undefined || !b.jumlah) {
+          var perPorsi = window._spMap[b.kategori_sp] * (+b.berat_1_sp);
+          b.jumlah = perPorsi * (window._jumlahPorsi || 1);
+          b._autoJumlah = b.jumlah;
+        }
       }
     }
     renderBahanList();
     hitungNutrisi();
-  } catch { window._spMap = {}; window._jumlahPorsi = 0; }
+  } catch (e) { console.error('loadSpMap error:', e); window._spMap = {}; window._jumlahPorsi = 0; }
 }
 
 function updateBahan(i, k, v) {
