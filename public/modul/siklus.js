@@ -124,7 +124,8 @@ async function reloadSiklusList() {
 
   wrap.innerHTML = selectAllHtml + list.map(s => {
     const statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-600';
-    const menuCount = (s.items || []).filter(it => it.menu_id).length;
+    // Count items that have either menu_id (from existing menu) OR have bahan ingredients assigned via grid picker
+    const menuCount = (s.items || []).filter(it => it.menu_id || it._has_bahan).length;
     return `<div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-lg hover:border-stone-300 transition-all duration-200 group">
       <div class="flex justify-between items-start mb-3">
         <div class="flex items-center gap-3 min-w-0">

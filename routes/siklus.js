@@ -26,6 +26,23 @@ router.get('/siklus', async (req, res) => {
       'SELECT * FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke ASC',
       [s.id]
     );
+    
+    // Also check which items have bahan (ingredients) assigned via the grid picker
+    // This handles manually-created siklus where menu_id is empty but bahan are assigned
+    const [bahanCounts] = await db.query(
+      'SELECT hari_ke, COUNT(*) as bahan_count FROM siklus_menu_item_bahan WHERE siklus_id=? GROUP BY hari_ke',
+      [s.id]
+    );
+    const bahanMap = {};
+    for (const bc of bahanCounts) {
+      bahanMap[bc.hari_ke] = bc.bahan_count;
+    }
+    
+    // Mark items that have ingredients even without menu_id
+    for (const it of items) {
+      it._has_bahan = (bahanMap[it.hari_ke] || 0) > 0;
+    }
+    
     s.items = items;
   }
   res.json(rows);
