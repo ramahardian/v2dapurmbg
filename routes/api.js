@@ -16,7 +16,6 @@ const shiftRoutes = require('./shift');
 const userRoutes = require('./users');
 const templateRoutes = require('./template');
 const bahanBakuRoutes = require('./bahanBaku');
-const notifikasiRoutes = require('./notifikasi');
 const ijinCutiRoutes = require('./ijinCuti');
 
 router.use(genericRoutes);
@@ -37,7 +36,6 @@ router.use('/template', templateRoutes);
 router.use('/ijin-cuti', ijinCutiRoutes);
 router.use(require('./purchase_order'));
 router.use(require('./sp'));
-router.use(notifikasiRoutes);
 router.use(require('./laporan_reports'));
 router.use('/mobile', require('./mobileAbsensi'));
 

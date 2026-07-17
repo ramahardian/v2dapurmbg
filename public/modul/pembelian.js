@@ -112,16 +112,6 @@ async function kirimKeKoperasi(po) {
     if (result.success) {
       showToast('PO berhasil dikirim ke koperasi. Kode: ' + (result.data?.kode_pesanan || '-'), 'success');
 
-      // Kirim notifikasi WhatsApp ke admin
-      try {
-        fetch('/api/notif/wa', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: `🛒 *PESANAN BARU DARI DAPUR*\n\nPO: ${po.no_po}\nUnit Dapur: ${po.unit_dapur || '-'}\nSupplier: ${po.supplier_nama || '-'}\nTanggal: ${po.tanggal}\nTotal: Rp ${(Number(po.total_nilai) || 0).toLocaleString('id-ID')}\nStatus: Dikirim ke Koperasi\n\nTerkirim otomatis dari sistem dapur.`,
-          }),
-        });
-      } catch (_) {}
     } else {
       showAlert('Gagal: ' + (result.message || 'Respons tidak valid'), 'error');
     }

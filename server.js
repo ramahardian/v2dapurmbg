@@ -29,7 +29,6 @@ if (cluster.isMaster && WORKERS > 1) {
   const helmet = require('helmet');
   const cookieParser = require('cookie-parser');
   const jwt = require('jsonwebtoken');
-  const whatsappBot = require('./services/whatsappBot');
   const { requireAuth, requireRole } = require('./middleware/auth');
   const authRoutes = require('./routes/auth');
   const apiRoutes = require('./routes/api');
@@ -265,9 +264,6 @@ if (cluster.isMaster && WORKERS > 1) {
   app.listen(PORT, () => {
     const label = isWorker ? `⚡ Worker ${process.pid}` : '🚀 Server';
     console.log(`${label} — http://localhost:${PORT}`);
-    // WA Bot hanya jalan di worker pertama
-    if (process.env.WA_BOT_ENABLED === 'true' && (!isWorker || cluster.worker?.id === 1)) {
-      whatsappBot.init().catch(e => console.error('Gagal init WA Bot:', e.message));
-    }
+
   });
 }
