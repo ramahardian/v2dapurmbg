@@ -83,6 +83,43 @@ router.get('/siklus/laporan', async (req, res) => {
     const coverage = totalHari ? Math.round((filledDays / totalHari) * 100) : 0;
     const uniqueMenus = new Set(items.filter(it => it.menu_id).map(it => it.menu_id));
 
+    // Hitung estimasi gizi untuk item manual (via grid picker tanpa menu_id)
+    const hasManual = items.some(it => !it.menu_id && (bahanMap[it.hari_ke] || 0) > 0);
+    if (hasManual) {
+      const [gridBahan] = await db.query(
+        `SELECT sb.hari_ke, b.kalori, b.protein, b.karbohidrat, b.lemak, b.serat, b.berat_1_sp
+         FROM siklus_menu_item_bahan sb
+         JOIN bahan_baku b ON b.id = sb.bahan_baku_id
+         WHERE sb.siklus_id=?`,
+        [s.id]
+      );
+      const gridByHari = {};
+      for (const g of gridBahan) {
+        if (!gridByHari[g.hari_ke]) gridByHari[g.hari_ke] = [];
+        gridByHari[g.hari_ke].push(g);
+      }
+      const porsi = Number(s.jumlah_porsi || 1);
+      for (const it of items) {
+        if (!it.menu_id && (bahanMap[it.hari_ke] || 0) > 0) {
+          const dayBahan = gridByHari[it.hari_ke] || [];
+          let estKalori = 0, estProtein = 0, estKarbohidrat = 0, estLemak = 0, estSerat = 0;
+          for (const b of dayBahan) {
+            const estWeight = Number(b.berat_1_sp || 0) * porsi;
+            estKalori  += (Number(b.kalori || 0) / 100) * estWeight;
+            estProtein += (Number(b.protein || 0) / 100) * estWeight;
+            estKarbohidrat += (Number(b.karbohidrat || 0) / 100) * estWeight;
+            estLemak   += (Number(b.lemak || 0) / 100) * estWeight;
+            estSerat   += (Number(b.serat || 0) / 100) * estWeight;
+          }
+          it.kalori = Math.round(estKalori * 100) / 100;
+          it.protein = Math.round(estProtein * 100) / 100;
+          it.karbohidrat = Math.round(estKarbohidrat * 100) / 100;
+          it.lemak = Math.round(estLemak * 100) / 100;
+          it.serat = Math.round(estSerat * 100) / 100;
+        }
+      }
+    }
+
     const totals = items.reduce((acc, it) => ({
       kalori: acc.kalori + Number(it.kalori || 0),
       protein: acc.protein + Number(it.protein || 0),
@@ -612,7 +649,48 @@ router.get('/siklus/:id/laporan', async (req, res) => {
   const uniqueMenus = new Set(items.filter(it => it.menu_id).map(it => it.menu_id)).size; // Jumlah menu unik (menghindari duplikasi)
   const coverage = totalDays ? Math.round((filledDays / totalDays) * 100) : 0; // Persentase kelengkapan (%)
 
-  // 4. Hitung total akumulasi nilai gizi selama siklus berlangsung
+  // 4. Untuk item yang diisi manual (via grid picker tanpa menu_id), hitung estimasi gizi
+  //    menggunakan SP (Satuan Porsi): estimasi berat = 1 SP × berat_1_sp × jumlah_porsi
+  //    lalu kalikan dengan nilai gizi per 100g dari bahan_baku
+  const hasManualItems = items.some(it => it._has_bahan && !it.menu_id);
+  if (hasManualItems) {
+    const [gridBahan] = await db.query(
+      `SELECT sb.hari_ke, b.kalori, b.protein, b.karbohidrat, b.lemak, b.serat, b.berat_1_sp
+       FROM siklus_menu_item_bahan sb
+       JOIN bahan_baku b ON b.id = sb.bahan_baku_id
+       WHERE sb.siklus_id=?`,
+      [req.params.id]
+    );
+    const gridByHari = {};
+    for (const g of gridBahan) {
+      if (!gridByHari[g.hari_ke]) gridByHari[g.hari_ke] = [];
+      gridByHari[g.hari_ke].push(g);
+    }
+    for (const it of items) {
+      if (it._has_bahan && !it.menu_id) {
+        const dayBahan = gridByHari[it.hari_ke] || [];
+        const porsi = Number(siklus.jumlah_porsi || 1);
+        let estKalori = 0, estProtein = 0, estKarbohidrat = 0, estLemak = 0, estSerat = 0;
+        for (const b of dayBahan) {
+          // Gunakan 1 SP sebagai estimasi berat per bahan per orang
+          const estWeight = Number(b.berat_1_sp || 0) * porsi;
+          estKalori  += (Number(b.kalori || 0) / 100) * estWeight;
+          estProtein += (Number(b.protein || 0) / 100) * estWeight;
+          estKarbohidrat += (Number(b.karbohidrat || 0) / 100) * estWeight;
+          estLemak   += (Number(b.lemak || 0) / 100) * estWeight;
+          estSerat   += (Number(b.serat || 0) / 100) * estWeight;
+        }
+        // Simpan estimasi ke item untuk dipakai oleh kalkulasi totals
+        it.kalori = Math.round(estKalori * 100) / 100;
+        it.protein = Math.round(estProtein * 100) / 100;
+        it.karbohidrat = Math.round(estKarbohidrat * 100) / 100;
+        it.lemak = Math.round(estLemak * 100) / 100;
+        it.serat = Math.round(estSerat * 100) / 100;
+      }
+    }
+  }
+
+  // 5. Hitung total akumulasi nilai gizi selama siklus berlangsung
   const totals = items.reduce((acc, it) => ({
     kalori: acc.kalori + Number(it.kalori || 0),
     protein: acc.protein + Number(it.protein || 0),
@@ -621,7 +699,7 @@ router.get('/siklus/:id/laporan', async (req, res) => {
     serat: acc.serat + Number(it.serat || 0),
   }), { kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0 });
 
-  // 5. Hitung rata-rata asupan gizi harian (dibagi dengan hari yang ada menunya saja)
+  // 6. Hitung rata-rata asupan gizi harian (dibagi dengan hari yang ada menunya saja)
   const avg = filledDays ? {
     kalori: Math.round(totals.kalori / filledDays),
     protein: Math.round(totals.protein / filledDays),
@@ -630,7 +708,7 @@ router.get('/siklus/:id/laporan', async (req, res) => {
     serat: Math.round(totals.serat / filledDays),
   } : { kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0 };
 
-  // 6. Kembalikan data lengkap untuk dirender di frontend (chart, tabel, ringkasan)
+  // 7. Kembalikan data lengkap untuk dirender di frontend (chart, tabel, ringkasan)
   res.json({
     siklus: { ...siklus },
     stats: {
