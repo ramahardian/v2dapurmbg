@@ -852,6 +852,7 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
       `SELECT 
          COUNT(*) AS total_hari,
          SUM(CASE WHEN status='Hadir' THEN 1 ELSE 0 END) AS hadir,
+         SUM(CASE WHEN status='Terlambat' THEN 1 ELSE 0 END) AS terlambat,
          SUM(CASE WHEN status='Sakit' THEN 1 ELSE 0 END) AS sakit,
          SUM(CASE WHEN status='Izin' THEN 1 ELSE 0 END) AS izin,
          SUM(CASE WHEN status='Cuti' THEN 1 ELSE 0 END) AS cuti,
@@ -947,8 +948,8 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
             tglMulaiEfektif,
             tglSelesai
           );
-          const realHadir = Number(stats?.hadir || 0) + Number(stats?.sakit || 0)
-            + Number(stats?.izin || 0) + Number(stats?.cuti || 0);
+          const realHadir = Number(stats?.hadir || 0) + Number(stats?.terlambat || 0)
+            + Number(stats?.sakit || 0) + Number(stats?.izin || 0) + Number(stats?.cuti || 0);
           bolos = Math.max(0, expected_hari - realHadir);
         }
         // Jika total_hari = 0, expected_hari & bolos tetap 0
@@ -968,6 +969,7 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
         total_hari: Number(stats?.total_hari || 0),
         expected_hari,
         hadir: Number(stats?.hadir || 0),
+        terlambat: Number(stats?.terlambat || 0),
         sakit: Number(stats?.sakit || 0),
         izin: Number(stats?.izin || 0),
         cuti: Number(stats?.cuti || 0),
