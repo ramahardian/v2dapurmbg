@@ -42,6 +42,21 @@ function renderKategoriBreakdown(groups) {
   return html;
 }
 
+// Convert grid bahan data { Karbohidrat: [{id, nama}], ... } to format renderKategoriBreakdown expects
+function gridBahanToGroups(gridBahan) {
+  if (!gridBahan) return null;
+  const groups = {};
+  let total = 0;
+  for (const kat of KAT_SP_ORDER) {
+    const items = gridBahan[kat];
+    if (!items || !items.length) continue;
+    groups[kat] = items.map(b => ({ nama: b.nama, kategori_sp: kat }));
+    total += items.length;
+  }
+  if (!total) return null;
+  return groups;
+}
+
 async function renderSiklus() {
   const c = document.getElementById('content');
   c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
@@ -190,11 +205,33 @@ async function loadSiklusDetail(id) {
       </div>
     </div>`;
   // Load category breakdown for each day
+  // Fetch bahan-grid data to support manually-assigned ingredients (items without menu_id)
+  let bahanGrid = null;
+  const needsGrid = data.items.some(it => !it.menu_id && it._has_bahan);
+  if (needsGrid) {
+    try {
+      const gridRes = await api.get('/siklus/' + id + '/bahan-grid');
+      const gridDays = gridRes && gridRes.days;
+      if (gridDays) {
+        bahanGrid = {};
+        for (const d of gridDays) bahanGrid[d.hari_ke] = d.bahan;
+      }
+    } catch (e) { /* ignore */ }
+  }
   for (const it of data.items) {
     if (it.menu_id) {
+      // Item linked to an existing menu — fetch breakdown from menu API
       const groups = await getMenuKategoriBreakdown(it.menu_id);
       const el = document.getElementById('sk-dtl-bd-' + it.hari_ke);
       if (el) el.innerHTML = renderKategoriBreakdown(groups) || '<div class="text-stone-400 text-[10px]">Tidak ada data bahan</div>';
+    } else if (it._has_bahan && bahanGrid && bahanGrid[it.hari_ke]) {
+      // Item with manually-assigned ingredients via grid picker — use bahan-grid data
+      const el = document.getElementById('sk-dtl-bd-' + it.hari_ke);
+      if (el) {
+        const groups = gridBahanToGroups(bahanGrid[it.hari_ke]);
+        el.innerHTML = renderKategoriBreakdown(groups) || '<div class="text-stone-400 text-[10px]">Tidak ada data bahan</div>';
+        el.classList.remove('animate-pulse');
+      }
     } else {
       const el = document.getElementById('sk-dtl-bd-' + it.hari_ke);
       if (el) el.innerHTML = '';
@@ -306,11 +343,31 @@ async function renderSiklusLaporan(id) {
       </div>
     </div>`;
   // Load category breakdown for each day in laporan
+  // Fetch bahan-grid data to support manually-assigned ingredients (items without menu_id)
+  let bahanGrid = null;
+  const needsGrid = items.some(it => !it.menu_id);
+  if (needsGrid) {
+    try {
+      const gridRes = await api.get('/siklus/' + id + '/bahan-grid');
+      const gridDays = gridRes && gridRes.days;
+      if (gridDays) {
+        bahanGrid = {};
+        for (const d of gridDays) bahanGrid[d.hari_ke] = d.bahan;
+      }
+    } catch (e) { /* ignore */ }
+  }
   for (const it of items) {
     if (it.menu_id) {
       const groups = await getMenuKategoriBreakdown(it.menu_id);
       const el = document.getElementById('sk-lap-bd-' + id + '-' + it.hari_ke);
       if (el) el.innerHTML = renderKategoriBreakdown(groups) || '<div class="text-stone-400 text-[10px]">Tidak ada data bahan</div>';
+    } else if (bahanGrid && bahanGrid[it.hari_ke]) {
+      // Item with manually-assigned ingredients via grid picker
+      const el = document.getElementById('sk-lap-bd-' + id + '-' + it.hari_ke);
+      if (el) {
+        const groups = gridBahanToGroups(bahanGrid[it.hari_ke]);
+        el.innerHTML = renderKategoriBreakdown(groups) || '<div class="text-stone-400 text-[10px]">Tidak ada data bahan</div>';
+      }
     } else {
       const el = document.getElementById('sk-lap-bd-' + id + '-' + it.hari_ke);
       if (el) el.innerHTML = '';

@@ -414,6 +414,21 @@ router.get('/siklus/:id', async (req, res) => {
     [req.params.id]
   );
   
+  // Check which items have bahan (ingredients) assigned via grid picker
+  const [bahanCounts] = await db.query(
+    'SELECT hari_ke, COUNT(*) as bahan_count FROM siklus_menu_item_bahan WHERE siklus_id=? GROUP BY hari_ke',
+    [req.params.id]
+  );
+  const bahanMap = {};
+  for (const bc of bahanCounts) {
+    bahanMap[bc.hari_ke] = bc.bahan_count;
+  }
+  
+  // Mark items that have ingredients even without menu_id
+  for (const it of items) {
+    it._has_bahan = (bahanMap[it.hari_ke] || 0) > 0;
+  }
+  
   // Gabungkan header dan detail item ke dalam satu response
   res.json({ ...siklus, items });
 });
