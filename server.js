@@ -368,6 +368,92 @@ CREATE TABLE siklus_menu_item (
     }
   });
 
+  // Endpoint cek kesesuaian tabel database (admin only)
+  app.get('/api/migrate/cek-tabel', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const fs = require('fs');
+      const schemaPath = path.join(__dirname, 'schema.sql');
+      const schemaContent = fs.readFileSync(schemaPath, 'utf8');
+      const schemaTables = [];
+      const regex = /CREATE TABLE\s+(?:IF NOT EXISTS\s+)?`?(\w+)`?\s*\(/gi;
+      let match;
+      while ((match = regex.exec(schemaContent)) !== null) {
+        schemaTables.push(match[1]);
+      }
+
+      const [dbTables] = await db.query('SHOW TABLES');
+      const dbTableNames = dbTables.map(r => Object.values(r)[0]);
+
+      const adaFix = [];
+      const tidakAdaFix = [];
+      for (const t of schemaTables) {
+        if (dbTableNames.includes(t)) adaFix.push(t);
+        else tidakAdaFix.push(t);
+      }
+      const tambahan = dbTableNames.filter(t => !schemaTables.includes(t));
+
+      const statusColor = tidakAdaFix.length === 0 ? '#16a34a' : '#dc2626';
+      const statusIcon = tidakAdaFix.length === 0 ? '✅' : '⚠️';
+      const statusMsg = tidakAdaFix.length === 0 ? 'Semua tabel sudah ada' : 'Ada tabel yang hilang!';
+
+      let html = `
+        <div style="font-family:sans-serif;padding:2rem;max-width:800px;margin:auto">
+          <div style="text-align:center;margin-bottom:2rem">
+            <h2 style="color:${statusColor}">${statusIcon} ${statusMsg}</h2>
+            <p style="color:#6b7280;margin-top:0.5rem">
+              Schema: <b>${schemaTables.length}</b> tabel &nbsp;|&nbsp; Database: <b>${dbTableNames.length}</b> tabel
+            </p>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.875rem">
+            <thead>
+              <tr style="background:#f5f5f4">
+                <th style="padding:0.625rem 1rem;text-align:left;border:1px solid #e7e5e4">#</th>
+                <th style="padding:0.625rem 1rem;text-align:left;border:1px solid #e7e5e4">Nama Tabel</th>
+                <th style="padding:0.625rem 1rem;text-align:center;border:1px solid #e7e5e4">Status</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+      const allTables = [...new Set([...schemaTables, ...dbTableNames])].sort();
+      let no = 0;
+      for (const t of allTables) {
+        no++;
+        const inSchema = schemaTables.includes(t);
+        const inDb = dbTableNames.includes(t);
+        let status, bg;
+        if (inSchema && inDb) { status = '✅ Ada'; bg = '#f0fdf4'; }
+        else if (inSchema && !inDb) { status = '❌ Hilang'; bg = '#fef2f2'; }
+        else { status = '⚠️ Ekstra'; bg = '#fffbeb'; }
+        html += `
+              <tr style="background:${bg}">
+                <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:center">${no}</td>
+                <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;font-weight:500">${t}</td>
+                <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:center">${status}</td>
+              </tr>`;
+      }
+
+      html += `
+            </tbody>
+          </table>
+          <div style="margin-top:1.5rem;display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
+            <span style="background:#f0fdf4;color:#166534;padding:0.375rem 1rem;border-radius:999px;font-size:0.8rem">✅ ${adaFix.length} Ada</span>
+            <span style="background:#fef2f2;color:#991b1b;padding:0.375rem 1rem;border-radius:999px;font-size:0.8rem">❌ ${tidakAdaFix.length} Hilang</span>
+            <span style="background:#fffbeb;color:#92400e;padding:0.375rem 1rem;border-radius:999px;font-size:0.8rem">⚠️ ${tambahan.length} Ekstra</span>
+          </div>
+          <div style="text-align:center;margin-top:2rem">
+            <a href="/" style="display:inline-block;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali ke Dashboard</a>
+          </div>
+        </div>`;
+      res.send(html);
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#dc2626">❌ Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+        </div>`);
+    }
+  });
+
   // Endpoint CREATE TABLE menu_bahan (admin only)
   app.get('/api/migrate/create-menu-bahan', requireAuth, requireRole('admin'), async (req, res) => {
     try {
