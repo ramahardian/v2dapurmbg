@@ -18,6 +18,16 @@ router.use(requireAuth);
 
 
 /* ──────────────────────────────────────────────
+ * Helper: tanggal lokal YYYY-MM-DD (pakai timezone Asia/Jakarta)
+ * ────────────────────────────────────────────── */
+function localDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/* ──────────────────────────────────────────────
  * Helper: bangun klausa WHERE untuk tenant_id
  * Handle NULL dengan aman karena di MySQL NULL = NULL itu FALSE
  * ────────────────────────────────────────────── */
@@ -231,7 +241,7 @@ async function ensureKaryawan(req, res, next) {
 router.get('/absensi/status', ensureKaryawan, async (req, res) => {
   try {
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
+    const today = localDateStr(now);
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const dayOfWeek = now.getDay() + 1;
 
@@ -459,7 +469,7 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
     const { keterangan } = req.body;
     const tenant_id = req.user.tenant_id;
     const karyawan_id = req.karyawan.id;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateStr(new Date());
     const nowTime = new Date().toTimeString().slice(0, 8); // HH:mm:ss
     const tw = tenantWhere();
 
@@ -497,7 +507,7 @@ router.post('/absensi/clock-in', ensureKaryawan, async (req, res) => {
 
     // Cek apakah shift sudah lewat (terkunci) atau hari libur
     const nowTimeCheck = new Date();
-    const todayCheck = nowTimeCheck.toISOString().slice(0, 10);
+    const todayCheck = localDateStr(nowTimeCheck);
     const dayOfWeekCheck = nowTimeCheck.getDay() + 1;
     const shiftCheck = await getEffectiveShift(req.karyawan, req.user.tenant_id, todayCheck, dayOfWeekCheck);
     let bolehMasuk = false;
@@ -593,7 +603,7 @@ router.post('/absensi/clock-out', ensureKaryawan, async (req, res) => {
     const tenant_id = req.user.tenant_id;
     const karyawan_id = req.karyawan.id;
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
+    const today = localDateStr(now);
     const nowTime = now.toTimeString().slice(0, 8);
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
     const tw = tenantWhere();
@@ -603,7 +613,7 @@ router.post('/absensi/clock-out', ensureKaryawan, async (req, res) => {
     const { sql: tSql, params: tParams } = tw(tenant_id);
     const kemarin = new Date(now);
     kemarin.setDate(kemarin.getDate() - 1);
-    const kemarinStr = kemarin.toISOString().slice(0, 10);
+    const kemarinStr = localDateStr(kemarin);
 
     const [existing] = await db.query(
       `SELECT id, tanggal, jam_masuk, jam_keluar FROM absensi 
@@ -900,7 +910,7 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
 
     if (shift) {
       const awalBulan = `${tahun}-${String(bulan).padStart(2,'0')}-01`;
-      const hariIni = now.toISOString().slice(0, 10);
+      const hariIni = localDateStr(now);
 
       // Tentukan tanggal mulai efektif:
       // 1) Pakai tanggal_masuk jika ada
@@ -985,7 +995,7 @@ router.get('/absensi/rekap', ensureKaryawan, async (req, res) => {
  * ────────────────────────────────────────────── */
 router.get('/absensi/shift-saya', ensureKaryawan, async (req, res) => {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateStr(new Date());
     const dayOfWeek = new Date().getDay() + 1;
 
     const shift = await getEffectiveShift(req.karyawan, req.user.tenant_id, today, dayOfWeek);
