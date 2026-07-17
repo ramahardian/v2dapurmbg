@@ -634,7 +634,8 @@ function selectBahan(i, nama) {
   var kat = spItem ? spItem.kategori : '';
   var berat1Sp = ref.berat_bersih;
   var perPorsi = window._spMap && window._spMap[kat] ? window._spMap[kat] * berat1Sp : 0;
-  window._menuBahan[i].bahan_baku_id = '';
+  var bb = (window._bahanBaku || []).find(function(b) { return b.nama.toLowerCase() === nama.toLowerCase(); });
+  window._menuBahan[i].bahan_baku_id = bb ? bb.id : '';
   window._menuBahan[i].nama = nama;
   window._menuBahan[i].satuan = 'g';
   window._menuBahan[i].kategori_sp = kat;
