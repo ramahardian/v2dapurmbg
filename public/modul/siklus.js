@@ -117,7 +117,10 @@ async function reloadSiklusList() {
     const aktif = list.filter(s => s.status === 'Aktif').length;
     const draft = list.filter(s => s.status === 'Draft').length;
     const menuSet = new Set();
-    list.forEach(s => s.items && s.items.forEach(it => { if (it.menu_id) menuSet.add(it.menu_id); }));
+    list.forEach(s => s.items && s.items.forEach(it => {
+      if (it.menu_id) menuSet.add(it.menu_id);
+      else if (it._has_bahan) menuSet.add('manual-' + s.id + '-' + it.hari_ke);
+    }));
     document.getElementById('stat-total').textContent = total;
     document.getElementById('stat-aktif').textContent = aktif;
     document.getElementById('stat-draft').textContent = draft;
