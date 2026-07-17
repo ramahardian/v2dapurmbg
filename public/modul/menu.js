@@ -552,8 +552,8 @@ async function loadSpMap(kategori) {
       if (berat1Sp <= 0) continue;
       if (b._autoJumlah !== undefined || !b.jumlah) {
         var perPorsi = window._spMap[b.kategori_sp] * berat1Sp;
-        b.jumlah = perPorsi * (window._jumlahPorsi || 1);
-        b._autoJumlah = b.jumlah;
+        b.jumlah = perPorsi;
+        b._autoJumlah = perPorsi;
         b.berat_1_sp = berat1Sp;
       }
     }
@@ -581,8 +581,7 @@ function renderBahanList() {
       extras.push('1SP=' + berat1Sp + 'g');
       extras.push('BDD=' + Math.round(ref ? ref.bdd_persen * 100 : (b.persen_bdd || 100)) + '%');
       var perPorsi = window._spMap && window._spMap[kategoriSp] ? window._spMap[kategoriSp] * berat1Sp : 0;
-      var totalGram = b.jumlah || 0;
-      spInfo = '<div class="col-span-3 text-[10px] text-stone-400 leading-tight">' + kategoriSp + ' · ' + extras.join(' · ') + (perPorsi ? ' · <span class="text-emerald-600 font-medium">' + Math.round(perPorsi*10)/10 + 'g/porsi</span>' : '') + (totalGram ? ' · total <span class="text-emerald-700 font-medium">' + Math.round(totalGram) + 'g</span>' : '') + '</div>';
+      spInfo = '<div class="col-span-3 text-[10px] text-stone-400 leading-tight">' + kategoriSp + ' · ' + extras.join(' · ') + (perPorsi ? ' · <span class="text-emerald-600 font-medium">' + Math.round(perPorsi*10)/10 + 'g/porsi</span>' : '') + '</div>';
     }
     return '<div class="grid grid-cols-12 gap-1.5 items-center">' +
       '<div class="col-span-4 relative">' +
@@ -635,15 +634,14 @@ function selectBahan(i, nama) {
   var kat = spItem ? spItem.kategori : '';
   var berat1Sp = ref.berat_bersih;
   var perPorsi = window._spMap && window._spMap[kat] ? window._spMap[kat] * berat1Sp : 0;
-  var jumlah = perPorsi * (window._jumlahPorsi || 1);
   window._menuBahan[i].bahan_baku_id = '';
   window._menuBahan[i].nama = nama;
   window._menuBahan[i].satuan = 'g';
   window._menuBahan[i].kategori_sp = kat;
   window._menuBahan[i].berat_1_sp = berat1Sp;
   window._menuBahan[i].persen_bdd = Math.round(ref.bdd_persen * 100);
-  window._menuBahan[i].jumlah = jumlah;
-  window._menuBahan[i]._autoJumlah = jumlah;
+  window._menuBahan[i].jumlah = perPorsi;
+  window._menuBahan[i]._autoJumlah = perPorsi;
   var input = document.getElementById('b-input-' + i);
   if (input) input.value = nama;
   renderBahanList();
