@@ -514,12 +514,13 @@ async function loadSpMap(kategori) {
       var cel = document.getElementById('sp-val-' + kat.replace(/\s/g,''));
       if (cel) cel.textContent = window._spMap[kat] != null ? window._spMap[kat] : '-';
     }
-    // Recalculate existing bahan items with new SP data
+    // Recalculate existing bahan items with new SP data (hanya yang belum diedit manual)
     for (var i = 0; i < window._menuBahan.length; i++) {
       var b = window._menuBahan[i];
-      if (b.bahan_baku_id && b.kategori_sp && b.berat_1_sp > 0 && window._spMap && window._spMap[b.kategori_sp]) {
+      if (b._autoJumlah !== undefined && b.bahan_baku_id && b.kategori_sp && b.berat_1_sp > 0 && window._spMap && window._spMap[b.kategori_sp]) {
         var perPorsi = window._spMap[b.kategori_sp] * (+b.berat_1_sp);
         b.jumlah = perPorsi * (window._jumlahPorsi || 1);
+        b._autoJumlah = b.jumlah;
       }
     }
     renderBahanList();
@@ -540,8 +541,12 @@ function updateBahan(i, k, v) {
     if (bb && bb.kategori_sp && bb.berat_1_sp > 0 && window._spMap && window._spMap[bb.kategori_sp]) {
       var perPorsi = window._spMap[bb.kategori_sp] * (+bb.berat_1_sp);
       window._menuBahan[i].jumlah = perPorsi * (window._jumlahPorsi || 1);
+      window._menuBahan[i]._autoJumlah = window._menuBahan[i].jumlah;
     }
     renderBahanList();
+  } else if (k === 'jumlah') {
+    // Manual edit — hapus flag auto agar tidak tertimpa
+    delete window._menuBahan[i]._autoJumlah;
   }
   hitungNutrisi();
 }
