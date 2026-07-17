@@ -19,12 +19,9 @@ const BAHAN_BAKU_CRUD_BASE = {
     { k: 'karbohidrat', l: 'Karbohidrat (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
     { k: 'lemak', l: 'Lemak (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
     { k: 'serat', l: 'Serat (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
-    { k: 'kategori_sp', l: 'Kategori SP', type: 'select', opts: ['','Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'], group: 'info' },
-    { k: 'berat_1_sp', l: 'Berat 1 SP (gram)', type: 'number', fmt: 'num', group: 'info' },
-    { k: 'persen_bdd', l: 'BDD (%)', type: 'number', fmt: 'num', group: 'info' },
     { k: 'berat_per_satuan', l: 'Berat per Satuan (gram)', type: 'number', fmt: 'num', desc: 'Isi jika satuan bukan gram (misal 1 pcs = 50g, 1 ikat = 30g)', group: 'info' },
   ],
-  cols: ['nama','kategori','kategori_sp','berat_1_sp','persen_bdd','satuan','harga_satuan','stok_saat_ini']
+  cols: ['nama','kategori','kategori_sp','satuan','harga_satuan','stok_saat_ini']
 };
 
 const NUTRISI_FIELDS = ['kalori','protein','karbohidrat','lemak','serat'];
@@ -47,11 +44,7 @@ function fillSpRefToForm(row) {
   const ref = spRefLookup[(row.nama||'').toLowerCase()];
   if (!ref) return;
   const elKat = document.getElementById('f-kategori_sp');
-  const elBerat = document.getElementById('f-berat_1_sp');
-  const elBdd = document.getElementById('f-persen_bdd');
   if (elKat && ref.kategori && !row.kategori_sp) elKat.value = ref.kategori;
-  if (elBerat && ref.berat_bersih && !row.berat_1_sp) elBerat.value = ref.berat_bersih;
-  if (elBdd && ref.bdd_persen && !row.persen_bdd) elBdd.value = Math.round(ref.bdd_persen * 100);
   NUTRISI_FIELDS.forEach(bk => {
     const el = document.getElementById('f-' + bk);
     const sk = NUT_MAP[bk];
