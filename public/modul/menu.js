@@ -351,7 +351,13 @@ function openMenuForm(editing) {
   document.getElementById('modal-title').textContent = editing ? 'Edit Menu' : 'Tambah Menu';
   document.getElementById('modal-body').innerHTML = `
     <div class="grid grid-cols-2 gap-3">
-      <div><label class="text-sm">Nama Menu *</label><input id="m-nama" value="${m.nama}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" /></div>
+      <div>
+        <label class="text-sm">Nama Menu *</label>
+        <div class="flex gap-2">
+          <input id="m-nama" value="${m.nama}" class="mt-1 flex-1 h-10 px-3 border border-stone-200 rounded-md" />
+          <button type="button" onclick="openSiklusMenuPicker()" class="mt-1 shrink-0 px-3 h-10 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 whitespace-nowrap" title="Ambil nama dari siklus">Siklus</button>
+        </div>
+      </div>
       <div><label class="text-sm">Kategori Penerima</label>
         <select id="m-kategori" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
           <option value="">—</option>${['Ibu Hamil','Ibu Menyusui','Balita','PAUD','TK','SD','SMP'].map(o => `<option value="${o}" ${m.kategori_penerima === o ? 'selected':''}>${o}</option>`).join('')}
@@ -550,6 +556,84 @@ async function recalcNutrisiMenu() {
   } catch (e) {
     showAlert(e.message || 'Gagal', 'error');
   }
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function closeSiklusMenuPicker() {
+  var m = document.getElementById('siklus-menu-picker');
+  if (m) m.remove();
+}
+
+async function openSiklusMenuPicker() {
+  try {
+    var data = await api.get('/siklus/recipe-names');
+    var hasNames = data.some(function(s) { return s.names && s.names.length; });
+    if (!data.length || !hasNames) {
+      showAlert('Belum ada siklus dengan nama menu atau resep. Buat siklus terlebih dahulu.', 'warning');
+      return;
+    }
+
+    var html = '<div class="p-4 space-y-3 max-h-[420px] overflow-y-auto">';
+    for (var si = 0; si < data.length; si++) {
+      var s = data[si];
+      if (!s.names || !s.names.length) continue;
+      var statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-600';
+      html += '<div class="border border-stone-200 rounded-xl overflow-hidden">' +
+        '<div class="px-4 py-2.5 bg-stone-50 border-b border-stone-200 flex items-center justify-between">' +
+          '<div class="font-semibold text-sm text-stone-700">' + escHtml(s.nama) + '</div>' +
+          '<div class="flex items-center gap-2">' +
+            (s.kategori_penerima ? '<span class="text-[10px] text-stone-400">' + escHtml(s.kategori_penerima) + '</span>' : '') +
+            '<span class="text-[10px] px-2 py-0.5 rounded-full font-medium ' + statusColor + ' capitalize">' + s.status + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="divide-y divide-stone-100">';
+      for (var ni = 0; ni < s.names.length; ni++) {
+        var n = s.names[ni];
+        var badge = n.source === 'menu' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700';
+        var badgeLabel = n.source === 'menu' ? 'Menu' : 'Resep';
+        html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + '\',\'' + escHtml(s.kategori_penerima || '') + '\')" class="w-full text-left px-4 py-2.5 hover:bg-stone-50 transition-colors flex items-center gap-2">' +
+          '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
+          '<span class="text-xs text-stone-500 shrink-0 w-14">' + n.hari_nama + '</span>' +
+          '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium ' + badge + ' shrink-0">' + badgeLabel + '</span>' +
+          '<span class="text-sm font-medium text-stone-800 truncate">' + escHtml(n.nama) + '</span>' +
+          (n.kategori_sp ? '<span class="text-[10px] text-stone-400 shrink-0 hidden sm:inline">' + escHtml(n.kategori_sp) + '</span>' : '') +
+        '</button>';
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
+
+    // Create floating modal on top of main modal
+    var existing = document.getElementById('siklus-menu-picker');
+    if (existing) existing.remove();
+    var m = document.createElement('div');
+    m.id = 'siklus-menu-picker';
+    m.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-black/40';
+    m.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-hidden">' +
+      '<div class="flex items-center justify-between px-5 py-3 border-b border-stone-200">' +
+        '<h3 class="font-bold text-stone-700 text-sm">Pilih Nama dari Siklus Menu</h3>' +
+        '<button onclick="closeSiklusMenuPicker()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400">&times;</button>' +
+      '</div>' +
+      '<div id="sk-picker-body">' + html + '</div>' +
+    '</div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', function(e) { if (e.target === m) closeSiklusMenuPicker(); });
+  } catch (e) {
+    showAlert('Gagal memuat data siklus: ' + e.message, 'error');
+  }
+}
+
+function selectSiklusMenuName(nama, kategori) {
+  document.getElementById('m-nama').value = nama;
+  if (kategori) {
+    var katSelect = document.getElementById('m-kategori');
+    if (katSelect) katSelect.value = kategori;
+  }
+  closeSiklusMenuPicker();
+  showToast('Nama diambil dari siklus: ' + nama, 'success');
 }
 
 function openAIDialog() {

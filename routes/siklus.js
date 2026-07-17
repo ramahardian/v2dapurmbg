@@ -347,8 +347,56 @@ router.get('/siklus/laporan/bahan-per-jenjang', async (req, res) => {
 });
 
 /**
+ * GET /siklus/recipe-names
+ * Mengambil semua siklus dengan daftar nama menu/resep dari setiap item.
+ * Digunakan oleh form Tambah Menu untuk mengambil nama menu dari siklus.
+ */
+router.get('/siklus/recipe-names', async (req, res) => {
+  const [siklusList] = await db.query(
+    'SELECT id, nama, kategori_penerima, total_hari, status FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
+    [req.user.tenant_id]
+  );
+
+  const result = [];
+  for (const s of siklusList) {
+    const [items] = await db.query(
+      'SELECT hari_ke, hari_nama, menu_id, menu_nama, resep_map FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke ASC',
+      [s.id]
+    );
+
+    const names = [];
+    for (const it of items) {
+      if (it.menu_nama && it.menu_nama.trim()) {
+        names.push({ source: 'menu', hari_ke: it.hari_ke, hari_nama: it.hari_nama, nama: it.menu_nama.trim() });
+      }
+      if (it.resep_map) {
+        try {
+          const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
+          for (const [kat, nama] of Object.entries(map)) {
+            if (nama && nama.trim()) {
+              names.push({ source: 'resep', kategori_sp: kat, hari_ke: it.hari_ke, hari_nama: it.hari_nama, nama: nama.trim() });
+            }
+          }
+        } catch (e) {}
+      }
+    }
+
+    result.push({
+      id: s.id,
+      nama: s.nama,
+      kategori_penerima: s.kategori_penerima,
+      total_hari: s.total_hari,
+      status: s.status,
+      names,
+    });
+  }
+
+  res.json(result);
+});
+
+/**
  * GET /siklus/:id
- * Mengambil detail satu siklus spesifik beserta seluruh item menu di dalamnya.
+ * Mengambil data header siklus beserta detail item per hari.
  */
 router.get('/siklus/:id', async (req, res) => {
   // Ambil header siklus
