@@ -8,6 +8,7 @@
     "dev": "bash scripts/dev.sh",
     "dev:server": "nodemon server.js",
     "migrate": "node scripts/migrate.js",
+    
     "build": "node scripts/build.js",
     "build:dev": "node scripts/build.js --dev",
     "build:prod": "node scripts/build-prod.js"
