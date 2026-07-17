@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS bahan_baku (
   harga_sebelumnya DECIMAL(15,2) DEFAULT 0,
   stok_saat_ini DECIMAL(15,3) DEFAULT 0,
   stok_minimum DECIMAL(15,3) DEFAULT 0,
+  sumber VARCHAR(20) DEFAULT NULL COMMENT 'sumber permintaan: ahli_gizi',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   INDEX idx_tenant (tenant_id)

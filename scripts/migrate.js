@@ -427,6 +427,16 @@ require('dotenv').config();
     } else {
       console.log('✓ Tenant sudah ada, skip seed');
     }
+    // Migrasi kolom sumber di bahan_baku
+    try {
+      const [sCol] = await conn.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'sumber'");
+      if (!sCol.length) {
+        await conn.query("ALTER TABLE bahan_baku ADD COLUMN sumber VARCHAR(20) DEFAULT NULL COMMENT 'sumber permintaan: ahli_gizi' AFTER stok_minimum");
+        console.log('✓ Migrasi bahan_baku: kolom sumber');
+      }
+    } catch (e) {
+      console.log('  (skip sumber)', e.message);
+    }
     console.log('✓ Schema berhasil dibuat');
     await conn.end();
     process.exit(0);

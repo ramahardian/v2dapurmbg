@@ -958,6 +958,26 @@ router.post('/siklus/:id/bahan-grid', async (req, res) => {
 });
 
 /**
+ * POST /siklus/tambah-bahan
+ * Menambahkan bahan baru ke bahan_baku dari grid siklus (oleh ahli gizi).
+ * Body: { nama, kategori_sp, satuan }
+ */
+router.post('/siklus/tambah-bahan', async (req, res) => {
+  const { nama, kategori_sp, satuan } = req.body;
+  if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama bahan wajib diisi' });
+  if (!kategori_sp) return res.status(400).json({ error: 'Kategori SP wajib diisi' });
+
+  const [existing] = await db.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [req.user.tenant_id, nama.trim()]);
+  if (existing.length) return res.json({ id: existing[0].id, exists: true });
+
+  const [r] = await db.query(
+    'INSERT INTO bahan_baku (tenant_id, nama, kategori_sp, satuan, sumber) VALUES (?,?,?,?,?)',
+    [req.user.tenant_id, nama.trim(), kategori_sp, satuan || 'g', 'ahli_gizi']
+  );
+  res.json({ id: r.insertId, exists: false });
+});
+
+/**
  * GET /bahan/by-sp
  * Mengembalikan bahan_baku yang dikelompokkan berdasarkan kategori_sp
  */

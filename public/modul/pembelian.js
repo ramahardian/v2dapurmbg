@@ -220,7 +220,8 @@ function renderPoItems(items) {
           const isNew = b.created_at && (Date.now() - new Date(b.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
           const sel = Number(b.id) === Number(item.bahan_baku_id) ? 'selected' : '';
           const kodeNum = b.kode ? (b.kode.match(/EXT[-\s]?(\d+)/i)?.[1] || b.kode) : '';
-          return `<option value="${b.id}" ${sel}>${kodeNum ? '[' + kodeNum + '] ' : ''}${b.nama}${isNew ? ' 🆕' : ''}${b.harga_satuan ? ' @ ' + fmtIDR(b.harga_satuan) : ''}</option>`;
+          const agLabel = b.sumber === 'ahli_gizi' ? ' [Permintaan Ahli Gizi]' : '';
+          return `<option value="${b.id}" ${sel}>${kodeNum ? '[' + kodeNum + '] ' : ''}${b.nama}${isNew ? ' 🆕' : ''}${agLabel}${b.harga_satuan ? ' @ ' + fmtIDR(b.harga_satuan) : ''}</option>`;
         }).join('')}
       </select>
       <input type="number" step="0.001" value="${item.qty || ''}" placeholder="Qty"
