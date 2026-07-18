@@ -738,6 +738,36 @@ CREATE TABLE menu_bahan (
     }
   });
 
+  // Endpoint isi berat_per_satuan bahan baku berdasarkan satuan (admin only)
+  app.get('/api/migrate/berat-per-satuan', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      var results = [];
+      var [r1] = await db.query("UPDATE bahan_baku SET berat_per_satuan = 1000 WHERE satuan = 'Kg' AND (berat_per_satuan IS NULL OR berat_per_satuan = 0)");
+      if (r1.affectedRows) results.push('Kg → 1000g: ' + r1.affectedRows + ' bahan');
+      var [r2] = await db.query("UPDATE bahan_baku SET berat_per_satuan = 1 WHERE (satuan = 'Gram' OR satuan = 'g' OR satuan = 'gr') AND (berat_per_satuan IS NULL OR berat_per_satuan = 0)");
+      if (r2.affectedRows) results.push('Gram/g/gr → 1g: ' + r2.affectedRows + ' bahan');
+      var [r3] = await db.query("UPDATE bahan_baku SET berat_per_satuan = 1000 WHERE satuan = 'Liter' AND (berat_per_satuan IS NULL OR berat_per_satuan = 0)");
+      if (r3.affectedRows) results.push('Liter → 1000g: ' + r3.affectedRows + ' bahan');
+      var [sisa] = await db.query("SELECT satuan, COUNT(*) cnt FROM bahan_baku WHERE (berat_per_satuan IS NULL OR berat_per_satuan = 0) AND satuan NOT IN ('Kg','Gram','g','gr','Liter') GROUP BY satuan");
+      var total = (r1.affectedRows || 0) + (r2.affectedRows || 0) + (r3.affectedRows || 0);
+      var html = '<div style="font-family:sans-serif;padding:2rem;max-width:600px;margin:auto">';
+      html += '<h2 style="color:#16a34a;margin-bottom:1rem">✅ Berat per Satuan — ' + total + ' diisi</h2>';
+      results.forEach(r => { html += '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:0.5rem;padding:0.75rem;margin-bottom:0.5rem">' + r + '</div>'; });
+      if (sisa.length) {
+        html += '<div style="margin-top:1rem;padding:0.75rem;background:#fffbeb;border:1px solid #fde68a;border-radius:0.5rem">';
+        html += '<b style="color:#92400e">Sisa manual (' + sisa.reduce((s,r) => s+Number(r.cnt), 0) + ' bahan):</b><div style="margin-top:0.5rem;font-size:0.875rem">';
+        sisa.forEach(r => { html += '<div style="padding:0.25rem 0">• ' + r.satuan + ': <b>' + r.cnt + '</b> bahan — isi manual</div>'; });
+        html += '</div></div>';
+      } else {
+        html += '<div style="margin-top:1rem;padding:0.75rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:0.5rem;color:#166534">✅ Semua bahan sudah terisi</div>';
+      }
+      html += '<a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>';
+      res.send(html);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#dc2626">❌ Gagal</h2><p>${e.message}</p></div>`);
+    }
+  });
+
   // ── ERROR HANDLING ──────────────────────
   process.on('unhandledRejection', (err) => console.error('Unhandled Rejection:', err));
   app.use((err, req, res, next) => {
