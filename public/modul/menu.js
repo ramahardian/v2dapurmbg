@@ -238,15 +238,12 @@ async function editMenuById(id) {
 }
 
 const KATEGORI_COLORS = {
-  'Bumil/Busui': { bg: '#be123c' },
-  'Paket Kecil': { bg: '#0e7490' },
-  'Paket Besar': { bg: '#d97706' },
-  // backward compat untuk data lama
   'Ibu Hamil': { bg: '#be123c' },
-  'Ibu Menyusui': { bg: '#be123c' },
+  'Ibu Menyusui': { bg: '#6d28d9' },
+  'Paket Kecil': { bg: '#0e7490' },
   'SD 4-6': { bg: '#d97706' },
-  'SMP': { bg: '#d97706' },
-  'SMA': { bg: '#d97706' },
+  'SMP': { bg: '#1d4ed8' },
+  'SMA': { bg: '#7c3aed' },
 };
 
 function kategoriBadge(kat) {
@@ -415,7 +412,7 @@ function openMenuForm(editing) {
       </div>
       <div><label class="text-sm">Kategori Penerima</label>
         <select id="m-kategori" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
-          <option value="">—</option>${['Paket Kecil','Paket Besar','Bumil/Busui'].map(o => `<option value="${o}" ${m.kategori_penerima === o ? 'selected':''}>${o}</option>`).join('')}
+          <option value="">—</option>${['Ibu Hamil','Ibu Menyusui','Paket Kecil','SD 4-6','SMP','SMA'].map(o => `<option value="${o}" ${m.kategori_penerima === o ? 'selected':''}>${o}</option>`).join('')}
         </select></div>
       <div><label class="text-sm">Jumlah Porsi <span id="m-porsi-label" class="text-stone-400 font-normal">(dari penerima manfaat)</span></label>
         <input id="m-jumlah-porsi" type="number" readonly value="0" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md bg-stone-50 text-sm font-semibold" />
@@ -548,12 +545,6 @@ async function loadSpMap(kategori) {
     if (kategori === 'Paket Kecil') {
       spJenjang = 'Balita';
       pmKategori = 'Balita,TK/PAUD,SD 1-3';
-    } else if (kategori === 'Paket Besar') {
-      spJenjang = 'SD 4-6';
-      pmKategori = 'SD 4-6,SMP,SMA';
-    } else if (kategori === 'Bumil/Busui') {
-      spJenjang = 'Ibu Hamil';
-      pmKategori = 'Ibu Hamil,Ibu Menyusui';
     }
     var rows = []; var pm = { total: 0 };
     try { rows = await api.get('/sp/standar/' + encodeURIComponent(spJenjang)); } catch (e) { console.warn('Gagal load standar_sp:', e.message); }
@@ -586,11 +577,7 @@ async function loadSpMap(kategori) {
     var tbl = document.getElementById('sp-ref-table');
     var title = document.getElementById('sp-ref-title');
     if (tbl) tbl.classList.remove('hidden');
-    var spLabel = kategori;
-    if (kategori === 'Paket Kecil') spLabel += ' (mengacu SP Balita)';
-    else if (kategori === 'Paket Besar') spLabel += ' (mengacu SP SD 4-6)';
-    else if (kategori === 'Bumil/Busui') spLabel += ' (mengacu SP Ibu Hamil)';
-    if (title) title.textContent = spLabel;
+    if (title) title.textContent = kategori + (kategori === 'Paket Kecil' ? ' (mengacu SP Balita)' : '');
     for (const kat of ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak']) {
       var cel = document.getElementById('sp-val-' + kat.replace(/\s/g,''));
       if (cel) cel.textContent = window._spMap[kat] != null ? window._spMap[kat] : '-';
@@ -868,7 +855,7 @@ function openAIDialog() {
   document.getElementById('modal-body').innerHTML = `
     <div><label class="text-sm">Kategori Penerima</label>
       <select id="ai-kat" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
-        ${['Paket Kecil','Paket Besar','Bumil/Busui'].map(o => `<option>${o}</option>`).join('')}
+        ${['Ibu Hamil','Ibu Menyusui','Paket Kecil','SD 4-6','SMP','SMA'].map(o => `<option>${o}</option>`).join('')}
       </select></div>
     <div class="mt-3"><label class="text-sm">Catatan (opsional)</label>
       <textarea id="ai-note" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md" placeholder="Mis. hindari kacang, bahan lokal Jawa Tengah"></textarea></div>
