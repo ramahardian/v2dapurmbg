@@ -706,6 +706,38 @@ CREATE TABLE menu_bahan (
     }
   });
 
+  // Endpoint hapus duplikasi penerima_manfaat (admin only)
+  app.get('/api/migrate/hapus-duplikat-penerima', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [dups] = await db.query(
+        `SELECT kategori_penerima, nama_kelompok, paket_besar, paket_kecil, lokasi,
+                COUNT(*) cnt, SUBSTRING_INDEX(GROUP_CONCAT(id ORDER BY id), ',', 1) keep_id,
+                GROUP_CONCAT(id ORDER BY id) ids
+         FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IS NOT NULL AND kategori_penerima != 'null'
+         GROUP BY kategori_penerima, nama_kelompok, paket_besar, paket_kecil, lokasi HAVING cnt > 1`,
+        [req.user.tenant_id]
+      );
+      if (!dups.length) {
+        return res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Tidak ada duplikat</h2><a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
+      }
+      var deleted = 0, html = '<div style="font-family:sans-serif;padding:2rem;max-width:600px;margin:auto"><h2 style="color:#d97706;margin-bottom:1rem">⚠️ Ditemukan ' + dups.length + ' kelompok duplikat</h2>';
+      for (var r of dups) {
+        var ids = r.ids.split(',').map(Number);
+        var keep = ids[0];
+        var delIds = ids.slice(1);
+        var [result] = await db.query('DELETE FROM penerima_manfaat WHERE id IN (' + delIds.map(() => '?').join(',') + ') AND tenant_id=?', [...delIds, req.user.tenant_id]);
+        deleted += result.affectedRows;
+        html += '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.75rem 1rem;margin-bottom:0.5rem;font-size:0.875rem">';
+        html += '<b>' + r.nama_kelompok + '</b> (' + r.kategori_penerima + ') → keep id ' + keep + ', hapus ' + result.affectedRows + ' baris</div>';
+      }
+      html += '<div style="margin-top:1rem;padding:1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:0.5rem;font-weight:600">✅ Total ' + deleted + ' baris duplikat dihapus</div>';
+      html += '<a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>';
+      res.send(html);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#dc2626">❌ Gagal</h2><p>${e.message}</p></div>`);
+    }
+  });
+
   // ── ERROR HANDLING ──────────────────────
   process.on('unhandledRejection', (err) => console.error('Unhandled Rejection:', err));
   app.use((err, req, res, next) => {
