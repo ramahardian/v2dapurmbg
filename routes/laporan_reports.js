@@ -575,4 +575,51 @@ router.get('/laporan/bp-kas', roleFinance, async (req, res) => {
   });
 });
 
+// ===== RAB Sinkron — otomatis dari data aktual =====
+router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
+  try {
+    const t = req.user.tenant_id;
+    const periode = req.query.periode || new Date().toISOString().slice(0, 7);
+
+    const [[{ total_hari }]] = await db.query(
+      `SELECT COUNT(DISTINCT tanggal_produksi) as total_hari
+       FROM produksi WHERE tenant_id=? AND DATE_FORMAT(tanggal_produksi, '%Y-%m')=?`,
+      [t, periode]
+    );
+
+    const [penerima] = await db.query(
+      `SELECT kategori_penerima, SUM(paket_besar + paket_kecil) as total_penerima
+       FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IS NOT NULL
+       GROUP BY kategori_penerima ORDER BY kategori_penerima`,
+      [t]
+    );
+
+    const [hargaList] = await db.query(
+      `SELECT kategori_penerima, harga_per_porsi FROM budget
+       WHERE tenant_id=? AND periode=? AND harga_per_porsi > 0`,
+      [t, periode]
+    );
+    const hargaMap = {};
+    for (const h of hargaList) hargaMap[h.kategori_penerima] = Number(h.harga_per_porsi);
+
+    let grandPenerima = 0;
+    let grandTotal = 0;
+    const rows = penerima.map(p => {
+      const kategori = p.kategori_penerima;
+      const harga = hargaMap[kategori] || 0;
+      const jmlPenerima = Number(p.total_penerima);
+      const jmlHari = total_hari || 0;
+      const total = harga * jmlPenerima * jmlHari;
+      grandPenerima += jmlPenerima;
+      grandTotal += total;
+      return { kategori, harga_per_porsi: harga, jumlah_penerima: jmlPenerima, jumlah_hari: jmlHari, total };
+    });
+
+    res.json({ rows, grand_penerima: grandPenerima, grand_total: grandTotal, total_hari: total_hari || 0, periode });
+  } catch (err) {
+    console.error('RAB sinkron error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

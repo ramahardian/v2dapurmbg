@@ -21,6 +21,16 @@
     .sidebar-link:hover { background: var(--bg-sidebar-hover); opacity:1; }
     .sidebar-link.active { background: var(--bg-sidebar-active); opacity:1; }
     .sidebar-link .nav-label { transition: opacity .15s; }
+    .sidebar-dropdown .sidebar-sub { display:none; }
+    .sidebar-dropdown.open .sidebar-sub { display:block; }
+    .sidebar-dropdown .dropdown-arrow { transition:transform .15s;display:inline-block; }
+    .sidebar-dropdown.open > .sidebar-dropdown-parent .dropdown-arrow { transform:rotate(90deg); }
+    .sidebar-sub-link { padding-left:2.25rem !important; font-size:.8rem !important; opacity:.6; }
+    .sidebar-sub-link:hover { opacity:1; }
+    .sidebar-sub-link.active { opacity:1; }
+    #sidebar.collapsed .sidebar-dropdown .sidebar-sub { display:none !important; }
+    #sidebar.collapsed .sidebar-dropdown .dropdown-arrow { display:none; }
+    #sidebar.collapsed .sidebar-dropdown .sidebar-sub-link { padding-left:.5rem !important; }
     #sidebar.collapsed { width: 64px; }
     #sidebar.collapsed .sidebar-link { justify-content:center;padding:.5rem;gap:0; }
     #sidebar.collapsed .sidebar-link .nav-label,

@@ -37,10 +37,18 @@ function renderNav() {
 
   nav.innerHTML = NAV_GROUPS.map(g => {
     const visibleItems = g.items.filter(key => {
+      if (typeof key === 'object' && key.children) {
+        const childKeys = key.children;
+        const visibleChildren = childKeys.filter(ck => {
+          if (ck === 'laporan-siklus') return userRole === 'admin' || userRole === 'ahli_gizi';
+          if (ck.startsWith('laporan-')) return isAdminOrKeuangan;
+          return true;
+        });
+        return visibleChildren.length > 0;
+      }
       if (key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'perencanaan' || key === 'total-kebutuhan' || key === 'standar-sp' || key === 'sp-referensi' || key === 'perhitungan-bdd' || key === 'bdd-kalkulator' || key === 'panduan-ahli-gizi') return isAdminOrAhliGizi;
       if (key === 'gudang') return isAdminOrGudang;
       if (key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun') return isAdminOrKeuangan;
-      if (key === 'laporan') return isAdminOrKeuangan;
       if (key === 'penerima-manfaat') return isAdminOrKeuangan;
       if (key === 'karyawan' || key === 'absensi' || key === 'payroll' || key === 'shift' || key === 'divisi' || key === 'ijin-cuti' || key === 'panduan-sdm') return isAdminOrKeuangan;
       if (key === 'supplier') return isAdminOrKeuanganOrGudang;
@@ -56,6 +64,25 @@ function renderNav() {
 
     return (g.label ? `<div class="nav-group-label px-3 pt-4 pb-1.5 text-[10px] uppercase tracking-wider font-semibold" style="opacity:.4">${g.label}</div>` : '') +
     visibleItems.map(key => {
+      if (typeof key === 'object' && key.children) {
+        const visibleChildKeys = key.children.filter(ck => {
+          if (ck === 'laporan-siklus') return userRole === 'admin' || userRole === 'ahli_gizi';
+          if (ck.startsWith('laporan-')) return isAdminOrKeuangan;
+          return true;
+        });
+        const childLinks = visibleChildKeys.filter(ck => MODULES[ck]).map(ck => {
+          const m = MODULES[ck];
+          return `<a href="/${ck}" data-key="${ck}" class="sidebar-link sidebar-sub-link" onclick="closeSidebar()" title="${m.title}"><span class="text-base w-5 text-center shrink-0">${m.icon}</span><span class="nav-label truncate">${m.title}</span></a>`;
+        }).join('');
+        if (!childLinks) return '';
+        return `<div class="sidebar-dropdown" data-dropdown="${key.label}">
+          <a href="#" class="sidebar-link sidebar-dropdown-parent" onclick="event.preventDefault();toggleDropdown('${key.label}')" title="${key.label}">
+            <span class="dropdown-arrow text-base w-5 text-center shrink-0 opacity-45">›</span>
+            <span class="nav-label truncate">${key.label}</span>
+          </a>
+          <div class="sidebar-sub">${childLinks}</div>
+        </div>`;
+      }
       const m = MODULES[key];
       return `<a href="/${key}" data-key="${key}" class="sidebar-link" onclick="closeSidebar()" title="${m.title}"><span class="text-base w-5 text-center shrink-0">${m.icon}</span><span class="nav-label truncate">${m.title}</span></a>`;
     }).join('');
@@ -65,6 +92,11 @@ function renderNav() {
 function navigate(key) {
   history.pushState(null, '', '/' + key);
   route();
+}
+
+function toggleDropdown(label) {
+  const el = document.querySelector(`[data-dropdown="${label}"]`);
+  if (el) el.classList.toggle('open');
 }
 
 function route() {
@@ -85,7 +117,10 @@ function route() {
   if ((key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun' || key === 'panduan-keuangan') && !isAdminOrKeuangan) {
     return showAccessDenied();
   }
-  if (key === 'laporan' && !isAdminOrKeuangan) {
+  if (key.startsWith('laporan-') && key !== 'laporan-siklus' && !isAdminOrKeuangan) {
+    return showAccessDenied();
+  }
+  if (key === 'laporan-siklus' && userRole !== 'admin' && userRole !== 'ahli_gizi') {
     return showAccessDenied();
   }
   if ((key === 'shift' || key === 'jadwal' || key === 'divisi') && !isAdminOrKeuangan) {
@@ -114,6 +149,11 @@ function route() {
   }
   
   document.querySelectorAll('.sidebar-link').forEach(a => a.classList.toggle('active', a.dataset.key === key));
+  document.querySelectorAll('.sidebar-dropdown').forEach(dd => {
+    const hasActive = dd.querySelector('.sidebar-link.active');
+    dd.classList.toggle('open', !!hasActive);
+    dd.querySelector('.sidebar-dropdown-parent')?.classList.toggle('active', !!hasActive);
+  });
   document.title = m.title + ' — Dapur Sukaluyu';
   document.getElementById('page-title').textContent = m.title;
   document.getElementById('page-sub').textContent = m.sub;

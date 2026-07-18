@@ -17,7 +17,7 @@ async function renderLaporan() {
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
   }
 }
-const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan'];
+const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'keuangan', 'hpp'];
 const LAP_PAGE_SIZE = 10;
 let lapState = { tab: 'siklus', page: 1 };
 
@@ -75,34 +75,73 @@ const tabColors = {
       window['_export_distribusi'] = { data: rows, fields: ['tanggal_distribusi','titik_distribusi','kategori_penerima','jumlah_porsi','status'] };
       window._lapStatCards = '';
     } else if (tab === 'rab') {
-      const rows = await api.get('/budget');
-      const totalBudget = rows.reduce((s, b) => s + Number(b.total_budget), 0);
-      const totalRealisasi = rows.reduce((s, b) => s + Number(b.realisasi), 0);
-      const totalSelisih = totalBudget - totalRealisasi;
-      const totalBiayaOp = rows.reduce((s, b) => s + Number(b.biaya_operasional), 0);
-      const totalPenerima = rows.reduce((s, b) => s + Number(b.jumlah_penerima), 0);
-      const totalHargaPerPorsi = rows.reduce((s, b) => s + Number(b.harga_per_porsi), 0);
-      const biayaCount = rows.filter(b => Number(b.biaya_operasional) > 0).length;
-      window._lapData = { tab, rows,
-        headers: ['Periode','Kategori','Penerima','Harga/Porsi','Biaya Operasional','Total Budget','Realisasi','Selisih','Capaian'],
-        fields: ['periode','kategori_penerima','jumlah_penerima','harga_per_porsi','biaya_operasional','total_budget','realisasi'],
-        fmt: rows.map(b => {
-          const budget = Number(b.total_budget);
-          const realisasi = Number(b.realisasi);
-          const selisih = budget - realisasi;
-          const capaian = budget > 0 ? (realisasi / budget * 100).toFixed(1) + '%' : '-';
-          return [b.periode, b.kategori_penerima||'-', fmtNum(b.jumlah_penerima), fmtIDR(b.harga_per_porsi),
-            fmtIDR(b.biaya_operasional), fmtIDR(budget), fmtIDR(realisasi), fmtIDR(selisih), capaian];
-        })
-      };
-      window['_export_rab'] = { data: rows, fields: ['periode','kategori_penerima','jumlah_penerima','harga_per_porsi','biaya_operasional','total_budget','realisasi'] };
-      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
-        ${statCard('Total Budget', fmtIDR(totalBudget), 'Anggaran', 'bg-emerald-50')}
-        ${statCard('Total Realisasi', fmtIDR(totalRealisasi), 'Terpakai', 'bg-orange-50')}
-        ${statCard('Sisa Anggaran', fmtIDR(totalSelisih), totalBudget > 0 ? (totalRealisasi/totalBudget*100).toFixed(1) + '% terserap' : '', 'bg-blue-50')}
-        ${statCard('Biaya Operasional', fmtIDR(totalBiayaOp), biayaCount + ' item', 'bg-stone-50')}
-        ${statCard('Total Penerima', fmtNum(totalPenerima), 'manfaat', 'bg-violet-50')}
-      </div>`;
+      const filterPeriode = lapState.rab_periode || new Date().toISOString().slice(0, 7);
+      const r = await api.get('/laporan/rab-sinkron?periode=' + filterPeriode);
+      const rows = r.rows || [];
+
+      // Generate periode list
+      var periods = [];
+      var nowDate = new Date();
+      for (var y = nowDate.getFullYear() - 2; y <= nowDate.getFullYear(); y++) {
+        for (var m = 1; m <= 12; m++) {
+          var mm = String(m).padStart(2, '0');
+          periods.push(y + '-' + mm);
+        }
+      }
+      periods = periods.filter(function(p) { return p <= nowDate.toISOString().slice(0, 7); }).reverse();
+
+      var rabFilterBar = '<div class="mb-4 flex flex-wrap items-center gap-3"><div class="flex items-center gap-2">' +
+        '<label class="text-xs font-medium text-stone-500">Periode:</label>' +
+        '<select id="rab-filter-periode" onchange="gantiPeriodeRab()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        periods.map(function(p) { return '<option value="' + p + '" ' + (filterPeriode===p?'selected':'') + '>' + p + '</option>'; }).join('') +
+        '</select></div>' +
+        '<span class="text-xs text-stone-400">' + (r.total_hari || 0) + ' hari produksi</span></div>';
+
+      var fmtIdr = fmtIDR;
+      var tableContent = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
+        '<thead class="bg-stone-50"><tr>' +
+        '<th class="text-left px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Deskripsi</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Harga</th>' +
+        '<th class="text-center px-1 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold" style="width:20px">×</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Jml Penerima</th>' +
+        '<th class="text-center px-1 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold" style="width:20px">×</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Hari</th>' +
+        '<th class="text-center px-1 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold" style="width:20px">=</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Total</th>' +
+        '</tr></thead><tbody>';
+
+      rows.forEach(function(b) {
+        tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 font-medium">' + escHtml(b.kategori) + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono">' + fmtIdr(b.harga_per_porsi) + '</td>' +
+          '<td class="px-1 py-2.5 sm:py-3 text-center text-stone-400">×</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right">' + fmtNum(b.jumlah_penerima) + ' SISWA</td>' +
+          '<td class="px-1 py-2.5 sm:py-3 text-center text-stone-400">×</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right">' + b.jumlah_hari + '</td>' +
+          '<td class="px-1 py-2.5 sm:py-3 text-center text-stone-400">=</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono font-bold">' + fmtIdr(b.total) + '</td></tr>';
+      });
+
+      // Total row
+      tableContent += '<tr class="border-t-2 border-stone-400 font-bold bg-stone-100">' +
+        '<td class="px-3 sm:px-4 py-3 font-bold text-sm">Total</td>' +
+        '<td class="px-3 sm:px-4 py-3"></td>' +
+        '<td class="px-1 py-3 text-center text-stone-400">×</td>' +
+        '<td class="px-3 sm:px-4 py-3 text-right font-bold">' + fmtNum(r.grand_penerima) + ' SISWA</td>' +
+        '<td class="px-1 py-3 text-center text-stone-400">×</td>' +
+        '<td class="px-3 sm:px-4 py-3 text-right font-bold">' + (r.total_hari || 0) + '</td>' +
+        '<td class="px-1 py-3 text-center text-stone-400">=</td>' +
+        '<td class="px-3 sm:px-4 py-3 text-right mono font-bold text-[#1e40af] text-sm">' + fmtIdr(r.grand_total) + '</td></tr>';
+
+      tableContent += '</tbody></table></div></div>';
+
+      window._lapData = null;
+      window._lapStatCards = rabFilterBar + '<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">' +
+        statCard('Total Anggaran', fmtIDR(r.grand_total), 'RAB sinkron', 'bg-emerald-50') +
+        statCard('Total Penerima', fmtNum(r.grand_penerima), 'siswa', 'bg-blue-50') +
+        statCard('Total Hari', fmtNum(r.total_hari), 'hari produksi', 'bg-amber-50') +
+        statCard('Rata Biaya/Hari', fmtIDR(r.total_hari ? Math.round(r.grand_total / r.total_hari) : 0), '', 'bg-violet-50') +
+      '</div>' + tableContent;
     } else if (tab === 'rab-bulanan') {
       const r = await api.get('/laporan/rab-bulanan');
       const rows = r.rows || [];
@@ -668,7 +707,15 @@ function renderLapPage() {
   const end = start + LAP_PAGE_SIZE;
   const pageData = ld.fmt.slice(start, end);
 
-  let html = (window._lapStatCards || '') + tableHtml(ld.headers, pageData);
+  let tblHtml = tableHtml(ld.headers, pageData);
+  if (ld.totalRow) {
+    const colspan = ld.headers.length;
+    var totalCells = ld.totalRow.map(function(v) {
+      return '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold whitespace-nowrap">' + (v || '') + '</td>';
+    }).join('');
+    tblHtml = tblHtml.replace('</tbody>', '<tr class="border-t-2 border-stone-400 font-bold bg-stone-100">' + totalCells + '</tr></tbody>');
+  }
+  let html = (window._lapStatCards || '') + tblHtml;
 
   if (totalPages > 1) {
     const prevBtn = page > 1 ? `<button onclick="lapGoToPage(${page - 1})" class="px-2 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Prev</button>` : '';
@@ -796,6 +843,11 @@ function fmtDateIndonesia(dateStr) {
   const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
   const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   return hari[d.getDay()] + ', ' + d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
+}
+function gantiPeriodeRab() {
+  lapState.rab_periode = document.getElementById('rab-filter-periode')?.value || '';
+  lapState.page = 1;
+  showLap('rab');
 }
 // ===== Payroll Mingguan Helpers =====
 function pmGanti() {
@@ -950,6 +1002,37 @@ function renderDailyMenuTable(menuHarian, kategori_order) {
   html += '</tbody></table></div>';
   return html;
 }
+
+function renderReportPage(tab) {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+    <div class="flex justify-end mb-3">
+      <button onclick="exportXlsxLaporan('${tab}')" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-[11px] font-medium flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Export XLSX
+      </button>
+    </div>
+    <div id="lap-content"></div>
+  `;
+  showLap(tab);
+}
+function renderLapRab() { renderReportPage('rab'); }
+function renderLapRabBulanan() { renderReportPage('rab-bulanan'); }
+function renderLapPersediaan() { renderReportPage('persediaan'); }
+function renderLapDistribusi() { renderReportPage('distribusi'); }
+function renderLapKeuangan() { renderReportPage('keuangan'); }
+function renderLapPengeluaranBulanan() { renderReportPage('pengeluaran-bulanan'); }
+function renderLapPenggunaanAnggaran() { renderReportPage('penggunaan-anggaran'); }
+function renderLapBpKas() { renderReportPage('bp-kas'); }
+function renderLapSiklus() { renderReportPage('siklus'); }
+function renderLapPembelian() { renderReportPage('pembelian'); }
+function renderLapPenerimaan() { renderReportPage('penerimaan'); }
+function renderLapMutasi() { renderReportPage('mutasi'); }
+function renderLapProduksi() { renderReportPage('produksi'); }
+function renderLapPayroll() { renderReportPage('payroll'); }
+function renderLapPayrollMingguan() { renderReportPage('payroll-mingguan'); }
+function renderLapLabaRugi() { renderReportPage('laba-rugi'); }
+function renderLapHpp() { renderReportPage('hpp'); }
 
 function renderResepTable(siklus, kategori_order) {
   if (!siklus.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
