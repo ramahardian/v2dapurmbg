@@ -190,28 +190,30 @@ router.post('/menu', async (req, res) => {
     
     // Hitung dan simpan nilai gizi dari bahan yang baru disimpan
     if (hasBahan) {
-      const [menuBahanRows] = await conn.query(
-        `SELECT mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
-         FROM menu_bahan mb JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
-         WHERE mb.menu_id=?`,
-        [r.insertId]
-      );
-      let calcGramasi = 0, calcKalori = 0, calcProtein = 0, calcKarbohidrat = 0, calcLemak = 0, calcSerat = 0;
-      for (const b of menuBahanRows) {
-        const jml = Number(b.jumlah) || 0;
-        const ref = spRefMap[b.nama] || {};
-        calcGramasi += jml;
-        calcKalori += jml / 100 * (Number(ref.energi || b.kalori) || 0);
-        calcProtein += jml / 100 * (Number(ref.protein || b.protein) || 0);
-        calcKarbohidrat += jml / 100 * (Number(ref.karbohidrat || b.karbohidrat) || 0);
-        calcLemak += jml / 100 * (Number(ref.lemak || b.lemak) || 0);
-        calcSerat += jml / 100 * (Number(ref.serat || b.serat) || 0);
-      }
-      await conn.query(
-        'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=?',
-        [Math.round(calcGramasi * 10) / 10, Math.round(calcKalori * 10) / 10, Math.round(calcProtein * 10) / 10,
-         Math.round(calcKarbohidrat * 10) / 10, Math.round(calcLemak * 10) / 10, Math.round(calcSerat * 10) / 10, r.insertId]
-      );
+      try {
+        const [menuBahanRows] = await conn.query(
+          `SELECT mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
+           FROM menu_bahan mb JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+           WHERE mb.menu_id=?`,
+          [r.insertId]
+        );
+        let calcGramasi = 0, calcKalori = 0, calcProtein = 0, calcKarbohidrat = 0, calcLemak = 0, calcSerat = 0;
+        for (const b of menuBahanRows) {
+          const jml = Number(b.jumlah) || 0;
+          const ref = spRefMap[b.nama] || {};
+          calcGramasi += jml;
+          calcKalori += jml / 100 * (Number(ref.energi || b.kalori) || 0);
+          calcProtein += jml / 100 * (Number(ref.protein || b.protein) || 0);
+          calcKarbohidrat += jml / 100 * (Number(ref.karbohidrat || b.karbohidrat) || 0);
+          calcLemak += jml / 100 * (Number(ref.lemak || b.lemak) || 0);
+          calcSerat += jml / 100 * (Number(ref.serat || b.serat) || 0);
+        }
+        await conn.query(
+          'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=?',
+          [Math.round(calcGramasi * 10) / 10, Math.round(calcKalori * 10) / 10, Math.round(calcProtein * 10) / 10,
+           Math.round(calcKarbohidrat * 10) / 10, Math.round(calcLemak * 10) / 10, Math.round(calcSerat * 10) / 10, r.insertId]
+        );
+      } catch (e2) { console.error('Gagal hitung nutrisi menu:', e2.message); }
     }
     
     await conn.commit(); // Permanenkan data ke database jika tidak ada error
@@ -321,29 +323,31 @@ router.put('/menu/:id', async (req, res) => {
     
     // Hitung dan simpan nilai gizi dari bahan yang baru disimpan
     if (hasBahan) {
-      const [menuBahanRows] = await conn.query(
-        `SELECT mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
-         FROM menu_bahan mb JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
-         WHERE mb.menu_id=?`,
-        [req.params.id]
-      );
-      let calcGramasi = 0, calcKalori = 0, calcProtein = 0, calcKarbohidrat = 0, calcLemak = 0, calcSerat = 0;
-      for (const b of menuBahanRows) {
-        const jml = Number(b.jumlah) || 0;
-        const ref = spRefMap[b.nama] || {};
-        calcGramasi += jml;
-        calcKalori += jml / 100 * (Number(ref.energi || b.kalori) || 0);
-        calcProtein += jml / 100 * (Number(ref.protein || b.protein) || 0);
-        calcKarbohidrat += jml / 100 * (Number(ref.karbohidrat || b.karbohidrat) || 0);
-        calcLemak += jml / 100 * (Number(ref.lemak || b.lemak) || 0);
-        calcSerat += jml / 100 * (Number(ref.serat || b.serat) || 0);
-      }
-      await conn.query(
-        'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?',
-        [Math.round(calcGramasi * 10) / 10, Math.round(calcKalori * 10) / 10, Math.round(calcProtein * 10) / 10,
-         Math.round(calcKarbohidrat * 10) / 10, Math.round(calcLemak * 10) / 10, Math.round(calcSerat * 10) / 10,
-         req.params.id, req.user.tenant_id]
-      );
+      try {
+        const [menuBahanRows] = await conn.query(
+          `SELECT mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
+           FROM menu_bahan mb JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+           WHERE mb.menu_id=?`,
+          [req.params.id]
+        );
+        let calcGramasi = 0, calcKalori = 0, calcProtein = 0, calcKarbohidrat = 0, calcLemak = 0, calcSerat = 0;
+        for (const b of menuBahanRows) {
+          const jml = Number(b.jumlah) || 0;
+          const ref = spRefMap[b.nama] || {};
+          calcGramasi += jml;
+          calcKalori += jml / 100 * (Number(ref.energi || b.kalori) || 0);
+          calcProtein += jml / 100 * (Number(ref.protein || b.protein) || 0);
+          calcKarbohidrat += jml / 100 * (Number(ref.karbohidrat || b.karbohidrat) || 0);
+          calcLemak += jml / 100 * (Number(ref.lemak || b.lemak) || 0);
+          calcSerat += jml / 100 * (Number(ref.serat || b.serat) || 0);
+        }
+        await conn.query(
+          'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?',
+          [Math.round(calcGramasi * 10) / 10, Math.round(calcKalori * 10) / 10, Math.round(calcProtein * 10) / 10,
+           Math.round(calcKarbohidrat * 10) / 10, Math.round(calcLemak * 10) / 10, Math.round(calcSerat * 10) / 10,
+           req.params.id, req.user.tenant_id]
+        );
+      } catch (e2) { console.error('Gagal hitung nutrisi menu:', e2.message); }
     }
     
     await conn.commit();

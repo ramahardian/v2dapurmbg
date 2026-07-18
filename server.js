@@ -370,6 +370,35 @@ CREATE TABLE siklus_menu_item (
     }
   });
 
+  // Endpoint tambah kolom nutrisi ke bahan_baku + FK siklus_menu_item.menu_id (admin only)
+  app.get('/api/migrate/nutrisi-dan-fk', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      let results = [];
+      // 1. Tambah kolom nutrisi ke bahan_baku
+      const [nutCols] = await db.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'kalori'");
+      if (!nutCols.length) {
+        await db.query('ALTER TABLE bahan_baku ADD COLUMN kalori DECIMAL(10,2) DEFAULT 0 AFTER harga_satuan, ADD COLUMN protein DECIMAL(10,2) DEFAULT 0 AFTER kalori, ADD COLUMN karbohidrat DECIMAL(10,2) DEFAULT 0 AFTER protein, ADD COLUMN lemak DECIMAL(10,2) DEFAULT 0 AFTER karbohidrat, ADD COLUMN serat DECIMAL(10,2) DEFAULT 0 AFTER lemak');
+        results.push('✓ Kolom nutrisi (kalori, protein, karbohidrat, lemak, serat) ditambahkan ke bahan_baku');
+      } else {
+        results.push('✓ Kolom nutrisi sudah ada di bahan_baku');
+      }
+      // 2. Bersihkan orphaned menu_id di siklus_menu_item
+      await db.query('UPDATE siklus_menu_item SET menu_id=NULL WHERE menu_id IS NOT NULL AND menu_id NOT IN (SELECT id FROM menu)');
+      results.push('✓ Orphaned menu_id dibersihkan');
+      // 3. Tambah FK siklus_menu_item.menu_id → menu(id) ON DELETE SET NULL
+      const [fkExists] = await db.query("SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'siklus_menu_item' AND CONSTRAINT_TYPE = 'FOREIGN KEY' AND CONSTRAINT_NAME = 'fk_smi_menu'");
+      if (!fkExists.length) {
+        await db.query('ALTER TABLE siklus_menu_item ADD CONSTRAINT fk_smi_menu FOREIGN KEY (menu_id) REFERENCES menu(id) ON DELETE SET NULL');
+        results.push('✓ FK siklus_menu_item.menu_id → menu(id) ON DELETE SET NULL ditambahkan');
+      } else {
+        results.push('✓ FK siklus_menu_item.menu_id sudah ada');
+      }
+      res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Migrasi Selesai</h2>${results.map(r => '<p style="color:#374151;margin-top:0.5rem">' + r + '</p>').join('')}<a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali ke Dashboard</a></div>`);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#dc2626">❌ Gagal</h2><p style="color:#6b7280;margin-top:0.5rem">${e.message}</p></div>`);
+    }
+  });
+
   // Endpoint jalankan seed dummy data (admin only)
   app.get('/api/migrate/seed-dummy', requireAuth, requireRole('admin'), async (req, res) => {
     try {
