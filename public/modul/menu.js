@@ -145,7 +145,6 @@ function renderMenuBySiklusHtml(data) {
                   <span class="text-[10px] font-semibold uppercase text-stone-400">Hari ${d.hari_ke}</span>
                   <span class="text-[10px] text-stone-400">${d.hari_nama}</span>
                 </div>
-                ${d.foto ? `<img src="${d.foto}" class="w-full h-20 object-cover rounded-lg mb-2 border border-stone-100" alt="${d.menu_nama}" />` : ''}
                 ${d.menu_id ? `
                   <div class="font-medium text-sm text-stone-800 truncate" title="${d.menu_nama}">${d.menu_nama}</div>
                   <div class="flex items-center gap-2 mt-1.5 text-[10px] text-stone-500">
@@ -189,7 +188,6 @@ function renderMenuBySiklusHtml(data) {
                 <tr class="border-t border-stone-100 hover:bg-stone-50/50 transition-colors">
                   <td class="px-4 py-3 text-sm font-medium">
                     <div class="flex items-center gap-2">
-                      ${m.foto ? `<img src="${m.foto}" class="w-8 h-8 rounded object-cover border border-stone-200 shrink-0" />` : ''}
                       <span class="truncate max-w-[180px]" title="${m.nama}">${m.nama}</span>
                     </div>
                   </td>
@@ -335,12 +333,7 @@ function renderMenuHtml(menus) {
               <td class="px-4 py-3 text-sm">
                 <input type="checkbox" value="${m.id}" onchange="updateSelectedMenuCount()" class="menu-checkbox w-4 h-4 rounded border-stone-300 text-[#1e40af] focus:ring-[#1e40af]/30">
               </td>
-              <td class="px-4 py-3 text-sm font-medium truncate max-w-[180px]" title="${m.nama}">
-                <div class="flex items-center gap-2">
-                  ${m.foto ? `<img src="${m.foto}" class="w-8 h-8 rounded object-cover border border-stone-200 shrink-0" />` : ''}
-                  <span>${m.nama}</span>
-                </div>
-              </td>
+              <td class="px-4 py-3 text-sm font-medium truncate max-w-[180px]" title="${m.nama}">${m.nama}</td>
               <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
               <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.kalori} kkal</td>
@@ -402,8 +395,8 @@ function attachMenuHandlers() {
   });
 }
 
-function openMenuForm(editing) {
-  const m = editing || { nama: '', kategori_penerima: '', deskripsi: '', gramasi_total: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
+async function openMenuForm(editing) {
+  const m = editing || { nama: '', kategori_penerima: '', deskripsi: '', gramasi_total: 0, gramasi_besar: 0, gramasi_kecil: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
   document.getElementById('modal-title').textContent = editing ? 'Edit Menu' : 'Tambah Menu';
   document.getElementById('modal-body').innerHTML = `
     <div class="grid grid-cols-2 gap-3">
@@ -421,23 +414,26 @@ function openMenuForm(editing) {
       <div><label class="text-sm">Jumlah Porsi <span id="m-porsi-label" class="text-stone-400 font-normal">(dari penerima manfaat)</span></label>
         <input id="m-jumlah-porsi" type="number" readonly value="0" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md bg-stone-50 text-sm font-semibold" />
       </div>
+      <div class="col-span-2 grid grid-cols-2 gap-3">
+        <div><label class="text-sm">Gramasi Besar (g)</label>
+          <input id="m-gramasi-besar" type="number" value="${m.gramasi_besar || 0}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" placeholder="0 = gramasi total" />
+        </div>
+        <div><label class="text-sm">Gramasi Kecil (g)</label>
+          <div class="flex gap-2">
+            <input id="m-gramasi-kecil" type="number" value="${m.gramasi_kecil || 0}" class="mt-1 flex-1 h-10 px-3 border border-stone-200 rounded-md" placeholder="0 = gramasi total" />
+            <button type="button" onclick="hitungGramasiBesarKecil()" class="mt-1 shrink-0 px-3 h-10 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100 whitespace-nowrap">SP</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="mt-3"><label class="text-sm">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
     <div class="flex items-center justify-between mt-3">
       <div class="flex-1 grid grid-cols-6 gap-2">
-        ${[['gramasi_total','Gramasi'],['kalori','Kalori'],['protein','Protein'],['karbohidrat','Karbo'],['lemak','Lemak'],['serat','Serat']].map(([k,l]) =>
+        ${[['kalori','Kalori'],['protein','Protein'],['karbohidrat','Karbo'],['lemak','Lemak'],['serat','Serat']].map(([k,l]) =>
           `<div><label class="text-xs">${l}</label><input id="m-${k}" type="number" value="${m[k] || 0}" class="mt-1 w-full h-9 px-2 border border-stone-200 rounded-md mono text-sm" /></div>`).join('')}
       </div>
       <button type="button" onclick="hitungNutrisiAI()" class="ml-2 mt-5 shrink-0 px-3 h-9 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100 whitespace-nowrap" title="Hitung nutrisi pakai AI">AI</button>
     </div>
-    <div class="mt-3"><label class="text-sm">Foto Menu</label>
-      <div class="flex items-center gap-3 mt-1">
-        ${m.foto ? `<div class="relative group"><img src="${m.foto}" class="w-20 h-20 object-cover rounded-lg border border-stone-200" /><button type="button" onclick="document.getElementById('m-foto').value='';this.closest('.flex').querySelector('img').remove();document.getElementById('m-foto-preview').innerHTML=''" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs leading-none opacity-0 group-hover:opacity-100 transition-opacity">&times;</button></div>` : ''}
-        <div id="m-foto-preview"></div>
-        <button type="button" onclick="document.getElementById('m-foto-input').click()" class="px-3 py-1.5 text-xs border border-stone-300 rounded hover:bg-stone-50">Pilih Foto</button>
-        <input type="hidden" id="m-foto" value="${m.foto || ''}" />
-        <input type="file" id="m-foto-input" accept="image/*" class="hidden" onchange="previewMenuFoto(this)" />
-      </div>
     </div>
     <div class="border-t border-stone-200 mt-4 pt-3">
       <div onclick="var n=document.getElementById('sp-ref-table');n.classList.toggle('hidden');this.querySelector('svg').classList.toggle('rotate-180')" class="flex items-center gap-2 cursor-pointer select-none mb-2">
@@ -468,21 +464,21 @@ function openMenuForm(editing) {
     `;
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0 }));
   renderBahanList();
-  loadSpMap(m.kategori_penerima);
-  document.getElementById('m-kategori').onchange = function() { loadSpMap(this.value); };
+  await loadSpMap(m.kategori_penerima);
+  document.getElementById('m-kategori').onchange = async function() { await loadSpMap(this.value); };
   document.getElementById('modal-save').onclick = async () => {
     if (!validateForm([{ id: 'm-nama', label: 'Nama Menu' }])) return;
     const payload = {
       nama: document.getElementById('m-nama').value,
       kategori_penerima: document.getElementById('m-kategori').value,
       deskripsi: document.getElementById('m-deskripsi').value,
-      gramasi_total: +document.getElementById('m-gramasi_total').value || 0,
+      gramasi_besar: +document.getElementById('m-gramasi-besar').value || 0,
+      gramasi_kecil: +document.getElementById('m-gramasi-kecil').value || 0,
       kalori: +document.getElementById('m-kalori').value || 0,
       protein: +document.getElementById('m-protein').value || 0,
       karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
       lemak: +document.getElementById('m-lemak').value || 0,
       serat: +document.getElementById('m-serat').value || 0,
-      foto: document.getElementById('m-foto').value || undefined,
       bahan: window._menuBahan.filter(function(b) { return (b.bahan_baku_id || b.nama) && (b.jumlah || b.kategori_sp); }),
     };
     if (editing) await api.put('/menu/' + editing.id, payload);
@@ -492,8 +488,8 @@ function openMenuForm(editing) {
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
 }
-function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '', nama: '' }); renderBahanList(); hitungNutrisi(); }
-function removeBahanRow(i) { window._menuBahan.splice(i, 1); renderBahanList(); hitungNutrisi(); }
+function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '', nama: '' }); renderBahanList(); hitungNutrisi(); hitungGramasiBesarKecil(); }
+function removeBahanRow(i) { window._menuBahan.splice(i, 1); renderBahanList(); hitungNutrisi(); hitungGramasiBesarKecil(); }
 function hitungNutrisi() {
   var totalGramasi = 0, totalKalori = 0, totalProtein = 0, totalKarbo = 0, totalLemak = 0, totalSerat = 0;
   (window._menuBahan || []).forEach(function(b) {
@@ -510,11 +506,40 @@ function hitungNutrisi() {
     }
   });
   if (totalKalori > 0 || totalProtein > 0 || totalKarbo > 0 || totalLemak > 0 || totalSerat > 0) {
-    ['gramasi_total','kalori','protein','karbohidrat','lemak','serat'].forEach(function(k) {
+    ['kalori','protein','karbohidrat','lemak','serat'].forEach(function(k) {
       var el = document.getElementById('m-' + k);
-      if (el) el.value = Math.round(({gramasi_total: totalGramasi, kalori: totalKalori, protein: totalProtein, karbohidrat: totalKarbo, lemak: totalLemak, serat: totalSerat}[k]) * 100) / 100;
+      if (el) el.value = Math.round(({kalori: totalKalori, protein: totalProtein, karbohidrat: totalKarbo, lemak: totalLemak, serat: totalSerat}[k]) * 100) / 100;
     });
   }
+}
+
+async function hitungGramasiBesarKecil() {
+  var bahan = (window._menuBahan || []).filter(function(b){return b.bahan_baku_id||b.nama;});
+  var kat = document.getElementById('m-kategori');
+  if (!bahan.length) { showAlert('Tidak ada bahan', 'warning'); return; }
+  if (!kat || !kat.value) { showAlert('Pilih kategori penerima', 'warning'); return; }
+  try {
+    var spBesar = [], spKecil = [];
+    try { spBesar = await api.get('/sp/standar/' + encodeURIComponent(kat.value)); } catch(e){ console.warn('SP besar gagal'); }
+    try { spKecil = await api.get('/sp/standar/Balita'); } catch(e){ console.warn('SP kecil gagal'); }
+    if (!spBesar.length) { showAlert('SP ' + kat.value + ' tidak ditemukan', 'warning'); return; }
+    if (!spKecil.length) { showAlert('SP Balita tidak ditemukan', 'warning'); return; }
+    var bMap = {}, kMap = {};
+    for (var r of spBesar) bMap[r.kategori_sp] = Number(r.sp_value);
+    for (var r of spKecil) kMap[r.kategori_sp] = Number(r.sp_value);
+    var gBesar = 0, gKecil = 0, hitung = 0;
+    for (var b of bahan) {
+      if (!b.kategori_sp || !b.berat_1_sp) continue;
+      var w = Number(b.berat_1_sp) || 0;
+      gBesar += (bMap[b.kategori_sp] || 0) * w;
+      gKecil += (kMap[b.kategori_sp] || 0) * w;
+      hitung++;
+    }
+    if (!hitung) { showAlert('Bahan belum punya berat_1_sp', 'warning'); return; }
+    document.getElementById('m-gramasi-besar').value = Math.round(gBesar * 100) / 100;
+    document.getElementById('m-gramasi-kecil').value = Math.round(gKecil * 100) / 100;
+    showToast('Gramasi terisi dari SP', 'success');
+  } catch(e){ showAlert('Error: ' + e.message, 'error'); }
 }
 
 async function hitungNutrisiAI() {
@@ -530,7 +555,7 @@ async function hitungNutrisiAI() {
   });
   try {
     var res = await api.post('/ai/hitung-nutrisi', { nama_menu: nama, bahan: bahanData });
-    ['gramasi_total','kalori','protein','karbohidrat','lemak','serat'].forEach(function(k) {
+    ['kalori','protein','karbohidrat','lemak','serat'].forEach(function(k) {
       var el = document.getElementById('m-' + k);
       if (el && res[k] != null) el.value = Math.round(res[k] * 100) / 100;
     });
@@ -596,6 +621,7 @@ async function loadSpMap(kategori) {
     }
     renderBahanList();
     hitungNutrisi();
+    await hitungGramasiBesarKecil();
   } catch (e) { console.error('loadSpMap error:', e); window._spMap = {}; window._jumlahPorsi = 0; }
 }
 
@@ -711,6 +737,7 @@ async function selectBahan(i, nama) {
   if (input) input.value = nama;
   renderBahanList();
   hitungNutrisi();
+  hitungGramasiBesarKecil();
 }
 
 async function deleteMenu(id) { if (!await showConfirm('Hapus menu?')) return; await api.del('/menu/' + id); renderMenu(); }
@@ -745,18 +772,6 @@ async function deleteSelectedMenu() {
   } catch (e) {
     showToast('Gagal menghapus: ' + (e.message || 'Unknown error'), 'error');
   }
-}
-
-function previewMenuFoto(input) {
-  var file = input.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { showAlert('Ukuran foto maksimal 5MB', 'warning'); return; }
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    document.getElementById('m-foto').value = e.target.result;
-    document.getElementById('m-foto-preview').innerHTML = '<img src="' + e.target.result + '" class="w-20 h-20 object-cover rounded-lg border border-stone-200" />';
-  };
-  reader.readAsDataURL(file);
 }
 
 async function recalcNutrisiMenu() {

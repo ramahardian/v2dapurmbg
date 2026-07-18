@@ -674,6 +674,38 @@ CREATE TABLE menu_bahan (
     }
   });
 
+  // Endpoint migrasi: tambah kolom gramasi_besar & gramasi_kecil ke menu
+  app.get('/api/migrate/gramasi-besar-kecil', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [c1] = await db.query("SHOW COLUMNS FROM menu LIKE 'gramasi_besar'");
+      const [c2] = await db.query("SHOW COLUMNS FROM menu LIKE 'gramasi_kecil'");
+      if (c1.length && c2.length) {
+        return res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Kolom sudah ada</h2><a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
+      }
+      if (!c1.length) await db.query('ALTER TABLE menu ADD COLUMN gramasi_besar DECIMAL(10,2) DEFAULT 0 AFTER gramasi_total');
+      if (!c2.length) await db.query('ALTER TABLE menu ADD COLUMN gramasi_kecil DECIMAL(10,2) DEFAULT 0 AFTER gramasi_besar');
+      res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Kolom berhasil ditambahkan</h2><a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#dc2626">❌ Gagal</h2><p>${e.message}</p></div>`);
+    }
+  });
+
+  // Endpoint migrasi: tambah kolom gramasi_besar & gramasi_kecil ke siklus_menu_item
+  app.get('/api/migrate/gramasi-siklus-item', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [c1] = await db.query("SHOW COLUMNS FROM siklus_menu_item LIKE 'gramasi_besar'");
+      const [c2] = await db.query("SHOW COLUMNS FROM siklus_menu_item LIKE 'gramasi_kecil'");
+      if (c1.length && c2.length) {
+        return res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Kolom sudah ada</h2><a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
+      }
+      if (!c1.length) await db.query('ALTER TABLE siklus_menu_item ADD COLUMN gramasi_besar DECIMAL(10,2) DEFAULT 0 AFTER jumlah_porsi');
+      if (!c2.length) await db.query('ALTER TABLE siklus_menu_item ADD COLUMN gramasi_kecil DECIMAL(10,2) DEFAULT 0 AFTER gramasi_besar');
+      res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Kolom berhasil ditambahkan ke siklus_menu_item</h2><a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#dc2626">❌ Gagal</h2><p>${e.message}</p></div>`);
+    }
+  });
+
   // ── ERROR HANDLING ──────────────────────
   process.on('unhandledRejection', (err) => console.error('Unhandled Rejection:', err));
   app.use((err, req, res, next) => {

@@ -119,11 +119,9 @@ async function reloadSiklusList() {
     document.getElementById('stat-total').textContent = total;
     document.getElementById('stat-aktif').textContent = aktif;
     document.getElementById('stat-draft').textContent = draft;
-    document.getElementById('stat-menu').textContent = '...';
-    try {
-      const menuRes = await api.get('/menu?limit=1');
-      document.getElementById('stat-menu').textContent = (menuRes.pagination && menuRes.pagination.total) || 0;
-    } catch (e) { document.getElementById('stat-menu').textContent = '0'; }
+    var menuSet = new Set();
+    list.forEach(function(s) { (s.items || []).forEach(function(it) { if (it.menu_id) menuSet.add(it.menu_id); }); });
+    document.getElementById('stat-menu').textContent = menuSet.size;
     statsEl.classList.remove('hidden');
   }
 
@@ -821,7 +819,9 @@ async function autoFillPorsi(sel) {
   var kat = sel ? sel.value : document.getElementById('sk-kategori')?.value;
   if (!kat) return;
   try {
-    var res = await api.get('/penerima_manfaat/total?kategori_penerima=' + encodeURIComponent(kat));
+    var cari = kat;
+    if (cari === 'SD 1-3' || cari === 'SD 4-6') cari = 'SD';
+    var res = await api.get('/penerima_manfaat/total?kategori_penerima=' + encodeURIComponent(cari));
     var total = (res && res.total) || 0;
     var el = document.getElementById('sk-porsi');
     if (el) el.value = total;

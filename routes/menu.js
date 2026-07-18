@@ -55,7 +55,7 @@ router.get('/menu', async (req, res) => {
   const totalCount = totalCountResult[0].count;
   
   // Get paginated menus (tanpa JOIN, agar LIMIT/OFFSET tepat)
-  const menuSql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.foto
+  const menuSql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat
         FROM menu m
         ${whereClause}
         ORDER BY m.id DESC
@@ -111,7 +111,7 @@ router.get('/menu', async (req, res) => {
  * Menggunakan Database Transaction untuk memastikan integritas data (header dan detail tersimpan bersamaan).
  */
 router.post('/menu', async (req, res) => {
-  const { nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat, foto, bahan } = req.body;
+  const { nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, bahan } = req.body;
   
   if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama menu wajib diisi' });
   
@@ -141,11 +141,10 @@ router.post('/menu', async (req, res) => {
     await conn.beginTransaction(); // Memulai transaksi
     
     // 1. Simpan data header menu
-    const fotoUrl = foto ? saveBase64Foto(foto) : null;
     const [r] = await conn.query(
-      `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat, foto)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      [req.user.tenant_id, nama, kategori_penerima || null, deskripsi || null, gramasi_total || 0, kalori || 0, protein || 0, karbohidrat || 0, lemak || 0, serat || 0, fotoUrl]);
+      `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [req.user.tenant_id, nama, kategori_penerima || null, deskripsi || null, gramasi_total || 0, gramasi_besar || 0, gramasi_kecil || 0, kalori || 0, protein || 0, karbohidrat || 0, lemak || 0, serat || 0]);
       
     // 2. Jika ada data bahan baku, simpan ke tabel relasi (menu_bahan)
     let hasBahan = false;
@@ -263,18 +262,9 @@ router.put('/menu/:id', async (req, res) => {
     for (const r of bbRows) bbNamaMap[r.id] = r.nama;
     
     // 1. Update data header menu sesuai ID dan kepemilikan tenant
-    const fotoUrl = f.foto ? saveBase64Foto(f.foto) : undefined;
-    let fotoSql = '';
-    const fotoParams = [];
-    if (fotoUrl) {
-      fotoSql = ', foto=?';
-      fotoParams.push(fotoUrl);
-    } else if (f.foto === 'hapus') {
-      fotoSql = ', foto=NULL';
-    }
     await conn.query(
-      `UPDATE menu SET nama=?, kategori_penerima=?, deskripsi=?, gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=?${fotoSql} WHERE id=? AND tenant_id=?`,
-      [f.nama, f.kategori_penerima || null, f.deskripsi || null, f.gramasi_total || 0, f.kalori || 0, f.protein || 0, f.karbohidrat || 0, f.lemak || 0, f.serat || 0, ...fotoParams, req.params.id, req.user.tenant_id]);
+      `UPDATE menu SET nama=?, kategori_penerima=?, deskripsi=?, gramasi_total=?, gramasi_besar=?, gramasi_kecil=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?`,
+      [f.nama, f.kategori_penerima || null, f.deskripsi || null, f.gramasi_total || 0, f.gramasi_besar || 0, f.gramasi_kecil || 0, f.kalori || 0, f.protein || 0, f.karbohidrat || 0, f.lemak || 0, f.serat || 0, req.params.id, req.user.tenant_id]);
       
     // 2. Perbarui detail bahan baku
     let hasBahan = false;
@@ -393,7 +383,7 @@ router.get('/menu/by-siklus', async (req, res) => {
 
   // 2. Ambil semua menu milik tenant
   const [allMenus] = await db.query(
-    'SELECT id, nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat, foto FROM menu WHERE tenant_id=? ORDER BY nama ASC',
+    'SELECT id, nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat FROM menu WHERE tenant_id=? ORDER BY nama ASC',
     [req.user.tenant_id]
   );
 
@@ -404,7 +394,7 @@ router.get('/menu/by-siklus', async (req, res) => {
   for (const s of siklusList) {
     const [items] = await db.query(
       `SELECT si.hari_ke, si.hari_nama, si.menu_id, si.menu_nama, si.jumlah_porsi, si.kalori, si.protein, si.karbohidrat, si.lemak, si.serat,
-              m.nama AS menu_nama_lengkap, m.gramasi_total, m.foto, m.kategori_penerima AS menu_kategori
+              m.nama AS menu_nama_lengkap, m.gramasi_total, m.kategori_penerima AS menu_kategori
        FROM siklus_menu_item si
        LEFT JOIN menu m ON m.id = si.menu_id
        WHERE si.siklus_id=?
@@ -420,7 +410,6 @@ router.get('/menu/by-siklus', async (req, res) => {
       jumlah_porsi: Number(it.jumlah_porsi) || 0,
       kalori: Number(it.kalori || it.kalori) || 0,
       gramasi_total: Number(it.gramasi_total) || 0,
-      foto: it.foto,
     }));
 
     if (it.menu_id) usedMenuIds.add(it.menu_id);
@@ -460,7 +449,7 @@ router.get('/menu/by-siklus', async (req, res) => {
  */
 router.get('/menu/:id', async (req, res) => {
   const [menus] = await db.query(
-    `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.foto,
+    `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat,
         mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
         FROM menu m
         LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
@@ -476,12 +465,13 @@ router.get('/menu/:id', async (req, res) => {
     kategori_penerima: menus[0].kategori_penerima,
     deskripsi: menus[0].deskripsi,
     gramasi_total: menus[0].gramasi_total,
+    gramasi_besar: menus[0].gramasi_besar,
+    gramasi_kecil: menus[0].gramasi_kecil,
     kalori: menus[0].kalori,
     protein: menus[0].protein,
     karbohidrat: menus[0].karbohidrat,
     lemak: menus[0].lemak,
     serat: menus[0].serat,
-    foto: menus[0].foto,
     bahan: []
   };
   menus.forEach(row => {
