@@ -505,10 +505,12 @@ function hitungNutrisi() {
       totalSerat += jml / 100 * (ref.serat || 0);
     }
   });
-  ['gramasi_total','kalori','protein','karbohidrat','lemak','serat'].forEach(function(k) {
-    var el = document.getElementById('m-' + k);
-    if (el) el.value = Math.round(({gramasi_total: totalGramasi, kalori: totalKalori, protein: totalProtein, karbohidrat: totalKarbo, lemak: totalLemak, serat: totalSerat}[k]) * 100) / 100;
-  });
+  if (totalKalori > 0 || totalProtein > 0 || totalKarbo > 0 || totalLemak > 0 || totalSerat > 0) {
+    ['gramasi_total','kalori','protein','karbohidrat','lemak','serat'].forEach(function(k) {
+      var el = document.getElementById('m-' + k);
+      if (el) el.value = Math.round(({gramasi_total: totalGramasi, kalori: totalKalori, protein: totalProtein, karbohidrat: totalKarbo, lemak: totalLemak, serat: totalSerat}[k]) * 100) / 100;
+    });
+  }
 }
 
 async function hitungNutrisiAI() {
