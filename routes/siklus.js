@@ -509,13 +509,12 @@ router.get('/siklus/:id', async (req, res) => {
       if (!gridByHari[g.hari_ke]) gridByHari[g.hari_ke] = [];
       gridByHari[g.hari_ke].push(g);
     }
-    const porsi = Number(siklus.jumlah_porsi || 1);
     for (const it of items) {
       if (it._has_bahan && !it.menu_id) {
         const dayBahan = gridByHari[it.hari_ke] || [];
         let estKalori = 0, estProtein = 0, estKarbohidrat = 0, estLemak = 0, estSerat = 0;
         for (const b of dayBahan) {
-          const estWeight = Number(b.berat_1_sp || 0) * porsi;
+          const estWeight = Number(b.berat_1_sp || 0);
           estKalori  += (Number(b.kalori || 0) / 100) * estWeight;
           estProtein += (Number(b.protein || 0) / 100) * estWeight;
           estKarbohidrat += (Number(b.karbohidrat || 0) / 100) * estWeight;
