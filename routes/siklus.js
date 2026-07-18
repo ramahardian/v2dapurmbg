@@ -494,6 +494,43 @@ router.get('/siklus/:id', async (req, res) => {
     }
   }
   
+  // Hitung estimasi gizi untuk item manual (via grid picker tanpa menu_id)
+  const hasManual = items.some(it => it._has_bahan && !it.menu_id);
+  if (hasManual) {
+    const [gridBahan] = await db.query(
+      `SELECT sb.hari_ke, b.kalori, b.protein, b.karbohidrat, b.lemak, b.serat, b.berat_1_sp
+       FROM siklus_menu_item_bahan sb
+       JOIN bahan_baku b ON b.id = sb.bahan_baku_id
+       WHERE sb.siklus_id=?`,
+      [req.params.id]
+    );
+    const gridByHari = {};
+    for (const g of gridBahan) {
+      if (!gridByHari[g.hari_ke]) gridByHari[g.hari_ke] = [];
+      gridByHari[g.hari_ke].push(g);
+    }
+    const porsi = Number(siklus.jumlah_porsi || 1);
+    for (const it of items) {
+      if (it._has_bahan && !it.menu_id) {
+        const dayBahan = gridByHari[it.hari_ke] || [];
+        let estKalori = 0, estProtein = 0, estKarbohidrat = 0, estLemak = 0, estSerat = 0;
+        for (const b of dayBahan) {
+          const estWeight = Number(b.berat_1_sp || 0) * porsi;
+          estKalori  += (Number(b.kalori || 0) / 100) * estWeight;
+          estProtein += (Number(b.protein || 0) / 100) * estWeight;
+          estKarbohidrat += (Number(b.karbohidrat || 0) / 100) * estWeight;
+          estLemak   += (Number(b.lemak || 0) / 100) * estWeight;
+          estSerat   += (Number(b.serat || 0) / 100) * estWeight;
+        }
+        it.kalori = Math.round(estKalori * 100) / 100;
+        it.protein = Math.round(estProtein * 100) / 100;
+        it.karbohidrat = Math.round(estKarbohidrat * 100) / 100;
+        it.lemak = Math.round(estLemak * 100) / 100;
+        it.serat = Math.round(estSerat * 100) / 100;
+      }
+    }
+  }
+
   // Gabungkan header dan detail item ke dalam satu response
   res.json({ ...siklus, items });
 });
