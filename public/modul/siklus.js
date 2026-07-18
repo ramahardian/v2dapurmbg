@@ -656,7 +656,7 @@ async function openSiklusForm(editing) {
       var hk = Number(hkKeys[i]), day = gd[hk];
       if (!day) continue;
       var hasAnyBahan = rowKeys.some(function(rk) { return (day.bahan[rk] || []).length > 0; });
-      if (!hasAnyBahan && !day.menu_nama) continue;
+      if (!hasAnyBahan) continue;
       items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: day.menu_id || '', menu_nama: day.menu_nama || '', jumlah_porsi: 0 });
       for (var ri = 0; ri < rowKeys.length; ri++) {
         var rk = rowKeys[ri], ids = (day.bahan[rk] || []).map(function(b) { return b.id; });
