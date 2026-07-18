@@ -1159,6 +1159,36 @@ router.post('/siklus/:id/bahan-grid', async (req, res) => {
       }
     }
 
+    // Hitung dan simpan nilai gizi untuk item manual berdasarkan grid yang baru disimpan
+    const [giziBahan] = await conn.query(
+      `SELECT sb.hari_ke, b.kalori, b.protein, b.karbohidrat, b.lemak, b.serat, b.berat_1_sp
+       FROM siklus_menu_item_bahan sb
+       JOIN bahan_baku b ON b.id = sb.bahan_baku_id
+       WHERE sb.siklus_id=?`,
+      [req.params.id]
+    );
+    const giziByHari = {};
+    for (const g of giziBahan) {
+      if (!giziByHari[g.hari_ke]) giziByHari[g.hari_ke] = [];
+      giziByHari[g.hari_ke].push(g);
+    }
+    for (const [hariKe, bahanList] of Object.entries(giziByHari)) {
+      let kalori = 0, protein = 0, karbohidrat = 0, lemak = 0, serat = 0;
+      for (const b of bahanList) {
+        const w = Number(b.berat_1_sp || 0);
+        kalori += (Number(b.kalori || 0) / 100) * w;
+        protein += (Number(b.protein || 0) / 100) * w;
+        karbohidrat += (Number(b.karbohidrat || 0) / 100) * w;
+        lemak += (Number(b.lemak || 0) / 100) * w;
+        serat += (Number(b.serat || 0) / 100) * w;
+      }
+      await conn.query(
+        'UPDATE siklus_menu_item SET kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE siklus_id=? AND hari_ke=?',
+        [Math.round(kalori * 100) / 100, Math.round(protein * 100) / 100, Math.round(karbohidrat * 100) / 100,
+         Math.round(lemak * 100) / 100, Math.round(serat * 100) / 100, req.params.id, Number(hariKe)]
+      );
+    }
+
     await conn.commit();
     res.json({ ok: true });
   } catch (e) {
