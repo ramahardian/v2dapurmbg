@@ -380,16 +380,16 @@ async function generatePOFromSiklus() {
             </tr>
           </thead>
           <tbody>
-            ${result.items.map(i => `
-              <tr class="border-t border-stone-100">
-                const kodeNum = i.kode ? (i.kode.match(/EXT[-\s]?(\d+)/i)?.[1] || i.kode) : '';
+            ${result.items.map(i => {
+              const kodeNum = i.kode ? (i.kode.match(/EXT[-\s]?(\d+)/i)?.[1] || i.kode) : '';
+              return `<tr class="border-t border-stone-100">
                 <td class="px-3 py-2">${kodeNum ? '[' + kodeNum + '] ' : ''}${i.bahan_nama}</td>
                 <td class="px-3 py-2 text-right mono">${i.total_qty} ${i.satuan}</td>
                 <td class="px-3 py-2 text-right mono">${i.buffer_10} ${i.satuan}</td>
                 <td class="px-3 py-2 text-right mono">${fmtIDR(i.harga_satuan)}</td>
                 <td class="px-3 py-2 text-right mono">${fmtIDR(i.estimated_subtotal)}</td>
-              </tr>
-            `).join('')}
+              </tr>`;
+            }).join('')}
           </tbody>
           <tfoot class="bg-stone-50 border-t border-stone-200">
             <tr><td colspan="4" class="px-3 py-2 text-right font-semibold">Total Estimasi</td>
