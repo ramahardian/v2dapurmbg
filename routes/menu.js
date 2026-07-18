@@ -151,6 +151,7 @@ router.post('/menu', async (req, res) => {
       [req.user.tenant_id, nama, kategori_penerima || null, deskripsi || null, gramasi_total || 0, kalori || 0, protein || 0, karbohidrat || 0, lemak || 0, serat || 0, fotoUrl]);
       
     // 2. Jika ada data bahan baku, simpan ke tabel relasi (menu_bahan)
+    let hasBahan = false;
     if (Array.isArray(bahan)) {
       for (const b of bahan) {
         let idBahan = Number(b.bahan_baku_id) || 0;
@@ -182,8 +183,35 @@ router.post('/menu', async (req, res) => {
         }
         if (jumlah > 0) {
           await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)', [r.insertId, idBahan, jumlah]);
+          hasBahan = true;
         }
       }
+    }
+    
+    // Hitung dan simpan nilai gizi dari bahan yang baru disimpan
+    if (hasBahan) {
+      const [menuBahanRows] = await conn.query(
+        `SELECT mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
+         FROM menu_bahan mb JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+         WHERE mb.menu_id=?`,
+        [r.insertId]
+      );
+      let calcGramasi = 0, calcKalori = 0, calcProtein = 0, calcKarbohidrat = 0, calcLemak = 0, calcSerat = 0;
+      for (const b of menuBahanRows) {
+        const jml = Number(b.jumlah) || 0;
+        const ref = spRefMap[b.nama] || {};
+        calcGramasi += jml;
+        calcKalori += jml / 100 * (Number(ref.energi || b.kalori) || 0);
+        calcProtein += jml / 100 * (Number(ref.protein || b.protein) || 0);
+        calcKarbohidrat += jml / 100 * (Number(ref.karbohidrat || b.karbohidrat) || 0);
+        calcLemak += jml / 100 * (Number(ref.lemak || b.lemak) || 0);
+        calcSerat += jml / 100 * (Number(ref.serat || b.serat) || 0);
+      }
+      await conn.query(
+        'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=?',
+        [Math.round(calcGramasi * 10) / 10, Math.round(calcKalori * 10) / 10, Math.round(calcProtein * 10) / 10,
+         Math.round(calcKarbohidrat * 10) / 10, Math.round(calcLemak * 10) / 10, Math.round(calcSerat * 10) / 10, r.insertId]
+      );
     }
     
     await conn.commit(); // Permanenkan data ke database jika tidak ada error
@@ -250,6 +278,7 @@ router.put('/menu/:id', async (req, res) => {
       [f.nama, f.kategori_penerima || null, f.deskripsi || null, f.gramasi_total || 0, f.kalori || 0, f.protein || 0, f.karbohidrat || 0, f.lemak || 0, f.serat || 0, ...fotoParams, req.params.id, req.user.tenant_id]);
       
     // 2. Perbarui detail bahan baku
+    let hasBahan = false;
     if (Array.isArray(f.bahan)) {
       // Hapus seluruh relasi bahan lama yang terkait dengan menu ini
       await conn.query('DELETE FROM menu_bahan WHERE menu_id=?', [req.params.id]);
@@ -285,8 +314,36 @@ router.put('/menu/:id', async (req, res) => {
         }
         if (jumlah > 0) {
           await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)', [req.params.id, idBahan, jumlah]);
+          hasBahan = true;
         }
       }
+    }
+    
+    // Hitung dan simpan nilai gizi dari bahan yang baru disimpan
+    if (hasBahan) {
+      const [menuBahanRows] = await conn.query(
+        `SELECT mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
+         FROM menu_bahan mb JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+         WHERE mb.menu_id=?`,
+        [req.params.id]
+      );
+      let calcGramasi = 0, calcKalori = 0, calcProtein = 0, calcKarbohidrat = 0, calcLemak = 0, calcSerat = 0;
+      for (const b of menuBahanRows) {
+        const jml = Number(b.jumlah) || 0;
+        const ref = spRefMap[b.nama] || {};
+        calcGramasi += jml;
+        calcKalori += jml / 100 * (Number(ref.energi || b.kalori) || 0);
+        calcProtein += jml / 100 * (Number(ref.protein || b.protein) || 0);
+        calcKarbohidrat += jml / 100 * (Number(ref.karbohidrat || b.karbohidrat) || 0);
+        calcLemak += jml / 100 * (Number(ref.lemak || b.lemak) || 0);
+        calcSerat += jml / 100 * (Number(ref.serat || b.serat) || 0);
+      }
+      await conn.query(
+        'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?',
+        [Math.round(calcGramasi * 10) / 10, Math.round(calcKalori * 10) / 10, Math.round(calcProtein * 10) / 10,
+         Math.round(calcKarbohidrat * 10) / 10, Math.round(calcLemak * 10) / 10, Math.round(calcSerat * 10) / 10,
+         req.params.id, req.user.tenant_id]
+      );
     }
     
     await conn.commit();
