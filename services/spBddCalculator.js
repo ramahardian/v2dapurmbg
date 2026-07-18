@@ -15,6 +15,9 @@ const JENJANG_MAP = {
   'Ibu Hamil': 'Ibu Hamil',
   'Ibu Menyusui': 'Ibu Menyusui',
   'Balita': 'Balita',
+  // kategori_penerima menu (grouping)
+  'Paket Kecil': 'Balita',
+  'Paket Besar': 'SD 4-6',
 };
 
 const KATEGORI_MAP_SHORT = {
@@ -25,6 +28,8 @@ const KATEGORI_MAP_SHORT = {
   'Ibu Hamil': 'Ibu Hamil',
   'Ibu Menyusui': 'Ibu Menyusui',
   'Balita': 'Balita',
+  'Paket Kecil': 'Balita',
+  'Paket Besar': 'SD 4-6',
 };
 
 const KATEGORI_MAP_DISPLAY = {
