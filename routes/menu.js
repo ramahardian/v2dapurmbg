@@ -125,12 +125,9 @@ router.post('/menu', async (req, res) => {
   let spMap = {};
   let jumlahPorsi = 0;
   if (kategori_penerima) {
-    const spJenjang = kategori_penerima === 'Paket Kecil' ? 'Balita' : kategori_penerima;
-    const [spRows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?', [spJenjang]);
+    const [spRows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?', [kategori_penerima]);
     for (const r of spRows) spMap[r.kategori_sp] = Number(r.sp_value);
-    // Hitung jumlah_porsi dari penerima_manfaat
-    const pmKats = kategori_penerima === 'Paket Kecil' ? ['Balita','TK/PAUD','SD 1-3'] : [kategori_penerima];
-    const [pmRow] = await db.query(`SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${pmKats.map(()=>'?').join(',')})`, [req.user.tenant_id, ...pmKats]);
+    const [pmRow] = await db.query('SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima=?', [req.user.tenant_id, kategori_penerima]);
     jumlahPorsi = Number(pmRow[0].total);
   }
   // Load sp_referensi_bahan dan bahan_baku untuk lookup nama
@@ -254,11 +251,9 @@ router.put('/menu/:id', async (req, res) => {
     let spMap = {};
     let jumlahPorsi = 0;
     if (f.kategori_penerima) {
-      const spJenjang = f.kategori_penerima === 'Paket Kecil' ? 'Balita' : f.kategori_penerima;
-      const [spRows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?', [spJenjang]);
+      const [spRows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?', [f.kategori_penerima]);
       for (const r of spRows) spMap[r.kategori_sp] = Number(r.sp_value);
-      const pmKats = f.kategori_penerima === 'Paket Kecil' ? ['Balita','TK/PAUD','SD 1-3'] : [f.kategori_penerima];
-      const [pmRow] = await db.query(`SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${pmKats.map(()=>'?').join(',')})`, [req.user.tenant_id, ...pmKats]);
+      const [pmRow] = await db.query('SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima=?', [req.user.tenant_id, f.kategori_penerima]);
       jumlahPorsi = Number(pmRow[0].total);
     }
     const spRefMap = {};
