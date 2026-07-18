@@ -9,7 +9,6 @@ const FILES = [
   'menu.js',
   'bahan-baku.js',
   'gudang.js',
-  'hpp.js',
   'laporan.js',
   'siklus.js',
   'karyawan.js',

@@ -99,7 +99,6 @@ distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', ic
       { k: 'jumlah', l: 'Jumlah (IDR)', type: 'number', fmt: 'idr', req: true },
     ], cols: ['tanggal','no_transaksi','tipe','kategori','akun','jumlah'] }
   },
-  hpp: { title: 'HPP per Porsi', sub: 'Bahan + Tenaga Kerja + Overhead = HPP', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10.01"/><line x1="12" y1="10" x2="12" y2="10.01"/><line x1="16" y1="10" x2="16" y2="10.01"/><line x1="8" y1="14" x2="8" y2="14.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="16" y1="14" x2="16" y2="14.01"/><line x1="8" y1="18" x2="8" y2="18.01"/><line x1="12" y1="18" x2="12" y2="18.01"/><line x1="16" y1="18" x2="16" y2="18.01"/></svg>', render: renderHPP },
   laporan: { title: 'Laporan', sub: 'Budget, Persediaan, Distribusi & Keuangan + Export CSV', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>', render: renderLaporan },
   siklus: { title: 'Siklus Menu', sub: 'Rencana menu berulang — untuk ahli gizi', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>', render: renderSiklus },
   'panduan-ahli-gizi': { title: 'Panduan Ahli Gizi', sub: 'Alur kerja dari SP hingga kebutuhan bahan', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', render: renderPanduanAhliGizi },
@@ -133,6 +132,6 @@ const NAV_GROUPS = [
   { label: 'Pembelian', items: ['supplier', 'pembelian', 'penerimaan'] },
   { label: 'Akuntansi', items: ['budgeting', 'kas-bank', 'bp-operasional', 'daftar-akun', 'laporan', 'panduan-keuangan'] },
   { label: 'SDM', items: ['karyawan', 'absensi', 'ijin-cuti', 'payroll', 'shift', 'divisi', 'panduan-sdm'] },
-  { label: 'Ahli Gizi', items: ['menu', 'hpp', 'siklus', 'perencanaan', 'total-kebutuhan', 'standar-sp', 'sp-referensi', 'perhitungan-bdd', 'bdd-kalkulator', 'panduan-ahli-gizi'] },
+  { label: 'Ahli Gizi', items: ['menu', 'siklus', 'perencanaan', 'total-kebutuhan', 'standar-sp', 'sp-referensi', 'perhitungan-bdd', 'bdd-kalkulator', 'panduan-ahli-gizi'] },
   { label: 'Pengaturan', items: ['kelola-user'] },
 ];

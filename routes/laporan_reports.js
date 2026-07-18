@@ -127,24 +127,6 @@ router.get('/laporan/laba-rugi', roleFinance, async (req, res) => {
 });
 
 // 7. HPP per Menu - Keuangan/Admin
-router.get('/laporan/hpp', roleFinance, async (req, res) => {
-  const [menus] = await db.query(
-    `SELECT m.id, m.nama, m.gramasi_total, m.kategori_penerima,
-            COALESCE(SUM(mb.jumlah * bb.harga_satuan), 0) as total_biaya_bahan
-     FROM menu m
-     LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
-     LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
-     WHERE m.tenant_id=?
-     GROUP BY m.id ORDER BY m.nama`,
-    [req.user.tenant_id]
-  );
-  const rows = menus.map(m => ({
-    ...m,
-    hpp_per_porsi: m.gramasi_total > 0 ? Math.round(Number(m.total_biaya_bahan) / (Number(m.gramasi_total) / 100)) : 0,
-  }));
-  const rataHPP = rows.length ? Math.round(rows.reduce((s, r) => s + r.hpp_per_porsi, 0) / rows.length) : 0;
-  res.json({ rows, stats: { total_menu: rows.length, rata_hpp: rataHPP, total_biaya: rows.reduce((s, r) => s + Number(r.total_biaya_bahan), 0) } });
-});
 
 // 8. RAB Bulanan (agregat per periode) - Operasional/Produksi/Admin
 router.get('/laporan/rab-bulanan', roleOps, async (req, res) => {
