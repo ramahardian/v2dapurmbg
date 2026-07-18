@@ -552,7 +552,7 @@ async function openSiklusForm(editing) {
     for (const it of formData.items) {
       const hk = it.hari_ke;
       const existingItem = isEdit && s.items ? s.items.find(i => i.hari_ke === hk) : null;
-      gridData[hk] = { hari_ke: hk, hari_nama: it.hari_nama, menu_nama: it.menu_nama || '', bahan: {}, resep_map: (existingGrid[hk] && existingGrid[hk].resep_map) || {} };
+      gridData[hk] = { hari_ke: hk, hari_nama: it.hari_nama, menu_id: it.menu_id || '', menu_nama: it.menu_nama || '', bahan: {}, resep_map: (existingGrid[hk] && existingGrid[hk].resep_map) || {} };
       for (const rk of ROW_KEYS) {
         const existing = existingGrid[hk] && existingGrid[hk].bahan && existingGrid[hk].bahan[rk];
         gridData[hk].bahan[rk] = (existing || []).map(b => ({ ...b }));
@@ -657,7 +657,7 @@ async function openSiklusForm(editing) {
       if (!day) continue;
       var hasAnyBahan = rowKeys.some(function(rk) { return (day.bahan[rk] || []).length > 0; });
       if (!hasAnyBahan && !day.menu_nama) continue;
-      items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: '', menu_nama: day.menu_nama || '', jumlah_porsi: 0 });
+      items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: day.menu_id || '', menu_nama: day.menu_nama || '', jumlah_porsi: 0 });
       for (var ri = 0; ri < rowKeys.length; ri++) {
         var rk = rowKeys[ri], ids = (day.bahan[rk] || []).map(function(b) { return b.id; });
         gridPayload.push({ hari_ke: hk, kategori_sp: rk, bahan_baku_ids: ids });
@@ -768,7 +768,7 @@ function saveGridPicker(hk, rk) {
   var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
   var items = hkKeys.map(function(hk) {
     var d = window._gridData[Number(hk)];
-    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
+    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
   });
   openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, total_hari: items.length, status: curStatus, items: items } : { nama: curNama, total_hari: items.length, status: curStatus, items: items });
 }
@@ -807,7 +807,7 @@ async function openSiklusFormHariChange(input) {
   var curId = window._siklusFormId;
   var items = Object.keys(window._gridData || {}).sort(function(a,b) { return Number(a)-Number(b); }).map(function(hk) {
     var d = window._gridData[hk];
-    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
+    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
   });
   openSiklusForm(curId ? { id: curId, nama: curNama, total_hari: newTotal, status: curStatus, items: items } : { nama: curNama, total_hari: newTotal, status: curStatus, items: items });
 }
