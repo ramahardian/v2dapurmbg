@@ -208,11 +208,13 @@ router.post('/menu', async (req, res) => {
           calcLemak += jml / 100 * (Number(ref.lemak || b.lemak) || 0);
           calcSerat += jml / 100 * (Number(ref.serat || b.serat) || 0);
         }
-        await conn.query(
-          'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=?',
-          [Math.round(calcGramasi * 10) / 10, Math.round(calcKalori * 10) / 10, Math.round(calcProtein * 10) / 10,
-           Math.round(calcKarbohidrat * 10) / 10, Math.round(calcLemak * 10) / 10, Math.round(calcSerat * 10) / 10, r.insertId]
-        );
+        if (calcKalori > 0 || calcProtein > 0 || calcKarbohidrat > 0 || calcLemak > 0 || calcSerat > 0) {
+          await conn.query(
+            'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=?',
+            [Math.round(calcGramasi * 10) / 10, Math.round(calcKalori * 10) / 10, Math.round(calcProtein * 10) / 10,
+             Math.round(calcKarbohidrat * 10) / 10, Math.round(calcLemak * 10) / 10, Math.round(calcSerat * 10) / 10, r.insertId]
+          );
+        }
       } catch (e2) { console.error('Gagal hitung nutrisi menu:', e2.message); }
     }
     
@@ -341,12 +343,14 @@ router.put('/menu/:id', async (req, res) => {
           calcLemak += jml / 100 * (Number(ref.lemak || b.lemak) || 0);
           calcSerat += jml / 100 * (Number(ref.serat || b.serat) || 0);
         }
-        await conn.query(
-          'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?',
-          [Math.round(calcGramasi * 10) / 10, Math.round(calcKalori * 10) / 10, Math.round(calcProtein * 10) / 10,
-           Math.round(calcKarbohidrat * 10) / 10, Math.round(calcLemak * 10) / 10, Math.round(calcSerat * 10) / 10,
-           req.params.id, req.user.tenant_id]
-        );
+        if (calcKalori > 0 || calcProtein > 0 || calcKarbohidrat > 0 || calcLemak > 0 || calcSerat > 0) {
+          await conn.query(
+            'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?',
+            [Math.round(calcGramasi * 10) / 10, Math.round(calcKalori * 10) / 10, Math.round(calcProtein * 10) / 10,
+             Math.round(calcKarbohidrat * 10) / 10, Math.round(calcLemak * 10) / 10, Math.round(calcSerat * 10) / 10,
+             req.params.id, req.user.tenant_id]
+          );
+        }
       } catch (e2) { console.error('Gagal hitung nutrisi menu:', e2.message); }
     }
     
