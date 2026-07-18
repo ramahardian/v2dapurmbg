@@ -116,14 +116,14 @@ async function reloadSiklusList() {
     const total = list.length;
     const aktif = list.filter(s => s.status === 'Aktif').length;
     const draft = list.filter(s => s.status === 'Draft').length;
+    const menuSet = new Set();
+    list.forEach(s => s.items && s.items.forEach(it => {
+      if (it.menu_id) menuSet.add(it.menu_id);
+    }));
     document.getElementById('stat-total').textContent = total;
     document.getElementById('stat-aktif').textContent = aktif;
     document.getElementById('stat-draft').textContent = draft;
-    document.getElementById('stat-menu').textContent = '...';
-    try {
-      const menuRes = await api.get('/menu?limit=1');
-      document.getElementById('stat-menu').textContent = (menuRes.pagination && menuRes.pagination.total) || 0;
-    } catch (e) { document.getElementById('stat-menu').textContent = '0'; }
+    document.getElementById('stat-menu').textContent = menuSet.size || 0;
     statsEl.classList.remove('hidden');
   }
 

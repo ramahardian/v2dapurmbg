@@ -324,6 +324,7 @@ if (cluster.isMaster && WORKERS > 1) {
           serat DECIMAL(10,2) DEFAULT 0.00,
           foto VARCHAR(255) DEFAULT NULL,
           FOREIGN KEY (siklus_id) REFERENCES siklus_menu(id) ON DELETE CASCADE,
+          FOREIGN KEY (menu_id) REFERENCES menu(id) ON DELETE SET NULL,
           INDEX idx_siklus (siklus_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
@@ -351,6 +352,7 @@ CREATE TABLE siklus_menu_item (
   serat DECIMAL(10,2) DEFAULT 0.00,
   foto VARCHAR(255) DEFAULT NULL,
   FOREIGN KEY (siklus_id) REFERENCES siklus_menu(id) ON DELETE CASCADE,
+  FOREIGN KEY (menu_id) REFERENCES menu(id) ON DELETE SET NULL,
   INDEX idx_siklus (siklus_id)
 ) ENGINE=InnoDB CHARSET=utf8mb4
           </pre>

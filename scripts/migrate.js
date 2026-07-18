@@ -437,6 +437,19 @@ require('dotenv').config();
     } catch (e) {
       console.log('  (skip sumber)', e.message);
     }
+    // Migrasi FK siklus_menu_item.menu_id → menu(id) ON DELETE SET NULL
+    try {
+      const [fkExists] = await conn.query(
+        "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'siklus_menu_item' AND CONSTRAINT_TYPE = 'FOREIGN KEY' AND CONSTRAINT_NAME = 'fk_smi_menu'"
+      );
+      if (!fkExists.length) {
+        await conn.query('UPDATE siklus_menu_item SET menu_id=NULL WHERE menu_id IS NOT NULL AND menu_id NOT IN (SELECT id FROM menu)');
+        await conn.query('ALTER TABLE siklus_menu_item ADD CONSTRAINT fk_smi_menu FOREIGN KEY (menu_id) REFERENCES menu(id) ON DELETE SET NULL');
+        console.log('✓ Migrasi siklus_menu_item: tambah FK menu_id → menu(id) ON DELETE SET NULL');
+      }
+    } catch (e) {
+      console.log('  (skip FK siklus_menu_item.menu_id)', e.message);
+    }
     console.log('✓ Schema berhasil dibuat');
     await conn.end();
     process.exit(0);
