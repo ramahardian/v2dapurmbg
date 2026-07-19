@@ -1627,42 +1627,53 @@ function renderDailyMenuTable(menuHarian, kategori_order) {
   const ROW_KEYS = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
   const ROW_LABELS = ROW_KEYS.map(k => KAT_MAP[k] || k);
 
-  let maxHari = 0;
-  for (const s of siklus) {
-    for (const d of s.days) {
+  // Generate a separate table for each siklus
+  let allHtml = '';
+  for (let si = 0; si < siklus.length; si++) {
+    const s = siklus[si];
+    const days = s.days || [];
+    if (!days.length) continue;
+
+    // Find max hari_ke for this siklus
+    let maxHari = 0;
+    for (const d of days) {
       if (d.hari_ke > maxHari) maxHari = d.hari_ke;
     }
-  }
-  if (!maxHari) return '<div class="p-8 text-center text-stone-400">Belum ada hari terisi</div>';
+    if (!maxHari) continue;
 
-  const dayKeys = Array.from({ length: maxHari }, (_, i) => i + 1);
+    const dayKeys = Array.from({ length: maxHari }, (_, i) => i + 1);
 
-  let html = '<div class="overflow-x-auto text-xs leading-relaxed">';
-  html += '<table class="w-full border-collapse border border-stone-300">';
+    // Siklus header
+    allHtml += `<div class="mb-2 mt-${si > 0 ? 6 : 0} px-3 py-2 bg-amber-100 border border-amber-300 rounded-t-lg flex items-center justify-between">`;
+    allHtml += `<span class="font-bold text-sm text-amber-900">📋 ${escHtml(s.nama || 'Siklus ' + (si+1))}</span>`;
+    allHtml += `<span class="text-xs text-amber-700">${escHtml(s.kategori_penerima || '-')} · ${maxHari} hari</span>`;
+    allHtml += '</div>';
 
-  html += '<thead>';
-  html += '<tr class="bg-amber-400 text-center font-bold">';
-  html += '<th class="border border-stone-300 px-3 py-2 text-[11px]" style="color:#000">Kelompok Bahan Makanan</th>';
-  for (const k of dayKeys) {
-    const dayNama = kategori_order && siklus.length && siklus[0].days[k-1] ? siklus[0].days[k-1].hari_nama : '';
-    html += `<th class="border border-stone-300 px-3 py-2 text-center text-[11px]" style="color:#000">Menu ${k}<br><span class="text-[10px] font-normal">${dayNama}</span></th>`;
-  }
-  html += '</tr>';
-  html += '</thead>';
+    let html = '<div class="overflow-x-auto text-xs leading-relaxed border border-amber-300 rounded-b-lg">';
+    html += '<table class="w-full border-collapse border border-stone-300">';
 
-  html += '<tbody>';
-
-  for (let ri = 0; ri < ROW_KEYS.length; ri++) {
-    const rowLabel = ROW_LABELS[ri];
-    const isFirst = ri === 0;
-
-    html += `<tr class="border border-stone-300 ${isFirst ? 'bg-sky-50' : ''}">`;
-    html += `<td class="border border-stone-300 px-3 py-2 font-bold ${isFirst ? 'bg-sky-50' : ''}">${rowLabel}</td>`;
-
+    html += '<thead>';
+    html += '<tr class="bg-amber-400 text-center font-bold">';
+    html += '<th class="border border-stone-300 px-3 py-2 text-[11px]" style="color:#000">Kelompok Bahan Makanan</th>';
     for (const k of dayKeys) {
-      const names = [];
-      for (const s of siklus) {
-        for (const d of s.days) {
+      const dayNama = days[k-1] ? days[k-1].hari_nama : '';
+      html += `<th class="border border-stone-300 px-3 py-2 text-center text-[11px]" style="color:#000">Menu ${k}<br><span class="text-[10px] font-normal">${dayNama}</span></th>`;
+    }
+    html += '</tr>';
+    html += '</thead>';
+
+    html += '<tbody>';
+
+    for (let ri = 0; ri < ROW_KEYS.length; ri++) {
+      const rowLabel = ROW_LABELS[ri];
+      const isFirst = ri === 0;
+
+      html += `<tr class="border border-stone-300 ${isFirst ? 'bg-sky-50' : ''}">`;
+      html += `<td class="border border-stone-300 px-3 py-2 font-bold ${isFirst ? 'bg-sky-50' : ''}">${rowLabel}</td>`;
+
+      for (const k of dayKeys) {
+        const names = [];
+        for (const d of days) {
           if (d.hari_ke === k) {
             const katItems = d.kategori && d.kategori[ROW_KEYS[ri]];
             if (katItems && katItems.length) {
@@ -1672,18 +1683,21 @@ function renderDailyMenuTable(menuHarian, kategori_order) {
             }
           }
         }
+        let cell = '<span class="text-stone-300">-</span>';
+        if (names.length) {
+          cell = names.map(n => `<div class="text-[10px] py-0.5">${n}</div>`).join('');
+        }
+        html += `<td class="border border-stone-300 px-3 py-2 align-top">${cell}</td>`;
       }
-      let cell = '<span class="text-stone-300">-</span>';
-      if (names.length) {
-        cell = names.map(n => `<div class="text-[10px] py-0.5">${n}</div>`).join('');
-      }
-      html += `<td class="border border-stone-300 px-3 py-2 align-top">${cell}</td>`;
+      html += '</tr>';
     }
-    html += '</tr>';
+
+    html += '</tbody></table></div>';
+    allHtml += html;
   }
 
-  html += '</tbody></table></div>';
-  return html;
+  if (!allHtml) return '<div class="p-8 text-center text-stone-400">Belum ada hari terisi</div>';
+  return allHtml;
 }
 
 function renderReportPage(tab) {
@@ -1721,16 +1735,22 @@ function renderLapBukuBesar() { renderReportPage('buku-besar'); }
 function renderLapNeraca() { renderReportPage('neraca'); }
 function renderLapArusKas() { renderReportPage('arus-kas'); }
 
-function renderResepTable(siklus, kategori_order) {
-  if (!siklus.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
+function renderResepTable(siklusList, kategori_order) {
+  if (!siklusList.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
 
   const KAT_MAP = { Karbohidrat: 'Makanan Pokok', 'Protein Hewani': 'Lauk Hewani', 'Protein Nabati': 'Lauk Nabati', Sayur: 'Sayur', Buah: 'Buah', Susu: 'Susu', Minyak: 'Minyak' };
   const ROW_KEYS = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
 
-  // Flatten all days from all siklus, group by hari_ke
-  const byDay = {};
-  for (const s of siklus) {
-    for (const d of s.days) {
+  // Generate a separate tabel for each siklus
+  let allHtml = '';
+  for (let si = 0; si < siklusList.length; si++) {
+    const s = siklusList[si];
+    const days = s.days || [];
+    if (!days.length) continue;
+
+    // Flatten days for this siklus only, group by hari_ke
+    const byDay = {};
+    for (const d of days) {
       if (!d.menu_id) continue;
       const key = d.hari_ke;
       if (!byDay[key]) {
@@ -1746,44 +1766,53 @@ function renderResepTable(siklus, kategori_order) {
         pi++;
       }
     }
-  }
 
-  const dayKeys = Object.keys(byDay).sort((a, b) => Number(a) - Number(b));
-  if (!dayKeys.length) return '<div class="p-8 text-center text-stone-400">Belum ada data menu terisi</div>';
+    const dayKeys = Object.keys(byDay).sort((a, b) => Number(a) - Number(b));
+    if (!dayKeys.length) continue;
 
-  let html = '<div class="overflow-x-auto">';
-  html += '<table class="w-full border-collapse border border-stone-300 text-xs">';
-  html += '<thead>';
-  html += '<tr class="bg-amber-400 text-center font-bold">';
-  html += '<th class="border border-stone-300 px-3 py-2 text-[11px]" style="color:#000">Kelompok Bahan Makanan</th>';
-  for (const k of dayKeys) {
-    const d = byDay[k];
-    html += `<th class="border border-stone-300 px-3 py-2 text-center text-[11px]" style="color:#000">Menu ${k}<br><span class="text-[10px] font-normal">${d.hari_nama}</span></th>`;
-  }
-  html += '</tr>';
-  html += '</thead>';
-  html += '<tbody>';
+    // Siklus header
+    allHtml += `<div class="mb-2 mt-${si > 0 ? 4 : 0} px-3 py-2 bg-amber-100 border border-amber-300 rounded-t-lg flex items-center justify-between">`;
+    allHtml += `<span class="font-bold text-sm text-amber-900">🍽️ ${escHtml(s.nama || 'Siklus ' + (si+1))}</span>`;
+    allHtml += `<span class="text-xs text-amber-700">${escHtml(s.kategori_penerima || '-')} · ${dayKeys.length} hari</span>`;
+    allHtml += '</div>';
 
-  for (let ri = 0; ri < ROW_KEYS.length; ri++) {
-    const rk = ROW_KEYS[ri];
-    const label = KAT_MAP[rk] || rk;
-    const isFirst = ri === 0;
-    html += `<tr class="border border-stone-300 ${isFirst ? 'bg-emerald-50' : ''}">`;
-    html += `<td class="border border-stone-300 px-3 py-2 font-bold ${isFirst ? 'bg-emerald-50' : ''}">${label}</td>`;
-
+    let html = '<div class="overflow-x-auto border border-amber-300 rounded-b-lg">';
+    html += '<table class="w-full border-collapse border border-stone-300 text-xs">';
+    html += '<thead>';
+    html += '<tr class="bg-amber-400 text-center font-bold">';
+    html += '<th class="border border-stone-300 px-3 py-2 text-[11px]" style="color:#000">Kelompok Bahan Makanan</th>';
     for (const k of dayKeys) {
       const d = byDay[k];
-      const names = d.catNames[rk];
-      const cell = names.length
-        ? names.map(n => `<div class="py-0.5 font-medium text-teal-700">${n}</div>`).join('')
-        : '<span class="text-stone-300">—</span>';
-      html += `<td class="border border-stone-300 px-3 py-2 align-top">${cell}</td>`;
+      html += `<th class="border border-stone-300 px-3 py-2 text-center text-[11px]" style="color:#000">Menu ${k}<br><span class="text-[10px] font-normal">${d.hari_nama}</span></th>`;
     }
     html += '</tr>';
+    html += '</thead>';
+    html += '<tbody>';
+
+    for (let ri = 0; ri < ROW_KEYS.length; ri++) {
+      const rk = ROW_KEYS[ri];
+      const label = KAT_MAP[rk] || rk;
+      const isFirst = ri === 0;
+      html += `<tr class="border border-stone-300 ${isFirst ? 'bg-emerald-50' : ''}">`;
+      html += `<td class="border border-stone-300 px-3 py-2 font-bold ${isFirst ? 'bg-emerald-50' : ''}">${label}</td>`;
+
+      for (const k of dayKeys) {
+        const d = byDay[k];
+        const names = d.catNames[rk];
+        const cell = names.length
+          ? names.map(n => `<div class="py-0.5 font-medium text-teal-700">${n}</div>`).join('')
+          : '<span class="text-stone-300">—</span>';
+        html += `<td class="border border-stone-300 px-3 py-2 align-top">${cell}</td>`;
+      }
+      html += '</tr>';
+    }
+
+    html += '</tbody></table></div>';
+    allHtml += html;
   }
 
-  html += '</tbody></table></div>';
-  return html;
+  if (!allHtml) return '<div class="p-8 text-center text-stone-400">Belum ada data menu terisi</div>';
+  return allHtml;
 }
 
 function gantiPeriodeLR() {

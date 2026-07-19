@@ -1088,7 +1088,7 @@ router.get('/siklus/laporan/siklus-menu', async (req, res) => {
  */
 router.get('/siklus/laporan/menu-harian', async (req, res) => {
   const [siklusList] = await db.query(
-    'SELECT id, nama, kategori_penerima, jumlah_porsi FROM siklus_menu WHERE tenant_id=? AND status="Aktif" ORDER BY id',
+    'SELECT id, nama, kategori_penerima, jumlah_porsi FROM siklus_menu WHERE tenant_id=? ORDER BY id',
     [req.user.tenant_id]
   );
 
