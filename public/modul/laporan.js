@@ -795,6 +795,73 @@ const tabColors = {
         '</tbody></table></div></div>' + listBadge;
 
       window._lapData = null;
+    } else if (tab === 'hpp') {
+      const r = await api.get('/laporan/hpp');
+      const rows = r.rows || [];
+      const stats = r.stats || {};
+      const detailBahan = r.detail_bahan || {};
+
+      window._lapData = { tab: 'hpp', rows,
+        headers: ['Menu','Kategori','Jumlah Bahan','Total HPP'],
+        fields: ['menu_nama','kategori_penerima','jumlah_bahan','total_hpp'],
+        fmt: rows.map(m => [
+          escHtml(m.menu_nama),
+          m.kategori_penerima || '-',
+          fmtNum(m.jumlah_bahan) + ' bahan',
+          fmtIDR(m.total_hpp),
+        ])
+      };
+      window['_export_hpp'] = { data: rows, fields: ['menu_nama','kategori_penerima','jumlah_bahan','total_hpp'] };
+
+      // Build stat cards
+      let statHtml = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
+        ${statCard('Total Menu', fmtNum(stats.total_menu || 0), '', 'bg-amber-50')}
+        ${statCard('Total Bahan', fmtNum(stats.total_bahan || 0), 'semua menu', 'bg-blue-50')}
+        ${statCard('Total HPP', fmtIDR(stats.total_hpp_all || 0), '', 'bg-emerald-50')}
+        ${statCard('Rata-rata HPP', fmtIDR(stats.rata_hpp || 0), '/menu', 'bg-violet-50')}
+        ${statCard('Menu Tanpa Bahan', fmtNum(stats.menu_tanpa_bahan || 0), 'belum diisi', stats.menu_tanpa_bahan > 0 ? 'bg-red-50' : 'bg-emerald-50')}
+      </div>`;
+
+      // Build table with expandable detail
+      var hppTable = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
+        '<thead class="bg-stone-50"><tr>' +
+        '<th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Menu</th>' +
+        '<th class="text-left px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Kategori</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Bahan</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Total HPP</th>' +
+        '</tr></thead><tbody>';
+
+      rows.forEach(function(m) {
+        var detailRow = '';
+        var bahanList = detailBahan[m.menu_id] || [];
+        if (bahanList.length) {
+          var detailHtml = bahanList.map(function(b) {
+            return '<tr class="bg-stone-50/50">' +
+              '<td class="px-6 py-1.5 text-[11px] text-stone-500">↳ ' + escHtml(b.bahan_nama) + '</td>' +
+              '<td class="px-2 py-1.5 text-[11px] text-stone-500"></td>' +
+              '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500">' + fmtNum(b.jumlah) + ' ' + (b.satuan||'') + '</td>' +
+              '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500 mono">@' + fmtIDR(b.harga_satuan) + '</td>' +
+              '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500 mono">' + fmtIDR(b.subtotal) + '</td>' +
+              '</tr>';
+          }).join('');
+          detailRow = '<tr class="detail-hpp-' + m.menu_id + '" style="display:none">' +
+            '<td colspan="5" class="p-0"><div class="overflow-hidden"><table class="w-full text-xs">' +
+            '<thead><tr class="bg-stone-100"><th class="px-6 py-1.5 text-[10px] font-medium text-left">Bahan Baku</th><th class="px-2 py-1.5"></th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Jumlah</th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Harga</th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Subtotal</th></tr></thead><tbody>' +
+            detailHtml + '</tbody></table></div></td></tr>';
+        }        hppTable += '<tr class="border-t border-stone-100 hover:bg-stone-50 cursor-pointer" onclick="toggleHppDetail(' + m.menu_id + ')">' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 font-medium">' +
+          '<span class="inline-flex items-center gap-1.5">' +
+          '<span id="arrow-hpp-' + m.menu_id + '" class="text-stone-400 transition-transform duration-150">▶</span> ' +
+          escHtml(m.menu_nama) + '</span></td>' +
+          '<td class="px-2 py-2.5 sm:py-3 text-xs text-stone-500">' + (m.kategori_penerima || '-') + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right">' + fmtNum(m.jumlah_bahan) + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono font-bold text-[#1e40af]">' + fmtIDR(m.total_hpp) + '</td>' +
+          '</tr>' + detailRow;
+      });
+
+      hppTable += '</tbody></table></div></div>';
+
+      window._lapStatCards = statHtml + hppTable;
     } else if (tab === 'keuangan') {
       const d = await api.get('/laporan/keuangan');
       const rows = d.transaksi || [];
@@ -1369,5 +1436,11 @@ function renderResepTable(siklus, kategori_order) {
   return html;
 }
 
-
-
+function toggleHppDetail(menuId) {
+  const row = document.querySelector('.detail-hpp-' + menuId);
+  const arrow = document.getElementById('arrow-hpp-' + menuId);
+  if (!row || !arrow) return;
+  const isHidden = row.style.display === 'none' || !row.style.display;
+  row.style.display = isHidden ? 'table-row' : 'none';
+  arrow.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+}
