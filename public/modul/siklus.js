@@ -179,7 +179,9 @@ async function loadSiklusDetail(id) {
           ${data.catatan ? `<div class="text-xs text-stone-400 mt-1">${data.catatan}</div>` : ''}
         </div>
         <div class="flex flex-wrap gap-2">
-          <button onclick="renderSiklusLaporan(${data.id})" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Laporan</button>
+          <button onclick="generateProduksi(${data.id})" class="px-3 py-1.5 text-sm border border-emerald-300 bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Buat Produksi</button>
+          <button onclick="hitungBudgetSiklus(${data.id})" class="px-3 py-1.5 text-sm border border-blue-300 bg-blue-50 text-blue-700 rounded hover:bg-blue-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Buat Budget</button>
+          <button onclick="renderSiklusLaporan(${data.id})" class="px-3 py-1.5 text-sm border border-purple-300 bg-purple-50 text-purple-700 rounded hover:bg-purple-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Laporan + Banding SP</button>
           <button onclick="editSiklus(${data.id})" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50">Edit Siklus</button>
           <button onclick="document.getElementById('siklus-detail').innerHTML=''" class="px-3 py-1.5 text-sm text-stone-500 hover:text-stone-900">Tutup</button>
         </div>
@@ -303,6 +305,52 @@ async function renderSiklusLaporan(id) {
           </div>
         </div>
       </div>
+
+      ${data.spComparison && data.spComparison.length ? `
+      <div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">
+        <div class="px-5 py-3 font-bold border-b border-stone-200 flex items-center justify-between">
+          <span>SP Target vs Realisasi</span>
+          <span class="text-xs font-normal text-stone-400">Rata-rata per hari terisi</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-stone-50">
+              <tr>
+                <th class="text-left px-4 py-2.5 font-semibold uppercase text-[10px]">Kategori SP</th>
+                <th class="text-center px-3 py-2.5 font-semibold uppercase text-[10px]">Target</th>
+                <th class="text-center px-3 py-2.5 font-semibold uppercase text-[10px]">Realisasi</th>
+                <th class="text-center px-3 py-2.5 font-semibold uppercase text-[10px]">Selisih</th>
+                <th class="text-center px-3 py-2.5 font-semibold uppercase text-[10px]">Capaian</th>
+                <th class="text-center px-3 py-2.5 font-semibold uppercase text-[10px]">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.spComparison.map(sp => {
+                const selisihClass = sp.selisih >= 0 ? 'text-emerald-600' : 'text-red-600';
+                const statusClass = sp.status === 'terpenuhi' ? 'bg-emerald-100 text-emerald-700' : sp.status === 'no_target' ? 'bg-stone-100 text-stone-500' : 'bg-red-100 text-red-700';
+                const statusLabel = sp.status === 'terpenuhi' ? '✓ Terpenuhi' : sp.status === 'no_target' ? '—' : '✗ Kurang';
+                const barWidth = Math.min(100, sp.persen);
+                const barColor = sp.persen >= 100 ? 'bg-emerald-500' : sp.persen >= 75 ? 'bg-amber-500' : 'bg-red-500';
+                return `<tr class="border-t border-stone-100 hover:bg-stone-50/50">
+                  <td class="px-4 py-2.5 font-medium whitespace-nowrap">${sp.kategori}</td>
+                  <td class="px-3 py-2.5 text-center mono font-semibold">${sp.target}</td>
+                  <td class="px-3 py-2.5 text-center mono font-semibold">${sp.realisasi}</td>
+                  <td class="px-3 py-2.5 text-center mono font-semibold ${selisihClass}">${sp.selisih > 0 ? '+' : ''}${sp.selisih}</td>
+                  <td class="px-3 py-2.5">
+                    <div class="w-full bg-stone-200 rounded-full h-2.5">
+                      <div class="${barColor} h-2.5 rounded-full transition-all duration-500" style="width:${barWidth}%"></div>
+                    </div>
+                    <div class="text-[10px] text-stone-400 text-center mt-0.5">${sp.persen}%</div>
+                  </td>
+                  <td class="px-3 py-2.5 text-center">
+                    <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${statusClass}">${statusLabel}</span>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
 
       <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
         <div class="px-5 py-3 font-bold border-b border-stone-200">Rincian per Hari</div>
@@ -478,6 +526,74 @@ function updateSelectedCount() {
   } else {
     btn.classList.add('hidden');
     btn.classList.remove('inline-flex');
+  }
+}
+
+// ===== Siklus → Keuangan Integration =====
+async function generateProduksi(siklusId) {
+  var tanggal = prompt('Tanggal produksi (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
+  if (!tanggal) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) { showAlert('Format tanggal salah. Gunakan YYYY-MM-DD', 'error'); return; }
+  try {
+    var r = await api.post('/siklus/generate-produksi', { siklus_id: siklusId, tanggal_produksi: tanggal });
+    showAlert('✅ ' + r.message, 'success');
+  } catch (e) {
+    showAlert('❌ ' + (e.message || 'Gagal'), 'error');
+  }
+}
+
+async function generateProduksiBatch(siklusId) {
+  var mulai = prompt('Tanggal mulai (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
+  if (!mulai) return;
+  var selesai = prompt('Tanggal selesai (YYYY-MM-DD):', new Date(new Date().getTime() + 7*86400000).toISOString().slice(0, 10));
+  if (!selesai) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(mulai) || !/^\d{4}-\d{2}-\d{2}$/.test(selesai)) {
+    showAlert('Format tanggal salah. Gunakan YYYY-MM-DD', 'error'); return;
+  }
+  if (!confirm('Buat produksi dari ' + mulai + ' sampai ' + selesai + '?')) return;
+  try {
+    var r = await api.post('/siklus/generate-produksi-batch', { siklus_id: siklusId, tanggal_mulai: mulai, tanggal_selesai: selesai });
+    var msg = '✅ ' + r.created_count + ' produksi berhasil dibuat';
+    if (r.skipped_count > 0) msg += ', ' + r.skipped_count + ' dilewati';
+    showAlert(msg, r.created_count > 0 ? 'success' : 'warning');
+  } catch (e) {
+    showAlert('❌ ' + (e.message || 'Gagal'), 'error');
+  }
+}
+
+async function hitungBudgetSiklus(siklusId) {
+  var periode = prompt('Periode budget (YYYY-MM):', new Date().toISOString().slice(0, 7));
+  if (!periode) return;
+  if (!/^\d{4}-\d{2}$/.test(periode)) { showAlert('Format periode salah. Gunakan YYYY-MM', 'error'); return; }
+  try {
+    var r = await api.post('/siklus/hitung-budget', { siklus_id: siklusId, periode: periode });
+    showAlert('✅ ' + r.message, 'success');
+  } catch (e) {
+    showAlert('❌ ' + (e.message || 'Gagal'), 'error');
+  }
+}
+
+async function hitungBudgetSemuaSiklus() {
+  var periode = prompt('Periode budget (YYYY-MM):', new Date().toISOString().slice(0, 7));
+  if (!periode) return;
+  if (!/^\d{4}-\d{2}$/.test(periode)) { showAlert('Format periode salah. Gunakan YYYY-MM', 'error'); return; }
+  try {
+    var r = await api.post('/siklus/hitung-budget-semua', { periode: periode });
+    showAlert('✅ ' + r.message, 'success');
+  } catch (e) {
+    showAlert('❌ ' + (e.message || 'Gagal'), 'error');
+  }
+}
+
+async function buatPRSiklus() {
+  var periode = prompt('Periode PR (YYYY-MM):', new Date().toISOString().slice(0, 7));
+  if (!periode) return;
+  if (!confirm('Buat Purchase Request untuk periode ' + periode + ' dari semua siklus Aktif?')) return;
+  try {
+    var r = await api.post('/siklus/buat-pr', { periode: periode });
+    showAlert('✅ ' + r.message, 'success');
+  } catch (e) {
+    showAlert('❌ ' + (e.message || 'Gagal'), 'error');
   }
 }
 
