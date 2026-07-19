@@ -702,7 +702,7 @@ router.get('/laporan/arus-kas', roleFinance, async (req, res) => {
   });
 });
 
-// ===== RAB Sinkron — otomatis dari data aktual =====
+// ===== RAB Sinkron — otomatis dari data aktual, plus realisasi =====
 router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
   try {
     const t = req.user.tenant_id;
@@ -722,12 +722,45 @@ router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
     );
 
     const [hargaList] = await db.query(
-      `SELECT kategori_penerima, harga_per_porsi FROM budget
+      `SELECT kategori_penerima, harga_per_porsi, total_budget, realisasi FROM budget
        WHERE tenant_id=? AND periode=? AND harga_per_porsi > 0`,
       [t, periode]
     );
     const hargaMap = {};
-    for (const h of hargaList) hargaMap[h.kategori_penerima] = Number(h.harga_per_porsi);
+    const budgetMap = {};
+    const realisasiMap = {};
+    for (const h of hargaList) {
+      hargaMap[h.kategori_penerima] = Number(h.harga_per_porsi);
+      budgetMap[h.kategori_penerima] = Number(h.total_budget || 0);
+      realisasiMap[h.kategori_penerima] = Number(h.realisasi || 0);
+    }
+
+    // Realisasi dari kas_bank (Pembayaran Supplier)
+    const [[{ realisasi_kas } = { realisasi_kas: 0 }]] = await db.query(
+      `SELECT COALESCE(SUM(jumlah),0) AS realisasi_kas
+       FROM kas_bank WHERE tenant_id=? AND tipe='keluar'
+       AND kategori='Pembayaran Supplier'
+       AND DATE_FORMAT(tanggal, '%Y-%m')=?`,
+      [t, periode]
+    );
+
+    // Total budget dari tabel budget
+    const [[budgetAgg]] = await db.query(
+      `SELECT COALESCE(SUM(total_budget),0) AS total_budget,
+              COALESCE(SUM(realisasi),0) AS total_realisasi_manual
+       FROM budget WHERE tenant_id=? AND periode=?`,
+      [t, periode]
+    );
+    const totalBudgetAgg = Number(budgetAgg.total_budget) || 0;
+    const totalRealisasiManual = Number(budgetAgg.total_realisasi_manual) || 0;
+
+    // Realisasi total dari kas_bank (semua pengeluaran)
+    const [[{ total_biaya_kas } = { total_biaya_kas: 0 }]] = await db.query(
+      `SELECT COALESCE(SUM(jumlah),0) AS total_biaya_kas
+       FROM kas_bank WHERE tenant_id=? AND tipe='keluar'
+       AND DATE_FORMAT(tanggal, '%Y-%m')=?`,
+      [t, periode]
+    );
 
     let grandPenerima = 0;
     let grandTotal = 0;
@@ -739,12 +772,149 @@ router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
       const total = harga * jmlPenerima * jmlHari;
       grandPenerima += jmlPenerima;
       grandTotal += total;
-      return { kategori, harga_per_porsi: harga, jumlah_penerima: jmlPenerima, jumlah_hari: jmlHari, total };
+      return {
+        kategori,
+        harga_per_porsi: harga,
+        jumlah_penerima: jmlPenerima,
+        jumlah_hari: jmlHari,
+        budget: budgetMap[kategori] || 0,
+        realisasi: realisasiMap[kategori] || 0,
+        total,
+      };
     });
 
-    res.json({ rows, grand_penerima: grandPenerima, grand_total: grandTotal, total_hari: total_hari || 0, periode });
+    const selisih = totalBudgetAgg - totalRealisasiManual;
+    const serapan = totalBudgetAgg > 0 ? (totalRealisasiManual / totalBudgetAgg * 100) : 0;
+
+    res.json({
+      rows,
+      grand_penerima: grandPenerima,
+      grand_total: grandTotal,
+      total_hari: total_hari || 0,
+      periode,
+      // Budget & realisasi summary
+      budget: {
+        total_budget: totalBudgetAgg,
+        total_realisasi_manual: totalRealisasiManual,
+        total_realisasi_kas: realisasi_kas,
+        total_biaya_kas: total_biaya_kas,
+        selisih,
+        serapan_persen: serapan,
+      },
+    });
   } catch (err) {
     console.error('RAB sinkron error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== RAB Hitung Realisasi — auto-hitung budget.realisasi dari kas_bank =====
+router.post('/laporan/rab-hitung-realisasi', roleFinance, async (req, res) => {
+  try {
+    const t = req.user.tenant_id;
+    const { periode } = req.body;
+
+    if (!periode) {
+      return res.status(400).json({ error: 'Periode wajib diisi (YYYY-MM)' });
+    }
+
+    // Hitung realisasi dari kas_bank per periode
+    const [rows] = await db.query(
+      `SELECT DATE_FORMAT(tanggal, '%Y-%m') AS periode,
+              COALESCE(SUM(jumlah),0) AS total_keluar
+       FROM kas_bank
+       WHERE tenant_id=? AND tipe='keluar'
+         AND DATE_FORMAT(tanggal, '%Y-%m')=?
+       GROUP BY DATE_FORMAT(tanggal, '%Y-%m')`,
+      [t, periode]
+    );
+
+    const totalRealisasi = rows.length > 0 ? Number(rows[0].total_keluar) : 0;
+
+    // Update budget.realisasi untuk periode ini
+    // Bagi rata ke semua item budget di periode yang sama
+    const [budgetItems] = await db.query(
+      `SELECT id FROM budget WHERE tenant_id=? AND periode=?`,
+      [t, periode]
+    );
+
+    if (budgetItems.length === 0) {
+      return res.json({ message: 'Tidak ada budget untuk periode ' + periode, updated: 0, totalRealisasi });
+    }
+
+    // Bagi realisasi merata ke semua item budget
+    const perItem = Math.round(totalRealisasi / budgetItems.length);
+    for (const item of budgetItems) {
+      await db.query(
+        `UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?`,
+        [perItem, item.id, t]
+      );
+    }
+
+    res.json({
+      message: 'Realisasi berhasil dihitung',
+      periode,
+      totalRealisasi,
+      item_count: budgetItems.length,
+      per_item: perItem,
+      updated: budgetItems.length,
+    });
+  } catch (err) {
+    console.error('RAB hitung realisasi error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== RAB Hitung Realisasi — auto-hitung semua periode =====
+router.post('/laporan/rab-hitung-realisasi-semua', roleFinance, async (req, res) => {
+  try {
+    const t = req.user.tenant_id;
+
+    // Dapatkan semua periode unik dari budget
+    const [periodeList] = await db.query(
+      `SELECT DISTINCT periode FROM budget WHERE tenant_id=? ORDER BY periode`,
+      [t]
+    );
+
+    let totalUpdated = 0;
+    const results = [];
+
+    for (const { periode } of periodeList) {
+      // Hitung realisasi dari kas_bank
+      const [[{ totalRealisasi } = { totalRealisasi: 0 }]] = await db.query(
+        `SELECT COALESCE(SUM(jumlah),0) AS totalRealisasi
+         FROM kas_bank WHERE tenant_id=? AND tipe='keluar'
+           AND DATE_FORMAT(tanggal, '%Y-%m')=?`,
+        [t, periode]
+      );
+
+      // Dapatkan item budget
+      const [budgetItems] = await db.query(
+        `SELECT id FROM budget WHERE tenant_id=? AND periode=?`,
+        [t, periode]
+      );
+
+      if (budgetItems.length > 0) {
+        const perItem = Math.round(Number(totalRealisasi) / budgetItems.length);
+        for (const item of budgetItems) {
+          await db.query(
+            `UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?`,
+            [perItem, item.id, t]
+          );
+        }
+        totalUpdated += budgetItems.length;
+        results.push({ periode, realisasi: totalRealisasi, items: budgetItems.length });
+      }
+    }
+
+    res.json({
+      message: 'Semua realisasi berhasil dihitung ulang',
+      total_periode: periodeList.length,
+      total_updated: totalUpdated,
+      results,
+    });
+  } catch (err) {
+    console.error('RAB hitung realisasi semua error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -898,6 +1068,23 @@ router.get('/laporan/rab-pembelian-suplier', roleOps, async (req, res) => {
       suppliers: [...k.supplier_set],
     })).sort((a, b) => b.total_nilai - a.total_nilai);
 
+    // 6. Pembayaran dari kas_bank (realisasi bayar untuk PO periode ini)
+    const [[{ total_bayar } = { total_bayar: 0 }]] = await db.query(
+      `SELECT COALESCE(SUM(jumlah),0) AS total_bayar
+       FROM kas_bank WHERE tenant_id=? AND tipe='keluar'
+       AND kategori='Pembayaran Supplier'
+       AND DATE_FORMAT(tanggal, '%Y-%m')=?`,
+      [t, periode]
+    );
+
+    const suppliersWithPayment = suppliers.map(s => ({
+      ...s,
+      total_bayar: totalBelanjaPO > 0 ? Math.round(Number(s.total_nilai) / totalBelanjaPO * total_bayar) : 0,
+      sisa_tagihan: Number(s.total_nilai) - (totalBelanjaPO > 0 ? Math.round(Number(s.total_nilai) / totalBelanjaPO * total_bayar) : 0),
+    }));
+
+    const sisa_bayar = totalBelanjaPO - total_bayar;
+
     res.json({
       periode,
       budget: {
@@ -911,10 +1098,12 @@ router.get('/laporan/rab-pembelian-suplier', roleOps, async (req, res) => {
         total_penerima: Number(penerimaRow.total_penerima),
         total_hari: Number(total_hari),
       },
-      suppliers,
+      suppliers: suppliersWithPayment,
       koperasi: koperasiView,
       grand_total_po: totalBelanjaPO,
       total_budget: grandBudget,
+      total_bayar,
+      sisa_bayar,
       selisih: grandBudget - totalBelanjaPO,
       serapan_persen: grandBudget > 0 ? (totalBelanjaPO / grandBudget * 100) : 0,
     });

@@ -83,6 +83,7 @@ const tabColors = {
       const filterPeriode = lapState.rab_periode || new Date().toISOString().slice(0, 7);
       const r = await api.get('/laporan/rab-sinkron?periode=' + filterPeriode);
       const rows = r.rows || [];
+      const bd = r.budget || {};
 
       // Generate periode list
       var periods = [];
@@ -95,58 +96,104 @@ const tabColors = {
       }
       periods = periods.filter(function(p) { return p <= nowDate.toISOString().slice(0, 7); }).reverse();
 
+      var fmtIdr = fmtIDR;
+
       var rabFilterBar = '<div class="mb-4 flex flex-wrap items-center gap-3"><div class="flex items-center gap-2">' +
         '<label class="text-xs font-medium text-stone-500">Periode:</label>' +
         '<select id="rab-filter-periode" onchange="gantiPeriodeRab()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
         periods.map(function(p) { return '<option value="' + p + '" ' + (filterPeriode===p?'selected':'') + '>' + p + '</option>'; }).join('') +
         '</select></div>' +
+        '<button onclick="hitungRealisasiRAB()" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1">' +
+        '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
+        'Auto Realisasi</button>' +
         '<span class="text-xs text-stone-400">' + (r.total_hari || 0) + ' hari produksi</span></div>';
 
-      var fmtIdr = fmtIDR;
       var tableContent = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
         '<thead class="bg-stone-50"><tr>' +
-        '<th class="text-left px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Deskripsi</th>' +
-        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Harga</th>' +
+        '<th class="text-left px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Kategori</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Harga/Porsi</th>' +
         '<th class="text-center px-1 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold" style="width:20px">×</th>' +
-        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Jml Penerima</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Penerima</th>' +
         '<th class="text-center px-1 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold" style="width:20px">×</th>' +
         '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Hari</th>' +
         '<th class="text-center px-1 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold" style="width:20px">=</th>' +
-        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Total</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Anggaran</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Budget</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Realisasi</th>' +
         '</tr></thead><tbody>';
 
       rows.forEach(function(b) {
+        var budgetVal = Number(b.budget || 0);
+        var realisasiVal = Number(b.realisasi || 0);
+        var selisihRow = budgetVal - realisasiVal;
+        var selisihClass = selisihRow >= 0 ? 'text-emerald-600' : 'text-red-600';
         tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
-          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 font-medium">' + escHtml(b.kategori) + '</td>' +
-          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono">' + fmtIdr(b.harga_per_porsi) + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-xs">' + escHtml(b.kategori) + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono text-xs">' + fmtIdr(b.harga_per_porsi) + '</td>' +
           '<td class="px-1 py-2.5 sm:py-3 text-center text-stone-400">×</td>' +
-          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right">' + fmtNum(b.jumlah_penerima) + ' SISWA</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs">' + fmtNum(b.jumlah_penerima) + '</td>' +
           '<td class="px-1 py-2.5 sm:py-3 text-center text-stone-400">×</td>' +
-          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right">' + b.jumlah_hari + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs">' + b.jumlah_hari + '</td>' +
           '<td class="px-1 py-2.5 sm:py-3 text-center text-stone-400">=</td>' +
-          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono font-bold">' + fmtIdr(b.total) + '</td></tr>';
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono font-bold text-xs">' + fmtIdr(b.total) + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono text-xs">' + fmtIdr(budgetVal) + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono text-xs ' + selisihClass + '">' + fmtIdr(realisasiVal) + '</td></tr>';
       });
 
       // Total row
+      var totalBudget = bd.total_budget || 0;
+      var totalBiayaKas = bd.total_biaya_kas || 0;
+      var totalSelisih = totalBudget - totalBiayaKas;
+      var selTotalClass = totalSelisih >= 0 ? 'text-emerald-600' : 'text-red-600';
       tableContent += '<tr class="border-t-2 border-stone-400 font-bold bg-stone-100">' +
-        '<td class="px-3 sm:px-4 py-3 font-bold text-sm">Total</td>' +
-        '<td class="px-3 sm:px-4 py-3"></td>' +
-        '<td class="px-1 py-3 text-center text-stone-400">×</td>' +
-        '<td class="px-3 sm:px-4 py-3 text-right font-bold">' + fmtNum(r.grand_penerima) + ' SISWA</td>' +
-        '<td class="px-1 py-3 text-center text-stone-400">×</td>' +
-        '<td class="px-3 sm:px-4 py-3 text-right font-bold">' + (r.total_hari || 0) + '</td>' +
-        '<td class="px-1 py-3 text-center text-stone-400">=</td>' +
-        '<td class="px-3 sm:px-4 py-3 text-right mono font-bold text-[#1e40af] text-sm">' + fmtIdr(r.grand_total) + '</td></tr>';
+        '<td class="px-3 sm:px-4 py-3 font-bold text-xs">Total</td>' +
+        '<td class="px-3 sm:px-4 py-3"></td><td class="px-1 py-3"></td>' +
+        '<td class="px-3 sm:px-4 py-3 text-right font-bold text-xs">' + fmtNum(r.grand_penerima) + '</td>' +
+        '<td class="px-1 py-3"></td>' +
+        '<td class="px-3 sm:px-4 py-3 text-right font-bold text-xs">' + (r.total_hari || 0) + '</td>' +
+        '<td class="px-1 py-3"></td>' +
+        '<td class="px-3 sm:px-4 py-3 text-right mono font-bold text-[#1e40af] text-xs">' + fmtIdr(r.grand_total) + '</td>' +
+        '<td class="px-3 sm:px-4 py-3 text-right mono font-bold text-xs">' + fmtIdr(totalBudget) + '</td>' +
+        '<td class="px-3 sm:px-4 py-3 text-right mono font-bold text-xs ' + selTotalClass + '">' + fmtIdr(totalBiayaKas) + '</td></tr>';
 
       tableContent += '</tbody></table></div></div>';
 
+      // Budget vs Realisasi section
+      var budgetVsRealHtml = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">' +
+        '<div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4">' +
+          '<div class="text-[10px] uppercase tracking-wider font-medium text-stone-500 mb-1">Ringkasan Anggaran</div>' +
+          '<div class="flex justify-between items-center py-1.5 border-b border-stone-100">' +
+            '<span class="text-xs">RAB Sinkron</span><span class="mono text-xs font-bold">' + fmtIdr(r.grand_total) + '</span></div>' +
+          '<div class="flex justify-between items-center py-1.5 border-b border-stone-100">' +
+            '<span class="text-xs">Total Budget (tabel)</span><span class="mono text-xs">' + fmtIdr(totalBudget) + '</span></div>' +
+          '<div class="flex justify-between items-center py-1.5 border-b border-stone-100">' +
+            '<span class="text-xs">Realisasi Kas</span><span class="mono text-xs text-red-600">' + fmtIdr(totalBiayaKas) + '</span></div>' +
+          '<div class="flex justify-between items-center py-1.5">' +
+            '<span class="text-xs font-bold">Selisih</span><span class="mono text-xs font-bold ' + selTotalClass + '">' + fmtIdr(Math.abs(totalSelisih)) + ' (' + (totalSelisih >= 0 ? 'surplus' : 'defisit') + ')' + '</span></div>' +
+        '</div>' +
+        '<div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4">' +
+          '<div class="text-[10px] uppercase tracking-wider font-medium text-stone-500 mb-1">Detail Realisasi</div>' +
+          '<div class="flex justify-between items-center py-1.5 border-b border-stone-100">' +
+            '<span class="text-xs">Realisasi Budget Manual</span><span class="mono text-xs">' + fmtIdr(bd.total_realisasi_manual || 0) + '</span></div>' +
+          '<div class="flex justify-between items-center py-1.5 border-b border-stone-100">' +
+            '<span class="text-xs">Pembayaran Supplier (Kas)</span><span class="mono text-xs">' + fmtIdr(bd.total_realisasi_kas || 0) + '</span></div>' +
+          '<div class="flex justify-between items-center py-1.5">' +
+            '<span class="text-xs">Total Biaya (Kas)</span><span class="mono text-xs font-bold text-red-600">' + fmtIdr(totalBiayaKas) + '</span></div>' +
+        '</div>' +
+      '</div>';
+
       window._lapData = null;
-      window._lapStatCards = rabFilterBar + '<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">' +
-        statCard('Total Anggaran', fmtIDR(r.grand_total), 'RAB sinkron', 'bg-emerald-50') +
-        statCard('Total Penerima', fmtNum(r.grand_penerima), 'siswa', 'bg-blue-50') +
-        statCard('Total Hari', fmtNum(r.total_hari), 'hari produksi', 'bg-amber-50') +
+      window._lapStatCards = rabFilterBar +
+        '<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">' +
+        statCard('RAB Sinkron', fmtIDR(r.grand_total), 'perencanaan', 'bg-emerald-50') +
+        statCard('Total Budget', fmtIDR(totalBudget), 'dari tabel budget', 'bg-blue-50') +
+        statCard('Realisasi Kas', fmtIDR(totalBiayaKas), totalBudget > 0 ? (totalBiayaKas/totalBudget*100).toFixed(1)+'% terserap' : '', 'bg-orange-50') +
+        statCard('Selisih', fmtIDR(Math.abs(totalSelisih)), totalSelisih >= 0 ? 'surplus' : 'defisit', totalSelisih >= 0 ? 'bg-emerald-50' : 'bg-red-50') +
         statCard('Rata Biaya/Hari', fmtIDR(r.total_hari ? Math.round(r.grand_total / r.total_hari) : 0), '', 'bg-violet-50') +
-      '</div>' + tableContent;
+      '</div>' +
+      budgetVsRealHtml +
+      '<div class="mb-2 text-xs font-semibold text-stone-600">📋 Rincian per Kategori</div>' +
+      tableContent;
     } else if (tab === 'rab-bulanan') {
       const r = await api.get('/laporan/rab-bulanan');
       const rows = r.rows || [];
@@ -662,9 +709,9 @@ const tabColors = {
       var statCards = '<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">' +
         statCard('Total Budget', fmtIdr(r.total_budget), 'RAB periode ini', 'bg-emerald-50') +
         statCard('Total PO', fmtIdr(r.grand_total_po), r.suppliers ? r.suppliers.length + ' supplier' : '0 supplier', 'bg-blue-50') +
-        statCard('Selisih', fmtIdr(r.selisih), r.selisih >= 0 ? 'surplus' : 'defisit', r.selisih >= 0 ? 'bg-emerald-50' : 'bg-red-50') +
+        statCard('Total Bayar', fmtIdr(r.total_bayar || 0), r.sisa_bayar ? 'Sisa: ' + fmtIdr(r.sisa_bayar) : '', r.total_bayar > 0 ? 'bg-teal-50' : 'bg-stone-50') +
         statCard('Serapan', r.serapan_persen.toFixed(1) + '%', 'dari total budget', 'bg-violet-50') +
-        statCard('Penerima', fmtNum2(r.penerima.total_penerima), r.penerima.total_hari + ' hari', 'bg-amber-50') +
+        statCard('Selisih', fmtIdr(r.selisih), r.selisih >= 0 ? 'surplus' : 'defisit', r.selisih >= 0 ? 'bg-emerald-50' : 'bg-red-50') +
       '</div>';
 
       // Toggle supplier / koperasi view
@@ -681,15 +728,17 @@ const tabColors = {
           '<div class="px-4 py-3 font-bold text-sm border-b border-stone-200 bg-stone-50 flex items-center justify-between">' +
           '<span>Pembelian per Supplier</span>' +
           '<span class="text-xs font-normal text-stone-500">' + r.suppliers.length + ' supplier</span></div>' +
-          '<div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
-          '<thead class="bg-stone-50"><tr>' +
-          '<th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Supplier</th>' +
-          '<th class="text-center px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wider">PO</th>' +
-          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Total Pembelian</th>' +
-          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">% Budget</th>' +
-          '<th class="text-center px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Status</th>' +
-          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">PO Terakhir</th>' +
-          '</tr></thead><tbody>';
+        '<div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
+        '<thead class="bg-stone-50"><tr>' +
+        '<th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Supplier</th>' +
+        '<th class="text-center px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wider">PO</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Total Pembelian</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Total Bayar</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Sisa Tagihan</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">% Budget</th>' +
+        '<th class="text-center px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Status</th>' +
+        '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">PO Terakhir</th>' +
+        '</tr></thead><tbody>';
 
         r.suppliers.forEach(function(s) {
           var st = s.status;
@@ -703,8 +752,10 @@ const tabColors = {
           tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
             '<td class="px-3 sm:px-4 py-2.5 font-medium">' + escHtml(s.supplier_nama) + '</td>' +
             '<td class="px-2 py-2.5 text-center font-bold text-sm">' + s.total_po + '</td>' +
-            '<td class="px-3 sm:px-4 py-2.5 text-right mono font-semibold">' + fmtIdr(s.total_nilai) + '</td>' +
-            '<td class="px-3 sm:px-4 py-2.5 text-right">' +
+          '<td class="px-3 sm:px-4 py-2.5 text-right mono font-semibold">' + fmtIdr(s.total_nilai) + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 text-right mono text-xs text-emerald-600">' + fmtIdr(totalBayar) + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 text-right mono text-xs font-semibold ' + bayarClass + '">' + fmtIdr(Math.abs(sisaTagihan)) + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 text-right">' +
             '<div class="flex items-center justify-end gap-1.5">' +
             '<span class="text-xs font-medium">' + s.porsi_budget.toFixed(1) + '%</span>' +
             '<div class="w-12 bg-stone-200 rounded-full h-1.5"><div class="bg-emerald-500 h-1.5 rounded-full" style="width:' + Math.min(s.porsi_budget, 100) + '%"></div></div>' +
@@ -1299,6 +1350,18 @@ function gantiPeriodeRab() {
   lapState.rab_periode = document.getElementById('rab-filter-periode')?.value || '';
   lapState.page = 1;
   showLap('rab');
+}
+async function hitungRealisasiRAB() {
+  var periode = document.getElementById('rab-filter-periode')?.value;
+  if (!periode) { showAlert('Pilih periode terlebih dahulu', 'error'); return; }
+  if (!confirm('Hitung ulang realisasi budget untuk periode ' + periode + ' dari data kas_bank?')) return;
+  try {
+    var r = await api.post('/laporan/rab-hitung-realisasi', { periode: periode });
+    showAlert('✅ Realisasi ' + periode + ' berhasil dihitung: Rp' + Number(r.totalRealisasi).toLocaleString('id-ID'), 'success');
+    showLap('rab');
+  } catch(e) {
+    showAlert('Gagal: ' + e.message, 'error');
+  }
 }
 function gantiPeriodeRabPembelian() {
   lapState.rp_periode = document.getElementById('rp-filter-periode')?.value || '';
