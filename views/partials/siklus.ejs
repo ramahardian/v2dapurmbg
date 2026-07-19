@@ -47,17 +47,19 @@
       class="pl-10 pr-4 py-2.5 border border-stone-200 rounded-xl text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1e40af]/20 focus:border-[#1e40af] bg-white transition" />
   </div>
   <div class="flex items-center gap-2">
-    <select id="siklus-filter-status" class="px-3 py-2.5 border border-stone-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1e40af]/20">
-      <option value="">Semua Status</option>
+    <button id="siklus-filter-all" onclick="var s=document.getElementById('siklus-filter-status');s.selectedIndex=0;reloadSiklusList()" class="px-3 py-2.5 text-sm font-medium text-stone-600 bg-stone-50 hover:bg-stone-100 rounded-xl transition-colors border border-stone-200 hover:text-stone-800">Semua Status</button>
+    <select id="siklus-filter-status" class="px-3 py-2.5 border border-stone-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1e40af]/20" onchange="reloadSiklusList()">
+      <option value="">Semua</option>
       <option value="Aktif">Aktif</option>
       <option value="Draft">Draft</option>
       <option value="Arsip">Arsip</option>
     </select>
+    <div class="w-px h-6 bg-stone-200 mx-1"></div>
+    <button id="siklus-delete-selected" onclick="deleteSelectedSiklus()" class="hidden px-3 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      Hapus Terpilih <span id="siklus-selected-count" class="font-bold">0</span>
+    </button>
   </div>
-  <button id="siklus-delete-selected" onclick="deleteSelectedSiklus()" class="hidden px-3 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors items-center gap-1.5">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-    Hapus Terpilih <span id="siklus-selected-count" class="font-bold">0</span>
-  </button>
 </div>
 
 <!-- Siklus Grid -->
