@@ -6,45 +6,14 @@ async function renderAkun() {
     if (!r.ok) throw new Error((await r.json()).error || 'Gagal memuat');
     c.innerHTML = await r.text();
 
-    let fotoBase64 = null;
-    const fotoInput = document.getElementById('foto-input');
-    const fotoPreview = document.getElementById('foto-preview');
-    const fotoInitials = document.getElementById('foto-initials');
-    const hapusBtn = document.getElementById('btn-hapus-foto');
-
-    fotoInput.onchange = function() {
-      const file = this.files[0];
-      if (!file) return;
-      if (file.size > 2 * 1024 * 1024) return showAlert('Maks 2MB', 'warning');
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        fotoBase64 = e.target.result;
-        fotoPreview.innerHTML = '<img src="' + fotoBase64 + '" class="w-full h-full object-cover" />';
-        hapusBtn.classList.remove('hidden');
-      };
-      reader.readAsDataURL(file);
-    };
-
-    hapusBtn.onclick = function() {
-      fotoBase64 = 'hapus';
-      fotoPreview.innerHTML = '<span id="foto-initials" class="text-3xl font-bold text-stone-400">' + (document.getElementById('akun-nama').value.split(' ').map(function(w) { return w[0]; }).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?') + '</span>';
-      hapusBtn.classList.add('hidden');
-    };
-
     document.getElementById('btn-simpan-profil').onclick = async function() {
       var nama = document.getElementById('akun-nama').value.trim();
       var email = document.getElementById('akun-email').value.trim();
       if (!nama) return showAlert('Nama tidak boleh kosong', 'warning');
       if (!email) return showAlert('Email tidak boleh kosong', 'warning');
       try {
-        var payload = { nama: nama, email: email };
-        if (fotoBase64) payload.foto = fotoBase64;
-        var res = await api.put('/auth/profile', payload);
+        await api.put('/auth/profile', { nama: nama, email: email });
         document.getElementById('user-name').textContent = nama;
-        if (res.user && res.user.foto) {
-          document.getElementById('user-avatar').innerHTML = '<img src="' + res.user.foto + '" class="w-full h-full object-cover" />';
-        }
-        fotoBase64 = null;
         showToast('Profil berhasil diperbarui', 'success');
       } catch (e) {
         showAlert(e.message || 'Gagal simpan profil', 'error');
