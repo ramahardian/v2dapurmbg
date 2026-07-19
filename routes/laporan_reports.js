@@ -622,4 +622,179 @@ router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
   }
 });
 
+// ===== RAB Pembelian per Supplier/Koperasi — gabungan RAB dengan realisasi pembelian =====
+router.get('/laporan/rab-pembelian-suplier', roleOps, async (req, res) => {
+  try {
+    const t = req.user.tenant_id;
+    const periode = req.query.periode || new Date().toISOString().slice(0, 7);
+    const filterTahun = periode.slice(0, 4);
+    const filterBulan = periode.slice(5, 7);
+
+    // 1. RAB Budget periode ini
+    const [[budgetRow]] = await db.query(
+      `SELECT COALESCE(SUM(total_budget), 0) AS total_budget,
+              COALESCE(SUM(realisasi), 0) AS total_realisasi,
+              COALESCE(AVG(harga_per_porsi), 0) AS rata_harga_per_porsi,
+              COUNT(*) AS item_count
+       FROM budget WHERE tenant_id=? AND periode=?`,
+      [t, periode]
+    );
+
+    // 2. Total penerima manfaat
+    const [[penerimaRow]] = await db.query(
+      `SELECT COALESCE(SUM(paket_besar + paket_kecil), 0) AS total_penerima
+       FROM penerima_manfaat WHERE tenant_id=?`,
+      [t]
+    );
+
+    // 3. Hari produksi periode ini
+    const [[{ total_hari } = { total_hari: 0 }]] = await db.query(
+      `SELECT COUNT(DISTINCT tanggal_produksi) AS total_hari
+       FROM produksi WHERE tenant_id=? AND DATE_FORMAT(tanggal_produksi, '%Y-%m')=?`,
+      [t, periode]
+    );
+
+    // 4. Purchase Orders per supplier (grouped by supplier_nama)
+    const [poRows] = await db.query(
+      `SELECT supplier_nama,
+              COUNT(*) AS total_po,
+              SUM(total_nilai) AS total_nilai,
+              SUM(CASE WHEN status='Draft' THEN 1 ELSE 0 END) AS draft_count,
+              SUM(CASE WHEN status='Disetujui' THEN 1 ELSE 0 END) AS disetujui_count,
+              SUM(CASE WHEN status='Dikirim' THEN 1 ELSE 0 END) AS dikirim_count,
+              SUM(CASE WHEN status='Diterima' THEN 1 ELSE 0 END) AS diterima_count,
+              SUM(CASE WHEN status='Dibayar' THEN 1 ELSE 0 END) AS dibayar_count,
+              MAX(tanggal) AS last_po_tanggal
+       FROM purchase_order
+       WHERE tenant_id=? AND DATE_FORMAT(tanggal, '%Y-%m')=?
+       GROUP BY supplier_nama
+       ORDER BY total_nilai DESC`,
+      [t, periode]
+    );
+
+    const totalBelanjaPO = poRows.reduce((s, r) => s + Number(r.total_nilai), 0);
+    const grandBudget = Number(budgetRow.total_budget) || 0;
+
+    // Map supplier dengan persentase budget
+    const suppliers = poRows.map(r => ({
+      supplier_nama: r.supplier_nama || '(Tanpa Nama)',
+      total_po: Number(r.total_po),
+      total_nilai: Number(r.total_nilai),
+      porsi_budget: grandBudget > 0 ? (Number(r.total_nilai) / grandBudget * 100) : 0,
+      status: {
+        draft: Number(r.draft_count),
+        disetujui: Number(r.disetujui_count),
+        dikirim: Number(r.dikirim_count),
+        diterima: Number(r.diterima_count),
+        dibayar: Number(r.dibayar_count),
+      },
+      last_po_tanggal: r.last_po_tanggal,
+    }));
+
+    // 5. Koperasi view — parse item JSON dari PO untuk extract id_koperasi
+    const [allPoItems] = await db.query(
+      `SELECT id, no_po, supplier_nama, tanggal, item, total_nilai
+       FROM purchase_order
+       WHERE tenant_id=? AND DATE_FORMAT(tanggal, '%Y-%m')=?
+         AND item IS NOT NULL AND item != '[]'
+       ORDER BY tanggal DESC`,
+      [t, periode]
+    );
+
+    const koperasiMap = {}; // id_koperasi -> { id_koperasi, nama_koperasi, total_nilai, supplier_set, bahan_ids, po_count }
+    const bahanKoperasiMap = {}; // bahan_baku_id -> id_koperasi
+
+    // Collect all bahan_baku_ids from items
+    const allBahanIds = new Set();
+    for (const po of allPoItems) {
+      try {
+        const items = JSON.parse(po.item || '[]');
+        for (const it of items) {
+          if (it.bahan_baku_id) allBahanIds.add(it.bahan_baku_id);
+        }
+      } catch (e) { /* skip invalid JSON */ }
+    }
+
+    // Lookup id_koperasi for all bahan_baku_ids
+    if (allBahanIds.size) {
+      const ids = [...allBahanIds];
+      const ph = ids.map(() => '?').join(',');
+      const [bahanRows] = await db.query(
+        `SELECT id, id_koperasi, nama FROM bahan_baku WHERE id IN (${ph}) AND tenant_id=?`,
+        [...ids, t]
+      );
+      for (const br of bahanRows) {
+        if (br.id_koperasi) {
+          bahanKoperasiMap[br.id] = { id_koperasi: br.id_koperasi, nama: br.nama };
+        }
+      }
+    }
+
+    // Group PO items by koperasi
+    for (const po of allPoItems) {
+      try {
+        const items = JSON.parse(po.item || '[]');
+        for (const it of items) {
+          const kb = it.bahan_baku_id ? bahanKoperasiMap[it.bahan_baku_id] : null;
+          if (!kb) continue;
+          const kId = kb.id_koperasi;
+          if (!koperasiMap[kId]) {
+            koperasiMap[kId] = {
+              id_koperasi: kId,
+              nama: kb.nama,
+              total_nilai: 0,
+              supplier_set: new Set(),
+              po_count: 0,
+              po_set: new Set(),
+            };
+          }
+          // Hitung proporsional nilai berdasarkan item
+          const itemQty = Number(it.total_qty || it.jumlah || 0);
+          const itemHarga = Number(it.harga_satuan || 0);
+          const itemNilai = itemQty * itemHarga;
+          // Atau gunakan total_nilai PO dibagi jumlah item (approximation)
+          // Lebih akurat: sum of item subtotals
+          const subTotal = Number(it.estimated_subtotal || it.subtotal || (itemQty * itemHarga) || 0);
+          koperasiMap[kId].total_nilai += subTotal;
+          koperasiMap[kId].supplier_set.add(po.supplier_nama || 'Unknown');
+          koperasiMap[kId].po_set.add(po.id);
+        }
+      } catch (e) { /* skip */ }
+    }
+
+    const koperasiView = Object.values(koperasiMap).map(k => ({
+      id_koperasi: k.id_koperasi,
+      nama_koperasi: k.nama,
+      total_nilai: k.total_nilai,
+      supplier_count: k.supplier_set.size,
+      po_count: k.po_set.size,
+      suppliers: [...k.supplier_set],
+    })).sort((a, b) => b.total_nilai - a.total_nilai);
+
+    res.json({
+      periode,
+      budget: {
+        total_budget: Number(budgetRow.total_budget),
+        total_realisasi: Number(budgetRow.total_realisasi),
+        rata_harga_per_porsi: Number(budgetRow.rata_harga_per_porsi),
+        item_count: Number(budgetRow.item_count),
+        sisa: Number(budgetRow.total_budget) - Number(budgetRow.total_realisasi),
+      },
+      penerima: {
+        total_penerima: Number(penerimaRow.total_penerima),
+        total_hari: Number(total_hari),
+      },
+      suppliers,
+      koperasi: koperasiView,
+      grand_total_po: totalBelanjaPO,
+      total_budget: grandBudget,
+      selisih: grandBudget - totalBelanjaPO,
+      serapan_persen: grandBudget > 0 ? (totalBelanjaPO / grandBudget * 100) : 0,
+    });
+  } catch (err) {
+    console.error('RAB Pembelian Supplier error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

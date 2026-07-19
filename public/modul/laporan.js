@@ -17,7 +17,7 @@ async function renderLaporan() {
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
   }
 }
-const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'keuangan', 'hpp'];
+const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'keuangan', 'hpp', 'rab-pembelian'];
 const LAP_PAGE_SIZE = 10;
 let lapState = { tab: 'siklus', page: 1 };
 
@@ -46,6 +46,7 @@ const tabColors = {
     'bp-kas': { active: 'bg-white text-indigo-600 shadow-sm', inactive: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' },
     payroll: { active: 'bg-white text-pink-600 shadow-sm', inactive: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
     'payroll-mingguan': { active: 'bg-white text-pink-600 shadow-sm', inactive: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
+    'rab-pembelian': { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
   };
   getLapTabsForRole().forEach(t => {
     const el = document.getElementById('lt-' + t);
@@ -570,6 +571,133 @@ const tabColors = {
 
       window._lapStatCards += docContent;
       window._lapData = null;
+    } else if (tab === 'rab-pembelian') {
+      const filterPeriode = lapState.rp_periode || new Date().toISOString().slice(0, 7);
+      const r = await api.get('/laporan/rab-pembelian-suplier?periode=' + filterPeriode);
+
+      // Generate periode list
+      var periods = [];
+      var nowDate = new Date();
+      for (var y = nowDate.getFullYear() - 2; y <= nowDate.getFullYear(); y++) {
+        for (var m = 1; m <= 12; m++) {
+          var mm = String(m).padStart(2, '0');
+          periods.push(y + '-' + mm);
+        }
+      }
+      periods = periods.filter(function(p) { return p <= nowDate.toISOString().slice(0, 7); }).reverse();
+
+      var fmtIdr = fmtIDR;
+      var fmtNum2 = fmtNum;
+
+      // Filter bar
+      var filterBar = '<div class="mb-4 flex flex-wrap items-center gap-3">' +
+        '<div class="flex items-center gap-2">' +
+        '<label class="text-xs font-medium text-stone-500">Periode:</label>' +
+        '<select id="rp-filter-periode" onchange="gantiPeriodeRabPembelian()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        periods.map(function(p) { return '<option value="' + p + '" ' + (filterPeriode===p?'selected':'') + '>' + p + '</option>'; }).join('') +
+        '</select></div>' +
+        '<div class="flex gap-2">' +
+        '<button onclick="showLap(\'rab-pembelian\')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-medium">Refresh</button>' +
+        '</div></div>';
+
+      var statCards = '<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">' +
+        statCard('Total Budget', fmtIdr(r.total_budget), 'RAB periode ini', 'bg-emerald-50') +
+        statCard('Total PO', fmtIdr(r.grand_total_po), r.suppliers ? r.suppliers.length + ' supplier' : '0 supplier', 'bg-blue-50') +
+        statCard('Selisih', fmtIdr(r.selisih), r.selisih >= 0 ? 'surplus' : 'defisit', r.selisih >= 0 ? 'bg-emerald-50' : 'bg-red-50') +
+        statCard('Serapan', r.serapan_persen.toFixed(1) + '%', 'dari total budget', 'bg-violet-50') +
+        statCard('Penerima', fmtNum2(r.penerima.total_penerima), r.penerima.total_hari + ' hari', 'bg-amber-50') +
+      '</div>';
+
+      // Toggle supplier / koperasi view
+      var viewMode = lapState.rp_view || 'supplier';
+      var toggleBtn = '<div class="mb-3 flex gap-2">' +
+        '<button onclick="lapState.rp_view=\'supplier\';showLap(\'rab-pembelian\')" class="px-3 py-1.5 text-[11px] font-medium rounded-lg ' + (viewMode==='supplier'?'bg-emerald-600 text-white':'bg-stone-100 text-stone-600 hover:bg-stone-200') + '">Supplier View</button>' +
+        '<button onclick="lapState.rp_view=\'koperasi\';showLap(\'rab-pembelian\')" class="px-3 py-1.5 text-[11px] font-medium rounded-lg ' + (viewMode==='koperasi'?'bg-emerald-600 text-white':'bg-stone-100 text-stone-600 hover:bg-stone-200') + '">Koperasi View</button>' +
+        '</div>';
+
+      var tableContent = '';
+
+      if (viewMode === 'supplier' && r.suppliers && r.suppliers.length) {
+        tableContent = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
+          '<div class="px-4 py-3 font-bold text-sm border-b border-stone-200 bg-stone-50 flex items-center justify-between">' +
+          '<span>Pembelian per Supplier</span>' +
+          '<span class="text-xs font-normal text-stone-500">' + r.suppliers.length + ' supplier</span></div>' +
+          '<div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
+          '<thead class="bg-stone-50"><tr>' +
+          '<th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Supplier</th>' +
+          '<th class="text-center px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wider">PO</th>' +
+          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Total Pembelian</th>' +
+          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">% Budget</th>' +
+          '<th class="text-center px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Status</th>' +
+          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">PO Terakhir</th>' +
+          '</tr></thead><tbody>';
+
+        r.suppliers.forEach(function(s) {
+          var st = s.status;
+          var statusBadges = '';
+          if (st.draft > 0) statusBadges += '<span class="inline-block bg-stone-200 text-stone-600 text-[10px] px-1.5 py-0.5 rounded mr-0.5">Draft:' + st.draft + '</span>';
+          if (st.disetujui > 0) statusBadges += '<span class="inline-block bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded mr-0.5">Disetujui:' + st.disetujui + '</span>';
+          if (st.dibayar > 0) statusBadges += '<span class="inline-block bg-emerald-100 text-emerald-600 text-[10px] px-1.5 py-0.5 rounded mr-0.5">Dibayar:' + st.dibayar + '</span>';
+          if (st.dikirim > 0) statusBadges += '<span class="inline-block bg-amber-100 text-amber-600 text-[10px] px-1.5 py-0.5 rounded mr-0.5">Dikirim:' + st.dikirim + '</span>';
+          if (st.diterima > 0) statusBadges += '<span class="inline-block bg-teal-100 text-teal-600 text-[10px] px-1.5 py-0.5 rounded mr-0.5">Diterima:' + st.diterima + '</span>';
+
+          tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
+            '<td class="px-3 sm:px-4 py-2.5 font-medium">' + escHtml(s.supplier_nama) + '</td>' +
+            '<td class="px-2 py-2.5 text-center font-bold text-sm">' + s.total_po + '</td>' +
+            '<td class="px-3 sm:px-4 py-2.5 text-right mono font-semibold">' + fmtIdr(s.total_nilai) + '</td>' +
+            '<td class="px-3 sm:px-4 py-2.5 text-right">' +
+            '<div class="flex items-center justify-end gap-1.5">' +
+            '<span class="text-xs font-medium">' + s.porsi_budget.toFixed(1) + '%</span>' +
+            '<div class="w-12 bg-stone-200 rounded-full h-1.5"><div class="bg-emerald-500 h-1.5 rounded-full" style="width:' + Math.min(s.porsi_budget, 100) + '%"></div></div>' +
+            '</div></td>' +
+            '<td class="px-2 py-2.5 text-center">' + (statusBadges || '<span class="text-stone-400 text-[10px]">—</span>') + '</td>' +
+            '<td class="px-3 sm:px-4 py-2.5 text-right text-[10px] text-stone-500">' + (s.last_po_tanggal ? fmtDate(s.last_po_tanggal) : '-') + '</td></tr>';
+        });
+
+        tableContent += '</tbody></table></div></div>';
+      } else if (viewMode === 'koperasi') {
+        if (r.koperasi && r.koperasi.length) {
+          tableContent = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
+            '<div class="px-4 py-3 font-bold text-sm border-b border-stone-200 bg-stone-50 flex items-center justify-between">' +
+            '<span>Pembelian per Koperasi (dari item PO)</span>' +
+            '<span class="text-xs font-normal text-stone-500">' + r.koperasi.length + ' koperasi</span></div>' +
+            '<div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
+            '<thead class="bg-stone-50"><tr>' +
+            '<th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">ID Koperasi</th>' +
+            '<th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Nama Bahan</th>' +
+            '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Total Nilai</th>' +
+            '<th class="text-center px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wider">PO</th>' +
+            '<th class="text-center px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Supplier</th>' +
+            '</tr></thead><tbody>';
+
+          r.koperasi.forEach(function(k) {
+            tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
+              '<td class="px-3 sm:px-4 py-2.5 font-medium text-xs">Kop-' + k.id_koperasi + '</td>' +
+              '<td class="px-3 sm:px-4 py-2.5">' + escHtml(k.nama_koperasi) + '</td>' +
+              '<td class="px-3 sm:px-4 py-2.5 text-right mono font-semibold">' + fmtIdr(k.total_nilai) + '</td>' +
+              '<td class="px-2 py-2.5 text-center">' + k.po_count + '</td>' +
+              '<td class="px-2 py-2.5 text-center text-[10px] text-stone-500">' + k.supplier_count + '</td></tr>';
+          });
+
+          tableContent += '</tbody></table></div></div>';
+        } else {
+          tableContent = '<div class="text-center py-12 text-stone-400 bg-white border border-stone-200 rounded-lg">' +
+            '<p class="text-sm font-medium">Belum ada data koperasi</p>' +
+            '<p class="text-xs mt-1">Data koperasi akan muncul jika item PO memiliki id_koperasi di bahan baku</p></div>';
+        }
+
+        // No supplier data
+        if (!r.suppliers || !r.suppliers.length) {
+          tableContent = filterBar + '<div class="text-center py-12 text-stone-400">Tidak ada data pembelian untuk periode ini</div>';
+        }
+      } else {
+        tableContent = '<div class="text-center py-12 text-stone-400 bg-white border border-stone-200 rounded-lg">' +
+          '<p class="text-sm font-medium">Belum ada data pembelian</p></div>';
+      }
+
+      window._lapData = null;
+      window._lapStatCards = filterBar + statCards + toggleBtn + tableContent;
+
     } else if (tab === 'bp-kas') {
       var kasState = lapState;
       var kasNow = new Date();
@@ -848,6 +976,11 @@ function gantiPeriodeRab() {
   lapState.rab_periode = document.getElementById('rab-filter-periode')?.value || '';
   lapState.page = 1;
   showLap('rab');
+}
+function gantiPeriodeRabPembelian() {
+  lapState.rp_periode = document.getElementById('rp-filter-periode')?.value || '';
+  lapState.page = 1;
+  showLap('rab-pembelian');
 }
 // ===== Payroll Mingguan Helpers =====
 function pmGanti() {
