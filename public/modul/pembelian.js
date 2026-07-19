@@ -100,7 +100,7 @@ function renderPrView() {
               <td class="px-4 py-3 text-center whitespace-nowrap">
                 <button onclick="viewPrItems(${pr.id})" class="text-blue-600 hover:text-blue-800 text-xs font-medium mr-2">Detail</button>
                 ${pr.status === 'Disetujui' ? `<button onclick="buatPoDariPr(${pr.id})" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium">Buat PO</button>` : ''}
-                ${(window.currentUser?.role === 'admin' || window.currentUser?.role === 'keuangan') && pr.status === 'Draft' ? `
+                ${(currentUser?.role === 'admin' || currentUser?.role === 'keuangan') && pr.status === 'Draft' ? `
                   <button onclick="approvePr(${pr.id})" class="text-green-600 hover:text-green-800 text-xs font-medium mr-1">Setujui</button>
                   <button onclick="rejectPr(${pr.id})" class="text-red-600 hover:text-red-800 text-xs font-medium">Tolak</button>
                 ` : ''}
