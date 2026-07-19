@@ -16,8 +16,10 @@ const userRoutes = require('./users');
 const templateRoutes = require('./template');
 const bahanBakuRoutes = require('./bahanBaku');
 const ijinCutiRoutes = require('./ijinCuti');
+const { router: jurnalRoutes } = require('./jurnal');
 
 router.use(genericRoutes);
+router.use(jurnalRoutes);
 router.use(bahanBakuRoutes);
 router.use(shiftRoutes);
 router.use(userRoutes);

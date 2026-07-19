@@ -738,6 +738,51 @@ CREATE TABLE menu_bahan (
     }
   });
 
+  // Endpoint migrasi jurnal umum & double entry accounting (admin only)
+  app.get('/api/migrate/jurnal', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const { runMigrasiJurnal } = require('./scripts/migrasi-jurnal');
+      const logs = await runMigrasiJurnal(db);
+      const escapedLogs = logs.map(l => l.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('\n');
+      const success = logs.every(l => l.startsWith('✓'));
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;max-width:600px;margin:auto;background:#f5f5f4">
+          <h2 style="color:${success ? '#16a34a' : '#d97706'};margin-bottom:1rem">
+            ${success ? '✅' : '⚠️'} Migrasi Jurnal ${success ? 'Selesai' : 'Sebagian'}
+          </h2>
+          <pre style="background:#1c1917;color:#a3e635;padding:1rem;border-radius:0.5rem;font-size:0.8rem;line-height:1.6;overflow-x:auto">${escapedLogs}</pre>
+          <div style="margin-top:1rem;display:flex;gap:0.75rem;flex-wrap:wrap">
+            <a href="/api/migrate/cek-tabel" style="padding:0.5rem 1.25rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">📋 Cek Tabel</a>
+            <a href="/" style="padding:0.5rem 1.25rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a>
+          </div>
+        </div>`);
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#dc2626">❌ Migrasi Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+        </div>`);
+    }
+  });
+
+  // Endpoint auto-repost jurnal dari kas_bank (admin only)
+  app.post('/api/migrate/repost-jurnal', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const { autoPostKasBankToJurnal } = require('./routes/jurnal');
+      const [kasList] = await db.query('SELECT * FROM kas_bank WHERE tenant_id=?', [req.user.tenant_id]);
+      let posted = 0, skipped = 0;
+      for (const kas of kasList) {
+        try {
+          await autoPostKasBankToJurnal(kas, req.user.tenant_id);
+          posted++;
+        } catch { skipped++; }
+      }
+      res.json({ ok: true, posted, skipped, total: kasList.length });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Endpoint isi berat_per_satuan bahan baku berdasarkan satuan (admin only)
   app.get('/api/migrate/berat-per-satuan', requireAuth, requireRole('admin'), async (req, res) => {
     try {

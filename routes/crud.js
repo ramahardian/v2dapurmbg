@@ -3,6 +3,7 @@ const db = require('../db');
 // Middleware autentikasi (menggunakan Supabase sesuai setup arsitektur)
 // untuk memastikan keamanan dan mengisolasi data per tenant
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { autoPostKasBankToJurnal } = require('./jurnal');
 
 /**
  * Konfigurasi Tabel (Whitelist)
@@ -59,6 +60,120 @@ const SEARCHABLE_FIELDS = {
   budget: ['periode', 'kategori_penerima'],
   kas_bank: ['tipe', 'kategori', 'akun', 'deskripsi', 'no_transaksi'],
 };
+
+/**
+ * Auto Stok Masuk: Parse item JSON dari Penerimaan Barang (Lolos QC)
+ * lalu INSERT ke stok_masuk + UPDATE stok_saat_ini di bahan_baku.
+ * Pakai TRANSACTION agar atomic, cegah duplikat via sumber LIKE.
+ */
+async function autoStokMasukFromPenerimaan(penerimaan, tenant_id) {
+  let items = [];
+  try { items = JSON.parse(penerimaan.item || '[]'); } catch { return; }
+  if (!items.length) return;
+
+  const validItems = items.filter(i => i.bahan_baku_id && (Number(i.qty) > 0 || Number(i.jumlah) > 0));
+  if (!validItems.length) return;
+
+  // Cegah duplikat: sudah pernah di-stok masuk?
+  const sourcePrefix = `Penerimaan: ${penerimaan.no_dokumen}`;
+  const [[{ cnt } = { cnt: 0 }]] = await db.query(
+    'SELECT COUNT(*) AS cnt FROM stok_masuk WHERE tenant_id=? AND sumber LIKE ?',
+    [tenant_id, sourcePrefix + '%']
+  );
+  if (cnt > 0) return;
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    for (const item of validItems) {
+      const jumlah = Number(item.qty || item.jumlah || 0);
+      if (jumlah <= 0) continue;
+
+      await conn.query(
+        `INSERT INTO stok_masuk (tenant_id, tanggal, bahan_baku_id, jumlah, sumber, catatan)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [tenant_id, penerimaan.tanggal_terima, item.bahan_baku_id, jumlah,
+         sourcePrefix,
+         (`Dari ${penerimaan.supplier_nama || 'Supplier'}${item.nama ? ' - ' + item.nama : ''}`)]
+      );
+
+      await conn.query(
+        `UPDATE bahan_baku SET stok_saat_ini = stok_saat_ini + ? WHERE id=? AND tenant_id=?`,
+        [jumlah, item.bahan_baku_id, tenant_id]
+      );
+    }
+
+    await conn.commit();
+  } catch (e) {
+    await conn.rollback();
+    console.error('❌ Auto stok masuk rollback:', e);
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * Auto Stok Keluar: Produksi (Diproduksi/Selesai) → Stok Keluar
+ * Ambil komposisi bahan dari menu_bahan, hitung per porsi,
+ * INSERT ke stok_keluar + UPDATE stok_saat_ini di bahan_baku.
+ * Pakai TRANSACTION agar atomic, cegah duplikat via tujuan LIKE.
+ */
+async function autoStokKeluarFromProduksi(produksi, tenant_id) {
+  if (!produksi.menu_id || !produksi.jumlah_porsi) return;
+
+  // Cegah duplikat: sudah pernah di-stok keluar?
+  const tujuanPrefix = `Produksi: ${produksi.id}`;
+  const [[{ cnt } = { cnt: 0 }]] = await db.query(
+    'SELECT COUNT(*) AS cnt FROM stok_keluar WHERE tenant_id=? AND tujuan LIKE ?',
+    [tenant_id, tujuanPrefix + '%']
+  );
+  if (cnt > 0) return;
+
+  // Ambil komposisi bahan dari menu_bahan
+  const [bahanRows] = await db.query(
+    `SELECT mb.bahan_baku_id, b.nama AS bahan_nama, b.satuan,
+            mb.jumlah AS jumlah_per_porsi
+     FROM menu_bahan mb
+     JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+     WHERE mb.menu_id=?`,
+    [produksi.menu_id]
+  );
+
+  if (!bahanRows.length) return;
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    for (const bahan of bahanRows) {
+      const jumlah = Number(bahan.jumlah_per_porsi) * Number(produksi.jumlah_porsi);
+      if (jumlah <= 0) continue;
+
+      await conn.query(
+        `INSERT INTO stok_keluar (tenant_id, tanggal, bahan_baku_id, jumlah, tujuan, catatan)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [tenant_id, produksi.tanggal_produksi, bahan.bahan_baku_id, jumlah,
+         tujuanPrefix,
+         `Produksi ${produksi.menu_nama || ''} - ${produksi.jumlah_porsi} porsi`]
+      );
+
+      await conn.query(
+        `UPDATE bahan_baku SET stok_saat_ini = stok_saat_ini - ? WHERE id=? AND tenant_id=?`,
+        [jumlah, bahan.bahan_baku_id, tenant_id]
+      );
+    }
+
+    await conn.commit();
+  } catch (e) {
+    await conn.rollback();
+    console.error('❌ Auto stok keluar rollback:', e);
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
 
 /**
  * Helper: Merakit Query INSERT
@@ -188,6 +303,28 @@ function createCrudRouter() {
         const [r] = await db.query(sql, vals);
         // Kembalikan data yang baru di-insert sebagai respons
         const [rows] = await db.query(`SELECT * FROM ${table} WHERE id=?`, [r.insertId]);
+
+        // 🔁 AUTO STOK MASUK: Penerimaan Barang (Lolos QC) → Stok Masuk
+        if (table === 'penerimaan_barang' && req.body.status_qc === 'Lolos' && rows.length) {
+          await autoStokMasukFromPenerimaan(rows[0], req.user.tenant_id).catch(e => {
+            console.error('Auto stok masuk gagal (CREATE):', e);
+          });
+        }
+
+        // 🔁 AUTO STOK KELUAR: Produksi (Diproduksi/Selesai) → Stok Keluar
+        if (table === 'produksi' && (req.body.status === 'Diproduksi' || req.body.status === 'Selesai') && rows.length) {
+          await autoStokKeluarFromProduksi(rows[0], req.user.tenant_id).catch(e => {
+            console.error('Auto stok keluar gagal (CREATE):', e);
+          });
+        }
+
+        // 🔁 AUTO JURNAL: Kas Bank → Jurnal Umum (double entry)
+        if (table === 'kas_bank' && rows.length) {
+          await autoPostKasBankToJurnal(rows[0], req.user.tenant_id).catch(e => {
+            console.error('Auto jurnal gagal (CREATE):', e);
+          });
+        }
+
         res.json(rows[0]);
       } catch (e) { 
         console.error(e); 
@@ -209,6 +346,58 @@ function createCrudRouter() {
         await db.query(`UPDATE ${table} ${sql} WHERE id=? AND tenant_id=?`, vals);
         
         const [rows] = await db.query(`SELECT * FROM ${table} WHERE id=?`, [req.params.id]);
+
+        // 🔁 AUTO STOK MASUK: Penerimaan Barang (Lolos QC) → Stok Masuk
+        if (table === 'penerimaan_barang' && req.body.status_qc === 'Lolos' && rows.length) {
+          await autoStokMasukFromPenerimaan(rows[0], req.user.tenant_id).catch(e => {
+            console.error('Auto stok masuk gagal (UPDATE):', e);
+          });
+        }
+
+        // 🔁 AUTO STOK KELUAR: Produksi (Diproduksi/Selesai) → Stok Keluar
+        if (table === 'produksi' && (req.body.status === 'Diproduksi' || req.body.status === 'Selesai') && rows.length) {
+          await autoStokKeluarFromProduksi(rows[0], req.user.tenant_id).catch(e => {
+            console.error('Auto stok keluar gagal (UPDATE):', e);
+          });
+        }
+
+        // 🔁 AUTO JURNAL: Kas Bank → Jurnal Umum (double entry)
+        if (table === 'kas_bank' && rows.length) {
+          await autoPostKasBankToJurnal(rows[0], req.user.tenant_id).catch(e => {
+            console.error('Auto jurnal gagal (UPDATE):', e);
+          });
+        }
+
+        // 🔁 AUTO-JOURNAL: Purchase Order Dibayar → Kas Bank (Pembayaran Supplier)
+        if (table === 'purchase_order' && req.body.status === 'Dibayar' && rows.length) {
+          const po = rows[0];
+          const t = req.user.tenant_id;
+          const noTransaksi = `PO/${po.id}`;
+
+          // Cegah duplikat — jangan sampai entry kas_bank dibuat 2x
+          const [existing] = await db.query(
+            'SELECT id FROM kas_bank WHERE tenant_id=? AND no_transaksi=? AND tipe="keluar"',
+            [t, noTransaksi]
+          );
+
+          if (!existing.length) {
+            // Cari akun default (sama seperti pola payroll di routes/payroll.js)
+            const [[akun]] = await db.query(
+              'SELECT id FROM akun WHERE tenant_id=? AND kode=?',
+              [t, '2100']
+            );
+
+            await db.query(
+              `INSERT INTO kas_bank (tenant_id, tanggal, no_transaksi, tipe, kategori, akun, akun_id, deskripsi, jumlah)
+               VALUES (?, ?, ?, 'keluar', 'Pembayaran Supplier', 'Dana Operasional', ?, ?, ?)`,
+              [t, po.tanggal || new Date(), noTransaksi,
+               akun?.id || null,
+               (`Pembayaran PO ${po.no_po}${po.supplier_nama ? ' - ' + po.supplier_nama : ''}`),
+               Number(po.total_nilai) || 0]
+            );
+          }
+        }
+
         res.json(rows[0]);
       } catch (e) { 
         console.error(e); 

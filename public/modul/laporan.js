@@ -17,7 +17,7 @@ async function renderLaporan() {
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
   }
 }
-const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'keuangan', 'hpp', 'rab-pembelian'];
+const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'keuangan', 'hpp', 'rab-pembelian', 'jurnal-umum', 'buku-besar', 'neraca'];
 const LAP_PAGE_SIZE = 10;
 let lapState = { tab: 'siklus', page: 1 };
 
@@ -47,6 +47,9 @@ const tabColors = {
     payroll: { active: 'bg-white text-pink-600 shadow-sm', inactive: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
     'payroll-mingguan': { active: 'bg-white text-pink-600 shadow-sm', inactive: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
     'rab-pembelian': { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
+    'jurnal-umum': { active: 'bg-white text-cyan-600 shadow-sm', inactive: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200' },
+    'buku-besar': { active: 'bg-white text-blue-600 shadow-sm', inactive: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
+    'neraca': { active: 'bg-white text-purple-600 shadow-sm', inactive: 'bg-purple-100 text-purple-700 hover:bg-purple-200' },
   };
   getLapTabsForRole().forEach(t => {
     const el = document.getElementById('lt-' + t);
@@ -792,7 +795,7 @@ const tabColors = {
         '</tbody></table></div></div>' + listBadge;
 
       window._lapData = null;
-    } else {
+    } else if (tab === 'keuangan') {
       const d = await api.get('/laporan/keuangan');
       const rows = d.transaksi || [];
       window._lapData = { tab, rows, headers: ['Tanggal','Tipe','Kategori','BP','Akun','Deskripsi','Jumlah'], fields: ['tanggal','tipe','kategori','akun_bp','akun_label','deskripsi','jumlah'],
@@ -811,6 +814,137 @@ const tabColors = {
         ${statCard('Kas Keluar', fmtIDR(d.total_kas_keluar), '', 'bg-orange-50')}
         ${statCard('Saldo Akhir', fmtIDR(d.saldo), 'saldo_awal + masuk - keluar', 'bg-emerald-50')}
       </div>` + bpCards;
+    } else if (tab === 'jurnal-umum') {
+      const r = await api.get('/laporan/jurnal-umum');
+      const jurnal = r.jurnal || [];
+      window._lapData = { tab: 'jurnal-umum', rows: jurnal,
+        headers: ['No Jurnal','Tanggal','Deskripsi','Total Debit','Total Kredit','Sumber'],
+        fields: ['no_jurnal','tanggal','deskripsi','total_debit','total_kredit','sumber_transaksi'],
+        fmt: jurnal.map(j => [
+          j.no_jurnal, fmtDate(j.tanggal), j.deskripsi||'-', fmtIDR(j.total_debit), fmtIDR(j.total_kredit), j.sumber_transaksi||'-'
+        ])
+      };
+      window['_export_jurnal-umum'] = { data: jurnal, fields: ['no_jurnal','tanggal','deskripsi','total_debit','total_kredit','sumber_transaksi'] };
+      window._lapStatCards = `<div class="mb-4 flex flex-wrap items-center gap-3">
+        <div class="text-xs text-stone-500">${r.total} jurnal · ${r.periode?.start} s/d ${r.periode?.end}</div>
+        <div class="text-xs font-medium">Grand Total Debit: ${fmtIDR(r.grand_debit)}</div>
+        <div class="text-xs font-medium">Grand Total Kredit: ${fmtIDR(r.grand_kredit)}</div>
+      </div>`;
+
+    } else if (tab === 'buku-besar') {
+      // First fetch COA for akun selector
+      const coa = await api.get('/akun/coa');
+      const akunId = lapState.bb_akun_id || '';
+      const params = akunId ? '?akun_id=' + akunId : '';
+      const r = await api.get('/laporan/buku-besar' + params);
+      const akunList = r.result || [];
+
+      var akunOpts = '<option value="">— Semua Akun —</option>' +
+        coa.map(function(a) { return '<option value="' + a.id + '" ' + (String(a.id) === String(akunId) ? 'selected' : '') + '>' + a.kode + ' - ' + a.nama + '</option>'; }).join('');
+
+      var filterBar = '<div class="mb-4 flex flex-wrap items-center gap-3">' +
+        '<label class="text-xs font-medium text-stone-500">Akun:</label>' +
+        '<select onchange="lapState.bb_akun_id=this.value;showLap(\'buku-besar\')" class="text-xs border border-stone-300 rounded px-2 py-1.5 min-w-[200px]">' + akunOpts + '</select>' +
+        '<span class="text-xs text-stone-400">' + r.periode?.start + ' s/d ' + r.periode?.end + '</span></div>';
+
+      var tableContent = '';
+      akunList.forEach(function(akun) {
+        tableContent += '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">' +
+          '<div class="px-4 py-3 font-bold text-sm border-b border-stone-200 bg-stone-50 flex items-center justify-between">' +
+          '<span>' + akun.akun_kode + ' - ' + akun.akun_nama + '</span>' +
+          '<span class="text-xs font-normal text-stone-500">' + akun.kelompok + ' (' + akun.saldo_normal + ')</span></div>' +
+          '<div class="px-4 py-2 bg-stone-50 border-b border-stone-200 text-xs text-stone-500 flex gap-4">' +
+          '<span>Saldo Awal: <strong class="mono">' + fmtIDR(akun.saldo_awal) + '</strong></span>' +
+          '<span>Debit: <strong class="mono">' + fmtIDR(akun.total_debit) + '</strong></span>' +
+          '<span>Kredit: <strong class="mono">' + fmtIDR(akun.total_kredit) + '</strong></span>' +
+          '<span>Saldo Akhir: <strong class="mono">' + fmtIDR(akun.saldo_akhir) + '</strong></span></div>';
+
+        if (akun.mutasi && akun.mutasi.length) {
+          tableContent += '<div class="overflow-x-auto"><table class="w-full text-xs"><thead class="bg-stone-50"><tr>' +
+            '<th class="text-left px-3 py-2 text-[10px] font-semibold uppercase">Tanggal</th>' +
+            '<th class="text-left px-3 py-2 text-[10px] font-semibold uppercase">No Jurnal</th>' +
+            '<th class="text-left px-3 py-2 text-[10px] font-semibold uppercase">Deskripsi</th>' +
+            '<th class="text-right px-3 py-2 text-[10px] font-semibold uppercase">Debit</th>' +
+            '<th class="text-right px-3 py-2 text-[10px] font-semibold uppercase">Kredit</th>' +
+            '<th class="text-right px-3 py-2 text-[10px] font-semibold uppercase">Saldo</th>' +
+            '</tr></thead><tbody>';
+          akun.mutasi.forEach(function(m) {
+            tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
+              '<td class="px-3 py-2">' + fmtDate(m.tanggal) + '</td>' +
+              '<td class="px-3 py-2 mono text-[10px]">' + m.no_jurnal + '</td>' +
+              '<td class="px-3 py-2">' + (m.deskripsi||'-') + '</td>' +
+              '<td class="px-3 py-2 text-right mono">' + (m.debit > 0 ? fmtIDR(m.debit) : '') + '</td>' +
+              '<td class="px-3 py-2 text-right mono">' + (m.kredit > 0 ? fmtIDR(m.kredit) : '') + '</td>' +
+              '<td class="px-3 py-2 text-right mono font-medium">' + fmtIDR(m.saldo) + '</td></tr>';
+          });
+          tableContent += '</tbody></table></div>';
+        } else {
+          tableContent += '<div class="p-4 text-center text-stone-400 text-xs">Tidak ada mutasi periode ini</div>';
+        }
+        tableContent += '</div>';
+      });
+
+      if (!akunList.length) {
+        tableContent = '<div class="text-center py-12 text-stone-400">Tidak ada data buku besar</div>';
+      }
+
+      window._lapData = null;
+      window._lapStatCards = filterBar + tableContent;
+
+    } else if (tab === 'neraca') {
+      const r = await api.get('/laporan/neraca');
+
+      var fmtIdr3 = fmtIDR;
+      var selisihClass = Math.abs(r.selisih) < 1 ? 'text-emerald-600' : 'text-red-600';
+
+      window._lapStatCards = `<div class="mb-4 grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        ${statCard('Total Aktiva', fmtIdr3(r.aktiva.total), '', 'bg-blue-50')}
+        ${statCard('Total Kewajiban', fmtIdr3(r.kewajiban.total), '', 'bg-orange-50')}
+        ${statCard('Total Ekuitas', fmtIdr3(r.ekuitas.total), 'Laba berjalan: ' + fmtIdr3(r.ekuitas.laba_berjalan), 'bg-emerald-50')}
+        ${statCard('Selisih', fmtIdr3(r.selisih), Math.abs(r.selisih) < 1 ? 'Balance ✓' : 'Tidak Balance!', selisihClass)}
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
+          <div class="px-4 py-3 font-bold text-sm bg-blue-50 border-b border-stone-200">AKTIVA</div>
+          <table class="w-full text-xs">
+            <tbody>
+              ${(r.aktiva.rincian||[]).map(function(a) {
+                return '<tr class="border-t border-stone-100 hover:bg-stone-50"><td class="px-4 py-2">' + a.akun_kode + ' - ' + a.akun_nama + '</td><td class="px-4 py-2 text-right mono font-medium">' + fmtIdr3(a.saldo) + '</td></tr>';
+              }).join('') || '<tr><td class="px-4 py-4 text-center text-stone-400">Tidak ada data</td></tr>'}
+              <tr class="border-t-2 border-stone-400 bg-blue-50 font-bold"><td class="px-4 py-2">TOTAL AKTIVA</td><td class="px-4 py-2 text-right mono">' + fmtIdr3(r.aktiva.total) + '</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">
+            <div class="px-4 py-3 font-bold text-sm bg-orange-50 border-b border-stone-200">KEWAJIBAN</div>
+            <table class="w-full text-xs">
+              <tbody>
+                ${(r.kewajiban.rincian||[]).map(function(a) {
+                  return '<tr class="border-t border-stone-100 hover:bg-stone-50"><td class="px-4 py-2">' + a.akun_kode + ' - ' + a.akun_nama + '</td><td class="px-4 py-2 text-right mono font-medium">' + fmtIdr3(a.saldo) + '</td></tr>';
+                }).join('') || '<tr><td class="px-4 py-4 text-center text-stone-400">Tidak ada data</td></tr>'}
+                <tr class="border-t-2 border-stone-400 bg-orange-50 font-bold"><td class="px-4 py-2">TOTAL KEWAJIBAN</td><td class="px-4 py-2 text-right mono">' + fmtIdr3(r.kewajiban.total) + '</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
+            <div class="px-4 py-3 font-bold text-sm bg-emerald-50 border-b border-stone-200">EKUITAS</div>
+            <table class="w-full text-xs">
+              <tbody>
+                ${(r.ekuitas.rincian||[]).map(function(a) {
+                  return '<tr class="border-t border-stone-100 hover:bg-stone-50"><td class="px-4 py-2">' + a.akun_kode + ' - ' + a.akun_nama + '</td><td class="px-4 py-2 text-right mono font-medium">' + fmtIdr3(a.saldo) + '</td></tr>';
+                }).join('') || ''}
+                <tr class="border-t border-stone-100 bg-emerald-50"><td class="px-4 py-2">Laba Berjalan</td><td class="px-4 py-2 text-right mono font-medium">' + fmtIdr3(r.ekuitas.laba_berjalan) + '</td></tr>
+                <tr class="border-t-2 border-stone-400 bg-emerald-50 font-bold"><td class="px-4 py-2">TOTAL EKUITAS</td><td class="px-4 py-2 text-right mono">' + fmtIdr3(r.ekuitas.total) + '</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="text-center text-xs text-stone-500">
+        Neraca per ${r.tanggal} &nbsp;|&nbsp; Aktiva: ${fmtIdr3(r.aktiva.total)} = Kewajiban: ${fmtIdr3(r.kewajiban.total)} + Ekuitas: ${fmtIdr3(r.ekuitas.total)}
+      </div>`;
+      window._lapData = null;
     }
     renderLapPage();
   } catch (err) {
