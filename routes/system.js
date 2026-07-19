@@ -1,45 +1,28 @@
 const express = require('express');
-const { exec } = require('child_process');
-const path = require('path');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { runMigration } = require('../scripts/migrate');
 
 const router = express.Router();
 router.use(requireAuth);
 
-// POST /system/migrate — jalankan migrasi database dari URL
+// POST /system/migrate — jalankan migrasi database dari URL (tanpa bash!)
 router.post('/system/migrate', requireRole('admin'), async (req, res) => {
-  const scriptPath = path.join(__dirname, '..', 'scripts', 'migrate.js');
-
-  // Beri response awal
   res.writeHead(200, {
     'Content-Type': 'text/plain; charset=utf-8',
     'Transfer-Encoding': 'chunked',
   });
   res.write('Menjalankan migrasi database...\n\n');
 
-  const child = exec(`node "${scriptPath}"`, {
-    cwd: path.join(__dirname, '..'),
-    env: { ...process.env },
-    timeout: 30000,
-  });
-
-  child.stdout.on('data', (data) => {
-    res.write(data);
-  });
-
-  child.stderr.on('data', (data) => {
-    res.write(data);
-  });
-
-  child.on('close', (code) => {
-    res.write(`\nSelesai dengan kode: ${code}`);
-    res.end();
-  });
-
-  child.on('error', (err) => {
-    res.write(`\nError: ${err.message}`);
-    res.end();
-  });
+  try {
+    const logs = await runMigration();
+    for (const line of logs) {
+      res.write(line + '\n');
+    }
+    res.write('\n✓ Migrasi selesai!\n');
+  } catch (err) {
+    res.write('\n✗ Gagal: ' + err.message + '\n');
+  }
+  res.end();
 });
 
 // GET /system/migrate — halaman trigger migrasi (web UI)

@@ -460,17 +460,17 @@ async function autoPostPembelianToJurnal(penerimaan, tenantId, totalNilai) {
   );
   if (existing) return;
 
-  // Cari akun Persediaan Bahan Baku (1300) & Hutang Usaha (2000)
+  // Cari akun Persediaan Bahan Baku (1300) & Hutang Usaha (3000)
   const [[akunPersediaan]] = await db.query(
     'SELECT id FROM akun WHERE tenant_id=? AND kode=?',
     [tenantId, '1300']
   );
   const [[akunHutang]] = await db.query(
     'SELECT id FROM akun WHERE tenant_id=? AND kode=?',
-    [tenantId, '2000']
+    [tenantId, '3000']
   );
   if (!akunPersediaan || !akunHutang) {
-    console.warn('⚠️ Auto-jurnal pembelian skip (akun 1300/2000 belum ada):', penerimaan.id);
+    console.warn('⚠️ Auto-jurnal pembelian skip (akun 1300/3000 belum ada):', penerimaan.id);
     return;
   }
 
