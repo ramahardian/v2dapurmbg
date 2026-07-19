@@ -1300,6 +1300,9 @@ function renderLapPayroll() { renderReportPage('payroll'); }
 function renderLapPayrollMingguan() { renderReportPage('payroll-mingguan'); }
 function renderLapLabaRugi() { renderReportPage('laba-rugi'); }
 function renderLapHpp() { renderReportPage('hpp'); }
+function renderLapJurnalUmum() { renderReportPage('jurnal-umum'); }
+function renderLapBukuBesar() { renderReportPage('buku-besar'); }
+function renderLapNeraca() { renderReportPage('neraca'); }
 
 function renderResepTable(siklus, kategori_order) {
   if (!siklus.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
