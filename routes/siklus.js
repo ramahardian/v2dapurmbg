@@ -2253,6 +2253,23 @@ router.post('/siklus/buat-pr', async (req, res) => {
       return res.status(404).json({ error: 'Tidak ada siklus ditemukan' });
     }
 
+    // Ambil total penerima manfaat per kategori (real-time)
+    const [pmRows] = await db.query(
+      `SELECT COALESCE(kategori_penerima, 'Lainnya') AS kategori,
+              COALESCE(SUM(paket_besar + paket_kecil), 0) AS total
+       FROM penerima_manfaat
+       WHERE tenant_id = ?
+       GROUP BY kategori_penerima`,
+      [t]
+    );
+    const pmTotalByKategori = {};
+    for (const r of pmRows) pmTotalByKategori[r.kategori] = Number(r.total);
+    function getPenerimaCount(siklusKategori) {
+      const map = { 'TK/PAUD': 'TK/PAUD', 'SD 1-3': 'SD', 'SD 4-6': 'SD', 'SMP': 'SMP', 'SMA': 'SMA', 'Ibu Hamil': 'Ibu Hamil', 'Ibu Menyusui': 'Ibu Menyusui', 'Balita': 'Balita' };
+      const key = map[siklusKategori] || siklusKategori;
+      return pmTotalByKategori[key] || 0;
+    }
+
     // Hitung hari kerja dalam periode
     const [y, m] = periode.split('-').map(Number);
     const daysInMonth = new Date(y, m, 0).getDate();
@@ -2271,11 +2288,14 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const totalHariSiklus = Number(s.total_hari) || 1;
       const scale = hariKerja / totalHariSiklus; // berapa kali siklus berulang dalam periode
       const kategoriPenerima = s.kategori_penerima || '';
+      const penerimaCount = getPenerimaCount(kategoriPenerima);
+      if (!penerimaCount) continue;
 
       // --- A. Menu-based ingredients ---
       const [items] = await db.query(
         `SELECT si.* FROM siklus_menu_item si
-         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL`,
+         JOIN menu m ON m.id = si.menu_id
+         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL AND m.status='Aktif'`,
         [siklusId]
       );
       if (items.length) hasItems = true;
@@ -2283,7 +2303,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const menuPorsiMap = {};
       for (const it of items) {
         if (!menuPorsiMap[it.menu_id]) menuPorsiMap[it.menu_id] = 0;
-        menuPorsiMap[it.menu_id] += Number(it.jumlah_porsi) || 0;
+        menuPorsiMap[it.menu_id] += penerimaCount;
       }
 
       const menuIds = Object.keys(menuPorsiMap);
@@ -2317,7 +2337,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const [gridBahan] = await db.query(
         `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
                 bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
-                bb.kode, smi.jumlah_porsi
+                bb.kode
          FROM siklus_menu_item_bahan smib
          JOIN siklus_menu_item smi ON smi.siklus_id=smib.siklus_id AND smi.hari_ke=smib.hari_ke
          JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
@@ -2347,7 +2367,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
         for (const gb of gridBahan) {
           const spVal = spMap[gb.kategori_sp] || 0;
           const berat1Sp = Number(gb.berat_1_sp || 0);
-          const jumlahPorsi = Number(gb.jumlah_porsi) || 0;
+          const jumlahPorsi = penerimaCount;
           if (spVal <= 0 || berat1Sp <= 0 || jumlahPorsi <= 0) continue;
 
           const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
