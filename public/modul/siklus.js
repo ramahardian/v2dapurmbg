@@ -120,7 +120,11 @@ async function reloadSiklusList() {
     document.getElementById('stat-aktif').textContent = aktif;
     document.getElementById('stat-draft').textContent = draft;
     var menuSet = new Set();
-    list.forEach(function(s) { (s.items || []).forEach(function(it) { if (it.menu_id) menuSet.add(it.menu_id); }); });
+    list.forEach(function(s) {
+      (s.items || []).forEach(function(it) {
+        if (it.menu_nama && !it.menu_nama.startsWith('Manual Hari ')) menuSet.add(it.menu_nama);
+      });
+    });
     document.getElementById('stat-menu').textContent = menuSet.size;
     statsEl.classList.remove('hidden');
   }
@@ -780,14 +784,6 @@ async function openSiklusForm(editing) {
         gridPayload.push({ hari_ke: hk, kategori_sp: rk, bahan_baku_ids: ids });
       }
     }
-    var meta = window._siklusMeta || {};
-    var jumlahPorsi = +(document.getElementById('sk-porsi')?.value) || 0;
-    // Perbaiki jumlah_porsi item yang diisi manual (sebelumnya 0)
-    for (var ii = 0; ii < items.length; ii++) {
-      items[ii].jumlah_porsi = jumlahPorsi;
-      if (!items[ii].menu_nama) items[ii].menu_nama = 'Manual Hari ' + items[ii].hari_ke;
-    }
-    var payload = { nama, kategori_penerima: document.getElementById('sk-kategori')?.value || '', jumlah_porsi: jumlahPorsi, total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', items };
     // Collect resep_map from Identifikasi Resep inputs
     var resepMap = {};
     var resepInputs = document.querySelectorAll('input[data-field="resep"]');
@@ -797,6 +793,25 @@ async function openSiklusForm(editing) {
       if (!resepMap[hk]) resepMap[hk] = {};
       resepMap[hk][inp.getAttribute('data-kat')] = inp.value.trim();
     }
+    var meta = window._siklusMeta || {};
+    var jumlahPorsi = +(document.getElementById('sk-porsi')?.value) || 0;
+    for (var ii = 0; ii < items.length; ii++) {
+      items[ii].jumlah_porsi = jumlahPorsi;
+      if (!items[ii].menu_nama) {
+        var hkKey = String(items[ii].hari_ke);
+        var rmap = resepMap[hkKey];
+        if (rmap) {
+          var parts = [];
+          for (var rki = 0; rki < rowKeys.length; rki++) {
+            var v = rmap[rowKeys[rki]];
+            if (v) parts.push(v);
+          }
+          if (parts.length) items[ii].menu_nama = parts.join(' + ');
+        }
+      }
+      if (!items[ii].menu_nama) items[ii].menu_nama = 'Manual Hari ' + items[ii].hari_ke;
+    }
+    var payload = { nama, kategori_penerima: document.getElementById('sk-kategori')?.value || '', jumlah_porsi: jumlahPorsi, total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', items };
     try {
       var savedId = window._siklusFormId;
       if (isEdit) await api.put('/siklus/' + savedId, payload);
