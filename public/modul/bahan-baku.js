@@ -1,10 +1,9 @@
-// ===== Bahan Baku (custom with sync, search, pagination & nutrisi) =====
+// ===== Bahan Baku (custom with sync, search, pagination) =====
 const BAHAN_BAKU_CRUD_BASE = {
   endpoint: '/bahan_baku',
   groups: [
     { key: 'info', label: 'Informasi Dasar', cols: 2 },
     { key: 'harga_stok', label: 'Harga & Stok', cols: 2 },
-    { key: 'nutrisi', label: 'Informasi Nutrisi', cols: 2 },
   ],
   fields: [
     { k: 'kode', l: 'Kode SKU', group: 'info' },
@@ -14,18 +13,10 @@ const BAHAN_BAKU_CRUD_BASE = {
     { k: 'harga_satuan', l: 'Harga Satuan (IDR)', type: 'number', fmt: 'idr', group: 'harga_stok' },
     { k: 'stok_saat_ini', l: 'Stok Saat Ini', type: 'number', fmt: 'num', group: 'harga_stok' },
     { k: 'stok_minimum', l: 'Stok Minimum', type: 'number', fmt: 'num', group: 'harga_stok' },
-    { k: 'kalori', l: 'Kalori (kkal)', type: 'number', fmt: 'num', group: 'nutrisi' },
-    { k: 'protein', l: 'Protein (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
-    { k: 'karbohidrat', l: 'Karbohidrat (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
-    { k: 'lemak', l: 'Lemak (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
-    { k: 'serat', l: 'Serat (g)', type: 'number', fmt: 'num', group: 'nutrisi' },
     { k: 'berat_per_satuan', l: 'Berat per Satuan (gram)', type: 'number', fmt: 'num', desc: 'Isi jika satuan bukan gram (misal 1 pcs = 50g, 1 ikat = 30g)', group: 'info' },
   ],
   cols: ['nama','kategori','kategori_sp','satuan','harga_satuan','stok_saat_ini']
 };
-
-const NUTRISI_FIELDS = ['kalori','protein','karbohidrat','lemak','serat'];
-const NUT_MAP = { kalori: 'energi', protein: 'protein', karbohidrat: 'karbohidrat', lemak: 'lemak', serat: 'serat' };
 
 let spRefLookup = {};
 
@@ -38,18 +29,6 @@ async function loadSpRefMap() {
   } catch (e) {
     spRefLookup = {};
   }
-}
-
-function fillSpRefToForm(row) {
-  const ref = spRefLookup[(row.nama||'').toLowerCase()];
-  if (!ref) return;
-  const elKat = document.getElementById('f-kategori_sp');
-  if (elKat && ref.kategori && !row.kategori_sp) elKat.value = ref.kategori;
-  NUTRISI_FIELDS.forEach(bk => {
-    const el = document.getElementById('f-' + bk);
-    const sk = NUT_MAP[bk];
-    if (el && ref[sk] && !row[bk]) el.value = ref[sk];
-  });
 }
 
 function getBahanCrud() {
@@ -85,20 +64,6 @@ async function renderBahanBaku() {
 
   document.getElementById('add-btn').onclick = () => {
     openForm(getBahanCrud(), null);
-    setTimeout(() => {
-      addAiNutrisiButton();
-      const elNama = document.getElementById('f-nama');
-      if (!elNama) return;
-      elNama.oninput = function() {
-        const ref = spRefLookup[(this.value||'').toLowerCase()];
-        if (!ref) return;
-        NUTRISI_FIELDS.forEach(bk => {
-          const el = document.getElementById('f-' + bk);
-          const sk = NUT_MAP[bk];
-          if (el && ref[sk] && !el.value) el.value = ref[sk];
-        });
-      };
-    }, 50);
   };
 
   const searchInput = document.getElementById('bahan-search');
@@ -177,51 +142,12 @@ function renderBahanBakuTable(rows) {
 
 function editBahanBaku(row) {
   openForm(getBahanCrud(), row);
-  setTimeout(() => {
-    fillSpRefToForm(row);
-    addAiNutrisiButton();
-  }, 50);
 }
 async function deleteBahanBaku(id) {
   const ok = await showConfirm('Hapus data ini?');
   if (!ok) return;
   await api.del('/bahan_baku/' + id);
   loadBahanBaku();
-}
-
-function addAiNutrisiButton() {
-  const headers = document.querySelectorAll('#modal-body h4');
-  let nutrisiHeader = null;
-  headers.forEach(h => { if (h.textContent.includes('Informasi Nutrisi')) nutrisiHeader = h; });
-  if (!nutrisiHeader) return;
-  if (nutrisiHeader.querySelector('.ai-nutrisi-btn')) return;
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'ai-nutrisi-btn text-xs border border-emerald-400 text-emerald-700 hover:bg-emerald-50 px-2 py-0.5 rounded flex items-center gap-1 ml-auto';
-  btn.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg> Isi AI';
-  btn.onclick = async function() {
-    const namaEl = document.getElementById('f-nama');
-    if (!namaEl || !namaEl.value.trim()) {
-      showAlert('Isi nama bahan terlebih dahulu', 'warning');
-      return;
-    }
-    btn.disabled = true;
-    btn.innerHTML = '<svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Memproses...';
-    try {
-      const res = await api.post('/ai/suggest-nutrisi', { nama: namaEl.value.trim() });
-      NUTRISI_FIELDS.forEach(bk => {
-        const el = document.getElementById('f-' + bk);
-        if (el && res[bk] != null) el.value = res[bk];
-      });
-      showToast('Nutrisi terisi dari AI', 'success');
-    } catch (e) {
-      showAlert('Gagal: ' + (e.message || ''), 'error');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg> Isi AI';
-    }
-  };
-  nutrisiHeader.appendChild(btn);
 }
 
 function showSpRefNutrisi(nama) {
