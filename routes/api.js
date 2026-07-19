@@ -39,5 +39,6 @@ router.use(require('./sp'));
 router.use(require('./laporan_reports'));
 router.use('/mobile', require('./mobileAbsensi'));
 router.use(require('./alterBahanSumber'));
+router.use(require('./system'));
 
 module.exports = router;

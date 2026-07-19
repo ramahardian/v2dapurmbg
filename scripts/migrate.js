@@ -237,8 +237,9 @@ require('dotenv').config();
           console.log(`  ✓ Seed sp_referensi_bahan untuk tenant id=${t.id}`);
         }
       }
-    } catch (e) {
-      console.log('  (skip copy seed sp_referensi_bahan ke tenant lain)', e.message);
+    } catch (e) {      console.log('  (skip copy seed sp_referensi_bahan ke tenant lain)', e.message);
+
+
     }
     // Migrasi tabel akun (Chart of Accounts)
     try {

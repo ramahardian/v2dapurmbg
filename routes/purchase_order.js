@@ -221,4 +221,232 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
   }
 });
 
+// ====================================================================
+// TASK 4: Buat Draft Purchase Request (PR) dari siklus terpilih
+// Endpoint ini mengambil data kebutuhan dari siklus, lalu langsung
+// membuat entri purchase_order dengan status Draft dan no_po prefix PR-
+// ====================================================================
+router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
+  try {
+    const { siklus_ids, jumlah_penerima } = req.body;
+    if (!siklus_ids || !Array.isArray(siklus_ids) || !siklus_ids.length) {
+      return res.status(400).json({ error: 'Pilih minimal satu siklus' });
+    }
+
+    // 1. Hitung kebutuhan (sama seperti /sp/hitung-kebutuhan)
+    const ph = siklus_ids.map(() => '?').join(',');
+    const [siklusList] = await db.query(
+      `SELECT id, nama, kategori_penerima, jumlah_porsi FROM siklus_menu WHERE tenant_id=? AND id IN (${ph})`,
+      [req.user.tenant_id, ...siklus_ids]
+    );
+    if (!siklusList.length) return res.status(404).json({ error: 'Siklus tidak ditemukan' });
+
+    // Ambil data hari & menu dari siklus
+    const dayRows = [];
+    for (const s of siklusList) {
+      const [items] = await db.query(
+        `SELECT si.*, m.kategori_penerima as menu_kat FROM siklus_menu_item si
+         LEFT JOIN menu m ON m.id = si.menu_id
+         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL`,
+        [s.id]
+      );
+      for (const it of items) {
+        dayRows.push({
+          siklus_id: s.id,
+          menu_id: it.menu_id,
+          jumlah_porsi: Number(it.jumlah_porsi) || 0,
+          kategori_db: it.menu_kat || s.kategori_penerima,
+        });
+      }
+    }
+
+    const menuIds = [...new Set(dayRows.map(r => r.menu_id))];
+    if (!menuIds.length) return res.status(400).json({ error: 'Tidak ada menu di siklus yang dipilih' });
+
+    const mph = menuIds.map(() => '?').join(',');
+    const [bahanRows] = await db.query(
+      `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah, b.nama, b.satuan, b.harga_satuan,
+              b.persen_bdd, b.kategori_sp
+       FROM menu_bahan mb
+       JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+       WHERE mb.menu_id IN (${mph})`,
+      menuIds
+    );
+
+    const menuBahanMap = {};
+    for (const br of bahanRows) {
+      if (!menuBahanMap[br.menu_id]) menuBahanMap[br.menu_id] = [];
+      menuBahanMap[br.menu_id].push(br);
+    }
+
+    // Agregasi kebutuhan per bahan
+    const penerima = jumlah_penerima || 0;
+    const agg = {};
+    for (const day of dayRows) {
+      const bahanList = menuBahanMap[day.menu_id] || [];
+      for (const b of bahanList) {
+        const key = b.bahan_baku_id;
+        if (!agg[key]) {
+          agg[key] = {
+            bahan_baku_id: b.bahan_baku_id,
+            nama: b.nama,
+            satuan: b.satuan || 'g',
+            harga_satuan: Number(b.harga_satuan) || 0,
+            persen_bdd: Number(b.persen_bdd) || 100,
+            total_berat_kotor: 0,
+          };
+        }
+        const beratKotor = b.persen_bdd > 0
+          ? Number(b.jumlah) / (Number(b.persen_bdd) / 100)
+          : Number(b.jumlah);
+        agg[key].total_berat_kotor += beratKotor * day.jumlah_porsi;
+      }
+    }
+
+    // 2. Format items untuk PO
+    const poItems = Object.values(agg).map(b => {
+      let qty = b.total_berat_kotor;
+      let satuan = b.satuan;
+      if (['gram', 'g', 'gr'].includes(b.satuan?.toLowerCase())) {
+        qty = qty / 1000;
+        satuan = 'kg';
+      }
+      const buffer = Math.round(qty * 1.1 * 100) / 100; // buffer 10%
+      return {
+        bahan_baku_id: b.bahan_baku_id,
+        bahan_nama: b.nama,
+        satuan,
+        qty: Math.round(qty * 100) / 100,
+        qty_buffer: buffer,
+        harga_satuan: b.harga_satuan,
+        subtotal: Math.round(buffer * b.harga_satuan),
+      };
+    }).filter(i => i.qty > 0);
+
+    if (!poItems.length) return res.status(400).json({ error: 'Tidak ada bahan yang perlu dibeli' });
+
+    // 3. Buat Purchase Request (PR)
+    const totalNilai = poItems.reduce((s, i) => s + i.subtotal, 0);
+    const noPr = `PR/${Date.now().toString(36).toUpperCase()}`;
+    const siklusRef = siklusList.map(s => s.nama).join(', ');
+
+    await db.query(
+      `INSERT INTO purchase_order (tenant_id, no_po, tanggal, supplier_nama, item, total_nilai, status, catatan)
+       VALUES (?, ?, CURDATE(), ?, ?, ?, 'Draft', ?)`,
+      [req.user.tenant_id, noPr, 'PR Otomatis dari Siklus',
+       JSON.stringify(poItems), totalNilai,
+       `Dibuat otomatis dari siklus: ${siklusRef}. ${penerima > 0 ? 'Jumlah penerima: ' + penerima : ''}`]
+    );
+
+    res.json({
+      ok: true,
+      no_pr: noPr,
+      total_items: poItems.length,
+      total_nilai: totalNilai,
+      siklus_refs: siklusList.map(s => s.nama),
+      items: poItems,
+    });
+  } catch (err) {
+    console.error('Create PR error:', err);
+    res.status(500).json({ error: 'Gagal membuat PR: ' + err.message });
+  }
+});
+
+
+// ====================================================================
+// TASK 5: Laporan Biaya Produksi per Siklus
+// Endpoint ini mengembalikan estimasi biaya bahan baku per siklus
+// ====================================================================
+router.get('/laporan/biaya-produksi', async (req, res) => {
+  try {
+    const t = req.user.tenant_id;
+
+    // Ambil semua siklus (hanya Aktif)
+    const [siklusList] = await db.query(
+      'SELECT id, nama, kategori_penerima, jumlah_porsi, total_hari FROM siklus_menu WHERE tenant_id=? AND status="Aktif" ORDER BY id',
+      [t]
+    );
+
+    const result = [];
+    let grandTotal = 0;
+    let grandTotalPorsi = 0;
+
+    for (const s of siklusList) {
+      const [items] = await db.query(
+        `SELECT si.*, m.nama as menu_nama_lengkap, m.gramasi_total
+         FROM siklus_menu_item si
+         LEFT JOIN menu m ON m.id = si.menu_id
+         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL
+         ORDER BY si.hari_ke ASC`,
+        [s.id]
+      );
+
+      if (!items.length) continue;
+
+      let totalBiaya = 0;
+      const menuIds = [...new Set(items.filter(it => it.menu_id).map(it => it.menu_id))];
+
+      // Ambil komposisi bahan + harga
+      const menuBahanMap = {};
+      if (menuIds.length) {
+        const mph = menuIds.map(() => '?').join(',');
+        const [bahanRows] = await db.query(
+          `SELECT mb.menu_id, b.nama, b.satuan, b.harga_satuan, mb.jumlah
+           FROM menu_bahan mb
+           JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+           WHERE mb.menu_id IN (${mph})`,
+          menuIds
+        );
+        for (const br of bahanRows) {
+          if (!menuBahanMap[br.menu_id]) menuBahanMap[br.menu_id] = [];
+          menuBahanMap[br.menu_id].push(br);
+        }
+      }
+
+      // Hitung biaya per hari
+      const biayaPerHari = [];
+      for (const it of items) {
+        const porsi = Number(it.jumlah_porsi) || 0;
+        if (!porsi || !it.menu_id) continue;
+        const bahanList = menuBahanMap[it.menu_id] || [];
+        let biayaHari = 0;
+        for (const b of bahanList) {
+          biayaHari += (Number(b.jumlah) || 0) * porsi * (Number(b.harga_satuan) || 0);
+        }
+        biayaPerHari.push({ hari_ke: it.hari_ke, hari_nama: it.hari_nama, menu_nama: it.menu_nama || it.menu_nama_lengkap || '', biaya: Math.round(biayaHari), porsi });
+        totalBiaya += biayaHari;
+      }
+
+      const totalPorsi = items.reduce((s, it) => s + (Number(it.jumlah_porsi) || 0), 0);
+      grandTotal += totalBiaya;
+      grandTotalPorsi += totalPorsi;
+
+      result.push({
+        id: s.id,
+        nama: s.nama,
+        kategori_penerima: s.kategori_penerima,
+        total_hari: s.total_hari || items.length,
+        total_porsi: totalPorsi,
+        total_biaya: Math.round(totalBiaya),
+        rata_biaya_per_hari: items.length ? Math.round(totalBiaya / items.length) : 0,
+        biaya_per_porsi: totalPorsi ? Math.round(totalBiaya / totalPorsi) : 0,
+        rincian_hari: biayaPerHari,
+      });
+    }
+
+    res.json({
+      siklus: result,
+      ringkasan: {
+        total_siklus: result.length,
+        grand_total_biaya: Math.round(grandTotal),
+        grand_total_porsi: grandTotalPorsi,
+        rata_biaya_per_siklus: result.length ? Math.round(grandTotal / result.length) : 0,
+      }
+    });
+  } catch (err) {
+    console.error('Laporan biaya produksi error:', err);
+    res.status(500).json({ error: 'Gagal memuat laporan biaya produksi' });
+  }
+});
+
 module.exports = router;

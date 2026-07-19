@@ -412,6 +412,7 @@ async function autoStokMasukFromPenerimaan(penerimaan, tenantId) {
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
+    let totalNilai = 0;
     for (const item of valid) {
       const jumlah = Number(item.qty || item.jumlah || 0);
       if (jumlah <= 0) continue;
@@ -424,11 +425,87 @@ async function autoStokMasukFromPenerimaan(penerimaan, tenantId) {
         `UPDATE bahan_baku SET stok_saat_ini = stok_saat_ini + ? WHERE id=? AND tenant_id=?`,
         [jumlah, item.bahan_baku_id, tenantId]
       );
+      // Hitung total nilai untuk jurnal
+      let harga = Number(item.harga_satuan || item.harga || 0);
+      if (!harga) {
+        const [[bb]] = await db.query('SELECT harga_satuan FROM bahan_baku WHERE id=?', [item.bahan_baku_id]);
+        harga = Number(bb?.harga_satuan || 0);
+      }
+      totalNilai += jumlah * harga;
     }
     await conn.commit();
+
+    // 🔁 AUTO JURNAL: Stok Masuk (Pembelian) → Jurnal Umum
+    if (totalNilai > 0) {
+      try {
+        await autoPostPembelianToJurnal(penerimaan, tenantId, totalNilai);
+      } catch (e) {
+        console.error('Auto jurnal stok masuk gagal:', e.message);
+      }
+    }
   } catch (e) {
     await conn.rollback();
     console.error('Auto stok masuk rollback:', e);
+  } finally {
+    conn.release();
+  }
+}
+
+// 🔁 AUTO JURNAL: Pembelian Bahan Baku → Jurnal Double Entry
+async function autoPostPembelianToJurnal(penerimaan, tenantId, totalNilai) {
+  // Cek duplikat
+  const [[existing]] = await db.query(
+    'SELECT id FROM jurnal WHERE tenant_id=? AND sumber_transaksi=? AND sumber_id=?',
+    [tenantId, 'penerimaan_barang', penerimaan.id]
+  );
+  if (existing) return;
+
+  // Cari akun Persediaan Bahan Baku (1300) & Hutang Usaha (2000)
+  const [[akunPersediaan]] = await db.query(
+    'SELECT id FROM akun WHERE tenant_id=? AND kode=?',
+    [tenantId, '1300']
+  );
+  const [[akunHutang]] = await db.query(
+    'SELECT id FROM akun WHERE tenant_id=? AND kode=?',
+    [tenantId, '2000']
+  );
+  if (!akunPersediaan || !akunHutang) {
+    console.warn('⚠️ Auto-jurnal pembelian skip (akun 1300/2000 belum ada):', penerimaan.id);
+    return;
+  }
+
+  const noJurnal = `JRN-B/${penerimaan.id}/${Date.now().toString(36).toUpperCase()}`;
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [jr] = await conn.query(
+      `INSERT INTO jurnal (tenant_id, no_jurnal, tanggal, sumber_transaksi, sumber_id, deskripsi)
+       VALUES (?, ?, ?, 'penerimaan_barang', ?, ?)`,
+      [tenantId, noJurnal, penerimaan.tanggal_terima, penerimaan.id,
+       `Pembelian Bahan: ${penerimaan.supplier_nama || 'Supplier'} (${penerimaan.no_dokumen})`]
+    );
+    const jurnalId = jr.insertId;
+
+    // Debit: Persediaan Bahan Baku
+    await conn.query(
+      `INSERT INTO jurnal_detail (jurnal_id, akun_id, debit, kredit, deskripsi)
+       VALUES (?, ?, ?, 0, ?)`,
+      [jurnalId, akunPersediaan.id, totalNilai,
+       `Pembelian ${items.length} jenis bahan - ${penerimaan.no_dokumen}`]
+    );
+
+    // Kredit: Hutang Usaha
+    await conn.query(
+      `INSERT INTO jurnal_detail (jurnal_id, akun_id, debit, kredit, deskripsi)
+       VALUES (?, ?, 0, ?, ?)`,
+      [jurnalId, akunHutang.id, totalNilai,
+       `Hutang ke ${penerimaan.supplier_nama || 'Supplier'} - ${penerimaan.no_dokumen}`]
+    );
+
+    await conn.commit();
+  } catch (e) {
+    await conn.rollback();
+    console.error('❌ Auto jurnal pembelian rollback:', e);
   } finally {
     conn.release();
   }
