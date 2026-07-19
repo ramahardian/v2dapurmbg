@@ -2253,34 +2253,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
       return res.status(404).json({ error: 'Tidak ada siklus ditemukan' });
     }
 
-    // Hitung kebutuhan bahan dari semua siklus (reuse logika dari /sp/hitung-kebutuhan)
-    const allMenuIds = new Set();
-    for (const s of siklusList) {
-      const [items] = await db.query(
-        `SELECT menu_id FROM siklus_menu_item WHERE siklus_id=? AND menu_id IS NOT NULL`,
-        [s.id]
-      );
-      for (const it of items) {
-        if (it.menu_id) allMenuIds.add(it.menu_id);
-      }
-    }
-
-    if (!allMenuIds.size) {
-      return res.status(400).json({ error: 'Tidak ada menu terisi di siklus yang dipilih' });
-    }
-
-    // Ambil bahan dari menu
-    const menuIds = [...allMenuIds];
-    const mph = menuIds.map(() => '?').join(',');
-    const [bahanRows] = await db.query(
-      `SELECT mb.bahan_baku_id, b.nama as bahan_nama, b.satuan, mb.jumlah
-       FROM menu_bahan mb
-       JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-       WHERE mb.menu_id IN (${mph})`,
-      menuIds
-    );
-
-    // Hitung total kebutuhan (asumsi: setiap menu diproduksi setiap hari kerja dalam periode)
+    // Hitung hari kerja dalam periode
     const [y, m] = periode.split('-').map(Number);
     const daysInMonth = new Date(y, m, 0).getDate();
     let hariKerja = 0;
@@ -2289,37 +2262,189 @@ router.post('/siklus/buat-pr', async (req, res) => {
       if (d.getDay() >= 1 && d.getDay() <= 5) hariKerja++;
     }
 
-    // Agregasi bahan
-    const bahanAgg = {};
-    for (const b of bahanRows) {
-      if (!bahanAgg[b.bahan_baku_id]) {
-        bahanAgg[b.bahan_baku_id] = {
-          bahan_baku_id: b.bahan_baku_id,
-          nama: b.bahan_nama,
-          satuan: b.satuan,
-          total_jumlah: 0,
-        };
+    // Kumpulkan semua siklus data (per hari per siklus)
+    const agg = {};
+    let hasItems = false;
+
+    for (const s of siklusList) {
+      const siklusId = s.id;
+      const totalHariSiklus = Number(s.total_hari) || 1;
+      const scale = hariKerja / totalHariSiklus; // berapa kali siklus berulang dalam periode
+      const kategoriPenerima = s.kategori_penerima || '';
+
+      // --- A. Menu-based ingredients ---
+      const [items] = await db.query(
+        `SELECT si.* FROM siklus_menu_item si
+         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL`,
+        [siklusId]
+      );
+      if (items.length) hasItems = true;
+
+      const menuPorsiMap = {};
+      for (const it of items) {
+        if (!menuPorsiMap[it.menu_id]) menuPorsiMap[it.menu_id] = 0;
+        menuPorsiMap[it.menu_id] += Number(it.jumlah_porsi) || 0;
       }
-      bahanAgg[b.bahan_baku_id].total_jumlah += Number(b.jumlah) * hariKerja;
+
+      const menuIds = Object.keys(menuPorsiMap);
+      if (menuIds.length) {
+        const mph = menuIds.map(() => '?').join(',');
+        const [bahanRows] = await db.query(
+          `SELECT mb.bahan_baku_id, b.nama as bahan_nama, b.satuan, b.harga_satuan,
+                  b.persen_bdd, b.kode, mb.jumlah, mb.menu_id
+           FROM menu_bahan mb
+           JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+           WHERE mb.menu_id IN (${mph})`,
+          menuIds
+        );
+
+        for (const br of bahanRows) {
+          const porsi = menuPorsiMap[br.menu_id] || 0;
+          if (!porsi) continue;
+          const beratBersih = Number(br.jumlah) * porsi;
+          const bdd = Number(br.persen_bdd) || 100;
+          const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
+
+          const key = br.bahan_baku_id;
+          if (!agg[key]) {
+            agg[key] = { bahan_baku_id: br.bahan_baku_id, bahan_nama: br.bahan_nama, kode: br.kode || '', satuan: br.satuan, harga_satuan: Number(br.harga_satuan) || 0, total_qty: 0 };
+          }
+          agg[key].total_qty += beratKotor * scale;
+        }
+      }
+
+      // --- B. Grid-based ingredients (siklus_menu_item_bahan) ---
+      const [gridBahan] = await db.query(
+        `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
+                bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
+                bb.kode, smi.jumlah_porsi
+         FROM siklus_menu_item_bahan smib
+         JOIN siklus_menu_item smi ON smi.siklus_id=smib.siklus_id AND smi.hari_ke=smib.hari_ke
+         JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
+         WHERE smib.siklus_id=?`,
+        [siklusId]
+      );
+
+      if (gridBahan.length) {
+        hasItems = true;
+
+        // Ambil standar SP untuk jenjang ini
+        const [spRows] = await db.query(
+          'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
+          [kategoriPenerima]
+        );
+        const spMap = {};
+        for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
+
+        // Hitung jumlah bahan per cell untuk bagi rata SP
+        const cellCount = {};
+        for (const gb of gridBahan) {
+          const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
+          if (!cellCount[cellKey]) cellCount[cellKey] = 0;
+          cellCount[cellKey]++;
+        }
+
+        for (const gb of gridBahan) {
+          const spVal = spMap[gb.kategori_sp] || 0;
+          const berat1Sp = Number(gb.berat_1_sp || 0);
+          const jumlahPorsi = Number(gb.jumlah_porsi) || 0;
+          if (spVal <= 0 || berat1Sp <= 0 || jumlahPorsi <= 0) continue;
+
+          const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
+          const bagi = cellCount[cellKey] || 1;
+          const spPerBahan = spVal / bagi;
+          const beratBersih = berat1Sp * spPerBahan * jumlahPorsi;
+          const bdd = Number(gb.persen_bdd || 100);
+          const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
+
+          const key = gb.bahan_baku_id;
+          if (!agg[key]) {
+            agg[key] = { bahan_baku_id: gb.bahan_baku_id, bahan_nama: gb.bahan_nama, kode: gb.kode || '', satuan: gb.satuan, harga_satuan: Number(gb.harga_satuan) || 0, total_qty: 0 };
+          }
+          agg[key].total_qty += beratKotor * scale;
+        }
+      }
     }
 
-    const bahanList = Object.values(bahanAgg).sort((a, b) => b.total_jumlah - a.total_jumlah);
+    if (!hasItems) {
+      return res.status(400).json({ error: 'Tidak ada menu terisi di siklus yang dipilih' });
+    }
+
+    // Ambil id_koperasi untuk mapping
+    const bahanIds = Object.keys(agg);
+    const idKoperasiMap = {};
+    if (bahanIds.length) {
+      const [rows] = await db.query(
+        `SELECT id, id_koperasi FROM bahan_baku WHERE id IN (${bahanIds.map(() => '?').join(',')}) AND tenant_id=?`,
+        [...bahanIds, t]
+      );
+      for (const r of rows) idKoperasiMap[r.id] = r.id_koperasi;
+    }
+
+    // Format output dengan buffer 10% dan konversi ke kg
+    const bahanList = Object.values(agg).map(b => {
+      let qty = b.total_qty;
+      let satuan = b.satuan;
+      if (['gram', 'g', 'gr'].includes(b.satuan?.toLowerCase())) {
+        qty = qty / 1000;
+        satuan = 'kg';
+      }
+      const buffer = Math.round(qty * 1.1 * 100) / 100;
+      return {
+        bahan_baku_id: b.bahan_baku_id,
+        id_koperasi: idKoperasiMap[b.bahan_baku_id] || null,
+        nama: b.bahan_nama,
+        kode: b.kode || '',
+        satuan,
+        total_qty: Math.round(qty * 100) / 100,
+        buffer_10: buffer,
+        harga_satuan: b.harga_satuan,
+        estimated_subtotal: Math.round(buffer * b.harga_satuan),
+      };
+    }).sort((a, b) => b.total_qty - a.total_qty);
+
+    const totalEstimated = bahanList.reduce((s, i) => s + i.estimated_subtotal, 0);
+
+    // Cek budget untuk periode ini
+    let budgetWarning = null;
+    const [budgetRows] = await db.query(
+      'SELECT kategori_penerima, total_budget, realisasi FROM budget WHERE tenant_id=? AND periode=?',
+      [t, periode]
+    );
+    if (budgetRows.length) {
+      const totalBudget = budgetRows.reduce((s, b) => s + Number(b.total_budget || 0), 0);
+      const totalRealisasi = budgetRows.reduce((s, b) => s + Number(b.realisasi || 0), 0);
+      const sisaBudget = totalBudget - totalRealisasi;
+      if (totalEstimated > sisaBudget) {
+        budgetWarning = {
+          total_budget: totalBudget,
+          total_realisasi: totalRealisasi,
+          sisa_budget: sisaBudget,
+          estimated_total: totalEstimated,
+          defisit: totalEstimated - sisaBudget,
+          message: 'Estimasi PR (Rp ' + Number(totalEstimated).toLocaleString('id-ID') + ') melebihi sisa budget (Rp ' + Number(sisaBudget).toLocaleString('id-ID') + ') periode ' + periode,
+        };
+      }
+    }
 
     // Buat PR
     const noPR = 'PR-' + periode + '-' + String(Date.now()).slice(-4);
     const itemJson = JSON.stringify(bahanList.map(b => ({
       bahan_baku_id: b.bahan_baku_id,
+      id_koperasi: b.id_koperasi,
+      kode: b.kode,
       nama: b.nama,
+      qty: b.buffer_10,
       satuan: b.satuan,
-      jumlah: Math.round(b.total_jumlah * 100) / 100,
+      harga: b.harga_satuan,
+      subtotal: b.estimated_subtotal,
     })));
 
-    // Simpan ke purchase_request (gunakan tabel purchase_order untuk sementara, atau buat tabel baru)
-    // Karena tidak ada tabel purchase_request, gunakan purchase_order dengan status khusus
+    // Simpan ke purchase_order dengan prefix PR-
     const [result] = await db.query(
       `INSERT INTO purchase_order (tenant_id, no_po, tanggal, supplier_nama, item, total_nilai, status, catatan)
        VALUES (?,?,?,?,?,?,?,?)`,
-      [t, noPR, periode + '-01', 'Auto PR Siklus', itemJson, 0, 'Draft',
+      [t, noPR, periode + '-01', 'Auto PR Siklus', itemJson, totalEstimated, 'Draft',
        'Auto-generated dari siklus: ' + siklusList.map(s => s.nama).join(', ')]
     );
 
@@ -2328,14 +2453,18 @@ router.post('/siklus/buat-pr', async (req, res) => {
       id: result.insertId,
       no_pr: noPR,
       item_count: bahanList.length,
-      total_kebutuhan: bahanList.reduce((s, b) => s + b.total_jumlah, 0),
+      total_estimated: totalEstimated,
       items: bahanList.map(b => ({
         nama: b.nama,
-        jumlah: Math.round(b.total_jumlah * 100) / 100,
+        total_qty: b.total_qty,
+        buffer_10: b.buffer_10,
         satuan: b.satuan,
+        harga_satuan: b.harga_satuan,
+        subtotal: b.estimated_subtotal,
       })),
       siklus: siklusList.map(s => s.nama),
-      message: 'PR ' + noPR + ' berhasil dibuat dengan ' + bahanList.length + ' item bahan',
+      budget_warning: budgetWarning,
+      message: 'PR ' + noPR + ' berhasil dibuat dengan ' + bahanList.length + ' item bahan' + (budgetWarning ? ' (⚠️ ' + budgetWarning.message + ')' : ''),
     });
   } catch (err) {
     console.error('Buat PR error:', err);

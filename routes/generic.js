@@ -165,6 +165,15 @@ const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (
       orderByClause = 'ORDER BY pb.id DESC';
     }
     
+    // Filter: untuk purchase_order, bedakan PR vs PO via prefix no_po
+    if ((table === 'purchase_order' || table === 'penerimaan_barang') && req.query.tipe) {
+      if (req.query.tipe === 'po') {
+        whereClause += ` AND no_po NOT LIKE 'PR-%'`;
+      } else if (req.query.tipe === 'pr') {
+        whereClause += ` AND no_po LIKE 'PR-%'`;
+      }
+    }
+
     // Search: filter berdasarkan kolom yang sudah ditentukan
     if (search && searchable.length) {
       const prefix = table === 'distribusi' ? 'd.' : '';
@@ -240,6 +249,16 @@ const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (
       
       // Ambil kembali data yang baru saja dimasukkan untuk dikembalikan sebagai response
       const [rows] = await db.query(`SELECT * FROM ${table} WHERE id=?`, [r.insertId]);
+
+      // 🔁 AUTO STOK MASUK: Penerimaan Barang Lolos QC → Stok Masuk
+      if (table === 'penerimaan_barang' && req.body.status_qc === 'Lolos' && rows.length) {
+        autoStokMasukFromPenerimaan(rows[0], req.user.tenant_id).catch(e => console.error('Auto stok masuk gagal (CREATE):', e));
+      }
+      // 🔁 AUTO STOK KELUAR: Produksi Diproduksi/Selesai → Stok Keluar
+      if (table === 'produksi' && (req.body.status === 'Diproduksi' || req.body.status === 'Selesai') && rows.length) {
+        autoStokKeluarFromProduksi(rows[0], req.user.tenant_id).catch(e => console.error('Auto stok keluar gagal (CREATE):', e));
+      }
+
       res.json(rows[0]);
     } catch (e) { 
       console.error(e); 
@@ -272,6 +291,15 @@ const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (
       
       // Ambil data terbaru setelah di-update
       const [rows] = await db.query(`SELECT * FROM ${table} WHERE id=?`, [req.params.id]);
+
+      // 🔁 AUTO STOK MASUK: Penerimaan Barang Lolos QC → Stok Masuk
+      if (table === 'penerimaan_barang' && req.body.status_qc === 'Lolos' && rows.length) {
+        autoStokMasukFromPenerimaan(rows[0], req.user.tenant_id).catch(e => console.error('Auto stok masuk gagal (UPDATE):', e));
+      }
+      // 🔁 AUTO STOK KELUAR: Produksi Diproduksi/Selesai → Stok Keluar
+      if (table === 'produksi' && (req.body.status === 'Diproduksi' || req.body.status === 'Selesai') && rows.length) {
+        autoStokKeluarFromProduksi(rows[0], req.user.tenant_id).catch(e => console.error('Auto stok keluar gagal (UPDATE):', e));
+      }
 
       // Auto-journal: PO Dibayar → kas_bank
       if (table === 'purchase_order' && req.body.status === 'Dibayar' && rows.length) {
@@ -366,6 +394,89 @@ router.get('/penerima_manfaat/total', async (req, res) => {
   const [[row]] = await db.query(sql, params);
   res.json({ total: Number(row.total) });
 });
+
+// Auto Stok Masuk: Penerimaan Barang (Lolos QC) → INSERT stok_masuk + UPDATE stok_saat_ini
+async function autoStokMasukFromPenerimaan(penerimaan, tenantId) {
+  let items = [];
+  try { items = JSON.parse(penerimaan.item || '[]'); } catch { return; }
+  const valid = items.filter(i => i.bahan_baku_id && (Number(i.qty) > 0 || Number(i.jumlah) > 0));
+  if (!valid.length) return;
+
+  const sourcePrefix = `Penerimaan: ${penerimaan.no_dokumen}`;
+  const [[{ cnt } = { cnt: 0 }]] = await db.query(
+    'SELECT COUNT(*) AS cnt FROM stok_masuk WHERE tenant_id=? AND sumber LIKE ?',
+    [tenantId, sourcePrefix + '%']
+  );
+  if (cnt > 0) return;
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    for (const item of valid) {
+      const jumlah = Number(item.qty || item.jumlah || 0);
+      if (jumlah <= 0) continue;
+      await conn.query(
+        `INSERT INTO stok_masuk (tenant_id, tanggal, bahan_baku_id, jumlah, sumber, catatan) VALUES (?,?,?,?,?,?)`,
+        [tenantId, penerimaan.tanggal_terima, item.bahan_baku_id, jumlah, sourcePrefix,
+         `Dari ${penerimaan.supplier_nama || 'Supplier'}${item.nama ? ' - ' + item.nama : ''}`]
+      );
+      await conn.query(
+        `UPDATE bahan_baku SET stok_saat_ini = stok_saat_ini + ? WHERE id=? AND tenant_id=?`,
+        [jumlah, item.bahan_baku_id, tenantId]
+      );
+    }
+    await conn.commit();
+  } catch (e) {
+    await conn.rollback();
+    console.error('Auto stok masuk rollback:', e);
+  } finally {
+    conn.release();
+  }
+}
+
+// Auto Stok Keluar: Produksi (Diproduksi/Selesai) → INSERT stok_keluar + UPDATE stok_saat_ini
+async function autoStokKeluarFromProduksi(produksi, tenantId) {
+  if (!produksi.menu_id || !produksi.jumlah_porsi) return;
+
+  const tujuanPrefix = `Produksi: ${produksi.id}`;
+  const [[{ cnt } = { cnt: 0 }]] = await db.query(
+    'SELECT COUNT(*) AS cnt FROM stok_keluar WHERE tenant_id=? AND tujuan LIKE ?',
+    [tenantId, tujuanPrefix + '%']
+  );
+  if (cnt > 0) return;
+
+  const [bahanRows] = await db.query(
+    `SELECT mb.bahan_baku_id, b.nama AS bahan_nama, mb.jumlah AS jumlah_per_porsi
+     FROM menu_bahan mb JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+     WHERE mb.menu_id=?`,
+    [produksi.menu_id]
+  );
+  if (!bahanRows.length) return;
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    for (const bahan of bahanRows) {
+      const jumlah = Number(bahan.jumlah_per_porsi) * Number(produksi.jumlah_porsi);
+      if (jumlah <= 0) continue;
+      await conn.query(
+        `INSERT INTO stok_keluar (tenant_id, tanggal, bahan_baku_id, jumlah, tujuan, catatan) VALUES (?,?,?,?,?,?)`,
+        [tenantId, produksi.tanggal_produksi, bahan.bahan_baku_id, jumlah, tujuanPrefix,
+         `Produksi ${produksi.menu_nama || ''} - ${produksi.jumlah_porsi} porsi`]
+      );
+      await conn.query(
+        `UPDATE bahan_baku SET stok_saat_ini = stok_saat_ini - ? WHERE id=? AND tenant_id=?`,
+        [jumlah, bahan.bahan_baku_id, tenantId]
+      );
+    }
+    await conn.commit();
+  } catch (e) {
+    await conn.rollback();
+    console.error('Auto stok keluar rollback:', e);
+  } finally {
+    conn.release();
+  }
+}
 
 // 6. Reusable: Recalculate Budget Realisasi
 async function recalculateRealisasi(tenantId) {
