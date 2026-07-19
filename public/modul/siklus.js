@@ -120,8 +120,14 @@ async function reloadSiklusList() {
     document.getElementById('stat-aktif').textContent = aktif;
     document.getElementById('stat-draft').textContent = draft;
     var menuSet = new Set();
-    list.forEach(function(s) { (s.items || []).forEach(function(it) { if (it.menu_id) menuSet.add(it.menu_id); }); });
-    document.getElementById('stat-menu').textContent = menuSet.size;
+    var gridCount = 0;
+    list.forEach(function(s) {
+      (s.items || []).forEach(function(it) {
+        if (it.menu_id) menuSet.add(it.menu_id);
+        else if (it._has_bahan) gridCount++;
+      });
+    });
+    document.getElementById('stat-menu').textContent = menuSet.size + gridCount;
     statsEl.classList.remove('hidden');
   }
 
