@@ -74,5 +74,119 @@ router.get('/dashboard/summary', async (req, res) => {
   });
 });
 
+/**
+ * GET /dashboard/finance
+ * Dashboard keuangan: saldo kas, pendapatan & biaya bulan ini, transaksi terbaru
+ */
+router.get('/dashboard/finance', async (req, res) => {
+  const t = req.user.tenant_id;
+  const now = new Date();
+  const bulan = now.getMonth() + 1;
+  const tahun = now.getFullYear();
+  const prevBulan = bulan === 1 ? 12 : bulan - 1;
+  const prevTahun = bulan === 1 ? tahun - 1 : tahun;
+
+  // 1. Saldo kas saat ini: total masuk - total keluar
+  const [[saldo]] = await db.query(
+    `SELECT COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE 0 END),0) -
+            COALESCE(SUM(CASE WHEN tipe='keluar' THEN jumlah ELSE 0 END),0) AS saldo
+     FROM kas_bank WHERE tenant_id=?`,
+    [t]
+  );
+
+  // 2. Pendapatan bulan ini (kas masuk)
+  const [[pendapatan]] = await db.query(
+    `SELECT COALESCE(SUM(jumlah),0) AS total
+     FROM kas_bank WHERE tenant_id=? AND tipe='masuk' AND MONTH(tanggal)=? AND YEAR(tanggal)=?`,
+    [t, bulan, tahun]
+  );
+
+  // 3. Biaya bulan ini (kas keluar)
+  const [[biaya]] = await db.query(
+    `SELECT COALESCE(SUM(jumlah),0) AS total
+     FROM kas_bank WHERE tenant_id=? AND tipe='keluar' AND MONTH(tanggal)=? AND YEAR(tanggal)=?`,
+    [t, bulan, tahun]
+  );
+
+  // 4. Pendapatan bulan lalu (untuk perbandingan)
+  const [[pendapatanPrev]] = await db.query(
+    `SELECT COALESCE(SUM(jumlah),0) AS total
+     FROM kas_bank WHERE tenant_id=? AND tipe='masuk' AND MONTH(tanggal)=? AND YEAR(tanggal)=?`,
+    [t, prevBulan, prevTahun]
+  );
+  
+  // 5. Biaya bulan lalu
+  const [[biayaPrev]] = await db.query(
+    `SELECT COALESCE(SUM(jumlah),0) AS total
+     FROM kas_bank WHERE tenant_id=? AND tipe='keluar' AND MONTH(tanggal)=? AND YEAR(tanggal)=?`,
+    [t, prevBulan, prevTahun]
+  );
+
+  // 6. Transaksi terbaru (10 terakhir)
+  const [transaksi] = await db.query(
+    `SELECT id, tanggal, tipe, kategori, deskripsi, jumlah
+     FROM kas_bank WHERE tenant_id=? ORDER BY tanggal DESC, id DESC LIMIT 10`,
+    [t]
+  );
+
+  // 7. Low stock count
+  const [[stk]] = await db.query(
+    'SELECT COUNT(*) AS count FROM bahan_baku WHERE tenant_id=? AND stok_saat_ini < stok_minimum',
+    [t]
+  );
+
+  const pendapatanBulanIni = Number(pendapatan.total);
+  const biayaBulanIni = Number(biaya.total);
+  const labaRugi = pendapatanBulanIni - biayaBulanIni;
+  const pendapatanBulanLalu = Number(pendapatanPrev.total);
+  const biayaBulanLalu = Number(biayaPrev.total);
+
+  // Growth % (hindari division by zero)
+  const pendapatanGrowth = pendapatanBulanLalu > 0 ? ((pendapatanBulanIni - pendapatanBulanLalu) / pendapatanBulanLalu * 100).toFixed(1) : null;
+  const biayaGrowth = biayaBulanLalu > 0 ? ((biayaBulanIni - biayaBulanLalu) / biayaBulanLalu * 100).toFixed(1) : null;
+
+  res.json({
+    saldo_kas: Number(saldo.saldo),
+    pendapatan_bulan_ini: pendapatanBulanIni,
+    biaya_bulan_ini: biayaBulanIni,
+    laba_rugi: labaRugi,
+    margin: pendapatanBulanIni > 0 ? (labaRugi / pendapatanBulanIni * 100).toFixed(1) : 0,
+    pendapatan_bulan_lalu: pendapatanBulanLalu,
+    biaya_bulan_lalu: biayaBulanLalu,
+    pendapatan_growth: pendapatanGrowth,
+    biaya_growth: biayaGrowth,
+    stok_menipis: Number(stk.count),
+    transaksi_terbaru: transaksi.map(t => ({
+      id: t.id,
+      tanggal: t.tanggal,
+      tipe: t.tipe,
+      kategori: t.kategori,
+      deskripsi: t.deskripsi,
+      jumlah: t.jumlah
+    })),
+    bulan: bulan,
+    tahun: tahun
+  });
+});
+
+/**
+ * GET /dashboard/low-stock
+ * Endpoint khusus untuk notifikasi stok menipis (ringan, cepat)
+ */
+router.get('/dashboard/low-stock', async (req, res) => {
+  const t = req.user.tenant_id;
+  const [items] = await db.query(
+    `SELECT id, nama, satuan, stok_saat_ini AS stok, stok_minimum AS min
+     FROM bahan_baku WHERE tenant_id=? AND stok_saat_ini < stok_minimum
+     ORDER BY (stok_minimum - stok_saat_ini) DESC LIMIT 20`,
+    [t]
+  );
+  const [[{ count }]] = await db.query(
+    'SELECT COUNT(*) AS count FROM bahan_baku WHERE tenant_id=? AND stok_saat_ini < stok_minimum',
+    [t]
+  );
+  res.json({ count, items });
+});
+
 module.exports = router;
 

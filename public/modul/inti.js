@@ -18,6 +18,17 @@ async function init() {
     document.addEventListener('click', function(e) {
       const a = e.target.closest('a[data-key]');
       if (a) { e.preventDefault(); navigate(a.dataset.key); }
+      // Close stock notification dropdown when clicking outside
+      const wrapDesktop = document.getElementById('stock-notif-wrap');
+      const wrapMobile = document.getElementById('stock-notif-wrap-mobile');
+      const dd = document.getElementById('stock-notif-dropdown');
+      if (dd && !dd.classList.contains('hidden')) {
+        const inDesktop = wrapDesktop && wrapDesktop.contains(e.target);
+        const inMobile = wrapMobile && wrapMobile.contains(e.target);
+        if (!inDesktop && !inMobile && !dd.contains(e.target)) {
+          dd.classList.add('hidden');
+        }
+      }
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSidebar(); });
     document.getElementById('logout-btn').onclick = async () => { await api.post('/auth/logout', {}); location.href = '/login'; };
@@ -114,7 +125,7 @@ function route() {
   if ((key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'perencanaan' || key === 'total-kebutuhan' || key === 'standar-sp' || key === 'sp-referensi' || key === 'perhitungan-bdd' || key === 'bdd-kalkulator' || key === 'panduan-ahli-gizi') && !isAdminOrAhliGizi) {
     showAlert('Akses ditolak', 'error'); navigate('dashboard'); return;
   }
-  if ((key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun' || key === 'panduan-keuangan') && !isAdminOrKeuangan) {
+  if ((key === 'dashboard-keuangan' || key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun' || key === 'panduan-keuangan') && !isAdminOrKeuangan) {
     return showAccessDenied();
   }
   if (key.startsWith('laporan-') && key !== 'laporan-siklus' && !isAdminOrKeuangan) {
@@ -166,9 +177,79 @@ function route() {
   else if (m.crud) renderCrud(m.crud);
 }
 
-// Bootstrap — diinisialisasi setelah semua modul terdefinisi
+// ===== Stock Notification =====
+let stockNotifTimer = null;
+
+async function fetchStockNotif() {
+  try {
+    const r = await fetch('/api/dashboard/low-stock', { credentials: 'include' });
+    if (!r.ok) return;
+    const d = await r.json();
+    const badge = document.getElementById('stock-notif-badge');
+    const list = document.getElementById('stock-notif-list');
+    if (!badge || !list) return;
+
+    if (d.count > 0) {
+      ['stock-notif-badge', 'stock-notif-badge-mobile'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b) { b.textContent = d.count > 99 ? '99+' : d.count; b.classList.remove('hidden'); }
+      });
+      // Update dropdown if it's visible
+      if (!document.getElementById('stock-notif-dropdown')?.classList.contains('hidden')) {
+        renderStockNotifList(d, list);
+      }
+    } else {
+      ['stock-notif-badge', 'stock-notif-badge-mobile'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b) b.classList.add('hidden');
+      });
+      if (!document.getElementById('stock-notif-dropdown')?.classList.contains('hidden')) {
+        list.innerHTML = '<div class="px-4 py-6 text-center text-sm text-emerald-600">✅ Semua stok aman</div>';
+      }
+    }
+  } catch { /* silent */ }
+}
+
+function renderStockNotifList(d, list) {
+  if (!d.items?.length) {
+    list.innerHTML = '<div class="px-4 py-6 text-center text-sm text-emerald-600">✅ Semua stok aman</div>';
+    return;
+  }
+  list.innerHTML = d.items.map(it => `
+    <div class="px-4 py-2.5 flex items-center justify-between border-b" style="border-color:var(--border)">
+      <div class="min-w-0 flex-1">
+        <div class="text-sm font-medium truncate">${escHtml(it.nama)}</div>
+        <div class="text-[10px]" style="opacity:0.5">Min: ${it.min} ${it.satuan}</div>
+      </div>
+      <div class="mono text-sm font-bold text-red-600 ml-3 whitespace-nowrap">${it.stok} ${it.satuan}</div>
+    </div>
+  `).join('');
+}
+
+function toggleStockNotif() {
+  const dd = document.getElementById('stock-notif-dropdown');
+  const list = document.getElementById('stock-notif-list');
+  if (!dd) return;
+  const isHidden = dd.classList.contains('hidden');
+  dd.classList.toggle('hidden');
+  if (isHidden && list) {
+    list.innerHTML = '<div class="px-4 py-6 text-center text-sm" style="opacity:0.5">Memuat...</div>';
+    fetchStockNotif(); // will render into list when response comes
+  }
+}
+
+function closeStockNotif() {
+  document.getElementById('stock-notif-dropdown')?.classList.add('hidden');
+}
+
+// ===== Bootstrap =====
 initSidebar();
 init();
 preloadMenus();
+
+// Start periodic stock check (every 60 seconds)
+if (stockNotifTimer) clearInterval(stockNotifTimer);
+stockNotifTimer = setInterval(fetchStockNotif, 60000);
+setTimeout(fetchStockNotif, 3000); // first check after 3s
 
 // ===== Dashboard =====

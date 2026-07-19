@@ -17,7 +17,7 @@ async function renderLaporan() {
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
   }
 }
-const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'keuangan', 'hpp', 'rab-pembelian', 'jurnal-umum', 'buku-besar', 'neraca'];
+const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'arus-kas', 'keuangan', 'hpp', 'rab-pembelian', 'jurnal-umum', 'buku-besar', 'neraca'];
 const LAP_PAGE_SIZE = 10;
 let lapState = { tab: 'siklus', page: 1 };
 
@@ -50,6 +50,7 @@ const tabColors = {
     'jurnal-umum': { active: 'bg-white text-cyan-600 shadow-sm', inactive: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200' },
     'buku-besar': { active: 'bg-white text-blue-600 shadow-sm', inactive: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
     'neraca': { active: 'bg-white text-purple-600 shadow-sm', inactive: 'bg-purple-100 text-purple-700 hover:bg-purple-200' },
+    'arus-kas': { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
   };
   getLapTabsForRole().forEach(t => {
     const el = document.getElementById('lt-' + t);
@@ -378,19 +379,74 @@ const tabColors = {
       renderLapPage();
 
     } else if (tab === 'laba-rugi') {
-      const r = await api.get('/laporan/laba-rugi');
+      const now = new Date();
+      const blnVal = lapState.lr_bulan || String(now.getMonth() + 1).padStart(2, '0');
+      const thnVal = lapState.lr_tahun || String(now.getFullYear());
+      var lrFilterBar = '<div class="mb-4 flex flex-wrap items-center gap-3"><div class="flex items-center gap-2">' +
+        '<label class="text-xs font-medium text-stone-500">Periode:</label>' +
+        '<select id="lr-bulan" onchange="gantiPeriodeLR()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(blnVal)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
+        '</select>' +
+        '<select id="lr-tahun" onchange="gantiPeriodeLR()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(thnVal)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
+        '</select></div></div>';
+
+      const r = await api.get('/laporan/laba-rugi?bulan=' + blnVal + '&tahun=' + thnVal);
       const rows = r.rows || [];
+      const pend = r.pendapatan || {};
+      const biaya = r.biaya || {};
+
+      // Build rincian pendapatan
+      var pendapatanHtml = (pend.rincian||[]).map(function(p) {
+        return '<tr class="border-t border-stone-100"><td class="px-3 py-2 text-xs">' + escHtml(p.kategori) + '</td>' +
+          '<td class="px-3 py-2 text-right mono text-xs">' + fmtIDR(p.jumlah) + '</td>' +
+          '<td class="px-3 py-2 text-right text-[10px] text-stone-500">' + p.persen.toFixed(1) + '%</td></tr>';
+      }).join('') || '<tr><td class="px-3 py-4 text-center text-stone-400 text-xs" colspan="3">Tidak ada pendapatan</td></tr>';
+
+      var biayaHtml = (biaya.rincian||[]).map(function(b) {
+        return '<tr class="border-t border-stone-100"><td class="px-3 py-2 text-xs">' + escHtml(b.kategori) + '</td>' +
+          '<td class="px-3 py-2 text-right mono text-xs">' + fmtIDR(b.jumlah) + '</td>' +
+          '<td class="px-3 py-2 text-right text-[10px] text-stone-500">' + b.persen.toFixed(1) + '%</td></tr>';
+      }).join('') || '<tr><td class="px-3 py-4 text-center text-stone-400 text-xs" colspan="3">Tidak ada biaya</td></tr>';
+
+      var laba = pend.total - biaya.total;
+      var margin = pend.total > 0 ? (laba / pend.total * 100) : 0;
+
+      // Summary & detail tables
+      var lrContent = '<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">' +
+        statCard('Pendapatan', fmtIDR(pend.total), pend.rincian?.length + ' kategori', 'bg-emerald-50') +
+        statCard('Biaya', fmtIDR(biaya.total), biaya.rincian?.length + ' kategori', 'bg-orange-50') +
+        statCard('Laba/' + (laba>=0?'Rugi':'Rugi'), `<span class="${laba>=0?'text-green-600':'text-red-600'}">${fmtIDR(Math.abs(laba))}</span>`, laba>=0?' surplus':' defisit', 'bg-blue-50') +
+        statCard('Margin', margin.toFixed(1) + '%', 'dari pendapatan', margin>=0?'bg-emerald-50':'bg-red-50') +
+      '</div>' +
+      '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">' +
+      // Pendapatan table
+      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
+      '<div class="px-4 py-2.5 font-bold text-sm border-b border-stone-200 bg-emerald-50 text-emerald-800 flex items-center justify-between"><span>💳 PENDAPATAN</span><span class="text-xs font-normal">' + fmtIDR(pend.total) + '</span></div>' +
+      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-3 py-2 text-[10px] font-semibold">Kategori</th><th class="text-right px-3 py-2 text-[10px] font-semibold">Jumlah</th><th class="text-right px-3 py-2 text-[10px] font-semibold">%</th></tr></thead><tbody>' +
+      pendapatanHtml +
+      '<tr class="border-t-2 border-stone-400 font-bold bg-emerald-50"><td class="px-3 py-2.5 text-xs">Total Pendapatan</td><td class="px-3 py-2.5 text-right mono text-xs">' + fmtIDR(pend.total) + '</td><td class="px-3 py-2.5 text-right text-xs">100%</td></tr>' +
+      '</tbody></table></div>' +
+      // Biaya table
+      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
+      '<div class="px-4 py-2.5 font-bold text-sm border-b border-stone-200 bg-orange-50 text-orange-800 flex items-center justify-between"><span>📉 BIAYA</span><span class="text-xs font-normal">' + fmtIDR(biaya.total) + '</span></div>' +
+      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-3 py-2 text-[10px] font-semibold">Kategori</th><th class="text-right px-3 py-2 text-[10px] font-semibold">Jumlah</th><th class="text-right px-3 py-2 text-[10px] font-semibold">%</th></tr></thead><tbody>' +
+      biayaHtml +
+      '<tr class="border-t-2 border-stone-400 font-bold bg-orange-50"><td class="px-3 py-2.5 text-xs">Total Biaya</td><td class="px-3 py-2.5 text-right mono text-xs">' + fmtIDR(biaya.total) + '</td><td class="px-3 py-2.5 text-right text-xs">100%</td></tr>' +
+      '</tbody></table></div></div>' +
+      // Summary bottom
+      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
+      '<div class="p-4 flex items-center justify-between"><div><span class="text-sm font-bold">Laba ' + (laba>=0?'Bersih':'Rugi Bersih') + '</span><br><span class="text-xs text-stone-500">' + r.periode + '</span></div>' +
+      '<div class="text-right"><div class="text-lg font-bold mono ' + (laba>=0?'text-green-600':'text-red-600') + '">' + (laba>=0?'':'−') + fmtIDR(Math.abs(laba)) + '</div>' +
+      '<div class="text-xs text-stone-500">Margin: ' + margin.toFixed(1) + '%</div></div></div></div>'
+
       window._lapData = { tab, rows, headers: ['Periode','Pendapatan','Biaya','Laba/Rugi'], fields: ['periode','pendapatan','biaya'],
         fmt: rows.map(d => {
-          const laba = d.pendapatan - d.biaya;
-          return [d.periode, fmtIDR(d.pendapatan), fmtIDR(d.biaya), `<span class="${laba>=0?'text-green-600':'text-red-600'} font-medium mono">${fmtIDR(laba)}</span>`];
+          const labaRow = d.pendapatan - d.biaya;
+          return [d.periode, fmtIDR(d.pendapatan), fmtIDR(d.biaya), `<span class="${labaRow>=0?'text-green-600':'text-red-600'} font-medium mono">${fmtIDR(labaRow)}</span>`];
         }) };
       window['_export_laba-rugi'] = { data: rows, fields: ['periode','pendapatan','biaya'] };
-      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
-        ${statCard('Total Pendapatan', fmtIDR(r.totalPendapatan), '', 'bg-emerald-50')}
-        ${statCard('Total Biaya', fmtIDR(r.totalBiayaAll), 'dari kas bank', 'bg-orange-50')}
-        ${statCard('Laba/Rugi', `<span class="${r.labaRugi>=0?'text-green-600':'text-red-600'}">${fmtIDR(r.labaRugi)}</span>`, '', 'bg-blue-50')}
-      </div>`;
+      window._lapStatCards = lrFilterBar + lrContent;
     } else if (tab === 'pengeluaran-bulanan') {
       const { bulan, tahun } = lapState;
       const params = new URLSearchParams();
@@ -862,6 +918,72 @@ const tabColors = {
       hppTable += '</tbody></table></div></div>';
 
       window._lapStatCards = statHtml + hppTable;
+    } else if (tab === 'arus-kas') {
+      const now = new Date();
+      const blnVal = lapState.ak_bulan || String(now.getMonth() + 1).padStart(2, '0');
+      const thnVal = lapState.ak_tahun || String(now.getFullYear());
+      var akFilterBar = '<div class="mb-4 flex flex-wrap items-center gap-3"><div class="flex items-center gap-2">' +
+        '<label class="text-xs font-medium text-stone-500">Periode:</label>' +
+        '<select id="ak-bulan" onchange="gantiPeriodeAK()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(blnVal)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
+        '</select>' +
+        '<select id="ak-tahun" onchange="gantiPeriodeAK()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(thnVal)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
+        '</select></div></div>';
+
+      const r = await api.get('/laporan/arus-kas?bulan=' + blnVal + '&tahun=' + thnVal);
+      const fmtIdr = fmtIDR;
+
+      // Rincian Kas Masuk
+      var masukHtml = (r.kas_masuk?.rincian||[]).map(function(k) {
+        return '<tr class="border-t border-stone-100"><td class="px-3 py-2 text-xs">' + escHtml(k.kategori) + '</td>' +
+          '<td class="px-3 py-2 text-right mono text-xs">' + fmtIdr(k.jumlah) + '</td></tr>';
+      }).join('') || '<tr><td class="px-3 py-4 text-center text-stone-400 text-xs" colspan="2">Tidak ada transaksi</td></tr>';
+
+      // Rincian Kas Keluar
+      var keluarHtml = (r.kas_keluar?.rincian||[]).map(function(k) {
+        return '<tr class="border-t border-stone-100"><td class="px-3 py-2 text-xs">' + escHtml(k.kategori) + '</td>' +
+          '<td class="px-3 py-2 text-right mono text-xs">' + fmtIdr(k.jumlah) + '</td></tr>';
+      }).join('') || '<tr><td class="px-3 py-4 text-center text-stone-400 text-xs" colspan="2">Tidak ada transaksi</td></tr>';
+
+      var saldoAkhir = r.saldo_akhir || 0;
+      var selisih = r.selisih || 0;
+
+      var akContent = '<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">' +
+        statCard('Saldo Awal', fmtIdr(r.saldo_awal), 'sebelum periode', 'bg-stone-50') +
+        statCard('Kas Masuk', fmtIdr(r.kas_masuk?.total||0), r.kas_masuk?.rincian?.length + ' kategori', 'bg-emerald-50') +
+        statCard('Kas Keluar', fmtIdr(r.kas_keluar?.total||0), r.kas_keluar?.rincian?.length + ' kategori', 'bg-orange-50') +
+        statCard('Saldo Akhir', fmtIdr(saldoAkhir), selisih>=0?'surplus':'defisit', selisih>=0?'bg-emerald-50':'bg-red-50') +
+      '</div>' +
+      // Detail tables
+      '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">' +
+      // Masuk
+      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
+      '<div class="px-4 py-2.5 font-bold text-sm border-b border-stone-200 bg-emerald-50 text-emerald-800 flex items-center justify-between"><span>💳 KAS MASUK</span><span class="text-xs font-normal">' + fmtIdr(r.kas_masuk?.total||0) + '</span></div>' +
+      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-3 py-2 text-[10px] font-semibold">Kategori</th><th class="text-right px-3 py-2 text-[10px] font-semibold">Jumlah</th></tr></thead><tbody>' +
+      masukHtml +
+      '<tr class="border-t-2 border-stone-400 font-bold bg-emerald-50"><td class="px-3 py-2.5 text-xs">Total Masuk</td><td class="px-3 py-2.5 text-right mono text-xs">' + fmtIdr(r.kas_masuk?.total||0) + '</td></tr>' +
+      '</tbody></table></div>' +
+      // Keluar
+      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
+      '<div class="px-4 py-2.5 font-bold text-sm border-b border-stone-200 bg-orange-50 text-orange-800 flex items-center justify-between"><span>📉 KAS KELUAR</span><span class="text-xs font-normal">' + fmtIdr(r.kas_keluar?.total||0) + '</span></div>' +
+      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-3 py-2 text-[10px] font-semibold">Kategori</th><th class="text-right px-3 py-2 text-[10px] font-semibold">Jumlah</th></tr></thead><tbody>' +
+      keluarHtml +
+      '<tr class="border-t-2 border-stone-400 font-bold bg-orange-50"><td class="px-3 py-2.5 text-xs">Total Keluar</td><td class="px-3 py-2.5 text-right mono text-xs">' + fmtIdr(r.kas_keluar?.total||0) + '</td></tr>' +
+      '</tbody></table></div></div>' +
+      // Ringkasan bottom
+      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
+      '<div class="p-4 flex items-center justify-between">' +
+      '<div><span class="text-sm font-bold">💵 Ringkasan Arus Kas</span><br><span class="text-xs text-stone-500">' + r.periode + '</span></div>' +
+      '<div class="text-right">' +
+      '<div class="text-xs text-stone-500">Saldo Awal: ' + fmtIdr(r.saldo_awal) + '</div>' +
+      '<div class="text-xs text-stone-500">(+) Masuk: ' + fmtIdr(r.kas_masuk?.total||0) + '</div>' +
+      '<div class="text-xs text-stone-500">(−) Keluar: ' + fmtIdr(r.kas_keluar?.total||0) + '</div>' +
+      '<div class="text-sm font-bold mono ' + (selisih>=0?'text-green-600':'text-red-600') + '">= Saldo Akhir: ' + fmtIdr(saldoAkhir) + '</div>' +
+      '</div></div></div>';
+
+      window._lapData = null;
+      window._lapStatCards = akFilterBar + akContent;
     } else if (tab === 'keuangan') {
       const d = await api.get('/laporan/keuangan');
       const rows = d.transaksi || [];
@@ -1370,6 +1492,7 @@ function renderLapHpp() { renderReportPage('hpp'); }
 function renderLapJurnalUmum() { renderReportPage('jurnal-umum'); }
 function renderLapBukuBesar() { renderReportPage('buku-besar'); }
 function renderLapNeraca() { renderReportPage('neraca'); }
+function renderLapArusKas() { renderReportPage('arus-kas'); }
 
 function renderResepTable(siklus, kategori_order) {
   if (!siklus.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
@@ -1436,6 +1559,16 @@ function renderResepTable(siklus, kategori_order) {
   return html;
 }
 
+function gantiPeriodeLR() {
+  lapState.lr_bulan = document.getElementById('lr-bulan')?.value;
+  lapState.lr_tahun = document.getElementById('lr-tahun')?.value;
+  showLap('laba-rugi');
+}
+function gantiPeriodeAK() {
+  lapState.ak_bulan = document.getElementById('ak-bulan')?.value;
+  lapState.ak_tahun = document.getElementById('ak-tahun')?.value;
+  showLap('arus-kas');
+}
 function toggleHppDetail(menuId) {
   const row = document.querySelector('.detail-hpp-' + menuId);
   const arrow = document.getElementById('arrow-hpp-' + menuId);
