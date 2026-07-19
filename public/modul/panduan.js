@@ -69,10 +69,10 @@ function renderPanduanAhliGizi() {
       link: { label: 'Buka Pembelian', action: 'renderPembelian' }
     },
     {
-      icon: '<svg class=\"w-8 h-8\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/><polyline points=\"14 2 14 8 20 8\"/><path d=\"M16 13H8M16 17H8\"/><path d=\"M10 9H8\"/></svg>',
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8M16 17H8"/><path d="M10 9H8"/></svg>',
       title: '11. 📊 Laporan Biaya Produksi per Siklus',
-      desc: '<strong class="text-blue-700">Fitur Baru!</strong> Bagian Keuangan bisa melihat estimasi biaya bahan baku per siklus: total biaya, rata-rata per hari, dan biaya per porsi. Data dihitung otomatis dari kebutuhan bahan × harga_satuan. Akses via: <code class="text-xs bg-stone-100 px-1.5 py-0.5 rounded">GET /api/purchase_order/laporan/biaya-produksi</code>',
-      link: null
+      desc: '<strong class="text-blue-700">Fitur Baru!</strong> Bagian Keuangan bisa melihat estimasi biaya bahan baku per siklus: total biaya, rata-rata per hari, dan biaya per porsi. Data dihitung otomatis dari kebutuhan bahan × harga_satuan. Buka halaman <strong>Laporan</strong> dan pilih tab <strong>Biaya Produksi</strong> untuk melihat data.',
+      link: { label: 'Buka Laporan', action: 'renderLaporan' }
     },
     {
       icon: '<svg class=\"w-8 h-8\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path d=\"M12 20V10\"/><path d=\"M18 20V4\"/><path d=\"M6 20v-4\"/></svg>',
@@ -226,8 +226,7 @@ function renderStepCard(s) {
   const linkHtml = s.link
     ? '<button onclick="' + s.link.action + '()" class="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' + s.link.label + '</button>'
     : '';
-  return '<div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-md transition-shadow flex items-start gap-4">' +
-    '<div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">' + s.icon + '</div>' +
+  return '<div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-md transition-shadow">' +
     '<div class="flex-1 min-w-0">' +
       '<h3 class="font-bold text-sm mb-1">' + s.title + '</h3>' +
       '<p class="text-sm text-stone-500 leading-relaxed">' + s.desc + '</p>' +
