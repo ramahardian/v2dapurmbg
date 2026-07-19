@@ -195,30 +195,194 @@ const tabColors = {
       '<div class="mb-2 text-xs font-semibold text-stone-600">📋 Rincian per Kategori</div>' +
       tableContent;
     } else if (tab === 'rab-bulanan') {
-      const r = await api.get('/laporan/rab-bulanan');
+      // Filter state
+      var rbBulan = lapState.rb_bulan || '';
+      var rbTahun = lapState.rb_tahun || '';
+      var nowDate = new Date();
+
+      // Build query params
+      var params = new URLSearchParams();
+      if (rbBulan) params.set('bulan', rbBulan);
+      if (rbTahun) params.set('tahun', rbTahun);
+
+      const r = await api.get('/laporan/rab-bulanan?' + params.toString());
       const rows = r.rows || [];
+      const detailKat = r.detail_kategori || [];
+      const prodInfo = r.produksi_info || null;
+
+      // Filter bar
+      var rbFilterBar = '<div class="mb-4 flex flex-wrap items-center gap-3">' +
+        '<div class="flex items-center gap-2">' +
+        '<label class="text-xs font-medium text-stone-500">Filter:</label>' +
+        '<select id="rb-bulan" onchange="gantiPeriodeRabBulanan()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        '<option value="">Semua Bulan</option>' +
+        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(rbBulan)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
+        '</select>' +
+        '<select id="rb-tahun" onchange="gantiPeriodeRabBulanan()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        '<option value="">Semua Tahun</option>' +
+        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(rbTahun)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
+        '</select></div>' +
+        (rbBulan && rbTahun ? '<button onclick="generateBudgetDariRAB()" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1">' +
+        '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>' +
+        'Generate Budget</button>' : '') +
+        '</div>';
+
+      var fmtIdr = fmtIDR;
+
+      // Jika filter spesifik, tampilkan detail per kategori
+      var detailHtml = '';
+      if (rbBulan && rbTahun && detailKat.length > 0) {
+        var periodeLbl = rbTahun + '-' + String(rbBulan).padStart(2, '0');
+
+        // Info produksi
+        var prodHtml = '';
+        if (prodInfo) {
+          prodHtml = '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">' +
+            statCard('Hari Produksi', fmtNum(prodInfo.total_hari), 'hari', 'bg-lime-50') +
+            statCard('Total Porsi', fmtNum(prodInfo.total_porsi_produksi), 'porsi', 'bg-blue-50') +
+            statCard('Realisasi Kas', fmtIDR(prodInfo.realisasi_kas), 'total pengeluaran', 'bg-orange-50') +
+            (prodInfo.realisasi_kas > 0 && detailKat.reduce(function(s, d) { return s + d.total_budget; }, 0) > 0
+              ? statCard('Serapan', (prodInfo.realisasi_kas / detailKat.reduce(function(s, d) { return s + d.total_budget; }, 0) * 100).toFixed(1) + '%', 'dari budget', 'bg-violet-50')
+              : statCard('Serapan', '0%', '', 'bg-stone-50')) +
+          '</div>';
+        }
+
+        // Tabel detail per kategori
+        var totalBudgetKat = 0, totalRealisasiKat = 0, totalBiayaOp = 0;
+        var katRows = detailKat.map(function(d) {
+          totalBudgetKat += d.total_budget;
+          totalRealisasiKat += d.realisasi;
+          totalBiayaOp += d.biaya_operasional;
+          var selisih = d.total_budget - d.realisasi;
+          var selClass = selisih >= 0 ? 'text-emerald-600' : 'text-red-600';
+          var capaian = d.total_budget > 0 ? (d.realisasi / d.total_budget * 100).toFixed(1) + '%' : '-';
+          return '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
+            '<td class="px-3 sm:px-4 py-2.5 font-medium text-xs">' + escHtml(d.kategori_penerima || 'Umum') + '</td>' +
+            '<td class="px-3 sm:px-4 py-2.5 text-right text-xs">' + fmtNum(d.jumlah_penerima) + '</td>' +
+            '<td class="px-3 sm:px-4 py-2.5 text-right mono text-xs">' + fmtIdr(d.harga_per_porsi) + '</td>' +
+            '<td class="px-3 sm:px-4 py-2.5 text-right mono text-xs">' + fmtIdr(d.biaya_operasional) + '</td>' +
+            '<td class="px-3 sm:px-4 py-2.5 text-right mono font-semibold text-xs">' + fmtIdr(d.total_budget) + '</td>' +
+            '<td class="px-3 sm:px-4 py-2.5 text-right mono text-xs ' + selClass + '">' + fmtIdr(d.realisasi) + '</td>' +
+            '<td class="px-3 sm:px-4 py-2.5 text-right mono text-xs ' + selClass + '">' + fmtIdr(Math.abs(selisih)) + '</td>' +
+            '<td class="px-3 sm:px-4 py-2.5 text-right text-xs font-medium ' + (parseFloat(capaian) >= 80 ? 'text-emerald-600' : parseFloat(capaian) >= 50 ? 'text-amber-600' : 'text-red-600') + '">' + capaian + '</td></tr>';
+        }).join('');
+
+        var totalSelisihKat = totalBudgetKat - totalRealisasiKat;
+        var totalSelClass = totalSelisihKat >= 0 ? 'text-emerald-600' : 'text-red-600';
+        var totalCapaian = totalBudgetKat > 0 ? (totalRealisasiKat / totalBudgetKat * 100).toFixed(1) + '%' : '-';
+
+        var katTabel = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">' +
+          '<div class="px-4 py-2.5 font-bold text-sm border-b border-stone-200 bg-emerald-50 text-emerald-800 flex items-center justify-between">' +
+          '<span>📋 Rincian Budget per Kategori — ' + periodeLbl + '</span>' +
+          '<span class="text-xs font-normal text-stone-500">' + prodInfo?.total_hari + ' hari produksi</span></div>' +
+          '<div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
+          '<thead class="bg-stone-50"><tr>' +
+          '<th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Kategori</th>' +
+          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Penerima</th>' +
+          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Harga/Porsi</th>' +
+          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Biaya Op</th>' +
+          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Budget</th>' +
+          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Realisasi</th>' +
+          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Selisih</th>' +
+          '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Capaian</th></tr></thead><tbody>' +
+          katRows +
+          '<tr class="border-t-2 border-stone-400 font-bold bg-stone-100">' +
+          '<td class="px-3 sm:px-4 py-3 font-bold text-xs">TOTAL</td>' +
+          '<td class="px-3 sm:px-4 py-3 text-right text-xs">' + fmtNum(detailKat.reduce(function(s, d) { return s + d.jumlah_penerima; }, 0)) + '</td>' +
+          '<td class="px-3 sm:px-4 py-3 text-right text-xs"></td>' +
+          '<td class="px-3 sm:px-4 py-3 text-right mono font-bold text-xs">' + fmtIdr(totalBiayaOp) + '</td>' +
+          '<td class="px-3 sm:px-4 py-3 text-right mono font-bold text-xs">' + fmtIdr(totalBudgetKat) + '</td>' +
+          '<td class="px-3 sm:px-4 py-3 text-right mono font-bold text-xs ' + totalSelClass + '">' + fmtIdr(totalRealisasiKat) + '</td>' +
+          '<td class="px-3 sm:px-4 py-3 text-right mono font-bold text-xs ' + totalSelClass + '">' + fmtIdr(Math.abs(totalSelisihKat)) + '</td>' +
+          '<td class="px-3 sm:px-4 py-3 text-right font-bold text-xs ' + (parseFloat(totalCapaian) >= 80 ? 'text-emerald-600' : parseFloat(totalCapaian) >= 50 ? 'text-amber-600' : 'text-red-600') + '">' + totalCapaian + '</td></tr>' +
+          '</tbody></table></div></div>';
+
+        // Realisasi per kategori dari kas_bank
+        var realisasiPerKatHtml = '';
+        if (prodInfo && prodInfo.realisasi_per_kategori && prodInfo.realisasi_per_kategori.length > 0) {
+          var realKatRows = prodInfo.realisasi_per_kategori.map(function(rk) {
+            var pct = totalBudgetKat > 0 ? (rk.total / totalBudgetKat * 100).toFixed(1) : 0;
+            return '<tr class="border-t border-stone-100 hover:bg-stone-50"><td class="px-4 py-2.5 text-xs">' + escHtml(rk.kategori) + '</td><td class="px-4 py-2.5 text-right mono text-xs">' + fmtIdr(rk.total) + '</td><td class="px-4 py-2.5 text-right text-xs text-stone-500">' + pct + '%</td></tr>';
+          }).join('');
+          realisasiPerKatHtml = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">' +
+            '<div class="px-4 py-2.5 font-bold text-sm border-b border-stone-200 bg-orange-50 text-orange-800">💰 Realisasi Pengeluaran (Kas Bank)</div>' +
+            '<div class="overflow-x-auto"><table class="w-full text-xs"><thead class="bg-stone-50"><tr>' +
+            '<th class="text-left px-4 py-2.5 text-[10px] font-semibold uppercase">Kategori</th>' +
+            '<th class="text-right px-4 py-2.5 text-[10px] font-semibold uppercase">Jumlah</th>' +
+            '<th class="text-right px-4 py-2.5 text-[10px] font-semibold uppercase">% Budget</th></tr></thead><tbody>' +
+            realKatRows +
+            '<tr class="border-t-2 border-stone-400 font-bold bg-orange-50"><td class="px-4 py-2.5 text-xs">Total</td><td class="px-4 py-2.5 text-right mono text-xs">' + fmtIdr(prodInfo.realisasi_kas) + '</td><td class="px-4 py-2.5 text-right text-xs">100%</td></tr>' +
+            '</tbody></table></div></div>';
+        }
+
+        detailHtml = prodHtml + katTabel + realisasiPerKatHtml;
+      }
+
+      // Tabel multi-periode (ringkasan)
       window._lapData = { tab, rows,
-        headers: ['Periode','Item','Penerima','Rata Harga/Porsi','Biaya Operasional','Total Budget','Realisasi','Selisih','Capaian'],
-        fields: ['periode','item_count','total_penerima','rata_harga_per_porsi','total_biaya_operasional','total_budget','total_realisasi'],
-        fmt: rows.map(b => {
-          const budget = Number(b.total_budget);
-          const realisasi = Number(b.total_realisasi);
-          const selisih = budget - realisasi;
-          const capaian = budget > 0 ? (realisasi / budget * 100).toFixed(1) + '%' : '-';
+        headers: ['Periode','Item','Penerima','Rata Harga','Biaya Op','Budget','Realisasi Budget','Realisasi Kas','Selisih Budget','Selisih Kas','Capaian Budget','Capaian Kas'],
+        fields: ['periode','item_count','total_penerima','rata_harga_per_porsi','total_biaya_operasional','total_budget','total_realisasi_budget','total_realisasi_kas','selisih_budget','selisih_kas','capaian_budget','capaian_kas'],
+        fmt: rows.map(function(b) {
+          var selisih = b.total_budget - b.total_realisasi_budget;
+          var capaian = b.total_budget > 0 ? (b.total_realisasi_budget / b.total_budget * 100).toFixed(1) + '%' : '-';
           return [b.periode, fmtNum(b.item_count), fmtNum(b.total_penerima), fmtIDR(b.rata_harga_per_porsi),
-            fmtIDR(b.total_biaya_operasional), fmtIDR(budget), fmtIDR(realisasi), fmtIDR(selisih), capaian];
+            fmtIDR(b.total_biaya_operasional), fmtIDR(b.total_budget), fmtIDR(b.total_realisasi_budget), fmtIDR(b.total_realisasi_kas),
+            fmtIDR(b.selisih_budget), fmtIDR(b.selisih_kas), capaian, b.capaian_kas.toFixed(1)+'%'];
         })
       };
-      window['_export_rab-bulanan'] = { data: rows, fields: ['periode','item_count','total_penerima','rata_harga_per_porsi','total_biaya_operasional','total_budget','total_realisasi'] };
+      window['_export_rab-bulanan'] = { data: rows, fields: ['periode','item_count','total_penerima','rata_harga_per_porsi','total_biaya_operasional','total_budget','total_realisasi_budget','total_realisasi_kas'] };
+
       const s = r.stats;
-      const selisihTotal = s.total_budget - s.total_realisasi;
-      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
-        ${statCard('Total Periode', fmtNum(s.total_periode), 'bulan anggaran', 'bg-emerald-50')}
-        ${statCard('Total Budget', fmtIDR(s.total_budget), '', 'bg-blue-50')}
-        ${statCard('Total Realisasi', fmtIDR(s.total_realisasi), s.total_periode > 0 ? (s.total_realisasi/s.total_budget*100).toFixed(1)+'% terserap' : '', 'bg-orange-50')}
-        ${statCard('Selisih Total', fmtIDR(selisihTotal), selisihTotal >= 0 ? 'surplus' : 'defisit', selisihTotal >= 0 ? 'bg-emerald-50' : 'bg-red-50')}
-        ${statCard('Rata-rata Capaian', s.rata_capaian.toFixed(1)+'%', 'per periode', 'bg-violet-50')}
-      </div>`;
+      const selisihTotalBudget = s.total_budget - s.total_realisasi_budget;
+      const selisihTotalKas = s.total_budget - s.total_realisasi_kas;
+
+      // Tabel multi-periode
+      var multiPeriodeTabel = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
+        '<div class="px-4 py-2.5 font-bold text-sm border-b border-stone-200 bg-emerald-50 text-emerald-800">📊 RAB Bulanan — Multi Periode</div>' +
+        '<div class="overflow-x-auto"><table class="w-full text-[10px] sm:text-xs">' +
+        '<thead class="bg-stone-50"><tr>' +
+        '<th class="text-left px-2 sm:px-3 py-2 font-semibold uppercase tracking-wider" rowspan="2">Periode</th>' +
+        '<th class="text-center px-1 py-1 font-semibold" colspan="2" style="border-bottom:1px solid #d6d3d1">Budget</th>' +
+        '<th class="text-center px-1 py-1 font-semibold" colspan="2" style="border-bottom:1px solid #d6d3d1">Realisasi</th>' +
+        '<th class="text-center px-1 py-1 font-semibold" colspan="2" style="border-bottom:1px solid #d6d3d1">Selisih</th>' +
+        '<th class="text-center px-1 py-1 font-semibold" colspan="2" style="border-bottom:1px solid #d6d3d1">Capaian</th></tr><tr class="bg-stone-50">' +
+        '<th class="text-right px-2 sm:px-3 py-1.5 text-[9px] font-semibold text-stone-500 uppercase">Budget</th>' +
+        '<th class="text-right px-2 sm:px-3 py-1.5 text-[9px] font-semibold text-stone-500 uppercase">Biaya Op</th>' +
+        '<th class="text-right px-2 sm:px-3 py-1.5 text-[9px] font-semibold text-stone-500 uppercase">Budget</th>' +
+        '<th class="text-right px-2 sm:px-3 py-1.5 text-[9px] font-semibold text-stone-500 uppercase">Kas</th>' +
+        '<th class="text-right px-2 sm:px-3 py-1.5 text-[9px] font-semibold text-stone-500 uppercase">Budget</th>' +
+        '<th class="text-right px-2 sm:px-3 py-1.5 text-[9px] font-semibold text-stone-500 uppercase">Kas</th>' +
+        '<th class="text-right px-2 sm:px-3 py-1.5 text-[9px] font-semibold text-stone-500 uppercase">Budget</th>' +
+        '<th class="text-right px-2 sm:px-3 py-1.5 text-[9px] font-semibold text-stone-500 uppercase">Kas</th></tr></thead><tbody>' +
+        rows.map(function(b) {
+          var selB = b.total_budget - b.total_realisasi_budget;
+          var selK = b.total_budget - b.total_realisasi_kas;
+          var capB = b.total_budget > 0 ? (b.total_realisasi_budget / b.total_budget * 100).toFixed(1) + '%' : '-';
+          var capK = b.total_budget > 0 ? b.capaian_kas.toFixed(1) + '%' : '-';
+          var isSelected = rbBulan && rbTahun && b.periode === (rbTahun + '-' + String(rbBulan).padStart(2, '0'));
+          return '<tr class="' + (isSelected ? 'bg-emerald-50 font-semibold' : 'border-t border-stone-100 hover:bg-stone-50') + '" onclick="filterRabBulanan(\'' + b.periode + '\')" style="cursor:pointer">' +
+            '<td class="px-2 sm:px-3 py-2 text-xs font-medium">' + b.periode + '</td>' +
+            '<td class="px-2 sm:px-3 py-2 text-right mono text-xs">' + fmtIdr(b.total_budget) + '</td>' +
+            '<td class="px-2 sm:px-3 py-2 text-right mono text-xs text-stone-500">' + fmtIdr(b.total_biaya_operasional) + '</td>' +
+            '<td class="px-2 sm:px-3 py-2 text-right mono text-xs">' + fmtIdr(b.total_realisasi_budget) + '</td>' +
+            '<td class="px-2 sm:px-3 py-2 text-right mono text-xs">' + fmtIdr(b.total_realisasi_kas) + '</td>' +
+            '<td class="px-2 sm:px-3 py-2 text-right mono text-xs ' + (selB >= 0 ? 'text-emerald-600' : 'text-red-600') + '">' + fmtIdr(selB) + '</td>' +
+            '<td class="px-2 sm:px-3 py-2 text-right mono text-xs ' + (selK >= 0 ? 'text-emerald-600' : 'text-red-600') + '">' + fmtIdr(selK) + '</td>' +
+            '<td class="px-2 sm:px-3 py-2 text-right text-xs ' + (parseFloat(capB) >= 80 ? 'text-emerald-600' : parseFloat(capB) >= 50 ? 'text-amber-600' : 'text-red-600') + '">' + capB + '</td>' +
+            '<td class="px-2 sm:px-3 py-2 text-right text-xs text-stone-500">' + capK + '</td></tr>';
+        }).join('') +
+        '</tbody></table></div></div>';
+
+      window._lapStatCards = rbFilterBar +
+        '<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">' +
+        statCard('Total Periode', fmtNum(s.total_periode), 'bulan', 'bg-emerald-50') +
+        statCard('Total Budget', fmtIDR(s.total_budget), '', 'bg-blue-50') +
+        statCard('Realisasi (Budget)', fmtIDR(s.total_realisasi_budget), s.total_periode > 0 ? (s.total_realisasi_budget/s.total_budget*100).toFixed(1)+'%' : '', 'bg-orange-50') +
+        statCard('Realisasi (Kas)', fmtIDR(s.total_realisasi_kas), s.total_periode > 0 ? (s.total_realisasi_kas/s.total_budget*100).toFixed(1)+'%' : '', 'bg-amber-50') +
+        statCard('Rata Capaian', s.rata_capaian_budget.toFixed(1)+'%', 'per periode', 'bg-violet-50') +
+      '</div>' +
+      detailHtml +
+      multiPeriodeTabel;
     } else if (tab === 'siklus') {
       const [siklusList, lapRes, menuHarianRes] = await Promise.all([
         api.get('/siklus'),
@@ -1639,4 +1803,43 @@ function toggleHppDetail(menuId) {
   const isHidden = row.style.display === 'none' || !row.style.display;
   row.style.display = isHidden ? 'table-row' : 'none';
   arrow.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+}
+
+// ===== RAB Bulanan Helper Functions =====
+function gantiPeriodeRabBulanan() {
+  lapState.rb_bulan = document.getElementById('rb-bulan')?.value || '';
+  lapState.rb_tahun = document.getElementById('rb-tahun')?.value || '';
+  showLap('rab-bulanan');
+}
+
+function filterRabBulanan(periode) {
+  if (!periode) return;
+  const parts = periode.split('-');
+  lapState.rb_tahun = parts[0];
+  lapState.rb_bulan = parts[1];
+  showLap('rab-bulanan');
+}
+
+async function generateBudgetDariRAB() {
+  const bln = lapState.rb_bulan;
+  const thn = lapState.rb_tahun;
+  if (!bln || !thn) {
+    showAlert('Pilih bulan dan tahun terlebih dahulu', 'warning');
+    return;
+  }
+  const periode = thn + '-' + String(bln).padStart(2, '0');
+  if (!await showConfirm('Generate entri budget untuk periode ' + periode + ' dari data aktual (produksi, penerima, harga referensi)?', 'Ya, Generate')) return;
+  try {
+    const res = await api.post('/laporan/rab-generate-budget', { periode: periode });
+    if (res.can_overwrite) {
+      if (!await showConfirm('Budget sudah ada untuk ' + periode + '. Timpa dengan data baru?', 'Ya, Timpa')) return;
+      const res2 = await api.post('/laporan/rab-generate-budget?overwrite=true', { periode: periode });
+      showAlert('Berhasil: ' + res2.kategori_count + ' entri budget dibuat', 'success');
+    } else {
+      showAlert('Berhasil: ' + res.kategori_count + ' entri budget dibuat untuk ' + periode, 'success');
+    }
+    showLap('rab-bulanan');
+  } catch (e) {
+    showAlert('Gagal: ' + (e.message || 'Unknown error'), 'error');
+  }
 }
