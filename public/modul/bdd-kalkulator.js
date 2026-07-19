@@ -257,7 +257,7 @@ function isiDariBahan() {
 async function renderBddKalkulator() {
   var c = document.getElementById('content');
   c.innerHTML = [
-    '<div class="max-w-4xl mx-auto">',
+    '<div class="max-w-100 mx-auto">',
 
     // Hero
     '<div class="bg-gradient-to-br from-emerald-700 to-emerald-500 rounded-2xl p-6 lg:p-8 mb-6 text-white shadow-lg">',

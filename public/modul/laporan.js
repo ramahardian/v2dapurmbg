@@ -597,7 +597,7 @@ const tabColors = {
       ], fields: ['kegiatan','diajukan','terpakai','sisa'] };
 
       window._lapStatCards =
-        '<div class="max-w-4xl mx-auto">' +
+        '<div class="max-w-100 mx-auto">' +
         '<div class="bg-white border border-stone-200 rounded-lg p-4 sm:p-6 mb-4">' +
         '<h2 class="text-base font-bold mb-4">Laporan Penggunaan Anggaran</h2>' +
         '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">' +
