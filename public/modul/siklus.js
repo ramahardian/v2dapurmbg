@@ -119,13 +119,7 @@ async function reloadSiklusList() {
     document.getElementById('stat-total').textContent = total;
     document.getElementById('stat-aktif').textContent = aktif;
     document.getElementById('stat-draft').textContent = draft;
-    var menuSet = new Set();
-    list.forEach(function(s) {
-      (s.items || []).forEach(function(it) {
-        if (it.menu_nama && !it.menu_nama.startsWith('Manual Hari ')) menuSet.add(it.menu_nama);
-      });
-    });
-    document.getElementById('stat-menu').textContent = menuSet.size;
+
     statsEl.classList.remove('hidden');
   }
 
