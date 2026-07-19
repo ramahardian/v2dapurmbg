@@ -28,7 +28,11 @@ async function loadPerencanaanData(tanggalMulai) {
     html += '<div class="bg-white border border-stone-200 rounded-lg p-4 mb-4 flex flex-wrap items-center gap-4">';
     html += '<label class="text-sm font-medium text-stone-700">Tanggal Mulai Siklus:</label>';
     html += '<input type="date" value="' + (tanggal_mulai || '') + '" onchange="loadPerencanaanData(this.value)" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400">';
-    html += '<div class="text-xs text-stone-400 ml-auto">' + (hari ? hari.length + ' hari' : '0 hari') + '</div>';
+    html += '<button onclick="buatPrDariSiklus()" class="ml-auto h-10 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2">';
+    html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    Buat Draft PR';
+    html += '</button>';
+    html += '<div class="text-xs text-stone-400">' + (hari ? hari.length + ' hari' : '0 hari') + '</div>';
     html += '</div>';
 
     if (!hari || !hari.length) {
@@ -102,3 +106,59 @@ function fmtPncNum(v) {
 function exportPncCsv() {
   showAlert('Export CSV: gunakan Print atau salin dari tabel', 'info');
 }
+
+// ===== Buat Draft Purchase Request dari Siklus =====
+async function buatPrDariSiklus() {
+  try {
+    // Ambil daftar siklus
+    const siklusList = await api.get('/siklus');
+    const aktif = siklusList.filter(s => s.status === 'Aktif');
+    
+    if (!aktif.length) {
+      showAlert('Tidak ada siklus dengan status Aktif. Aktifkan siklus terlebih dahulu.', 'warning');
+      return;
+    }
+
+    // Tampilkan pilihan siklus via prompt sederhana
+    let msg = 'Pilih siklus yang akan dibuat PR:\n\n';
+    for (var i = 0; i < aktif.length; i++) {
+      msg += (i+1) + '. ' + aktif[i].nama + ' (' + aktif[i].kategori_penerima + ' - ' + aktif[i].jumlah_porsi + ' porsi)\n';
+    }
+    msg += '\nMasukkan nomor siklus (pisahkan dengan koma, misal: 1,2,3):';
+    
+    const input = prompt(msg);
+    if (!input) return;
+    
+    const selectedIndices = input.split(',').map(function(s) { return parseInt(s.trim()) - 1; }).filter(function(i) { return i >= 0 && i < aktif.length; });
+    if (!selectedIndices.length) {
+      showAlert('Pilihan tidak valid', 'error');
+      return;
+    }
+
+    const selectedSiklus = selectedIndices.map(function(i) { return aktif[i]; });
+    const siklusIds = selectedSiklus.map(function(s) { return s.id; });
+
+    showAlert('Membuat Draft PR untuk ' + selectedSiklus.length + ' siklus...', 'info');
+    
+    const result = await api.post('/purchase_order/create-pr-from-siklus', {
+      siklus_ids: siklusIds
+    });
+
+    if (result.ok) {
+      showAlert(
+        '✅ Draft PR berhasil dibuat!\n\n' +
+        'No. PR: ' + result.no_pr + '\n' +
+        'Total item: ' + result.total_items + ' bahan\n' +
+        'Total nilai: Rp ' + fmtPncNum(result.total_nilai) + '\n\n' +
+        'Cek di menu Pembelian → Purchase Order untuk melanjutkan.',
+        'success'
+      );
+    } else {
+      showAlert('Gagal: ' + (result.error || 'Unknown error'), 'error');
+    }
+  } catch (err) {
+    showAlert('Gagal: ' + err.message, 'error');
+  }
+}
+
+// Format number helper (gunakan yang sudah ada: fmtPncNum di file ini)

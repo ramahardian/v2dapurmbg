@@ -163,12 +163,6 @@ function renderPanduanAhliGizi() {
 
   // ===================== RENDER =====================
   c.innerHTML = `
-    <!-- HEADER -->
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-stone-800">📋 Panduan Ahli Gizi</h1>
-      <p class="text-sm text-stone-500 mt-1">Alur lengkap dari input data gizi hingga laporan keuangan otomatis.</p>
-    </div>
-
     <!-- SECTION: AHLI GIZI -->
     <div class="mb-4 flex items-center gap-2">
       <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">BAGIAN AHLI GIZI</span>
