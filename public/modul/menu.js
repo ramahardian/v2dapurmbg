@@ -395,6 +395,13 @@ function attachMenuHandlers() {
   });
 }
 
+function toggleGramasiKecil(kat) {
+  var el = document.getElementById('gramasi-kecil-wrapper');
+  if (!el) return;
+  var show = kat === 'Balita' || kat === 'TK/PAUD' || kat === 'SD 1-3';
+  el.style.display = show ? '' : 'none';
+}
+
 async function openMenuForm(editing) {
   const m = editing || { nama: '', kategori_penerima: '', deskripsi: '', gramasi_total: 0, gramasi_besar: 0, gramasi_kecil: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
   document.getElementById('modal-title').textContent = editing ? 'Edit Menu' : 'Tambah Menu';
@@ -418,7 +425,7 @@ async function openMenuForm(editing) {
         <div><label class="text-sm">Gramasi Besar (g)</label>
           <input id="m-gramasi-besar" type="number" value="${m.gramasi_besar || 0}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" placeholder="0 = gramasi total" />
         </div>
-        <div><label class="text-sm">Gramasi Kecil (g)</label>
+        <div id="gramasi-kecil-wrapper"><label class="text-sm">Gramasi Kecil (g)</label>
           <div class="flex gap-2">
             <input id="m-gramasi-kecil" type="number" value="${m.gramasi_kecil || 0}" class="mt-1 flex-1 h-10 px-3 border border-stone-200 rounded-md" placeholder="0 = gramasi total" />
             <button type="button" onclick="hitungGramasiBesarKecil()" class="mt-1 shrink-0 px-3 h-10 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100 whitespace-nowrap">SP</button>
@@ -465,7 +472,11 @@ async function openMenuForm(editing) {
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0 }));
   renderBahanList();
   await loadSpMap(m.kategori_penerima);
-  document.getElementById('m-kategori').onchange = async function() { await loadSpMap(this.value); };
+  toggleGramasiKecil(m.kategori_penerima);
+  document.getElementById('m-kategori').onchange = async function() {
+    await loadSpMap(this.value);
+    toggleGramasiKecil(this.value);
+  };
   document.getElementById('modal-save').onclick = async () => {
     if (!validateForm([{ id: 'm-nama', label: 'Nama Menu' }])) return;
     const payload = {
