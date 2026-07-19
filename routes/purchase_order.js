@@ -304,19 +304,18 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
     }
 
     // 2. Format items untuk PO
+    // NOTE: menu_bahan.jumlah selalu dalam gram (gramasi per porsi)
+    // sehingga total_berat_kotor dalam gram — konversi ke kg
     const poItems = Object.values(agg).map(b => {
-      let qty = b.total_berat_kotor;
-      let satuan = b.satuan;
-      if (['gram', 'g', 'gr'].includes(b.satuan?.toLowerCase())) {
-        qty = qty / 1000;
-        satuan = 'kg';
-      }
+      let qtyGram = b.total_berat_kotor; // selalu gram
+      let qty = Math.round(qtyGram / 1000 * 100) / 100; // konversi ke kg
+      let satuan = 'kg';
       const buffer = Math.round(qty * 1.1 * 100) / 100; // buffer 10%
       return {
         bahan_baku_id: b.bahan_baku_id,
         bahan_nama: b.nama,
         satuan,
-        qty: Math.round(qty * 100) / 100,
+        qty,
         qty_buffer: buffer,
         harga_satuan: b.harga_satuan,
         subtotal: Math.round(buffer * b.harga_satuan),
