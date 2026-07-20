@@ -2294,8 +2294,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
       // --- A. Menu-based ingredients ---
       const [items] = await db.query(
         `SELECT si.* FROM siklus_menu_item si
-         JOIN menu m ON m.id = si.menu_id
-         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL AND m.status='Aktif'`,
+         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL`,
         [siklusId]
       );
       if (items.length) hasItems = true;
