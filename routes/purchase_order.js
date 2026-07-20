@@ -367,55 +367,53 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
       }
 
       // --- B. Grid-based ingredients ---
-      // Hanya filter grid jika ada menu/resep yang terisi
-      const hariDenganMenu = new Set(items.filter(it => it.menu_id).map(it => it.hari_ke));
-      const [gridBahanRaw] = await db.query(
-        `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
-                bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp, bb.berat_per_satuan
-         FROM siklus_menu_item_bahan smib
-         JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
-         WHERE smib.siklus_id=?`,
-        [s.id]
-      );
-      const gridBahan = hariDenganMenu.size > 0
-        ? gridBahanRaw.filter(gb => hariDenganMenu.has(gb.hari_ke))
-        : gridBahanRaw;
-
-      if (gridBahan.length) {
-        hasItems = true;
-
-        const [spRows] = await db.query(
-          'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
-          [kategoriPenerima]
+      // Hanya dipakai jika siklus ini TIDAK punya menu (resep)
+      if (items.length === 0) {
+        const [gridBahanRaw] = await db.query(
+          `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
+                  bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp, bb.berat_per_satuan
+           FROM siklus_menu_item_bahan smib
+           JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
+           WHERE smib.siklus_id=?`,
+          [s.id]
         );
-        const spMap = {};
-        for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
 
-        const cellCount = {};
-        for (const gb of gridBahan) {
-          const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
-          if (!cellCount[cellKey]) cellCount[cellKey] = 0;
-          cellCount[cellKey]++;
-        }
+        if (gridBahanRaw.length) {
+          hasItems = true;
 
-        for (const gb of gridBahan) {
-          const spVal = spMap[gb.kategori_sp] || 0;
-          const berat1Sp = Number(gb.berat_1_sp || 0);
-          if (spVal <= 0 || berat1Sp <= 0) continue;
+          const [spRows] = await db.query(
+            'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
+            [kategoriPenerima]
+          );
+          const spMap = {};
+          for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
 
-          const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
-          const bagi = cellCount[cellKey] || 1;
-          const spPerBahan = spVal / bagi;
-          const beratBersih = berat1Sp * spPerBahan * penerimaCount;
-          const spRefBdd = spRefByName[(gb.nama || '').trim().toLowerCase()];
-          const bdd = spRefBdd || Number(gb.persen_bdd || 100);
-          const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
-
-          const key = gb.bahan_baku_id;
-          if (!agg[key]) {
-            agg[key] = { bahan_baku_id: gb.bahan_baku_id, nama: gb.nama, satuan: gb.satuan || 'g', harga_satuan: Number(gb.harga_satuan) || 0, berat_per_satuan: Number(gb.berat_per_satuan) || 0, total_berat_kotor: 0 };
+          const cellCount = {};
+          for (const gb of gridBahanRaw) {
+            const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
+            if (!cellCount[cellKey]) cellCount[cellKey] = 0;
+            cellCount[cellKey]++;
           }
-          agg[key].total_berat_kotor += beratKotor;
+
+          for (const gb of gridBahanRaw) {
+            const spVal = spMap[gb.kategori_sp] || 0;
+            const berat1Sp = Number(gb.berat_1_sp || 0);
+            if (spVal <= 0 || berat1Sp <= 0) continue;
+
+            const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
+            const bagi = cellCount[cellKey] || 1;
+            const spPerBahan = spVal / bagi;
+            const beratBersih = berat1Sp * spPerBahan * penerimaCount;
+            const spRefBdd = spRefByName[(gb.nama || '').trim().toLowerCase()];
+            const bdd = spRefBdd || Number(gb.persen_bdd || 100);
+            const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
+
+            const key = gb.bahan_baku_id;
+            if (!agg[key]) {
+              agg[key] = { bahan_baku_id: gb.bahan_baku_id, nama: gb.nama, satuan: gb.satuan || 'g', harga_satuan: Number(gb.harga_satuan) || 0, berat_per_satuan: Number(gb.berat_per_satuan) || 0, total_berat_kotor: 0 };
+            }
+            agg[key].total_berat_kotor += beratKotor;
+          }
         }
       }
     }

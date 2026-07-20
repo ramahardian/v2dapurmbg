@@ -2368,58 +2368,57 @@ router.post('/siklus/buat-pr', async (req, res) => {
       }
 
       // --- B. Grid-based ingredients (siklus_menu_item_bahan) ---
-      const hariDenganMenu = new Set(items.filter(it => it.menu_id).map(it => it.hari_ke));
-      const [gridBahanRaw] = await db.query(
-        `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
-                bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
-                bb.kode, bb.berat_per_satuan
-         FROM siklus_menu_item_bahan smib
-         JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
-         WHERE smib.siklus_id=? AND smib.hari_ke BETWEEN ? AND ?`,
-        [siklusId, hariMulai, hariSelesai]
-      );
-      const gridBahan = hariDenganMenu.size > 0
-        ? gridBahanRaw.filter(gb => hariDenganMenu.has(gb.hari_ke))
-        : gridBahanRaw;
-
-      if (gridBahan.length) {
-        hasItems = true;
-
-        // Ambil standar SP untuk jenjang ini
-        const [spRows] = await db.query(
-          'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
-          [kategoriPenerima]
+      // Hanya dipakai jika siklus ini TIDAK punya menu (resep)
+      // Jika sudah ada menu → bahan dihitung dari menu_bahan (akurat)
+      // Grid SP hanya fallback untuk siklus tanpa menu
+      if (items.length === 0) {
+        const [gridBahanRaw] = await db.query(
+          `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
+                  bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
+                  bb.kode, bb.berat_per_satuan
+           FROM siklus_menu_item_bahan smib
+           JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
+           WHERE smib.siklus_id=? AND smib.hari_ke BETWEEN ? AND ?`,
+          [siklusId, hariMulai, hariSelesai]
         );
-        const spMap = {};
-        for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
 
-        // Hitung jumlah bahan per cell untuk bagi rata SP
-        const cellCount = {};
-        for (const gb of gridBahan) {
-          const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
-          if (!cellCount[cellKey]) cellCount[cellKey] = 0;
-          cellCount[cellKey]++;
-        }
+        if (gridBahanRaw.length) {
+          hasItems = true;
 
-        for (const gb of gridBahan) {
-          const spVal = spMap[gb.kategori_sp] || 0;
-          const berat1Sp = Number(gb.berat_1_sp || 0);
-          const jumlahPorsi = penerimaCount;
-          if (spVal <= 0 || berat1Sp <= 0 || jumlahPorsi <= 0) continue;
+          const [spRows] = await db.query(
+            'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
+            [kategoriPenerima]
+          );
+          const spMap = {};
+          for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
 
-          const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
-          const bagi = cellCount[cellKey] || 1;
-          const spPerBahan = spVal / bagi;
-          const beratBersih = berat1Sp * spPerBahan * jumlahPorsi;
-          const spRefBdd = spRefByName[(gb.bahan_nama || '').trim().toLowerCase()];
-          const bdd = spRefBdd || Number(gb.persen_bdd || 100);
-          const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
-
-          const key = gb.bahan_baku_id;
-          if (!agg[key]) {
-            agg[key] = { bahan_baku_id: gb.bahan_baku_id, bahan_nama: gb.bahan_nama, kode: gb.kode || '', satuan: gb.satuan, harga_satuan: Number(gb.harga_satuan) || 0, berat_per_satuan: Number(gb.berat_per_satuan) || 0, total_qty: 0 };
+          const cellCount = {};
+          for (const gb of gridBahanRaw) {
+            const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
+            if (!cellCount[cellKey]) cellCount[cellKey] = 0;
+            cellCount[cellKey]++;
           }
-          agg[key].total_qty += beratKotor * multiplier;
+
+          for (const gb of gridBahanRaw) {
+            const spVal = spMap[gb.kategori_sp] || 0;
+            const berat1Sp = Number(gb.berat_1_sp || 0);
+            const jumlahPorsi = penerimaCount;
+            if (spVal <= 0 || berat1Sp <= 0 || jumlahPorsi <= 0) continue;
+
+            const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
+            const bagi = cellCount[cellKey] || 1;
+            const spPerBahan = spVal / bagi;
+            const beratBersih = berat1Sp * spPerBahan * jumlahPorsi;
+            const spRefBdd = spRefByName[(gb.bahan_nama || '').trim().toLowerCase()];
+            const bdd = spRefBdd || Number(gb.persen_bdd || 100);
+            const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
+
+            const key = gb.bahan_baku_id;
+            if (!agg[key]) {
+              agg[key] = { bahan_baku_id: gb.bahan_baku_id, bahan_nama: gb.bahan_nama, kode: gb.kode || '', satuan: gb.satuan, harga_satuan: Number(gb.harga_satuan) || 0, berat_per_satuan: Number(gb.berat_per_satuan) || 0, total_qty: 0 };
+            }
+            agg[key].total_qty += beratKotor * multiplier;
+          }
         }
       }
     }
@@ -2443,8 +2442,10 @@ router.post('/siklus/buat-pr', async (req, res) => {
     const bahanList = Object.values(agg).map(b => {
       let qty = b.total_qty;
       let satuan = b.satuan;
+      let harga = b.harga_satuan;
+      const satuanAsli = (b.satuan || '').toLowerCase();
       // Internal selalu gram → konversi ke satuan display
-      if (['gram', 'g', 'gr', 'kg'].includes(b.satuan?.toLowerCase())) {
+      if (['gram', 'g', 'gr', 'kg'].includes(satuanAsli)) {
         qty = qty / 1000;
         satuan = 'kg';
       } else if (b.berat_per_satuan > 0) {
@@ -2452,9 +2453,13 @@ router.post('/siklus/buat-pr', async (req, res) => {
         qty = qty / b.berat_per_satuan;
         qty = Math.round(qty);
       } else {
-        // fallback: gram → kg jika berat_per_satuan tidak diketahui
+        // fallback: gram → kg. Harga ikut dikonversi jika berat_per_satuan tersedia
         qty = qty / 1000;
         satuan = 'kg';
+      }
+      // Jika satuan display berbeda dari satuan asli, konversi harga juga
+      if (satuan !== b.satuan && b.berat_per_satuan > 0 && !['gram', 'g', 'gr', 'kg'].includes(satuanAsli)) {
+        harga = b.harga_satuan / (b.berat_per_satuan / 1000);
       }
       const buffer = Math.round(qty * 1.1 * 100) / 100;
       return {
@@ -2465,8 +2470,8 @@ router.post('/siklus/buat-pr', async (req, res) => {
         satuan,
         total_qty: Math.round(qty * 100) / 100,
         buffer_10: buffer,
-        harga_satuan: b.harga_satuan,
-        estimated_subtotal: Math.round(buffer * b.harga_satuan),
+        harga_satuan: Math.round(harga * 100) / 100,
+        estimated_subtotal: Math.round(buffer * harga),
       };
     }).sort((a, b) => b.total_qty - a.total_qty);
 

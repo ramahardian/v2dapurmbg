@@ -181,19 +181,29 @@ async function openBuatPrForm() {
     });
   });
 
-  // Update info saat input range berubah
+  function updateHariInfo() {
+    var mulai = document.getElementById('pr-hari-mulai');
+    var selesai = document.getElementById('pr-hari-selesai');
+    var info = document.getElementById('pr-hari-info');
+    if (info && mulai && selesai) {
+      info.textContent = 'Range dipilih: hari ' + mulai.value + ' — ' + selesai.value;
+    }
+  }
   document.getElementById('pr-hari-mulai').addEventListener('input', function() {
     var selesai = document.getElementById('pr-hari-selesai');
     if (this.value && selesai.value && Number(this.value) > Number(selesai.value)) {
       selesai.value = this.value;
     }
+    updateHariInfo();
   });
   document.getElementById('pr-hari-selesai').addEventListener('input', function() {
     var mulai = document.getElementById('pr-hari-mulai');
     if (this.value && mulai.value && Number(this.value) < Number(mulai.value)) {
       mulai.value = this.value;
     }
+    updateHariInfo();
   });
+  updateHariInfo();
 
   const saveBtn = document.getElementById('modal-save');
   saveBtn.textContent = 'Generate PR';
