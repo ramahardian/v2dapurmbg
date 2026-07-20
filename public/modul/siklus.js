@@ -783,13 +783,16 @@ async function openSiklusForm(editing) {
       }
     }
     // Collect resep_map from Identifikasi Resep inputs
+    // Hanya simpan kategori yang benar-benar diisi (tidak kosong)
     var resepMap = {};
     var resepInputs = document.querySelectorAll('input[data-field="resep"]');
     for (var ri = 0; ri < resepInputs.length; ri++) {
       var inp = resepInputs[ri];
+      var val = inp.value.trim();
+      if (!val) continue; // Skip input kosong — tidak perlu disimpan
       var hk = inp.getAttribute('data-hk');
       if (!resepMap[hk]) resepMap[hk] = {};
-      resepMap[hk][inp.getAttribute('data-kat')] = inp.value.trim();
+      resepMap[hk][inp.getAttribute('data-kat')] = val;
     }
     var meta = window._siklusMeta || {};
     var jumlahPorsi = +(document.getElementById('sk-porsi')?.value) || 0;

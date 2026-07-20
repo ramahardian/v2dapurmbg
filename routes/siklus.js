@@ -444,11 +444,14 @@ router.get('/siklus/recipe-names', async (req, res) => {
     const names = [];
     for (const it of items) {
       // Track resep_map coverage so grid-based resep doesn't duplicate
+      // HANYA kategori dengan nama non-kosong yang dianggap covered
       if (it.resep_map) {
         try {
           const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
-          for (const kat of Object.keys(map)) {
-            resepCovered.add(it.hari_ke + '::' + kat);
+          for (const [kat, nama] of Object.entries(map)) {
+            if (nama && nama.trim()) {
+              resepCovered.add(it.hari_ke + '::' + kat);
+            }
           }
         } catch (e) {}
       }
