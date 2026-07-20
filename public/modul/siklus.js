@@ -733,12 +733,24 @@ async function openSiklusForm(editing) {
         </tbody></table></div>
       </div>
 
-      <!-- Identifikasi Resep -->
+      <!-- Pilih Resep Menu -->
       <div class="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm">
-        <div class="px-5 py-3 border-b border-stone-200"><h3 class="font-bold text-stone-700">Identifikasi Resep</h3></div>
+        <div class="px-5 py-3 border-b border-stone-200 flex items-center justify-between">
+          <h3 class="font-bold text-stone-700">Pilih Resep Menu</h3>
+          <span class="text-xs text-stone-400">Pilih menu untuk setiap hari — bahan akan otomatis dari resep</span>
+        </div>
         <div class="overflow-x-auto"><table class="w-full" style="min-width:${Math.max(600, formData.items.length * 130 + 100)}px"><thead><tr>
-          <th class="w-[100px] min-w-[100px] px-3 py-3 text-left text-xs font-semibold text-stone-400 bg-stone-50 border-b border-r border-stone-200">Kelompok</th>${formData.items.map(it => {
-            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200"><span class="text-xs font-semibold text-stone-700">Menu ' + it.hari_ke + '</span></th>';
+          <th class="w-[100px] min-w-[100px] px-3 py-3 text-left text-xs font-semibold text-stone-400 bg-stone-50 border-b border-r border-stone-200">Hari</th>${formData.items.map(it => {
+            const dt = getDate(it.hari_ke);
+            const menuNama = gridData[it.hari_ke].menu_nama || '';
+            const menuId = gridData[it.hari_ke].menu_id || '';
+            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top">' +
+              '<div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div>' +
+              '<div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div>' +
+              (menuNama ? '<div class="mt-1 text-xs text-emerald-700 font-medium truncate max-w-[120px] mx-auto">' + escHtml(menuNama) + '</div>' : '') +
+              '<button onclick="openMenuPickerForDay(' + it.hari_ke + ')" class="mt-1 px-2 py-1 text-[10px] font-medium ' + (menuId ? 'text-amber-700 bg-amber-50 border border-amber-200' : 'text-emerald-700 bg-emerald-50 border border-emerald-200') + ' rounded-md hover:bg-emerald-100 w-full truncate">' + (menuId ? 'Ganti' : 'Pilih Menu') + '</button>' +
+              (menuId ? '<button onclick="hapusMenuHari(' + it.hari_ke + ')" class="mt-0.5 text-[10px] text-red-500 hover:text-red-700 w-full">hapus</button>' : '') +
+              '</th>';
           }).join('')}
         </tr></thead><tbody>
           ${ROW_KEYS.map(rk => {
@@ -771,7 +783,8 @@ async function openSiklusForm(editing) {
       var hk = Number(hkKeys[i]), day = gd[hk];
       if (!day) continue;
       var hasAnyBahan = rowKeys.some(function(rk) { return (day.bahan[rk] || []).length > 0; });
-      if (!hasAnyBahan) continue;
+      var hasMenu = !!day.menu_id;
+      if (!hasAnyBahan && !hasMenu) continue;
       items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: day.menu_id || '', menu_nama: day.menu_nama || '', jumlah_porsi: 0 });
       for (var ri = 0; ri < rowKeys.length; ri++) {
         var rk = rowKeys[ri], ids = (day.bahan[rk] || []).map(function(b) { return b.id; });
@@ -1058,6 +1071,85 @@ async function saveStandarSp() {
     if (btn) { btn.disabled = false; btn.innerHTML = 'Simpan Perubahan'; btn.classList.remove('opacity-60'); }
     showToast('Gagal menyimpan: ' + e.message, 'error');
   }
+}
+
+// ===== Pilih Menu untuk Siklus =====
+function escHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+async function openMenuPickerForDay(hk) {
+  try {
+    var menus = await api.get('/menu');
+    var list = Array.isArray(menus) ? menus : (menus.data || []);
+    if (!list.length) {
+      showAlert('Belum ada menu. Buat menu terlebih dahulu di halaman Menu.', 'warning');
+      return;
+    }
+    var html = '<div class="p-3"><div class="font-bold text-sm mb-3 text-stone-700">Pilih Menu — Hari ' + hk + '</div>';
+    html += '<div class="max-h-[300px] overflow-y-auto space-y-1">';
+    var gd = window._gridData;
+    var currentMenuId = gd[hk] ? gd[hk].menu_id || '' : '';
+    for (var i = 0; i < list.length; i++) {
+      var m = list[i];
+      var sel = String(m.id) === String(currentMenuId) ? ' checked' : '';
+      html += '<label class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-emerald-50 cursor-pointer border border-transparent hover:border-emerald-200 transition-all' + (sel ? ' bg-emerald-50 border-emerald-200' : '') + '">' +
+        '<input type="radio" name="menu-pick" value="' + m.id + '" data-nama="' + escHtml(m.nama) + '"' + sel + ' class="text-emerald-600 focus:ring-emerald-500">' +
+        '<div><div class="text-sm font-medium text-stone-800">' + escHtml(m.nama) + '</div>' +
+        '<div class="text-xs text-stone-400">' + (m.kategori_penerima || '-') + (m.gramasi_total ? ' | ' + m.gramasi_total + 'g' : '') + '</div></div></label>';
+    }
+    html += '</div>';
+    html += '<div class="flex justify-end gap-2 mt-3 pt-3 border-t border-stone-100">' +
+      '<button onclick="closeMenuPicker()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Batal</button>' +
+      '<button onclick="simpanMenuHari(' + hk + ')" class="px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg">Pilih</button></div></div>';
+    showModal('Pilih Menu', html, 'max-w-md');
+  } catch (e) {
+    showAlert('Gagal memuat menu: ' + e.message, 'error');
+  }
+}
+
+function closeMenuPicker() {
+  var m = document.getElementById('siklus-modal');
+  if (m) m.remove();
+}
+
+function simpanMenuHari(hk) {
+  var m = document.getElementById('siklus-modal');
+  if (!m) return;
+  var selected = m.querySelector('input[name="menu-pick"]:checked');
+  if (!selected) { showAlert('Pilih menu terlebih dahulu', 'warning'); return; }
+  var gd = window._gridData;
+  if (!gd[hk]) return;
+  gd[hk].menu_id = selected.value;
+  gd[hk].menu_nama = selected.getAttribute('data-nama');
+  // Kosongkan resep_map per kategori agar bisa diisi ulang dari menu
+  gd[hk].resep_map = {};
+  window._gridDirty = true;
+  closeMenuPicker();
+  renderSiklusFormAfterPick();
+}
+
+function hapusMenuHari(hk) {
+  var gd = window._gridData;
+  if (!gd[hk]) return;
+  gd[hk].menu_id = '';
+  gd[hk].menu_nama = '';
+  window._gridDirty = true;
+  renderSiklusFormAfterPick();
+}
+
+function renderSiklusFormAfterPick() {
+  var curNama = (document.getElementById('sk-nama')?.value) || '';
+  var curKat = (document.getElementById('sk-kategori')?.value) || '';
+  var curStatus = (document.getElementById('sk-status')?.value) || 'Draft';
+  var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
+  var items = hkKeys.map(function(hk) {
+    var d = window._gridData[Number(hk)];
+    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
+  });
+  openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, items: items });
 }
 
 // ===== Karyawan =====
