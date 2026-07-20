@@ -838,7 +838,7 @@ async function openSiklusMenuPicker() {
             '<span class="text-sm truncate">' + escHtml(n.nama) + '</span>' +
           '</div>';
         } else {
-          html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + '\',\'' + escHtml(s.kategori_penerima || '') + '\')" class="w-full text-left px-4 py-2 hover:bg-stone-50 transition-colors">' +
+          html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + '\',\'' + escHtml(s.kategori_penerima || '') + '\',\'' + encodeURIComponent(JSON.stringify(n.bahan || [])) + '\')" class="w-full text-left px-4 py-2 hover:bg-stone-50 transition-colors">' +
             '<div class="flex items-center gap-2 pl-4">' +
             '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
             '<span class="text-xs text-stone-500 shrink-0 w-14">' + n.hari_nama + '</span>' +
@@ -874,11 +874,100 @@ async function openSiklusMenuPicker() {
   }
 }
 
-function selectSiklusMenuName(nama, kategori) {
+async function selectSiklusMenuName(nama, kategori, bahanEncoded) {
   document.getElementById('m-nama').value = nama;
   if (kategori) {
     var katSelect = document.getElementById('m-kategori');
-    if (katSelect) { katSelect.value = kategori; loadSpMap(kategori); }
+    if (katSelect) { katSelect.value = kategori; await loadSpMap(kategori); }
+  }
+  // Isi bahan dari siklus jika ada
+  if (bahanEncoded) {
+    try {
+      var bahanList = JSON.parse(decodeURIComponent(bahanEncoded));
+      if (Array.isArray(bahanList) && bahanList.length > 0) {
+        window._menuBahan = [];
+        // Proses setiap bahan: lookup dari sp_ref atau bahan_baku
+        var pendingBahan = bahanList.map(function(b) {
+          return new Promise(function(resolve) {
+            var namaBahan = b.nama;
+            // Skip placeholder untuk bahan yang sudah dihapus
+            if (namaBahan === '(bahan dihapus)' || !namaBahan) { resolve(); return; }
+            
+            var ref = window._spRefMap && window._spRefMap[namaBahan];
+            var bb = (window._bahanBaku || []).find(function(x) { 
+              return x.nama && x.nama.toLowerCase() === namaBahan.toLowerCase(); 
+            });
+            
+            // Tentukan kategori_sp dan berat_1_sp
+            var kat = '';
+            var berat1Sp = 0;
+            var persenBdd = 100;
+            var kalori = 0, protein = 0, karbohidrat = 0, lemak = 0, serat = 0;
+            
+            if (ref) {
+              var spItem = (window._spRefList || []).find(function(r) { return r.nama === namaBahan; });
+              if (spItem) kat = spItem.kategori || '';
+              berat1Sp = ref.berat_bersih || 0;
+              persenBdd = Math.round(ref.bdd_persen * 100) || 100;
+              kalori = ref.energi || 0;
+              protein = ref.protein || 0;
+              karbohidrat = ref.karbohidrat || 0;
+              lemak = ref.lemak || 0;
+              serat = ref.serat || 0;
+            } else if (bb) {
+              kat = bb.kategori_sp || '';
+              berat1Sp = bb.berat_1_sp || 0;
+              persenBdd = bb.persen_bdd || 100;
+              kalori = bb.kalori || 0;
+              protein = bb.protein || 0;
+              karbohidrat = bb.karbohidrat || 0;
+              lemak = bb.lemak || 0;
+              serat = bb.serat || 0;
+            }
+            
+            var perPorsi = window._spMap && window._spMap[kat] ? window._spMap[kat] * (berat1Sp || 0) : 0;
+            
+            // Auto-create bahan_baku jika belum ada
+            function addBahan(bahanId) {
+              window._menuBahan.push({
+                bahan_baku_id: bahanId || '',
+                nama: namaBahan, satuan: 'g', jumlah: perPorsi,
+                kategori_sp: kat, berat_1_sp: berat1Sp,
+                persen_bdd: persenBdd, berat_per_satuan: berat1Sp,
+                kalori: kalori, protein: protein,
+                karbohidrat: karbohidrat, lemak: lemak, serat: serat,
+                _autoJumlah: perPorsi
+              });
+              resolve();
+            }
+            
+            if (bb) {
+              addBahan(bb.id);
+            } else {
+              // Auto-create di bahan_baku
+              api.post('/bahan_baku', {
+                nama: namaBahan, satuan: 'g', kategori_sp: kat,
+                berat_1_sp: berat1Sp, persen_bdd: persenBdd,
+                berat_per_satuan: berat1Sp,
+                kalori: kalori, protein: protein, karbohidrat: karbohidrat,
+                lemak: lemak, serat: serat
+              }).then(function(created) {
+                window._bahanBaku.push(created);
+                addBahan(created.id);
+              }).catch(function() {
+                addBahan('');
+              });
+            }
+          });
+        });
+        await Promise.all(pendingBahan);
+        renderBahanList();
+        hitungNutrisi();
+        hitungGramasiBesarKecil();
+      }
+    } catch (e) {
+      console.error('Gagal parse bahan dari siklus:', e);
+    }
   }
   closeSiklusMenuPicker();
   showToast('Nama diambil dari siklus: ' + nama, 'success');

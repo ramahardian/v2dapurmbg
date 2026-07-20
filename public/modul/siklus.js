@@ -1101,7 +1101,8 @@ async function openSiklusRecipePicker() {
             '<span class="text-sm truncate">' + escHtml(n.nama) + '</span>' +
           '</div>';
         } else {
-          html += '<button type="button" onclick="pilihResepDariSiklus(' + n.hari_ke + ',\'' + escHtml(n.kategori_sp || '') + '\',\'' + escHtml(n.nama) + '\')" class="w-full text-left px-4 py-2 hover:bg-stone-50 transition-colors">' +
+          var bahanJson = JSON.stringify(n.bahan || []);
+          html += '<button type="button" onclick="pilihResepDariSiklus(' + n.hari_ke + ',\'' + escHtml(n.kategori_sp || '') + '\',\'' + escHtml(n.nama) + '\',\'' + bahanJson.replace(/'/g, "\\'") + '\')" class="w-full text-left px-4 py-2 hover:bg-stone-50 transition-colors">' +
             '<div class="flex items-center gap-2 pl-4">' +
             '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
             '<span class="text-xs text-stone-500 shrink-0 w-14">' + escHtml(n.hari_nama || '') + '</span>' +
@@ -1141,7 +1142,33 @@ function closeSiklusRecipePicker() {
   if (m) m.remove();
 }
 
-function pilihResepDariSiklus(hariKe, kategoriSp, namaResep) {
+function refreshGridSection(hariKe, kategoriSp) {
+  var gd = window._gridData;
+  if (!gd || !gd[hariKe]) return;
+  var bahan = gd[hariKe].bahan[kategoriSp] || [];
+  var rowIdx = ROW_KEYS.indexOf(kategoriSp);
+  if (rowIdx < 0) return;
+  var table = document.querySelector('#content table');
+  if (!table) return;
+  var rows = table.querySelectorAll('tbody tr');
+  var cell = rows[rowIdx] && rows[rowIdx].cells[hariKe];
+  if (!cell) return;
+  var clrMap = {Karbohidrat:'amber','Protein Hewani':'rose','Protein Nabati':'emerald',Sayur:'green',Buah:'orange',Susu:'blue'};
+  var clr = clrMap[kategoriSp] || 'stone';
+  var html = '<div class="flex flex-wrap gap-1">';
+  if (bahan.length) {
+    for (var bi = 0; bi < bahan.length; bi++) {
+      html += '<span class="inline-flex items-center gap-1 bg-' + clr + '-100 text-' + clr + '-700 px-2 py-0.5 rounded-md text-xs font-medium">' + escHtml(bahan[bi].nama) + '</span>';
+    }
+  } else {
+    html += '<span class="text-xs text-stone-300 italic">+ tambah</span>';
+  }
+  html += '</div>';
+  cell.innerHTML = html;
+}
+
+function pilihResepDariSiklus(hariKe, kategoriSp, namaResep, bahanStr) {
+  // Fill identifikasi resep input
   var inputs = document.querySelectorAll('input[data-field="resep"]');
   for (var i = 0; i < inputs.length; i++) {
     var inp = inputs[i];
@@ -1150,7 +1177,21 @@ function pilihResepDariSiklus(hariKe, kategoriSp, namaResep) {
       break;
     }
   }
+  // Fill grid bahan for this day & category — hanya jika ada bahan yang valid
+  if (bahanStr) {
+    try {
+      var bahan = JSON.parse(bahanStr);
+      if (Array.isArray(bahan) && bahan.length > 0) {
+        var gd = window._gridData;
+        if (gd && gd[hariKe] && gd[hariKe].bahan) {
+          gd[hariKe].bahan[kategoriSp] = bahan;
+          window._gridDirty = true;
+        }
+      }
+    } catch (e) {}
+  }
   closeSiklusRecipePicker();
+  refreshGridSection(hariKe, kategoriSp);
   showToast('Nama resep diambil: ' + namaResep, 'success');
 }
 

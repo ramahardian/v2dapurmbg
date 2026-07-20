@@ -413,12 +413,13 @@ router.get('/siklus/recipe-names', async (req, res) => {
     );
 
     // Ambil bahan per hari_ke + kategori_sp
+    // Gunakan LEFT JOIN agar bahan tetap terbaca meskipun sudah dihapus dari tabel bahan_baku
     const [bahanRows] = await db.query(
-      `SELECT b.siklus_id, b.hari_ke, b.kategori_sp, b.bahan_baku_id, bk.nama AS bahan_nama
+      `SELECT b.siklus_id, b.hari_ke, b.kategori_sp, b.bahan_baku_id, COALESCE(bk.nama, '(bahan dihapus)') AS bahan_nama
        FROM siklus_menu_item_bahan b
-       JOIN bahan_baku bk ON b.bahan_baku_id = bk.id
+       LEFT JOIN bahan_baku bk ON b.bahan_baku_id = bk.id
        WHERE b.siklus_id=?
-       ORDER BY b.hari_ke, b.kategori_sp, bk.nama`,
+       ORDER BY b.hari_ke, b.kategori_sp, COALESCE(bk.nama, '')`,
       [s.id]
     );
     const bahanMap = {};
@@ -1194,10 +1195,11 @@ router.get('/siklus/:id/bahan-grid', async (req, res) => {
 
   const KAT_ORDER = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
 
+  // Gunakan LEFT JOIN agar bahan tetap muncul meskipun sudah dihapus dari tabel bahan_baku
   const [gridRows] = await db.query(
-    `SELECT sb.hari_ke, sb.kategori_sp, sb.bahan_baku_id, b.nama
+    `SELECT sb.hari_ke, sb.kategori_sp, sb.bahan_baku_id, COALESCE(b.nama, '(bahan dihapus)') AS nama
      FROM siklus_menu_item_bahan sb
-     JOIN bahan_baku b ON b.id = sb.bahan_baku_id
+     LEFT JOIN bahan_baku b ON b.id = sb.bahan_baku_id
      WHERE sb.siklus_id=?
      ORDER BY sb.hari_ke, sb.kategori_sp`,
     [req.params.id]
