@@ -506,6 +506,133 @@ router.get('/siklus/recipe-names', async (req, res) => {
 });
 
 /**
+ * GET /siklus/cek-resep-map
+ * Menampilkan data resep_map dari siklus_menu_item dalam format HTML.
+ * Bisa diakses dari browser untuk debugging.
+ */
+router.get('/siklus/cek-resep-map', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        si.id,
+        si.siklus_id,
+        sm.nama AS siklus_nama,
+        si.hari_ke,
+        si.hari_nama,
+        si.menu_nama,
+        si.resep_map
+      FROM siklus_menu_item si
+      JOIN siklus_menu sm ON sm.id = si.siklus_id
+      WHERE si.resep_map IS NOT NULL AND si.resep_map != '' AND si.resep_map != '{}'
+        AND sm.tenant_id=?
+      ORDER BY sm.id DESC, si.hari_ke ASC
+    `, [req.user.tenant_id]);
+
+    // Stats
+    const [stats] = await db.query(`
+      SELECT 
+        COUNT(*) AS total_item,
+        SUM(CASE WHEN resep_map IS NULL OR resep_map = '' OR resep_map = '{}' THEN 1 ELSE 0 END) AS kosong,
+        SUM(CASE WHEN resep_map IS NOT NULL AND resep_map != '' AND resep_map != '{}' THEN 1 ELSE 0 END) AS terisi
+      FROM siklus_menu_item
+    `);
+
+    // Items with grid bahan but no resep_map
+    const [gridItems] = await db.query(`
+      SELECT DISTINCT si.siklus_id, sm.nama AS siklus_nama, si.hari_ke, si.hari_nama, si.menu_nama
+      FROM siklus_menu_item si
+      JOIN siklus_menu sm ON sm.id = si.siklus_id AND sm.tenant_id=?
+      WHERE EXISTS (
+        SELECT 1 FROM siklus_menu_item_bahan sb 
+        WHERE sb.siklus_id = si.siklus_id AND sb.hari_ke = si.hari_ke
+      )
+      AND (si.resep_map IS NULL OR si.resep_map = '' OR si.resep_map = '{}')
+      ORDER BY sm.id DESC, si.hari_ke ASC
+    `, [req.user.tenant_id]);
+
+    let html = `<!DOCTYPE html><html><head>
+      <meta charset="utf-8">
+      <title>Cek Resep Map</title>
+      <script src="https://cdn.tailwindcss.com"></script>
+    </head><body class="bg-stone-50 p-6 font-sans">
+      <div class="max-w-5xl mx-auto">
+        <h1 class="text-2xl font-bold text-stone-800 mb-2">📋 Data resep_map</h1>
+        <div class="flex gap-3 mb-6">
+          <span class="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">Total: ${stats[0].total_item} item</span>
+          <span class="bg-emerald-100 text-emerald-800 text-sm px-3 py-1 rounded-full">Terisi: ${stats[0].terisi}</span>
+          <span class="bg-stone-100 text-stone-600 text-sm px-3 py-1 rounded-full">Kosong: ${stats[0].kosong}</span>
+        </div>`;
+
+    if (gridItems.length) {
+      html += `<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+        <h3 class="font-semibold text-amber-800 mb-2">⚠️ Item dengan grid bahan TAPI tanpa resep_map (${gridItems.length})</h3>
+        <p class="text-sm text-amber-700 mb-2">Item ini seharusnya dapat grid-based resep dari fix terbaru</p>
+        <ul class="space-y-1">`;
+      for (const r of gridItems) {
+        html += `<li class="text-sm text-amber-800">• ${escHtml(r.siklus_nama)} | H${r.hari_ke} (${r.hari_nama}) | Menu: ${escHtml(r.menu_nama || '-')}</li>`;
+      }
+      html += `</ul></div>`;
+    }
+
+    if (!rows.length) {
+      html += `<div class="bg-stone-100 border border-stone-200 rounded-xl p-8 text-center text-stone-500">Tidak ada data resep_map yang terisi.</div>`;
+    } else {
+      for (const r of rows) {
+        html += `<div class="bg-white border border-stone-200 rounded-xl overflow-hidden mb-4">
+          <div class="px-4 py-3 bg-stone-50 border-b border-stone-200 flex items-center gap-3">
+            <span class="font-semibold text-stone-700">${escHtml(r.siklus_nama)}</span>
+            <span class="text-xs text-stone-400">Siklus #${r.siklus_id}</span>
+            <span class="text-xs text-stone-400">H${r.hari_ke} (${r.hari_nama})</span>
+            <span class="text-xs text-stone-500 ml-auto">Item ID: ${r.id}</span>
+          </div>
+          <div class="p-4">
+            <div class="text-sm text-stone-500 mb-2">Menu: <span class="font-medium text-stone-700">${escHtml(r.menu_nama || '-')}</span></div>
+            <div class="text-sm text-stone-500 mb-2">resep_map (TEXT):</div>
+            <pre class="bg-stone-100 p-3 rounded-lg text-xs overflow-x-auto mb-3">${escHtml(r.resep_map)}</pre>
+            <div class="text-sm text-stone-500 mb-2">resep_map (PARSED):</div>`;
+
+        try {
+          const parsed = typeof r.resep_map === 'string' ? JSON.parse(r.resep_map) : r.resep_map;
+          html += `<div class="space-y-1">`;
+          for (const [kat, nama] of Object.entries(parsed)) {
+            if (nama && nama.trim()) {
+              html += `<div class="flex items-center gap-2 text-sm">
+                <span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-medium w-28 text-center">${escHtml(kat)}</span>
+                <span class="text-stone-700">→ ${escHtml(nama)}</span>
+                <span class="text-[10px] text-stone-400">(akan tampil sebagai green "Resep" item)</span>
+              </div>`;
+            } else {
+              html += `<div class="flex items-center gap-2 text-sm text-stone-400">
+                <span class="bg-stone-100 text-stone-400 text-[10px] px-2 py-0.5 rounded-full font-medium w-28 text-center">${escHtml(kat)}</span>
+                <span class="italic">(kosong)</span>
+              </div>`;
+            }
+          }
+          html += `</div>`;
+        } catch (e) {
+          html += `<div class="text-red-600 text-sm">⚠️ Gagal parse JSON: ${escHtml(e.message)}</div>`;
+        }
+        html += `</div></div>`;
+      }
+    }
+
+    html += `
+      <div class="text-center py-4 text-xs text-stone-400">
+        <a href="/menu" class="text-blue-600 hover:underline">← Kembali ke Menu</a>
+      </div>
+    </div></body></html>`;
+
+    res.send(html);
+  } catch (e) {
+    res.status(500).send(`<div class="p-8 text-red-600">Error: ${escHtml(e.message)}</div>`);
+  }
+});
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+/**
  * GET /siklus/:id
  * Mengambil data header siklus beserta detail item per hari.
  */
