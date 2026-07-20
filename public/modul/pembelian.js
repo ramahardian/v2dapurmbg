@@ -132,6 +132,9 @@ async function openBuatPrForm() {
   const now = new Date();
   const defaultPeriode = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
 
+  // Hitung max total_hari dari semua siklus untuk default range
+  var maxHari = Math.max(...siklusList.filter(s => s.status === 'Aktif').map(s => Number(s.total_hari) || 7), 7);
+
   document.getElementById('modal-title').textContent = 'Buat Purchase Request';
   document.getElementById('modal-body').innerHTML = `
     <div class="space-y-3">
@@ -142,17 +145,55 @@ async function openBuatPrForm() {
       <div>
         <label class="text-sm font-medium">Pilih Siklus</label>
         <div class="mt-1 space-y-1 max-h-48 overflow-y-auto border border-stone-200 rounded-lg p-2">
-          ${siklusList.filter(s => s.status === 'Aktif').map(s => `
+          ${siklusList.filter(s => s.status === 'Aktif').map((s, i) => `
             <label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-1.5 rounded">
-              <input type="checkbox" class="pr-siklus-check" value="${s.id}" checked>
-              <span class="text-sm">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi)</span>
+              <input type="checkbox" class="pr-siklus-check" value="${s.id}" data-hari="${Number(s.total_hari) || 7}" checked>
+              <span class="text-sm">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi, ${Number(s.total_hari) || 7} hari)</span>
             </label>
           `).join('')}
         </div>
         <p class="text-xs text-stone-400 mt-1">Kosongkan pilihan untuk menggunakan semua siklus Aktif</p>
       </div>
+      <div class="flex gap-2">
+        <div class="flex-1">
+          <label class="text-sm font-medium">Hari Mulai</label>
+          <input id="pr-hari-mulai" type="number" min="1" value="1" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+        </div>
+        <div class="flex-1">
+          <label class="text-sm font-medium">Hari Selesai</label>
+          <input id="pr-hari-selesai" type="number" min="1" value="${maxHari}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+        </div>
+      </div>
+      <p class="text-xs text-stone-400" id="pr-hari-info">Rentang hari 1 — ${maxHari}</p>
       <div id="pr-preview" class="text-sm text-stone-500">Klik "Generate PR" untuk menghitung kebutuhan bahan...</div>
     </div>`;
+
+  // Update hari selesai saat checkbox siklus berubah
+  document.querySelectorAll('.pr-siklus-check').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      var checked = document.querySelectorAll('.pr-siklus-check:checked');
+      var maxHari = Math.max(1, ...Array.from(checked).map(function(c) { return Number(c.dataset.hari || 7); }));
+      var selesaiEl = document.getElementById('pr-hari-selesai');
+      if (selesaiEl) selesaiEl.max = maxHari;
+      if (Number(selesaiEl.value) > maxHari) selesaiEl.value = maxHari;
+      var infoEl = document.getElementById('pr-hari-info');
+      if (infoEl) infoEl.textContent = 'Rentang hari 1 — ' + maxHari;
+    });
+  });
+
+  // Update info saat input range berubah
+  document.getElementById('pr-hari-mulai').addEventListener('input', function() {
+    var selesai = document.getElementById('pr-hari-selesai');
+    if (this.value && selesai.value && Number(this.value) > Number(selesai.value)) {
+      selesai.value = this.value;
+    }
+  });
+  document.getElementById('pr-hari-selesai').addEventListener('input', function() {
+    var mulai = document.getElementById('pr-hari-mulai');
+    if (this.value && mulai.value && Number(this.value) < Number(mulai.value)) {
+      mulai.value = this.value;
+    }
+  });
 
   const saveBtn = document.getElementById('modal-save');
   saveBtn.textContent = 'Generate PR';
@@ -178,6 +219,8 @@ async function generatePr() {
     const ids = Array.from(checked).map(cb => parseInt(cb.value));
     const body = { periode };
     if (ids.length) body.siklus_ids = ids;
+    body.hari_mulai = parseInt(document.getElementById('pr-hari-mulai').value) || 1;
+    body.hari_selesai = parseInt(document.getElementById('pr-hari-selesai').value) || 999;
 
     const result = await api.post('/siklus/buat-pr', body);
 
@@ -196,6 +239,7 @@ async function generatePr() {
     preview.innerHTML = `
       <div class="border border-stone-200 rounded-lg overflow-hidden">
         <div class="bg-emerald-50 px-3 py-2 text-sm text-emerald-800 font-medium">✅ ${result.message}</div>
+        ${result.total_hari ? '<div class="px-3 py-1.5 text-xs text-stone-500 bg-stone-50 border-t border-stone-200">Hari produksi: ' + result.hari_mulai + ' — ' + result.hari_selesai + ' (total ' + result.total_hari + ' hari)</div>' : ''}
         ${budgetHtml}
         <table class="w-full text-sm">
           <thead class="bg-stone-50">

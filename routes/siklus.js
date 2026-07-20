@@ -2250,6 +2250,11 @@ router.post('/siklus/buat-pr', async (req, res) => {
       return res.status(404).json({ error: 'Tidak ada siklus ditemukan' });
     }
 
+    // Filter hari ke
+    const hariMulai = parseInt(req.body.hari_mulai) || 1;
+    const hariSelesai = parseInt(req.body.hari_selesai) || 999;
+    let totalHariIncluded = 0;
+
     // Ambil total penerima manfaat per kategori (real-time)
     const [pmByJenjang] = await db.query(
       `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang,
@@ -2316,8 +2321,9 @@ router.post('/siklus/buat-pr', async (req, res) => {
       // --- A. Menu-based ingredients ---
       const [items] = await db.query(
         `SELECT si.* FROM siklus_menu_item si
-         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL`,
-        [siklusId]
+         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL
+         AND si.hari_ke BETWEEN ? AND ?`,
+        [siklusId, hariMulai, hariSelesai]
       );
       if (items.length) hasItems = true;
 
@@ -2325,6 +2331,12 @@ router.post('/siklus/buat-pr', async (req, res) => {
       for (const it of items) {
         if (!menuPorsiMap[it.menu_id]) menuPorsiMap[it.menu_id] = 0;
         menuPorsiMap[it.menu_id] += penerimaCount;
+      }
+
+      // Hitung jumlah hari unik yang di-filter
+      if (items.length) {
+        const hariSet = new Set(items.map(it => it.hari_ke));
+        totalHariIncluded = Math.max(totalHariIncluded, hariSet.size);
       }
 
       const menuIds = Object.keys(menuPorsiMap);
@@ -2363,8 +2375,8 @@ router.post('/siklus/buat-pr', async (req, res) => {
                 bb.kode
          FROM siklus_menu_item_bahan smib
          JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
-         WHERE smib.siklus_id=?`,
-        [siklusId]
+         WHERE smib.siklus_id=? AND smib.hari_ke BETWEEN ? AND ?`,
+        [siklusId, hariMulai, hariSelesai]
       );
       const gridBahan = hariDenganMenu.size > 0
         ? gridBahanRaw.filter(gb => hariDenganMenu.has(gb.hari_ke))
@@ -2500,6 +2512,9 @@ router.post('/siklus/buat-pr', async (req, res) => {
       no_pr: noPR,
       item_count: bahanList.length,
       total_estimated: totalEstimated,
+      total_hari: totalHariIncluded,
+      hari_mulai: hariMulai,
+      hari_selesai: hariSelesai,
       items: bahanList.map(b => ({
         nama: b.nama,
         total_qty: b.total_qty,
@@ -2510,7 +2525,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
       })),
       siklus: siklusList.map(s => s.nama),
       budget_warning: budgetWarning,
-      message: 'PR ' + noPR + ' berhasil dibuat dengan ' + bahanList.length + ' item bahan' + (budgetWarning ? ' (⚠️ ' + budgetWarning.message + ')' : ''),
+      message: 'PR ' + noPR + ' berhasil dibuat dengan ' + bahanList.length + ' item bahan' + (totalHariIncluded ? ' untuk ' + totalHariIncluded + ' hari produksi' : '') + (budgetWarning ? ' (⚠️ ' + budgetWarning.message + ')' : ''),
     });
   } catch (err) {
     console.error('Buat PR error:', err);
