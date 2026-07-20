@@ -217,8 +217,7 @@ const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (
         }
       });
     } else {
-      // Tanpa pagination: return array biasa (backward compatible)
-      const [rows] = await db.query(`SELECT ${selectClause} FROM ${fromClause} ${whereClause} ${orderByClause}`, params);
+      const [rows] = await db.query(`SELECT ${selectClause} FROM ${fromClause} ${whereClause} ${orderByClause} LIMIT 500`, params);
       res.json(rows);
     }
   });
