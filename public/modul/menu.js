@@ -490,7 +490,7 @@ async function openMenuForm(editing) {
       karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
       lemak: +document.getElementById('m-lemak').value || 0,
       serat: +document.getElementById('m-serat').value || 0,
-      bahan: window._menuBahan.filter(function(b) { return (b.bahan_baku_id || b.nama) && (b.jumlah || b.kategori_sp); }),
+      bahan: window._menuBahan.filter(function(b) { return b.bahan_baku_id || b.nama; }),
     };
     if (editing) await api.put('/menu/' + editing.id, payload);
     else await api.post('/menu', payload);
