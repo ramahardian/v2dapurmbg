@@ -2367,7 +2367,9 @@ router.post('/siklus/buat-pr', async (req, res) => {
          WHERE smib.siklus_id=?`,
         [siklusId]
       );
-      const gridBahan = gridBahanRaw.filter(gb => hariDenganMenu.has(gb.hari_ke));
+      const gridBahan = hariDenganMenu.size > 0
+        ? gridBahanRaw.filter(gb => hariDenganMenu.has(gb.hari_ke))
+        : gridBahanRaw;
 
       if (gridBahan.length) {
         hasItems = true;

@@ -141,7 +141,9 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
          AND sm.tenant_id=?`,
         [...siklus_ids, req.user.tenant_id]
       );
-      const gridBahan = gridBahanRaw.filter(gb => hariDenganMenu.has(gb.siklus_id + '-' + gb.hari_ke));
+      const gridBahan = hariDenganMenu.size > 0
+        ? gridBahanRaw.filter(gb => hariDenganMenu.has(gb.siklus_id + '-' + gb.hari_ke))
+        : gridBahanRaw;
 
       if (gridBahan.length) {
         // Kumpulkan jenjang unik untuk ambil standar SP
@@ -365,7 +367,7 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
       }
 
       // --- B. Grid-based ingredients ---
-      // Hanya untuk hari_ke yang sudah punya menu/resep
+      // Hanya filter grid jika ada menu/resep yang terisi
       const hariDenganMenu = new Set(items.filter(it => it.menu_id).map(it => it.hari_ke));
       const [gridBahanRaw] = await db.query(
         `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
@@ -375,7 +377,9 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
          WHERE smib.siklus_id=?`,
         [s.id]
       );
-      const gridBahan = gridBahanRaw.filter(gb => hariDenganMenu.has(gb.hari_ke));
+      const gridBahan = hariDenganMenu.size > 0
+        ? gridBahanRaw.filter(gb => hariDenganMenu.has(gb.hari_ke))
+        : gridBahanRaw;
 
       if (gridBahan.length) {
         hasItems = true;
