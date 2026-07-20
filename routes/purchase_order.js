@@ -343,7 +343,7 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
         const mph = menuIds.map(() => '?').join(',');
         const [bahanRows] = await db.query(
           `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah, b.nama, b.satuan, b.harga_satuan,
-                  b.persen_bdd, b.kategori_sp
+                  b.persen_bdd, b.kategori_sp, b.berat_per_satuan
            FROM menu_bahan mb
            JOIN bahan_baku b ON b.id = mb.bahan_baku_id
            WHERE mb.menu_id IN (${mph})`,
@@ -360,7 +360,7 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
 
           const key = br.bahan_baku_id;
           if (!agg[key]) {
-            agg[key] = { bahan_baku_id: br.bahan_baku_id, nama: br.nama, satuan: br.satuan || 'g', harga_satuan: Number(br.harga_satuan) || 0, total_berat_kotor: 0 };
+            agg[key] = { bahan_baku_id: br.bahan_baku_id, nama: br.nama, satuan: br.satuan || 'g', harga_satuan: Number(br.harga_satuan) || 0, berat_per_satuan: Number(br.berat_per_satuan) || 0, total_berat_kotor: 0 };
           }
           agg[key].total_berat_kotor += beratKotor;
         }
@@ -371,7 +371,7 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
       const hariDenganMenu = new Set(items.filter(it => it.menu_id).map(it => it.hari_ke));
       const [gridBahanRaw] = await db.query(
         `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
-                bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp
+                bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp, bb.berat_per_satuan
          FROM siklus_menu_item_bahan smib
          JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
          WHERE smib.siklus_id=?`,
@@ -413,7 +413,7 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
 
           const key = gb.bahan_baku_id;
           if (!agg[key]) {
-            agg[key] = { bahan_baku_id: gb.bahan_baku_id, nama: gb.nama, satuan: gb.satuan || 'g', harga_satuan: Number(gb.harga_satuan) || 0, total_berat_kotor: 0 };
+            agg[key] = { bahan_baku_id: gb.bahan_baku_id, nama: gb.nama, satuan: gb.satuan || 'g', harga_satuan: Number(gb.harga_satuan) || 0, berat_per_satuan: Number(gb.berat_per_satuan) || 0, total_berat_kotor: 0 };
           }
           agg[key].total_berat_kotor += beratKotor;
         }
@@ -424,10 +424,20 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
       return res.status(400).json({ error: 'Tidak ada menu atau bahan di siklus yang dipilih' });
     }
 
-    // Format items ke kg + buffer 10%
+    // Format items — internal gram → konversi ke satuan display
     const poItems = Object.values(agg).filter(b => b.total_berat_kotor > 0).map(b => {
-      let qty = Math.round(b.total_berat_kotor / 1000 * 100) / 100;
-      let satuan = 'kg';
+      let qty = b.total_berat_kotor;
+      let satuan = b.satuan || 'g';
+      if (['gram', 'g', 'gr', 'kg'].includes(satuan.toLowerCase())) {
+        qty = Math.round(qty / 1000 * 100) / 100;
+        satuan = 'kg';
+      } else if (Number(b.berat_per_satuan) > 0) {
+        qty = qty / Number(b.berat_per_satuan);
+        qty = Math.round(qty);
+      } else {
+        qty = Math.round(qty / 1000 * 100) / 100;
+        satuan = 'kg';
+      }
       const buffer = Math.round(qty * 1.1 * 100) / 100;
       return {
         bahan_baku_id: b.bahan_baku_id,

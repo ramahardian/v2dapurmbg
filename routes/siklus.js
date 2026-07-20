@@ -2443,13 +2443,18 @@ router.post('/siklus/buat-pr', async (req, res) => {
     const bahanList = Object.values(agg).map(b => {
       let qty = b.total_qty;
       let satuan = b.satuan;
-      // weight-based satuan → kg
+      // Internal selalu gram → konversi ke satuan display
       if (['gram', 'g', 'gr', 'kg'].includes(b.satuan?.toLowerCase())) {
         qty = qty / 1000;
         satuan = 'kg';
       } else if (b.berat_per_satuan > 0) {
-        // count-based satuan (pcs, karton, etc.) → konversi dari gram ke satuan asli
+        // count-based satuan (pcs, karton, etc.): gram → count via berat_per_satuan
         qty = qty / b.berat_per_satuan;
+        qty = Math.round(qty);
+      } else {
+        // fallback: gram → kg jika berat_per_satuan tidak diketahui
+        qty = qty / 1000;
+        satuan = 'kg';
       }
       const buffer = Math.round(qty * 1.1 * 100) / 100;
       return {
