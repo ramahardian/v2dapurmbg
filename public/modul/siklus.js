@@ -1093,12 +1093,22 @@ async function openSiklusRecipePicker() {
         '<div class="divide-y divide-stone-100">';
       for (var ni = 0; ni < s.names.length; ni++) {
         var n = s.names[ni];
-        html += '<button type="button" onclick="pilihResepDariSiklus(' + n.hari_ke + ',\'' + escHtml(n.kategori_sp || '') + '\',\'' + escHtml(n.nama) + '\')" class="w-full text-left px-4 py-2.5 hover:bg-stone-50 transition-colors flex items-center gap-2">' +
-          '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
-          '<span class="text-xs text-stone-500 shrink-0 w-14">' + escHtml(n.hari_nama || '') + '</span>' +
-          '<span class="text-sm font-medium text-stone-800 truncate">' + escHtml(n.nama) + '</span>' +
-          (n.kategori_sp ? '<span class="text-[10px] text-stone-400 shrink-0 hidden sm:inline">(' + escHtml(n.kategori_sp) + ')</span>' : '') +
-        '</button>';
+        if (n.source === 'menu') {
+          html += '<div class="px-4 py-2 flex items-center gap-2 text-stone-400">' +
+            '<span class="text-xs shrink-0 w-8">H' + n.hari_ke + '</span>' +
+            '<span class="text-xs shrink-0 w-14">' + escHtml(n.hari_nama || '') + '</span>' +
+            '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-700 shrink-0">Menu</span>' +
+            '<span class="text-sm truncate">' + escHtml(n.nama) + '</span>' +
+          '</div>';
+        } else {
+          html += '<button type="button" onclick="pilihResepDariSiklus(' + n.hari_ke + ',\'' + escHtml(n.kategori_sp || '') + '\',\'' + escHtml(n.nama) + '\')" class="w-full text-left px-4 py-2 hover:bg-stone-50 transition-colors flex items-center gap-2">' +
+            '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
+            '<span class="text-xs text-stone-500 shrink-0 w-14">' + escHtml(n.hari_nama || '') + '</span>' +
+            '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-emerald-100 text-emerald-700 shrink-0">Resep</span>' +
+            '<span class="text-sm font-medium text-stone-800 truncate">' + escHtml(n.nama) + '</span>' +
+            (n.kategori_sp ? '<span class="text-[10px] text-stone-400 shrink-0 hidden sm:inline">(' + escHtml(n.kategori_sp) + ')</span>' : '') +
+          '</button>';
+        }
       }
       html += '</div></div>';
     }
