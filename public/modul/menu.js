@@ -885,8 +885,8 @@ async function selectSiklusMenuName(nama, kategori, bahanEncoded) {
     try {
       var bahanList = JSON.parse(decodeURIComponent(bahanEncoded));
       if (Array.isArray(bahanList) && bahanList.length > 0) {
-        window._menuBahan = [];
-        // Proses setiap bahan: lookup dari sp_ref atau bahan_baku
+        // Proses setiap bahan: kumpulkan dulu di array sementara, baru assign ke window
+        var newBahan = [];
         var pendingBahan = bahanList.map(function(b) {
           return new Promise(function(resolve) {
             var namaBahan = b.nama;
@@ -927,9 +927,8 @@ async function selectSiklusMenuName(nama, kategori, bahanEncoded) {
             
             var perPorsi = window._spMap && window._spMap[kat] ? window._spMap[kat] * (berat1Sp || 0) : 0;
             
-            // Auto-create bahan_baku jika belum ada
             function addBahan(bahanId) {
-              window._menuBahan.push({
+              newBahan.push({
                 bahan_baku_id: bahanId || '',
                 nama: namaBahan, satuan: 'g', jumlah: perPorsi,
                 kategori_sp: kat, berat_1_sp: berat1Sp,
@@ -961,6 +960,8 @@ async function selectSiklusMenuName(nama, kategori, bahanEncoded) {
           });
         });
         await Promise.all(pendingBahan);
+        // Assign array sementara ke window — hanya sekali setelah semua selesai
+        window._menuBahan = newBahan;
         renderBahanList();
         hitungNutrisi();
         hitungGramasiBesarKecil();
