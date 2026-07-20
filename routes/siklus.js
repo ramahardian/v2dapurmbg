@@ -429,22 +429,37 @@ router.get('/siklus/recipe-names', async (req, res) => {
       bahanMap[key].push({ id: br.bahan_baku_id, nama: br.bahan_nama });
     }
 
-    // Buat map per hari untuk aggregasi bahan dari grid picker
+    // Buat map per hari untuk aggregasi bahan dari grid picker (dengan kategori_sp)
     const bahanByDay = {};
     for (const br of bahanRows) {
       if (!bahanByDay[br.hari_ke]) bahanByDay[br.hari_ke] = [];
       if (!bahanByDay[br.hari_ke].some(function(b) { return b.id === br.bahan_baku_id; })) {
-        bahanByDay[br.hari_ke].push({ id: br.bahan_baku_id, nama: br.bahan_nama });
+        bahanByDay[br.hari_ke].push({ id: br.bahan_baku_id, nama: br.bahan_nama, kategori_sp: br.kategori_sp });
       }
     }
 
+    // Track which (hari_ke, kategori_sp) are already covered by resep_map entries
+    const resepCovered = new Set();
+
     const names = [];
     for (const it of items) {
+      // Track resep_map coverage so grid-based resep doesn't duplicate
+      if (it.resep_map) {
+        try {
+          const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
+          for (const kat of Object.keys(map)) {
+            resepCovered.add(it.hari_ke + '::' + kat);
+          }
+        } catch (e) {}
+      }
+
+      // 1. Menu items (from menu_nama) — import seluruh bahan hari itu
       if (it.menu_nama && it.menu_nama.trim()) {
-        // Lampirkan bahan dari grid picker untuk menu items
         const dayBahan = bahanByDay[it.hari_ke] || [];
         names.push({ source: 'menu', hari_ke: it.hari_ke, hari_nama: it.hari_nama, nama: it.menu_nama.trim(), bahan: dayBahan });
       }
+
+      // 2. Resep items (from resep_map) — per kategori dengan nama yang diisi user
       if (it.resep_map) {
         try {
           const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
@@ -455,6 +470,25 @@ router.get('/siklus/recipe-names', async (req, res) => {
             }
           }
         } catch (e) {}
+      }
+
+      // 3. Grid-based resep items — untuk kategori yang TIDAK ada di resep_map
+      //    Tapi hanya jika item tidak punya menu_nama (jika ada menu_nama, berarti user pilih "Ambil dari Menu")
+      //    Atau selalu generate jika ada bahan grid yang belum tercakup resep_map
+      for (const [key, bahan] of Object.entries(bahanMap)) {
+        const parts = key.split('::');
+        const hk = Number(parts[0]);
+        const kat = parts[1];
+        if (hk === it.hari_ke && !resepCovered.has(key)) {
+          names.push({
+            source: 'resep',
+            kategori_sp: kat,
+            hari_ke: it.hari_ke,
+            hari_nama: it.hari_nama,
+            nama: kat, // Gunakan nama kategori sebagai nama resep
+            bahan: bahan,
+          });
+        }
       }
     }
 

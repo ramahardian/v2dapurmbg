@@ -840,7 +840,7 @@ async function openSiklusMenuPicker() {
               '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-700 shrink-0">Menu</span>' +
               '<span class="text-sm font-medium text-stone-800 truncate">' + escHtml(n.nama) + '</span>' +
               '</div>' +
-              (n.bahan && n.bahan.length ? '<div class="pl-16 mt-0.5 space-y-0.5">' + n.bahan.map(function(b) { return '<div class="flex items-center gap-1.5 text-[11px] text-stone-400"><span class="w-1 h-1 rounded-full bg-stone-300 shrink-0"></span>' + escHtml(b.nama) + '</div>'; }).join('') + '</div>' : '') +
+              (n.bahan && n.bahan.length ? '<div class="pl-16 mt-0.5 space-y-0.5">' + n.bahan.map(function(b) { var katTag = b.kategori_sp ? ' <span class="text-[9px] text-stone-400/60">(' + escHtml(b.kategori_sp) + ')</span>' : ''; return '<div class="flex items-center gap-1.5 text-[11px] text-stone-400"><span class="w-1 h-1 rounded-full bg-stone-300 shrink-0"></span>' + escHtml(b.nama) + katTag + '</div>'; }).join('') + '</div>' : '') +
             '</button>';
           } else {
             html += '<div class="px-4 py-2 flex items-center gap-2 text-stone-400">' +
