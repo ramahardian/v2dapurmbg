@@ -2357,7 +2357,8 @@ router.post('/siklus/buat-pr', async (req, res) => {
       }
 
       // --- B. Grid-based ingredients (siklus_menu_item_bahan) ---
-      const [gridBahan] = await db.query(
+      const hariDenganMenu = new Set(items.filter(it => it.menu_id).map(it => it.hari_ke));
+      const [gridBahanRaw] = await db.query(
         `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
                 bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
                 bb.kode
@@ -2366,6 +2367,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
          WHERE smib.siklus_id=?`,
         [siklusId]
       );
+      const gridBahan = gridBahanRaw.filter(gb => hariDenganMenu.has(gb.hari_ke));
 
       if (gridBahan.length) {
         hasItems = true;

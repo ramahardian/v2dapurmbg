@@ -126,8 +126,10 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
     //    Jika satu cell (hari_ke+kategori_sp) punya >1 bahan, SP dibagi rata
     // ====================================================================
     if (siklus_ids.length) {
+      // Hanya untuk hari_ke yang sudah punya menu/resep
+      const hariDenganMenu = new Set(dayRows.map(r => r.siklus_id + '-' + r.hari_ke));
       // Ambil semua grid item untuk siklus yang dipilih
-      const [gridBahan] = await db.query(
+      const [gridBahanRaw] = await db.query(
         `SELECT smib.siklus_id, smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
                  bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
                  bb.kode as kode, bb.kategori_sp as bb_kategori_sp,
@@ -139,6 +141,7 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
          AND sm.tenant_id=?`,
         [...siklus_ids, req.user.tenant_id]
       );
+      const gridBahan = gridBahanRaw.filter(gb => hariDenganMenu.has(gb.siklus_id + '-' + gb.hari_ke));
 
       if (gridBahan.length) {
         // Kumpulkan jenjang unik untuk ambil standar SP
@@ -362,7 +365,9 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
       }
 
       // --- B. Grid-based ingredients ---
-      const [gridBahan] = await db.query(
+      // Hanya untuk hari_ke yang sudah punya menu/resep
+      const hariDenganMenu = new Set(items.filter(it => it.menu_id).map(it => it.hari_ke));
+      const [gridBahanRaw] = await db.query(
         `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
                 bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp
          FROM siklus_menu_item_bahan smib
@@ -370,6 +375,7 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
          WHERE smib.siklus_id=?`,
         [s.id]
       );
+      const gridBahan = gridBahanRaw.filter(gb => hariDenganMenu.has(gb.hari_ke));
 
       if (gridBahan.length) {
         hasItems = true;
