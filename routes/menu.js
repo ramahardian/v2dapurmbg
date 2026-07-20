@@ -476,21 +476,32 @@ router.get('/menu/by-siklus', async (req, res) => {
     [req.user.tenant_id]
   );
 
-  // 3. Untuk setiap siklus, ambil item dan menu yang dipakai
-  const siklusGroups = [];
+  // 3. Batch-load items untuk semua siklus
+  const siklusIds = siklusList.map(s => s.id);
+  const allItems = {};
   const usedMenuIds = new Set();
-
-  for (const s of siklusList) {
-    const [items] = await db.query(
-      `SELECT si.hari_ke, si.hari_nama, si.menu_id, si.menu_nama, si.jumlah_porsi, si.kalori, si.protein, si.karbohidrat, si.lemak, si.serat,
+  if (siklusIds.length) {
+    const ph = siklusIds.map(() => '?').join(',');
+    const [rows] = await db.query(
+      `SELECT si.siklus_id, si.hari_ke, si.hari_nama, si.menu_id, si.menu_nama, si.jumlah_porsi, si.kalori, si.protein, si.karbohidrat, si.lemak, si.serat,
               m.nama AS menu_nama_lengkap, m.gramasi_total, m.kategori_penerima AS menu_kategori
        FROM siklus_menu_item si
        LEFT JOIN menu m ON m.id = si.menu_id
-       WHERE si.siklus_id=?
-       ORDER BY si.hari_ke ASC`,
-      [s.id]
+       WHERE si.siklus_id IN (${ph})
+       ORDER BY si.siklus_id, si.hari_ke ASC`,
+      siklusIds
     );
+    for (const r of rows) {
+      if (!allItems[r.siklus_id]) allItems[r.siklus_id] = [];
+      allItems[r.siklus_id].push(r);
+      if (r.menu_id) usedMenuIds.add(r.menu_id);
+    }
+  }
 
+  // 4. Build siklus groups
+  const siklusGroups = [];
+  for (const s of siklusList) {
+    const items = allItems[s.id] || [];
     const days = items.map(it => ({
       hari_ke: it.hari_ke,
       hari_nama: it.hari_nama,
@@ -500,8 +511,6 @@ router.get('/menu/by-siklus', async (req, res) => {
       kalori: Number(it.kalori || it.kalori) || 0,
       gramasi_total: Number(it.gramasi_total) || 0,
     }));
-
-    if (it.menu_id) usedMenuIds.add(it.menu_id);
 
     siklusGroups.push({
       id: s.id,
@@ -569,6 +578,46 @@ router.get('/menu/:id', async (req, res) => {
     }
   });
   res.json(m);
+});
+
+/**
+ * GET /menu/batch?ids=1,2,3
+ * Batch load menu dengan bahan-nya untuk menghindari N+1 di frontend.
+ */
+router.get('/menu/batch', async (req, res) => {
+  const ids = (req.query.ids || '').split(',').map(Number).filter(Boolean);
+  if (!ids.length) return res.json({});
+  const ph = ids.map(() => '?').join(',');
+  const [rows] = await db.query(
+    `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat,
+        mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.keterangan
+     FROM menu m
+     LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
+     LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+     WHERE m.id IN (${ph}) AND m.tenant_id=?`,
+    [...ids, req.user.tenant_id]
+  );
+  const map = {};
+  for (const row of rows) {
+    if (!map[row.id]) {
+      map[row.id] = {
+        id: row.id, nama: row.nama, kategori_penerima: row.kategori_penerima,
+        deskripsi: row.deskripsi, gramasi_total: row.gramasi_total,
+        gramasi_besar: row.gramasi_besar, gramasi_kecil: row.gramasi_kecil,
+        kalori: row.kalori, protein: row.protein, karbohidrat: row.karbohidrat,
+        lemak: row.lemak, serat: row.serat, bahan: []
+      };
+    }
+    if (row.bahan_baku_id) {
+      map[row.id].bahan.push({
+        bahan_baku_id: row.bahan_baku_id, nama: row.bahan_nama, satuan: row.satuan,
+        kategori_sp: row.kategori_sp, berat_1_sp: row.berat_1_sp,
+        persen_bdd: row.persen_bdd, berat_per_satuan: row.berat_per_satuan,
+        jumlah: row.jumlah, keterangan: row.keterangan || ''
+      });
+    }
+  }
+  res.json(map);
 });
 
 // Hitung ulang nutrisi semua menu — prioritaskan sp_referensi_bahan, fallback ke bahan_baku

@@ -1846,6 +1846,14 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     spByJenjang[r.jenjang][r.kategori_sp] = Number(r.sp_value);
   }
 
+  // Batch-load all data before loops
+  const activeIds = activeSiklus.map(s => s.id);
+  const itemsBySiklus = await batchLoadItems(activeIds);
+  const bahanCountsBySiklus = await batchLoadBahanCounts(activeIds);
+  const allMenuIds = [...new Set(Object.values(itemsBySiklus).flatMap(arr => arr.filter(it => it.menu_id).map(it => it.menu_id)))];
+  const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
+  const gridBahanBySiklus = await batchLoadGridBahanBySiklus(activeIds);
+
   // 5. Build per-hari × per-jenjang × per-bahan data
   // Structure: { hari_ke: { "TK/PAUD": { bahan_nama: { kebutuhan_kg, ... } }, ... } }
   const hariMap = {};     // hari_ke → { jenjang_display → { bahan_nama → { kebutuhan_kg } } }
@@ -1866,24 +1874,13 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     const jenjangSp = spByJenjang[displayJenjang] || {};
 
     for (const s of matchingSiklus) {
-      // Ambil semua item — termasuk yang tanpa menu_id (item grid manual)
-      const [items] = await db.query(
-        `SELECT si.*, m.nama as menu_nama_lengkap
-         FROM siklus_menu_item si
-         LEFT JOIN menu m ON m.id = si.menu_id
-         WHERE si.siklus_id=?
-         ORDER BY si.hari_ke ASC`,
-        [s.id]
-      );
-
-      // Cek item mana yang punya bahan dari grid (siklus_menu_item_bahan)
-      const [bahanCounts] = await db.query(
-        'SELECT hari_ke, COUNT(*) as bahan_count FROM siklus_menu_item_bahan WHERE siklus_id=? GROUP BY hari_ke',
-        [s.id]
-      );
-      const bahanMap = {};
-      for (const bc of bahanCounts) {
-        bahanMap[bc.hari_ke] = bc.bahan_count;
+      const items = itemsBySiklus[s.id] || [];
+      const bahanMap = bahanCountsBySiklus[s.id] || {};
+      const gridBahan = gridBahanBySiklus[s.id] || [];
+      const gridByHari = {};
+      for (const gb of gridBahan) {
+        if (!gridByHari[gb.hari_ke]) gridByHari[gb.hari_ke] = [];
+        gridByHari[gb.hari_ke].push(gb);
       }
 
       for (const it of items) {
@@ -1905,23 +1902,9 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
 
         let bahanRows;
         if (it.menu_id) {
-          // Menu tradisional — ambil bahan dari menu_bahan
-          [bahanRows] = await db.query(
-            `SELECT b.id, b.nama, b.kategori_sp, b.persen_bdd, b.berat_1_sp, mb.jumlah as berat_bersih
-             FROM menu_bahan mb
-             JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-             WHERE mb.menu_id=?`,
-            [it.menu_id]
-          );
+          bahanRows = menuBahanMap[it.menu_id] || [];
         } else {
-          // Item grid manual — ambil bahan dari siklus_menu_item_bahan
-          [bahanRows] = await db.query(
-            `SELECT b.id, b.nama, b.kategori_sp, b.persen_bdd, b.berat_1_sp, 0 as berat_bersih
-             FROM siklus_menu_item_bahan sb
-             JOIN bahan_baku b ON b.id = sb.bahan_baku_id
-             WHERE sb.siklus_id=? AND sb.hari_ke=?`,
-            [s.id, it.hari_ke]
-          );
+          bahanRows = gridByHari[hk] || [];
         }
 
         for (const b of bahanRows) {

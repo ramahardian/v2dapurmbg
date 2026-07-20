@@ -12,18 +12,31 @@ const KAT_SP_LABELS = {
   'Minyak': { label: 'Minyak', color: 'text-yellow-700 bg-yellow-50' },
 };
 
+async function batchLoadMenuBreakdowns(menuIds) {
+  if (!menuIds || !menuIds.length) return {};
+  const unique = [...new Set(menuIds)];
+  try {
+    const data = await api.get('/menu/batch?ids=' + unique.join(','));
+    const result = {};
+    for (const menuId of unique) {
+      const menu = data[menuId];
+      if (!menu) continue;
+      const groups = {};
+      for (const b of (menu.bahan || [])) {
+        const kat = b.kategori_sp || 'Lainnya';
+        if (!groups[kat]) groups[kat] = [];
+        groups[kat].push(b);
+      }
+      result[menuId] = groups;
+    }
+    return result;
+  } catch { return {}; }
+}
+
 async function getMenuKategoriBreakdown(menuId) {
   if (!menuId) return null;
-  try {
-    const menu = await api.get('/menu/' + menuId);
-    const groups = {};
-    for (const b of (menu.bahan || [])) {
-      const kat = b.kategori_sp || 'Lainnya';
-      if (!groups[kat]) groups[kat] = [];
-      groups[kat].push(b);
-    }
-    return groups;
-  } catch { return null; }
+  const map = await batchLoadMenuBreakdowns([menuId]);
+  return map[menuId] || null;
 }
 
 function renderKategoriBreakdown(groups) {
@@ -217,10 +230,11 @@ async function loadSiklusDetail(id) {
       }
     } catch (e) { /* ignore */ }
   }
+  const menuIds = [...new Set(data.items.filter(it => it.menu_id).map(it => it.menu_id))];
+  const breakdownMap = await batchLoadMenuBreakdowns(menuIds);
   for (const it of data.items) {
     if (it.menu_id) {
-      // Item linked to an existing menu — fetch breakdown from menu API
-      const groups = await getMenuKategoriBreakdown(it.menu_id);
+      const groups = breakdownMap[it.menu_id];
       const el = document.getElementById('sk-dtl-bd-' + it.hari_ke);
       if (el) el.innerHTML = renderKategoriBreakdown(groups) || '<div class="text-stone-400 text-[10px]">Tidak ada data bahan</div>';
     } else if (it._has_bahan && bahanGrid && bahanGrid[it.hari_ke]) {
@@ -401,9 +415,11 @@ async function renderSiklusLaporan(id) {
       }
     } catch (e) { /* ignore */ }
   }
+  const menuIds = [...new Set(items.filter(it => it.menu_id).map(it => it.menu_id))];
+  const breakdownMap = await batchLoadMenuBreakdowns(menuIds);
   for (const it of items) {
     if (it.menu_id) {
-      const groups = await getMenuKategoriBreakdown(it.menu_id);
+      const groups = breakdownMap[it.menu_id];
       const el = document.getElementById('sk-lap-bd-' + id + '-' + it.hari_ke);
       if (el) el.innerHTML = renderKategoriBreakdown(groups) || '<div class="text-stone-400 text-[10px]">Tidak ada data bahan</div>';
     } else if (bahanGrid && bahanGrid[it.hari_ke]) {
