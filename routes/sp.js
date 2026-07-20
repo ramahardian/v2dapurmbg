@@ -165,7 +165,7 @@ router.post('/sp/hitung-kebutuhan', requireRole('admin', 'ahli_gizi', 'keuangan'
 
   const items = Object.values(agg).map(b => ({
     ...b,
-    kebutuhan_kg: fmtNum(penerima > 0 ? (b.total_berat_kotor * penerima / 1000) : (b.total_berat_kotor / 1000)),
+    kebutuhan_kg: fmtNum(b.total_berat_kotor / 1000),
     total_berat_kotor: b.total_berat_kotor,
   }));
 

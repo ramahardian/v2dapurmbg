@@ -1465,10 +1465,10 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
             const namaLower = b.nama.trim().toLowerCase();
             const spRef = spRefByName[namaLower];
             const persenBdd = spRef ? spRef.bdd_persen : Number(b.persen_bdd || 100);
-            const beratBersih = 0; // Grid assignments don't store weight — will be calculated from SP
+            const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || null) : null;
+            const beratBersih = spValue !== null ? (Number(b.berat_1_sp || 0) * spValue) : 0;
             const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
             const kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
-            const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || null) : null;
 
             let namaDisplay = b.nama;
             if (spValue !== null) {
@@ -2254,20 +2254,43 @@ router.post('/siklus/buat-pr', async (req, res) => {
     }
 
     // Ambil total penerima manfaat per kategori (real-time)
-    const [pmRows] = await db.query(
-      `SELECT COALESCE(kategori_penerima, 'Lainnya') AS kategori,
-              COALESCE(SUM(paket_besar + paket_kecil), 0) AS total
-       FROM penerima_manfaat
-       WHERE tenant_id = ?
+    const [pmByJenjang] = await db.query(
+      `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang,
+              COALESCE(SUM(paket_besar + paket_kecil), 0) AS total_penerima
+       FROM penerima_manfaat WHERE tenant_id=?
        GROUP BY kategori_penerima`,
       [t]
     );
-    const pmTotalByKategori = {};
-    for (const r of pmRows) pmTotalByKategori[r.kategori] = Number(r.total);
-    function getPenerimaCount(siklusKategori) {
-      const map = { 'TK/PAUD': 'TK/PAUD', 'SD 1-3': 'SD', 'SD 4-6': 'SD', 'SMP': 'SMP', 'SMA': 'SMA', 'Ibu Hamil': 'Ibu Hamil', 'Ibu Menyusui': 'Ibu Menyusui', 'Balita': 'Balita' };
-      const key = map[siklusKategori] || siklusKategori;
-      return pmTotalByKategori[key] || 0;
+
+    const JENJANG_DB_MAP = {
+      'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
+      'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+      'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
+      'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
+      'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
+      'Balita': ['Balita'],
+    };
+    const dbToDisplay = {};
+    for (const [display, dbVals] of Object.entries(JENJANG_DB_MAP)) {
+      for (const dv of dbVals) dbToDisplay[dv] = display;
+    }
+
+    const pmMap = {};
+    for (const p of pmByJenjang) {
+      const display = dbToDisplay[p.jenjang] || p.jenjang;
+      if (!pmMap[display]) pmMap[display] = { total_penerima: 0 };
+      pmMap[display].total_penerima += Number(p.total_penerima);
+    }
+
+    // SP Referensi Bahan untuk BDD override
+    const [spRefList] = await db.query(
+      'SELECT nama, bdd_persen FROM sp_referensi_bahan WHERE tenant_id=?',
+      [t]
+    );
+    const spRefByName = {};
+    for (const r of spRefList) {
+      const key = r.nama.trim().toLowerCase();
+      spRefByName[key] = Math.round(Number(r.bdd_persen || 0) * 100);
     }
 
     // Hitung hari kerja dalam periode
@@ -2288,7 +2311,8 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const totalHariSiklus = Number(s.total_hari) || 1;
       const scale = hariKerja / totalHariSiklus; // berapa kali siklus berulang dalam periode
       const kategoriPenerima = s.kategori_penerima || '';
-      const penerimaCount = getPenerimaCount(kategoriPenerima);
+      const displayJenjang = dbToDisplay[kategoriPenerima] || kategoriPenerima;
+      const penerimaCount = pmMap[displayJenjang]?.total_penerima || 0;
       if (!penerimaCount) continue;
 
       // --- A. Menu-based ingredients ---
@@ -2321,7 +2345,8 @@ router.post('/siklus/buat-pr', async (req, res) => {
           const porsi = menuPorsiMap[br.menu_id] || 0;
           if (!porsi) continue;
           const beratBersih = Number(br.jumlah) * porsi;
-          const bdd = Number(br.persen_bdd) || 100;
+          const spRefBdd = spRefByName[(br.bahan_nama || '').trim().toLowerCase()];
+          const bdd = spRefBdd || Number(br.persen_bdd) || 100;
           const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
 
           const key = br.bahan_baku_id;
@@ -2373,7 +2398,8 @@ router.post('/siklus/buat-pr', async (req, res) => {
           const bagi = cellCount[cellKey] || 1;
           const spPerBahan = spVal / bagi;
           const beratBersih = berat1Sp * spPerBahan * jumlahPorsi;
-          const bdd = Number(gb.persen_bdd || 100);
+          const spRefBdd = spRefByName[(gb.bahan_nama || '').trim().toLowerCase()];
+          const bdd = spRefBdd || Number(gb.persen_bdd || 100);
           const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
 
           const key = gb.bahan_baku_id;
