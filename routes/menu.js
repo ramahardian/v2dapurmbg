@@ -67,7 +67,7 @@ router.get('/menu', async (req, res) => {
   const bahanMap = {};
   if (menuIds.length > 0) {
     const [bahanRows] = await db.query(
-      `SELECT mb.menu_id, mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
+      `SELECT mb.menu_id, mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.keterangan
        FROM menu_bahan mb
        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
        WHERE mb.menu_id IN (${menuIds.map(() => '?').join(',')})`,
@@ -83,7 +83,8 @@ router.get('/menu', async (req, res) => {
         berat_1_sp: row.berat_1_sp,
         persen_bdd: row.persen_bdd,
         berat_per_satuan: row.berat_per_satuan,
-        jumlah: row.jumlah
+        jumlah: row.jumlah,
+        keterangan: row.keterangan || ''
       });
     });
   }
@@ -149,15 +150,37 @@ router.post('/menu', async (req, res) => {
     // 2. Jika ada data bahan baku, simpan ke tabel relasi (menu_bahan)
     let hasBahan = false;
     if (Array.isArray(bahan)) {
+      // Batch-load bahan_baku IDs untuk verifikasi nama
+      const bbCheckMap = {};
+      for (const b of bahan) {
+        const idB = Number(b.bahan_baku_id) || 0;
+        if (idB && b.nama) bbCheckMap[idB] = null;
+      }
+      if (Object.keys(bbCheckMap).length) {
+        const ids = Object.keys(bbCheckMap);
+        const [bbRows] = await conn.query(
+          `SELECT id, nama FROM bahan_baku WHERE id IN (${ids.map(() => '?').join(',')}) AND tenant_id=?`,
+          [...ids, req.user.tenant_id]
+        );
+        for (const r of bbRows) bbCheckMap[r.id] = r.nama;
+      }
+
       for (const b of bahan) {
         let idBahan = Number(b.bahan_baku_id) || 0;
+        // Smart lookup: jika ID diberikan, verifikasi nama cocok
+        // Jika ID tidak valid atau nama berubah, cari by nama
+        if (idBahan && b.nama && bbCheckMap[idBahan] !== undefined && bbCheckMap[idBahan] !== b.nama) {
+          // Nama berubah — cari by nama
+          const [newBb] = await conn.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [req.user.tenant_id, b.nama]);
+          idBahan = newBb.length ? newBb[0].id : 0; // fallback ke auto-create
+        }
         // Auto-create bahan_baku jika ID tidak ditemukan tapi nama tersedia
         if (!idBahan && b.nama) {
           const [existingBb] = await db.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [req.user.tenant_id, b.nama]);
           if (existingBb.length) {
             idBahan = existingBb[0].id;
           } else {
-            const [bbInsert] = await db.query(
+            const [bbInsert] = await conn.query(
               `INSERT INTO bahan_baku (tenant_id, nama, satuan, kategori_sp, berat_1_sp, persen_bdd, berat_per_satuan, kalori, protein, karbohidrat, lemak, serat)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
               [req.user.tenant_id, b.nama, b.satuan || 'g', b.kategori_sp || null,
@@ -178,7 +201,7 @@ router.post('/menu', async (req, res) => {
           jumlah = berat1Sp * spVal * (jumlahPorsi || 1);
         }
         if (jumlah > 0) {
-          await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)', [r.insertId, idBahan, jumlah]);
+          await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, keterangan) VALUES (?,?,?,?)', [r.insertId, idBahan, jumlah, b.keterangan || null]);
           hasBahan = true;
         }
       }
@@ -212,6 +235,28 @@ router.post('/menu', async (req, res) => {
           );
         }
       } catch (e2) { console.error('Gagal hitung nutrisi menu:', e2.message); }
+    }
+
+    // Sync siklus_menu_item_bahan jika menu dibuat dari siklus
+    const siklusSource = req.body.siklus_source;
+    if (siklusSource && siklusSource.siklus_id && Array.isArray(bahan)) {
+      try {
+        // Hapus existing siklus_menu_item_bahan untuk hari ini
+        await conn.query(
+          'DELETE FROM siklus_menu_item_bahan WHERE siklus_id=? AND hari_ke=?',
+          [siklusSource.siklus_id, siklusSource.hari_ke]
+        );
+        // Insert ulang dengan bahan terbaru dari form
+        for (const b of bahan) {
+          let idBahan = Number(b.bahan_baku_id) || 0;
+          if (idBahan) {
+            await conn.query(
+              'INSERT INTO siklus_menu_item_bahan (siklus_id, hari_ke, kategori_sp, bahan_baku_id) VALUES (?,?,?,?)',
+              [siklusSource.siklus_id, siklusSource.hari_ke, b.kategori_sp || null, idBahan]
+            );
+          }
+        }
+      } catch (e3) { console.error('Gagal sync siklus:', e3.message); }
     }
     
     await conn.commit(); // Permanenkan data ke database jika tidak ada error
@@ -268,13 +313,35 @@ router.put('/menu/:id', async (req, res) => {
       
     // 2. Perbarui detail bahan baku
     let hasBahan = false;
+    // 2. Perbarui detail bahan baku — delete & re-insert
     if (Array.isArray(f.bahan)) {
       // Hapus seluruh relasi bahan lama yang terkait dengan menu ini
       await conn.query('DELETE FROM menu_bahan WHERE menu_id=?', [req.params.id]);
       
+      // Batch-load bahan_baku IDs untuk verifikasi nama
+      const bbCheckMap = {};
+      for (const b of f.bahan) {
+        const idB = Number(b.bahan_baku_id) || 0;
+        if (idB && b.nama) bbCheckMap[idB] = null;
+      }
+      if (Object.keys(bbCheckMap).length) {
+        const ids = Object.keys(bbCheckMap);
+        const [bbRows] = await conn.query(
+          `SELECT id, nama FROM bahan_baku WHERE id IN (${ids.map(() => '?').join(',')}) AND tenant_id=?`,
+          [...ids, req.user.tenant_id]
+        );
+        for (const r of bbRows) bbCheckMap[r.id] = r.nama;
+      }
+
       // Masukkan ulang data bahan baku yang baru dikirimkan dari client
       for (const b of f.bahan) {
         let idBahan = Number(b.bahan_baku_id) || 0;
+        // Smart lookup: jika ID diberikan, verifikasi nama cocok
+        if (idBahan && b.nama && bbCheckMap[idBahan] !== undefined && bbCheckMap[idBahan] !== b.nama) {
+          // Nama berubah — cari by nama
+          const [newBb] = await conn.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [req.user.tenant_id, b.nama]);
+          idBahan = newBb.length ? newBb[0].id : 0; // fallback ke auto-create
+        }
         // Auto-create bahan_baku jika ID tidak ditemukan tapi nama tersedia
         if (!idBahan && b.nama) {
           const [existingBb] = await db.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [req.user.tenant_id, b.nama]);
@@ -302,7 +369,7 @@ router.put('/menu/:id', async (req, res) => {
           jumlah = berat1Sp * spVal * (jumlahPorsi || 1);
         }
         if (jumlah > 0) {
-          await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah) VALUES (?,?,?)', [req.params.id, idBahan, jumlah]);
+          await conn.query('INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, keterangan) VALUES (?,?,?,?)', [req.params.id, idBahan, jumlah, b.keterangan || null]);
           hasBahan = true;
         }
       }
@@ -337,6 +404,28 @@ router.put('/menu/:id', async (req, res) => {
           );
         }
       } catch (e2) { console.error('Gagal hitung nutrisi menu:', e2.message); }
+    }
+
+    // Sync siklus_menu_item_bahan jika menu diedit dari siklus
+    const siklusSource = f.siklus_source;
+    if (siklusSource && siklusSource.siklus_id && Array.isArray(f.bahan)) {
+      try {
+        // Hapus existing siklus_menu_item_bahan untuk hari ini
+        await conn.query(
+          'DELETE FROM siklus_menu_item_bahan WHERE siklus_id=? AND hari_ke=?',
+          [siklusSource.siklus_id, siklusSource.hari_ke]
+        );
+        // Insert ulang dengan bahan terbaru dari form
+        for (const b of f.bahan) {
+          let idBahan = Number(b.bahan_baku_id) || 0;
+          if (idBahan) {
+            await conn.query(
+              'INSERT INTO siklus_menu_item_bahan (siklus_id, hari_ke, kategori_sp, bahan_baku_id) VALUES (?,?,?,?)',
+              [siklusSource.siklus_id, siklusSource.hari_ke, b.kategori_sp || null, idBahan]
+            );
+          }
+        }
+      } catch (e3) { console.error('Gagal sync siklus:', e3.message); }
     }
     
     await conn.commit();
@@ -450,7 +539,7 @@ router.get('/menu/by-siklus', async (req, res) => {
 router.get('/menu/:id', async (req, res) => {
   const [menus] = await db.query(
     `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat,
-        mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah
+        mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.keterangan
         FROM menu m
         LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
         LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
@@ -476,7 +565,7 @@ router.get('/menu/:id', async (req, res) => {
   };
   menus.forEach(row => {
     if (row.bahan_baku_id) {
-      m.bahan.push({ bahan_baku_id: row.bahan_baku_id, nama: row.bahan_nama, satuan: row.satuan, kategori_sp: row.kategori_sp, berat_1_sp: row.berat_1_sp, persen_bdd: row.persen_bdd, berat_per_satuan: row.berat_per_satuan, jumlah: row.jumlah });
+      m.bahan.push({ bahan_baku_id: row.bahan_baku_id, nama: row.bahan_nama, satuan: row.satuan, kategori_sp: row.kategori_sp, berat_1_sp: row.berat_1_sp, persen_bdd: row.persen_bdd, berat_per_satuan: row.berat_per_satuan, jumlah: row.jumlah, keterangan: row.keterangan || '' });
     }
   });
   res.json(m);

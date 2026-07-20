@@ -261,7 +261,9 @@ function openForm(cfg, editing) {
     });
     if (editing) await api.put(cfg.endpoint + '/' + editing.id, payload);
     else await api.post(cfg.endpoint, payload);
-    closeModal(); reloadCrud(cfg);
+    closeModal();
+    if (cfg.onSaved) cfg.onSaved();
+    else reloadCrud(cfg);
   };
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');

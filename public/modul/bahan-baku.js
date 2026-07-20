@@ -4,6 +4,7 @@ const BAHAN_BAKU_CRUD_BASE = {
   groups: [
     { key: 'info', label: 'Informasi Dasar', cols: 2 },
     { key: 'harga_stok', label: 'Harga & Stok', cols: 2 },
+    { key: 'nutrisi', label: 'Nutrisi (per 100g)', cols: 2, ai: true },
   ],
   fields: [
     { k: 'kode', l: 'Kode SKU', group: 'info' },
@@ -14,8 +15,13 @@ const BAHAN_BAKU_CRUD_BASE = {
     { k: 'stok_saat_ini', l: 'Stok Saat Ini', type: 'number', fmt: 'num', group: 'harga_stok' },
     { k: 'stok_minimum', l: 'Stok Minimum', type: 'number', fmt: 'num', group: 'harga_stok' },
     { k: 'berat_per_satuan', l: 'Berat per Satuan (gram)', type: 'number', fmt: 'num', desc: 'Isi jika satuan bukan gram (misal 1 pcs = 50g, 1 ikat = 30g)', group: 'info' },
+    { k: 'kalori', l: 'Energi (kkal)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
+    { k: 'protein', l: 'Protein (g)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
+    { k: 'lemak', l: 'Lemak (g)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
+    { k: 'karbohidrat', l: 'Karbohidrat (g)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
+    { k: 'serat', l: 'Serat (g)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
   ],
-  cols: ['nama','kategori','kategori_sp','satuan','harga_satuan','stok_saat_ini']
+  cols: ['nama','kategori','kategori_sp','satuan','kalori','protein','harga_satuan','stok_saat_ini']
 };
 
 let spRefLookup = {};
@@ -45,7 +51,7 @@ function getBahanCrud() {
   return BAHAN_BAKU_CRUD_BASE;
 }
 
-let bahanBakuState = { page: 1, limit: 10, search: '', total: 0, totalPages: 1 };
+let bahanBakuState = { page: 1, limit: 10, search: '', sumber: '', total: 0, totalPages: 1 };
 let bahanSyncInterval = null;
 const BAHAN_SYNC_INTERVAL_MS = 3 * 60 * 60 * 1000; // 3 jam
 
@@ -63,7 +69,9 @@ async function renderBahanBaku() {
   }
 
   document.getElementById('add-btn').onclick = () => {
-    openForm(getBahanCrud(), null);
+    const cfg = getBahanCrud();
+    cfg.onSaved = loadBahanBaku;
+    openForm(cfg, null);
   };
 
   const searchInput = document.getElementById('bahan-search');
@@ -86,7 +94,7 @@ async function renderBahanBaku() {
 }
 
 async function loadBahanBaku() {
-  const params = new URLSearchParams({ page: bahanBakuState.page, limit: bahanBakuState.limit, search: bahanBakuState.search });
+  const params = new URLSearchParams({ page: bahanBakuState.page, limit: bahanBakuState.limit, search: bahanBakuState.search, sumber: bahanBakuState.sumber });
   const res = await api.get('/bahan_baku?' + params);
   const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
   const pagination = res.pagination || { total: data.length, totalPages: 1, page: 1 };
@@ -104,9 +112,11 @@ function renderBahanBakuTable(rows) {
   }
   const fields = getBahanCrud();
   const numKeys = fields.fields.filter(f => f.fmt === 'idr' || f.fmt === 'num').map(f => f.k);
+  const narrowCols = ['satuan'];
   const headers = fields.cols.map(k => {
     const align = numKeys.includes(k) ? 'text-right' : 'text-left';
-    return `<th class="${align} px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wider">${fields.fields.find(f => f.k === k)?.l || k}</th>`;
+    const width = narrowCols.includes(k) ? ' w-16' : '';
+    return `<th class="${align} px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wider${width}">${fields.fields.find(f => f.k === k)?.l || k}</th>`;
   }).join('');
   const body = rows.map((r, i) => `<tr class="${i % 2 === 0 ? 'bg-white' : 'bg-stone-50/50'} hover:bg-stone-100/60 transition-colors">
     ${fields.cols.map(k => {
@@ -114,6 +124,7 @@ function renderBahanBakuTable(rows) {
       const v = r[k];
       let cell = v == null || v === '' ? '<span class="text-stone-300">—</span>' : String(v);
       const align = numKeys.includes(k) ? 'text-right' : 'text-left';
+      const width = narrowCols.includes(k) ? ' w-16' : '';
       if (f?.fmt === 'idr') {
         cell = fmtIDR(v);
         if (k === 'harga_satuan' && r.harga_sebelumnya > 0) {
@@ -130,7 +141,7 @@ function renderBahanBakuTable(rows) {
         const colors = { 'Karbohidrat':'bg-amber-100 text-amber-800','Protein Hewani':'bg-red-100 text-red-800','Protein Nabati':'bg-emerald-100 text-emerald-800','Sayur':'bg-green-100 text-green-800','Buah':'bg-orange-100 text-orange-800','Susu':'bg-blue-100 text-blue-800','Minyak':'bg-yellow-100 text-yellow-800' };
         cell = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[v]||'bg-stone-100 text-stone-700'}">${v}</span>`;
       }
-      return `<td class="${align} px-4 py-3 text-sm">${cell}</td>`;
+      return `<td class="${align} px-4 py-3 text-sm${width}">${cell}</td>`;
     }).join('')}
     <td class="px-4 py-3 text-right whitespace-nowrap">
       ${spRefLookup[(r.nama||'').toLowerCase()] ? `<button onclick='showSpRefNutrisi(${JSON.stringify(r.nama||'').replace(/'/g, "&#39;")})' class="text-emerald-600 hover:text-emerald-700 p-1.5 inline-flex items-center" title="Nutrisi"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></button>` : ''}
@@ -141,7 +152,9 @@ function renderBahanBakuTable(rows) {
 }
 
 function editBahanBaku(row) {
-  openForm(getBahanCrud(), row);
+  const cfg = getBahanCrud();
+  cfg.onSaved = loadBahanBaku;
+  openForm(cfg, row);
 }
 async function deleteBahanBaku(id) {
   const ok = await showConfirm('Hapus data ini?');
@@ -207,5 +220,21 @@ async function syncBahanBaku() {
   } catch (e) {
     console.log('Auto-sync bahan baku:', e.message);
   }
+}
+
+function toggleSumberFilter() {
+  bahanBakuState.sumber = bahanBakuState.sumber === 'koperasi' ? '' : 'koperasi';
+  bahanBakuState.page = 1;
+  const btn = document.getElementById('filter-koperasi-btn');
+  if (btn) {
+    if (bahanBakuState.sumber === 'koperasi') {
+      btn.classList.add('bg-[#1e40af]', 'text-white');
+      btn.classList.remove('border', 'border-stone-300', 'text-stone-700');
+    } else {
+      btn.classList.remove('bg-[#1e40af]', 'text-white');
+      btn.classList.add('border', 'border-stone-300', 'text-stone-700');
+    }
+  }
+  loadBahanBaku();
 }
 

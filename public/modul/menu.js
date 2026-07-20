@@ -396,41 +396,29 @@ function attachMenuHandlers() {
 }
 
 function toggleGramasiKecil(kat) {
-  var el = document.getElementById('gramasi-kecil-wrapper');
-  if (!el) return;
-  var show = kat === 'Balita' || kat === 'TK/PAUD' || kat === 'SD 1-3';
-  el.style.display = show ? '' : 'none';
+  var kecil = document.getElementById('gramasi-kecil-wrapper');
+  var besar = document.getElementById('gramasi-besar-wrapper');
+  if (!besar && !kecil) return;
+  // TK/PAUD, Balita, SD 1-3: hanya gramasi kecil (besar tidak perlu)
+  if (kat === 'TK/PAUD' || kat === 'Balita' || kat === 'SD 1-3') {
+    if (besar) besar.style.display = 'none';
+    if (kecil) kecil.style.display = '';
+    return;
+  }
+  // Kategori lain: tampilkan gramasi besar, sembunyikan gramasi kecil
+  if (besar) besar.style.display = '';
+  if (kecil) kecil.style.display = 'none';
 }
 
 async function openMenuForm(editing) {
   const m = editing || { nama: '', kategori_penerima: '', deskripsi: '', gramasi_total: 0, gramasi_besar: 0, gramasi_kecil: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
   document.getElementById('modal-title').textContent = editing ? 'Edit Menu' : 'Menu Baru';
   document.getElementById('modal-body').innerHTML = `
-    <div class="grid grid-cols-2 gap-3">
-      <div>
-        <label class="text-sm">Nama Menu *</label>
-        <div class="flex gap-2">
-          <input id="m-nama" value="${m.nama}" class="mt-1 flex-1 h-10 px-3 border border-stone-200 rounded-md" />
-          <button type="button" onclick="openSiklusMenuPicker()" class="mt-1 shrink-0 px-3 h-10 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 whitespace-nowrap" title="Ambil nama dari siklus">Siklus</button>
-        </div>
-      </div>
-      <div><label class="text-sm">Kategori Penerima</label>
-        <select id="m-kategori" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
-          <option value="">—</option>${['TK/PAUD','SD 1-3','SD 4-6','SMP','SMA','Ibu Hamil','Ibu Menyusui','Balita'].map(o => `<option value="${o}" ${m.kategori_penerima === o ? 'selected':''}>${o}</option>`).join('')}
-        </select></div>
-      <div><label class="text-sm">Jumlah Porsi <span id="m-porsi-label" class="text-stone-400 font-normal">(dari penerima manfaat)</span></label>
-        <input id="m-jumlah-porsi" type="number" readonly value="0" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md bg-stone-50 text-sm font-semibold" />
-      </div>
-      <div class="col-span-2 grid grid-cols-2 gap-3">
-        <div><label class="text-sm">Gramasi Besar (g)</label>
-          <input id="m-gramasi-besar" type="number" value="${m.gramasi_besar || 0}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" placeholder="0 = gramasi total" />
-        </div>
-        <div id="gramasi-kecil-wrapper"><label class="text-sm">Gramasi Kecil (g)</label>
-          <div class="flex gap-2">
-            <input id="m-gramasi-kecil" type="number" value="${m.gramasi_kecil || 0}" class="mt-1 flex-1 h-10 px-3 border border-stone-200 rounded-md" placeholder="0 = gramasi total" />
-            <button type="button" onclick="hitungGramasiBesarKecil()" class="mt-1 shrink-0 px-3 h-10 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100 whitespace-nowrap">SP</button>
-          </div>
-        </div>
+    <div>
+      <label class="text-sm">Nama Menu *</label>
+      <div class="flex gap-2">
+        <input id="m-nama" value="${m.nama}" class="mt-1 flex-1 h-10 px-3 border border-stone-200 rounded-md" />
+        <button type="button" onclick="openSiklusMenuPicker()" class="mt-1 shrink-0 px-3 h-10 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 whitespace-nowrap" title="Ambil nama dari siklus">Siklus</button>
       </div>
     </div>
     <div class="mt-3"><label class="text-sm">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
@@ -441,26 +429,12 @@ async function openMenuForm(editing) {
       </div>
       <button type="button" onclick="hitungNutrisiAI()" class="ml-2 mt-5 shrink-0 px-3 h-9 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100 whitespace-nowrap" title="Hitung nutrisi pakai AI">AI</button>
     </div>
+    <div class="mt-2">
+      <label class="text-xs">Gramasi Total (g)</label>
+      <input id="m-gramasi-total" type="number" value="${m.gramasi_total || 0}" readonly class="mt-1 w-full h-9 px-2 border border-stone-200 rounded-md mono text-sm bg-stone-50 text-stone-500" />
     </div>
-    <div class="border-t border-stone-200 mt-4 pt-3">
-      <div onclick="var n=document.getElementById('sp-ref-table');n.classList.toggle('hidden');this.querySelector('svg').classList.toggle('rotate-180')" class="flex items-center gap-2 cursor-pointer select-none mb-2">
-        <svg class="w-3.5 h-3.5 text-stone-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        <span class="text-xs font-semibold text-stone-400 uppercase tracking-wider">Standar Satuan Penukar (SP) — <span id="sp-ref-title" class="text-stone-500">pilih kategori</span></span>
-      </div>
-      <div id="sp-ref-table" class="hidden overflow-x-auto mb-3">
-        <table class="w-full text-[11px] border-collapse">
-          <thead><tr class="bg-stone-100">
-            <th class="px-3 py-1.5 text-left font-semibold text-stone-500 border border-stone-200">Kategori</th>
-            <th class="px-3 py-1.5 text-right font-semibold text-stone-500 border border-stone-200">SP</th>
-          </tr></thead>
-          <tbody id="sp-ref-body">
-            ${['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'].map(k => 
-              '<tr><td class="px-3 py-1.5 border border-stone-200 text-stone-600">' + k + '</td><td id="sp-val-' + k.replace(/\s/g,'') + '" class="px-3 py-1.5 border border-stone-200 text-right mono font-medium text-stone-700">-</td></tr>'
-            ).join('')}
-          </tbody>
-        </table>
-      </div>
     </div>
+
     <div class="border-t border-stone-200 mt-4 pt-3">
       <div class="flex justify-between items-center mb-2">
         <div class="font-semibold text-sm">Bahan & Gramasi</div>
@@ -469,22 +443,14 @@ async function openMenuForm(editing) {
       <div id="bahan-list" class="space-y-2"></div>
     </div>
     `;
-  window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0 }));
+  window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, keterangan: b.keterangan || '' }));
   renderBahanList();
-  await loadSpMap(m.kategori_penerima);
-  toggleGramasiKecil(m.kategori_penerima);
-  document.getElementById('m-kategori').onchange = async function() {
-    await loadSpMap(this.value);
-    toggleGramasiKecil(this.value);
-  };
   document.getElementById('modal-save').onclick = async () => {
     if (!validateForm([{ id: 'm-nama', label: 'Nama Menu' }])) return;
     const payload = {
       nama: document.getElementById('m-nama').value,
-      kategori_penerima: document.getElementById('m-kategori').value,
       deskripsi: document.getElementById('m-deskripsi').value,
-      gramasi_besar: +document.getElementById('m-gramasi-besar').value || 0,
-      gramasi_kecil: +document.getElementById('m-gramasi-kecil').value || 0,
+      gramasi_total: +document.getElementById('m-gramasi-total').value || 0,
       kalori: +document.getElementById('m-kalori').value || 0,
       protein: +document.getElementById('m-protein').value || 0,
       karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
@@ -499,8 +465,8 @@ async function openMenuForm(editing) {
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
 }
-function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '', nama: '' }); renderBahanList(); hitungNutrisi(); hitungGramasiBesarKecil(); }
-function removeBahanRow(i) { window._menuBahan.splice(i, 1); renderBahanList(); hitungNutrisi(); hitungGramasiBesarKecil(); }
+function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '', nama: '', keterangan: '' }); renderBahanList(); hitungNutrisi(); }
+function removeBahanRow(i) { window._menuBahan.splice(i, 1); renderBahanList(); hitungNutrisi(); }
 function hitungNutrisi() {
   var totalGramasi = 0, totalKalori = 0, totalProtein = 0, totalKarbo = 0, totalLemak = 0, totalSerat = 0;
   (window._menuBahan || []).forEach(function(b) {
@@ -522,6 +488,8 @@ function hitungNutrisi() {
       if (el) el.value = Math.round(({kalori: totalKalori, protein: totalProtein, karbohidrat: totalKarbo, lemak: totalLemak, serat: totalSerat}[k]) * 100) / 100;
     });
   }
+  var gramasiEl = document.getElementById('m-gramasi-total');
+  if (gramasiEl) gramasiEl.value = Math.round(totalGramasi * 100) / 100;
 }
 
 async function hitungGramasiBesarKecil() {
@@ -645,27 +613,17 @@ function updateBahan(i, k, v) {
 }
 function renderBahanList() {
   document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
-    var ref = window._spRefMap && window._spRefMap[b.nama];
     var displayNama = b.nama || '';
-    var berat1Sp = ref ? ref.berat_bersih : (b.berat_1_sp || 0);
-    var kategoriSp = b.kategori_sp || '';
-    var spInfo = '';
-    if (kategoriSp && berat1Sp > 0) {
-      var extras = [];
-      extras.push('1SP=' + berat1Sp + 'g');
-      extras.push('BDD=' + Math.round(ref ? ref.bdd_persen * 100 : (b.persen_bdd || 100)) + '%');
-      var perPorsi = window._spMap && window._spMap[kategoriSp] ? window._spMap[kategoriSp] * berat1Sp : 0;
-      spInfo = '<div class="col-span-3 text-[10px] text-stone-400 leading-tight">' + kategoriSp + ' · ' + extras.join(' · ') + (perPorsi ? ' · <span class="text-emerald-600 font-medium">' + Math.round(perPorsi*10)/10 + 'g/porsi</span>' : '') + '</div>';
-    }
+    var displaySatuan = b.satuan || 'g';
     return '<div class="grid grid-cols-12 gap-1.5 items-center">' +
       '<div class="col-span-4 relative">' +
-        '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan (SP)..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
+        '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
         '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
       '</div>' +
-      '<input type="text" value="g" readonly class="col-span-1 h-9 px-2 border border-stone-200 rounded-md text-sm bg-stone-50 text-stone-500" />' +
-      '<input type="number" value="' + (b.jumlah || '') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" placeholder="gram" class="col-span-3 h-9 px-2 border border-stone-200 rounded-md text-sm mono" />' +
-      (spInfo || '<div class="col-span-3"></div>') +
-      '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2">×</button>' +
+      '<input type="text" value="' + displaySatuan + '" readonly class="col-span-1 h-9 px-2 border border-stone-200 rounded-md text-sm bg-stone-50 text-stone-500" />' +
+      '<input type="number" value="' + (b.jumlah || '') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" placeholder="jumlah" class="col-span-2 h-9 px-2 border border-stone-200 rounded-md text-sm mono" />' +
+      '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="col-span-4 h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
+      '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
     '</div>';
   }).join('');
 }
@@ -733,7 +691,7 @@ async function selectBahan(i, nama) {
   }
   window._menuBahan[i].bahan_baku_id = bb ? bb.id : '';
   window._menuBahan[i].nama = nama;
-  window._menuBahan[i].satuan = 'g';
+  window._menuBahan[i].satuan = bb ? bb.satuan : 'g';
   window._menuBahan[i].kategori_sp = kat;
   window._menuBahan[i].berat_1_sp = berat1Sp;
   window._menuBahan[i].persen_bdd = Math.round(ref.bdd_persen * 100);
@@ -748,7 +706,6 @@ async function selectBahan(i, nama) {
   if (input) input.value = nama;
   renderBahanList();
   hitungNutrisi();
-  hitungGramasiBesarKecil();
 }
 
 async function deleteMenu(id) { if (!await showConfirm('Hapus menu?')) return; await api.del('/menu/' + id); renderMenu(); }
@@ -831,27 +788,29 @@ async function openSiklusMenuPicker() {
       for (var ni = 0; ni < s.names.length; ni++) {
         var n = s.names[ni];
         if (n.source === 'menu') {
-          // Menu items — non-clickable, hanya info bahan (seperti dropdown)
+          // Menu items — clickable, untuk import bahan
+          html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + '\')" class="w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors">' +
+            '<div class="flex items-center gap-2">' +
+            '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
+            '<span class="text-xs text-stone-500 shrink-0 w-14">' + n.hari_nama + '</span>' +
+            '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-700 shrink-0">Menu</span>' +
+            '<span class="text-sm font-medium text-stone-800 truncate">' + escHtml(n.nama) + '</span>' +
+            (n.bahan && n.bahan.length ? '<span class="text-[10px] text-stone-400 shrink-0">' + n.bahan.length + ' bahan</span>' : '') +
+            '<svg class="w-4 h-4 text-stone-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>' +
+            '</div>' +
+          '</button>';
+        } else {
+          // Resep items — non-clickable, info saja
           html += '<div class="px-4 py-2">' +
             '<div class="flex items-center gap-2 text-stone-500">' +
             '<span class="text-xs shrink-0 w-8">H' + n.hari_ke + '</span>' +
             '<span class="text-xs shrink-0 w-14">' + n.hari_nama + '</span>' +
-            '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-700 shrink-0">Menu</span>' +
-            '<span class="text-sm font-medium text-stone-600 truncate">' + escHtml(n.nama) + '</span>' +
+            '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-stone-100 text-stone-500 shrink-0">Resep</span>' +
+            '<span class="text-sm font-medium text-stone-500 truncate">' + escHtml(n.nama) + '</span>' +
+            (n.kategori_sp ? '<span class="text-[10px] text-stone-400 shrink-0 hidden sm:inline">(' + escHtml(n.kategori_sp) + ')</span>' : '') +
+            (n.bahan && n.bahan.length ? '<span class="text-[10px] text-stone-400 shrink-0">· ' + escHtml(n.bahan[0].nama) + '</span>' : '') +
             '</div>' +
-            (n.bahan && n.bahan.length ? '<div class="pl-16 mt-0.5 space-y-0.5">' + n.bahan.map(function(b) { var katTag = b.kategori_sp ? ' <span class="text-[9px] text-stone-400/60">(' + escHtml(b.kategori_sp) + ')</span>' : ''; return '<div class="flex items-center gap-1.5 text-[11px] text-stone-400"><span class="w-1 h-1 rounded-full bg-stone-300 shrink-0"></span>' + escHtml(b.nama) + katTag + '</div>'; }).join('') + '</div>' : '') +
           '</div>';
-        } else {
-          html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + '\',\'' + escHtml(s.kategori_penerima || '') + '\',\'' + encodeURIComponent(JSON.stringify(n.bahan || [])) + '\')" class="w-full text-left px-4 py-2 hover:bg-stone-50 transition-colors">' +
-            '<div class="flex items-center gap-2 pl-4">' +
-            '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
-            '<span class="text-xs text-stone-500 shrink-0 w-14">' + n.hari_nama + '</span>' +
-            '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-emerald-100 text-emerald-700 shrink-0">Resep</span>' +
-            '<span class="text-sm font-medium text-stone-800 truncate">' + escHtml(n.nama) + '</span>' +
-            (n.kategori_sp ? '<span class="text-[10px] text-stone-400 shrink-0 hidden sm:inline">' + escHtml(n.kategori_sp) + '</span>' : '') +
-            '</div>' +
-            (n.bahan && n.bahan.length ? '<div class="pl-16 mt-0.5 space-y-0.5">' + n.bahan.map(function(b) { return '<div class="flex items-center gap-1.5 text-[11px] text-stone-400"><span class="w-1 h-1 rounded-full bg-stone-300 shrink-0"></span>' + escHtml(b.nama) + '</div>'; }).join('') + '</div>' : '') +
-          '</button>';
         }
       }
       html += '</div></div>';
@@ -878,102 +837,8 @@ async function openSiklusMenuPicker() {
   }
 }
 
-async function selectSiklusMenuName(nama, kategori, bahanEncoded) {
+async function selectSiklusMenuName(nama) {
   document.getElementById('m-nama').value = nama;
-  if (kategori) {
-    var katSelect = document.getElementById('m-kategori');
-    if (katSelect) { katSelect.value = kategori; await loadSpMap(kategori); }
-  }
-  // Isi bahan dari siklus jika ada
-  if (bahanEncoded) {
-    try {
-      var bahanList = JSON.parse(decodeURIComponent(bahanEncoded));
-      if (Array.isArray(bahanList) && bahanList.length > 0) {
-        // Proses setiap bahan: kumpulkan dulu di array sementara, baru assign ke window
-        var newBahan = [];
-        var pendingBahan = bahanList.map(function(b) {
-          return new Promise(function(resolve) {
-            var namaBahan = b.nama;
-            // Skip placeholder untuk bahan yang sudah dihapus
-            if (namaBahan === '(bahan dihapus)' || !namaBahan) { resolve(); return; }
-            
-            var ref = window._spRefMap && window._spRefMap[namaBahan];
-            var bb = (window._bahanBaku || []).find(function(x) { 
-              return x.nama && x.nama.toLowerCase() === namaBahan.toLowerCase(); 
-            });
-            
-            // Tentukan kategori_sp dan berat_1_sp
-            var kat = '';
-            var berat1Sp = 0;
-            var persenBdd = 100;
-            var kalori = 0, protein = 0, karbohidrat = 0, lemak = 0, serat = 0;
-            
-            if (ref) {
-              var spItem = (window._spRefList || []).find(function(r) { return r.nama === namaBahan; });
-              if (spItem) kat = spItem.kategori || '';
-              berat1Sp = ref.berat_bersih || 0;
-              persenBdd = Math.round(ref.bdd_persen * 100) || 100;
-              kalori = ref.energi || 0;
-              protein = ref.protein || 0;
-              karbohidrat = ref.karbohidrat || 0;
-              lemak = ref.lemak || 0;
-              serat = ref.serat || 0;
-            } else if (bb) {
-              kat = bb.kategori_sp || '';
-              berat1Sp = bb.berat_1_sp || 0;
-              persenBdd = bb.persen_bdd || 100;
-              kalori = bb.kalori || 0;
-              protein = bb.protein || 0;
-              karbohidrat = bb.karbohidrat || 0;
-              lemak = bb.lemak || 0;
-              serat = bb.serat || 0;
-            }
-            
-            var perPorsi = window._spMap && window._spMap[kat] ? window._spMap[kat] * (berat1Sp || 0) : 0;
-            
-            function addBahan(bahanId) {
-              newBahan.push({
-                bahan_baku_id: bahanId || '',
-                nama: namaBahan, satuan: 'g', jumlah: perPorsi,
-                kategori_sp: kat, berat_1_sp: berat1Sp,
-                persen_bdd: persenBdd, berat_per_satuan: berat1Sp,
-                kalori: kalori, protein: protein,
-                karbohidrat: karbohidrat, lemak: lemak, serat: serat,
-                _autoJumlah: perPorsi
-              });
-              resolve();
-            }
-            
-            if (bb) {
-              addBahan(bb.id);
-            } else {
-              // Auto-create di bahan_baku
-              api.post('/bahan_baku', {
-                nama: namaBahan, satuan: 'g', kategori_sp: kat,
-                berat_1_sp: berat1Sp, persen_bdd: persenBdd,
-                berat_per_satuan: berat1Sp,
-                kalori: kalori, protein: protein, karbohidrat: karbohidrat,
-                lemak: lemak, serat: serat
-              }).then(function(created) {
-                window._bahanBaku.push(created);
-                addBahan(created.id);
-              }).catch(function() {
-                addBahan('');
-              });
-            }
-          });
-        });
-        await Promise.all(pendingBahan);
-        // Assign array sementara ke window — hanya sekali setelah semua selesai
-        window._menuBahan = newBahan;
-        renderBahanList();
-        hitungNutrisi();
-        hitungGramasiBesarKecil();
-      }
-    } catch (e) {
-      console.error('Gagal parse bahan dari siklus:', e);
-    }
-  }
   closeSiklusMenuPicker();
   showToast('Nama diambil dari siklus: ' + nama, 'success');
 }

@@ -186,6 +186,10 @@ const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (
       whereClause += ' AND bp=?';
       params.push(bp);
     }
+    // Filter: sumber koperasi (id_koperasi IS NOT NULL)
+    if (req.query.sumber === 'koperasi' && table === 'bahan_baku') {
+      whereClause += ' AND id_koperasi IS NOT NULL';
+    }
     
     // Hitung total sebelum pagination
     const countFrom = table === 'distribusi' ? `${table} d` : table === 'penerimaan_barang' ? `${table} pb` : table;
@@ -343,12 +347,13 @@ router.post('/sp_referensi_bahan/sync-bahan-baku', async (req, res) => {
   try {
     const tenantId = req.user.tenant_id;
     const [spRefs] = await db.query('SELECT * FROM sp_referensi_bahan WHERE tenant_id=?', [tenantId]);
+    const validKategoriSp = ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
     let updated = 0, imported = 0;
     for (const ref of spRefs) {
       const [bahan] = await db.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [tenantId, ref.nama]);
       if (bahan.length) {
         const updates = {};
-        if (ref.kategori != null) updates.kategori_sp = ref.kategori;
+        if (ref.kategori != null && validKategoriSp.includes(ref.kategori)) updates.kategori_sp = ref.kategori;
         if (ref.berat_bersih != null) updates.berat_1_sp = ref.berat_bersih;
         if (ref.bdd_persen != null) updates.persen_bdd = Math.round(ref.bdd_persen * 100);
         if (ref.energi != null) updates.kalori = ref.energi;
@@ -360,14 +365,14 @@ router.post('/sp_referensi_bahan/sync-bahan-baku', async (req, res) => {
           const sets = Object.keys(updates).map(k => `${k}=?`).join(',');
           const vals = Object.values(updates);
           vals.push(bahan[0].id, tenantId);
-          await db.query(`UPDATE bahan_baku ${sets} WHERE id=? AND tenant_id=?`, vals);
+          await db.query(`UPDATE bahan_baku SET ${sets} WHERE id=? AND tenant_id=?`, vals);
           updated++;
         }
       } else {
         await db.query(
           `INSERT INTO bahan_baku (tenant_id, nama, satuan, kategori, kategori_sp, berat_1_sp, persen_bdd, kalori, protein, karbohidrat, lemak, serat)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [tenantId, ref.nama, 'g', ref.kategori, ref.kategori, ref.berat_bersih || 0,
+          [tenantId, ref.nama, 'g', validKategoriSp.includes(ref.kategori) ? ref.kategori : null, validKategoriSp.includes(ref.kategori) ? ref.kategori : null, ref.berat_bersih || 0,
            ref.bdd_persen != null ? Math.round(ref.bdd_persen * 100) : 100,
            ref.energi || 0, ref.protein || 0, ref.karbohidrat || 0, ref.lemak || 0, ref.serat || 0]
         );

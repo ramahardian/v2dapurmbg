@@ -1,4 +1,7 @@
 // ===== Perencanaan Kebutuhan Bahan Pangan =====
+var _perencanaanData = null;
+var _pncView = 'hari';
+
 async function renderPerencanaan() {
   const c = document.getElementById('content');
   c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-sky-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
@@ -20,14 +23,22 @@ async function loadPerencanaanData(tanggalMulai) {
   try {
     const params = tanggalMulai ? '?tanggal_mulai=' + tanggalMulai : '';
     const res = await api.get('/siklus/laporan/perencanaan' + params);
+    _perencanaanData = res;
     const { jenjang_list, hari, pm_map, tanggal_mulai } = res;
 
     let html = '';
 
-    // Filter bar
+    // Filter bar + view tabs
     html += '<div class="bg-white border border-stone-200 rounded-lg p-4 mb-4 flex flex-wrap items-center gap-4">';
     html += '<label class="text-sm font-medium text-stone-700">Tanggal Mulai Siklus:</label>';
     html += '<input type="date" value="' + (tanggal_mulai || '') + '" onchange="loadPerencanaanData(this.value)" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400">';
+
+    // View tabs
+    html += '<div class="flex rounded-lg border border-stone-200 overflow-hidden">';
+    html += '<button onclick="switchPncView(\'hari\')" id="pnc-tab-hari" class="px-4 py-1.5 text-xs font-medium ' + (_pncView === 'hari' ? 'bg-sky-600 text-white' : 'bg-white text-stone-600 hover:bg-stone-50') + '">Per Hari</button>';
+    html += '<button onclick="switchPncView(\'rekap\')" id="pnc-tab-rekap" class="px-4 py-1.5 text-xs font-medium ' + (_pncView === 'rekap' ? 'bg-sky-600 text-white' : 'bg-white text-stone-600 hover:bg-stone-50') + '">Rekap per Jenjang</button>';
+    html += '</div>';
+
     html += '<button onclick="buatPrDariSiklus()" class="ml-auto h-10 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2">';
     html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>\n    Buat Draft PR';
     html += '</button>';
@@ -40,15 +51,36 @@ async function loadPerencanaanData(tanggalMulai) {
       return;
     }
 
-    // Per day
-    for (var h = 0; h < hari.length; h++) {
-      html += renderPerencanaanDay(hari[h], jenjang_list);
-    }
+    // Content
+    html += '<div id="pnc-view-container">';
+    html += buildPncCurrentView();
+    html += '</div>';
 
     wrap.innerHTML = html;
   } catch (err) {
     wrap.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal: ' + err.message + '</div>';
   }
+}
+
+function switchPncView(view) {
+  _pncView = view;
+  var tH = document.getElementById('pnc-tab-hari');
+  var tR = document.getElementById('pnc-tab-rekap');
+  if (tH) tH.className = 'px-4 py-1.5 text-xs font-medium ' + (view === 'hari' ? 'bg-sky-600 text-white' : 'bg-white text-stone-600 hover:bg-stone-50');
+  if (tR) tR.className = 'px-4 py-1.5 text-xs font-medium ' + (view === 'rekap' ? 'bg-sky-600 text-white' : 'bg-white text-stone-600 hover:bg-stone-50');
+  var c = document.getElementById('pnc-view-container');
+  if (c) { c.innerHTML = buildPncCurrentView(); c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
+
+function buildPncCurrentView() {
+  if (!_perencanaanData) return '';
+  if (_pncView === 'rekap') return renderPerencanaanRekap(_perencanaanData);
+  // Per Hari
+  var html = '';
+  var hari = _perencanaanData.hari || [];
+  var jl = _perencanaanData.jenjang_list || [];
+  for (var h = 0; h < hari.length; h++) html += renderPerencanaanDay(hari[h], jl);
+  return html;
 }
 
 function renderPerencanaanDay(day, jenjangList) {
@@ -83,7 +115,8 @@ function renderPerencanaanDay(day, jenjangList) {
     html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
     html += '<td class="px-3 py-2 text-sm font-medium">' + (b.nama_display || b.nama) + '</td>';
     for (var j = 0; j < jenjangList.length; j++) {
-      var val = b.per_jenjang[jenjangList[j]];
+      var pj = b.per_jenjang[jenjangList[j]];
+      var val = pj != null ? (pj.kebutuhan_kg != null ? pj.kebutuhan_kg : pj) : null;
       html += '<td class="px-3 py-2 text-sm text-right mono">' + (val != null ? fmtPncNum(val) : '—') + '</td>';
     }
     html += '<td class="px-3 py-2 text-sm text-right mono">' + fmtPncNum(day.total_porsi) + '</td>';
@@ -94,6 +127,129 @@ function renderPerencanaanDay(day, jenjangList) {
   }
 
   html += '</tbody></table></div></div>';
+  return html;
+}
+
+// ===== Rekap per Jenjang =====
+function renderPerencanaanRekap(data) {
+  var hari = data.hari || [];
+  var jenjang_list = data.jenjang_list || [];
+  var pm_map = data.pm_map || {};
+
+  if (!hari.length) {
+    return '<div class="text-center py-16 text-stone-400">Tidak ada data untuk direkap</div>';
+  }
+
+  var agg = {};
+
+  for (var h = 0; h < hari.length; h++) {
+    var day = hari[h];
+    var bahan = day.bahan || [];
+    for (var j = 0; j < jenjang_list.length; j++) {
+      if (!agg[jenjang_list[j]]) agg[jenjang_list[j]] = {};
+    }
+    for (var i = 0; i < bahan.length; i++) {
+      var b = bahan[i];
+      var nama = b.nama || '';
+      if (!nama) continue;
+      for (var j = 0; j < jenjang_list.length; j++) {
+        var jenjang = jenjang_list[j];
+        var pj = b.per_jenjang && b.per_jenjang[jenjang];
+        if (!pj) continue;
+        var dayKg = Number(pj.kebutuhan_kg != null ? pj.kebutuhan_kg : pj) || 0;
+        if (dayKg <= 0) continue;
+        if (!agg[jenjang][nama]) {
+          agg[jenjang][nama] = {
+            nama_display: b.nama_display || nama,
+            kategori_sp: b.kategori_sp || '',
+            ref_berat_bersih: pj.berat_bersih || 0,
+            ref_persen_bdd: pj.persen_bdd || 0,
+            ref_berat_kotor: pj.berat_kotor || 0,
+            total_kebutuhan: 0,
+            total_buffer: 0,
+          };
+        }
+        agg[jenjang][nama].total_kebutuhan += dayKg;
+        agg[jenjang][nama].total_buffer += dayKg * 0.1;
+      }
+    }
+  }
+
+  var KAT_ORDER = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu', 'Minyak'];
+  var html = '';
+
+  for (var j = 0; j < jenjang_list.length; j++) {
+    var jenjang = jenjang_list[j];
+    var bahanAgg = agg[jenjang];
+    if (!bahanAgg) continue;
+    var names = Object.keys(bahanAgg);
+    if (!names.length) continue;
+
+    names.sort(function(a, b) {
+      var ka = KAT_ORDER.indexOf(bahanAgg[a].kategori_sp);
+      var kb = KAT_ORDER.indexOf(bahanAgg[b].kategori_sp);
+      if (ka === -1 && kb === -1) return a.localeCompare(b);
+      if (ka === -1) return 1;
+      if (kb === -1) return -1;
+      return ka - kb;
+    });
+
+    var pmCount = Number(pm_map[jenjang]) || 0;
+    var grandTtl = 0, grandBuf = 0;
+
+    html += '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6">';
+    html += '<div class="px-5 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-stone-200 flex items-center justify-between">';
+    html += '<div><span class="font-bold text-base text-emerald-800">' + jenjang + '</span>';
+    html += '<span class="ml-3 text-sm text-stone-500">' + hari.length + ' hari';
+    if (pmCount > 0) html += ' &middot; ' + pmCount + ' penerima';
+    html += '</span></div></div>';
+
+    html += '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse">';
+    html += '<thead><tr class="border-b border-stone-200 bg-stone-50">';
+    html += '<th class="px-3 py-2 text-left font-semibold text-stone-600 min-w-[140px] whitespace-nowrap">Bahan Pangan</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Bersih (g)</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">%BDD</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Kotor (g)</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Jml Siswa</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan (kg)</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">+10%</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Rincian</th>';
+    html += '</tr></thead><tbody>';
+
+    for (var i = 0; i < names.length; i++) {
+      var b = bahanAgg[names[i]];
+      var k = b.total_kebutuhan;
+      var buf = b.total_buffer;
+      var tot = k + buf;
+      grandTtl += k; grandBuf += buf;
+      var satuan = (b.kategori_sp === 'Buah' || b.kategori_sp === 'Susu') ? 'pcs' : 'kg';
+      var rinci = Math.ceil(tot) + satuan;
+
+      html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
+      html += '<td class="px-3 py-2 text-sm font-medium">' + b.nama_display + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono">' + fmtPncNum(b.ref_berat_bersih) + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono">' + (b.ref_persen_bdd ? b.ref_persen_bdd + '%' : '—') + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono">' + fmtPncNum(b.ref_berat_kotor) + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono font-semibold">' + pmCount + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono font-semibold">' + fmtPncNum(k) + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono font-semibold text-emerald-700">' + fmtPncNum(tot) + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono font-bold">' + rinci + '</td>';
+      html += '</tr>';
+    }
+
+    html += '<tr class="border-t-2 border-stone-300 bg-stone-50 font-semibold">';
+    html += '<td class="px-3 py-2 text-sm font-bold text-stone-700">TOTAL</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-stone-700">—</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-stone-700">—</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-stone-700">—</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-stone-700">' + pmCount + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-stone-700">' + fmtPncNum(grandTtl) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-stone-700">' + fmtPncNum(grandTtl + grandBuf) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-stone-700">—</td>';
+    html += '</tr></tbody></table></div></div>';
+  }
+
+  if (!html) html = '<div class="text-center py-16 text-stone-400 bg-white border border-stone-200 rounded-lg">Tidak ada data bahan untuk direkap per jenjang</div>';
   return html;
 }
 

@@ -1942,6 +1942,8 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
               nama: b.nama,
               nama_display: namaDisplay,
               kategori_sp: b.kategori_sp,
+              berat_bersih: beratBersih,
+              persen_bdd: persenBdd,
               berat_kotor: beratKotor,
               kebutuhan_kg: 0,
             };
@@ -1950,6 +1952,11 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
           hariMap[hk][displayJenjang][namaDisplay].kebutuhan_kg += kebutuhanKg;
           // Add per-porsi berat_kotor (use the max if multiple entries for same ingredient)
           hariMap[hk][displayJenjang][namaDisplay].berat_kotor = Math.max(hariMap[hk][displayJenjang][namaDisplay].berat_kotor, beratKotor);
+          // Keep the first berat_bersih & persen_bdd (should be same across menus)
+          if (!hariMap[hk][displayJenjang][namaDisplay].berat_bersih) {
+            hariMap[hk][displayJenjang][namaDisplay].berat_bersih = beratBersih;
+            hariMap[hk][displayJenjang][namaDisplay].persen_bdd = persenBdd;
+          }
         }
       }
     }
@@ -2002,10 +2009,15 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       const perJenjang = {};
       let totalKg = 0;
       for (const j of activeJenjang) {
-        const val = hariMap[hk][j] && hariMap[hk][j][namaBahan]
-          ? hariMap[hk][j][namaBahan].kebutuhan_kg
-          : 0;
-        perJenjang[j] = val;
+        const refJ = hariMap[hk][j] && hariMap[hk][j][namaBahan];
+        const val = refJ ? refJ.kebutuhan_kg : 0;
+        perJenjang[j] = refJ ? {
+          kebutuhan_kg: refJ.kebutuhan_kg,
+          berat_bersih: refJ.berat_bersih,
+          persen_bdd: refJ.persen_bdd,
+          berat_kotor: refJ.berat_kotor,
+          jumlah_siswa: pmMap[j] ? pmMap[j].total_penerima : 0,
+        } : null;
         totalKg += val;
       }
 
