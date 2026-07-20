@@ -1101,12 +1101,15 @@ async function openSiklusRecipePicker() {
             '<span class="text-sm truncate">' + escHtml(n.nama) + '</span>' +
           '</div>';
         } else {
-          html += '<button type="button" onclick="pilihResepDariSiklus(' + n.hari_ke + ',\'' + escHtml(n.kategori_sp || '') + '\',\'' + escHtml(n.nama) + '\')" class="w-full text-left px-4 py-2 hover:bg-stone-50 transition-colors flex items-center gap-2">' +
+          html += '<button type="button" onclick="pilihResepDariSiklus(' + n.hari_ke + ',\'' + escHtml(n.kategori_sp || '') + '\',\'' + escHtml(n.nama) + '\')" class="w-full text-left px-4 py-2 hover:bg-stone-50 transition-colors">' +
+            '<div class="flex items-center gap-2 pl-4">' +
             '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
             '<span class="text-xs text-stone-500 shrink-0 w-14">' + escHtml(n.hari_nama || '') + '</span>' +
             '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-emerald-100 text-emerald-700 shrink-0">Resep</span>' +
             '<span class="text-sm font-medium text-stone-800 truncate">' + escHtml(n.nama) + '</span>' +
             (n.kategori_sp ? '<span class="text-[10px] text-stone-400 shrink-0 hidden sm:inline">(' + escHtml(n.kategori_sp) + ')</span>' : '') +
+            '</div>' +
+            (n.bahan && n.bahan.length ? '<div class="pl-16 mt-0.5 space-y-0.5">' + n.bahan.map(function(b) { return '<div class="flex items-center gap-1.5 text-[11px] text-stone-400"><span class="w-1 h-1 rounded-full bg-stone-300 shrink-0"></span>' + escHtml(b.nama) + '</div>'; }).join('') + '</div>' : '') +
           '</button>';
         }
       }

@@ -412,6 +412,22 @@ router.get('/siklus/recipe-names', async (req, res) => {
       [s.id]
     );
 
+    // Ambil bahan per hari_ke + kategori_sp
+    const [bahanRows] = await db.query(
+      `SELECT b.siklus_id, b.hari_ke, b.kategori_sp, b.bahan_baku_id, bk.nama AS bahan_nama
+       FROM siklus_menu_item_bahan b
+       JOIN bahan_baku bk ON b.bahan_baku_id = bk.id
+       WHERE b.siklus_id=?
+       ORDER BY b.hari_ke, b.kategori_sp, bk.nama`,
+      [s.id]
+    );
+    const bahanMap = {};
+    for (const br of bahanRows) {
+      const key = br.hari_ke + '::' + br.kategori_sp;
+      if (!bahanMap[key]) bahanMap[key] = [];
+      bahanMap[key].push({ id: br.bahan_baku_id, nama: br.bahan_nama });
+    }
+
     const names = [];
     for (const it of items) {
       if (it.menu_nama && it.menu_nama.trim()) {
@@ -422,7 +438,8 @@ router.get('/siklus/recipe-names', async (req, res) => {
           const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
           for (const [kat, nama] of Object.entries(map)) {
             if (nama && nama.trim()) {
-              names.push({ source: 'resep', kategori_sp: kat, hari_ke: it.hari_ke, hari_nama: it.hari_nama, nama: nama.trim() });
+              const bahan = bahanMap[it.hari_ke + '::' + kat] || [];
+              names.push({ source: 'resep', kategori_sp: kat, hari_ke: it.hari_ke, hari_nama: it.hari_nama, nama: nama.trim(), bahan });
             }
           }
         } catch (e) {}
