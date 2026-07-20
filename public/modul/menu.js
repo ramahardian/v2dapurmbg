@@ -404,7 +404,7 @@ function toggleGramasiKecil(kat) {
 
 async function openMenuForm(editing) {
   const m = editing || { nama: '', kategori_penerima: '', deskripsi: '', gramasi_total: 0, gramasi_besar: 0, gramasi_kecil: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
-  document.getElementById('modal-title').textContent = editing ? 'Edit Menu' : 'Tambah Menu';
+  document.getElementById('modal-title').textContent = editing ? 'Edit Menu' : 'Menu Baru';
   document.getElementById('modal-body').innerHTML = `
     <div class="grid grid-cols-2 gap-3">
       <div>
