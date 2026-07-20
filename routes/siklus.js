@@ -2098,18 +2098,16 @@ router.post('/siklus/hitung-budget', async (req, res) => {
     );
 
     if (existingEntry.length) {
-      // Update yang sudah ada
       await db.query(
-        `UPDATE budget SET jumlah_penerima=?, harga_per_porsi=?, total_budget=?, jumlah_porsi=?
+        `UPDATE budget SET jumlah_penerima=?, harga_per_porsi=?, total_budget=?
          WHERE id=? AND tenant_id=?`,
-        [jumlahPorsi, hargaPerPorsi, totalBudget, jumlahPorsi, existingEntry[0].id, t]
+        [jumlahPorsi, hargaPerPorsi, totalBudget, existingEntry[0].id, t]
       );
     } else {
-      // Buat baru
       await db.query(
-        `INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_per_porsi, total_budget, biaya_operasional, jumlah_porsi)
-         VALUES (?,?,?,?,?,?,?,?)`,
-        [t, periode, siklus.kategori_penerima, jumlahPorsi, hargaPerPorsi, totalBudget, biayaOperasional, jumlahPorsi]
+        `INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_per_porsi, total_budget, biaya_operasional)
+         VALUES (?,?,?,?,?,?,?)`,
+        [t, periode, siklus.kategori_penerima, jumlahPorsi, hargaPerPorsi, totalBudget, biayaOperasional]
       );
     }
 
@@ -2141,7 +2139,6 @@ router.post('/siklus/hitung-budget-semua', async (req, res) => {
     const { periode } = req.body;
     if (!periode) return res.status(400).json({ error: 'Periode (YYYY-MM) wajib diisi' });
 
-    // Ambil semua siklus Aktif
     const [siklusList] = await db.query(
       'SELECT * FROM siklus_menu WHERE tenant_id=? AND status="Aktif" ORDER BY kategori_penerima',
       [t]
@@ -2185,15 +2182,15 @@ router.post('/siklus/hitung-budget-semua', async (req, res) => {
 
       if (existingEntry.length) {
         await db.query(
-          `UPDATE budget SET jumlah_penerima=?, harga_per_porsi=?, total_budget=?, jumlah_porsi=?
+          `UPDATE budget SET jumlah_penerima=?, harga_per_porsi=?, total_budget=?
            WHERE id=? AND tenant_id=?`,
-          [jumlahPorsi, hargaPerPorsi, totalBudget, jumlahPorsi, existingEntry[0].id, t]
+          [jumlahPorsi, hargaPerPorsi, totalBudget, existingEntry[0].id, t]
         );
       } else {
         await db.query(
-          `INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_per_porsi, total_budget, biaya_operasional, jumlah_porsi)
-           VALUES (?,?,?,?,?,?,?,?)`,
-          [t, periode, siklus.kategori_penerima, jumlahPorsi, hargaPerPorsi, totalBudget, 0, jumlahPorsi]
+          `INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_per_porsi, total_budget, biaya_operasional)
+           VALUES (?,?,?,?,?,?,?)`,
+          [t, periode, siklus.kategori_penerima, jumlahPorsi, hargaPerPorsi, totalBudget, 0]
         );
       }
 
