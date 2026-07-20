@@ -2344,7 +2344,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
         const mph = menuIds.map(() => '?').join(',');
         const [bahanRows] = await db.query(
           `SELECT mb.bahan_baku_id, b.nama as bahan_nama, b.satuan, b.harga_satuan,
-                  b.persen_bdd, b.kode, mb.jumlah, mb.menu_id
+                  b.persen_bdd, b.kode, mb.jumlah, mb.menu_id, b.berat_per_satuan
            FROM menu_bahan mb
            JOIN bahan_baku b ON b.id = mb.bahan_baku_id
            WHERE mb.menu_id IN (${mph})`,
@@ -2361,7 +2361,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
 
           const key = br.bahan_baku_id;
           if (!agg[key]) {
-            agg[key] = { bahan_baku_id: br.bahan_baku_id, bahan_nama: br.bahan_nama, kode: br.kode || '', satuan: br.satuan, harga_satuan: Number(br.harga_satuan) || 0, total_qty: 0 };
+            agg[key] = { bahan_baku_id: br.bahan_baku_id, bahan_nama: br.bahan_nama, kode: br.kode || '', satuan: br.satuan, harga_satuan: Number(br.harga_satuan) || 0, berat_per_satuan: Number(br.berat_per_satuan) || 0, total_qty: 0 };
           }
           agg[key].total_qty += beratKotor * multiplier;
         }
@@ -2372,7 +2372,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const [gridBahanRaw] = await db.query(
         `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
                 bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
-                bb.kode
+                bb.kode, bb.berat_per_satuan
          FROM siklus_menu_item_bahan smib
          JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
          WHERE smib.siklus_id=? AND smib.hari_ke BETWEEN ? AND ?`,
@@ -2417,7 +2417,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
 
           const key = gb.bahan_baku_id;
           if (!agg[key]) {
-            agg[key] = { bahan_baku_id: gb.bahan_baku_id, bahan_nama: gb.bahan_nama, kode: gb.kode || '', satuan: gb.satuan, harga_satuan: Number(gb.harga_satuan) || 0, total_qty: 0 };
+            agg[key] = { bahan_baku_id: gb.bahan_baku_id, bahan_nama: gb.bahan_nama, kode: gb.kode || '', satuan: gb.satuan, harga_satuan: Number(gb.harga_satuan) || 0, berat_per_satuan: Number(gb.berat_per_satuan) || 0, total_qty: 0 };
           }
           agg[key].total_qty += beratKotor * multiplier;
         }
@@ -2439,13 +2439,17 @@ router.post('/siklus/buat-pr', async (req, res) => {
       for (const r of rows) idKoperasiMap[r.id] = r.id_koperasi;
     }
 
-    // Format output dengan buffer 10% dan konversi ke kg
+    // Format output dengan buffer 10% dan konversi satuan
     const bahanList = Object.values(agg).map(b => {
       let qty = b.total_qty;
       let satuan = b.satuan;
+      // weight-based satuan → kg
       if (['gram', 'g', 'gr', 'kg'].includes(b.satuan?.toLowerCase())) {
         qty = qty / 1000;
         satuan = 'kg';
+      } else if (b.berat_per_satuan > 0) {
+        // count-based satuan (pcs, karton, etc.) → konversi dari gram ke satuan asli
+        qty = qty / b.berat_per_satuan;
       }
       const buffer = Math.round(qty * 1.1 * 100) / 100;
       return {
