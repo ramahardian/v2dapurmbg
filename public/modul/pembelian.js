@@ -105,6 +105,9 @@ function renderPrView() {
                   <button onclick="rejectPr(${pr.id})" class="text-red-600 hover:text-red-800 text-xs font-medium">Tolak</button>
                 ` : ''}
                 ${(pr.catatan || '').includes('[DITOLAK]') ? '<span class="text-red-500 text-xs">Ditolak</span>' : ''}
+                ${pr.status !== 'Disetujui' ? `<button onclick="deletePr(${pr.id})" class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>` : ''}
               </td>
             </tr>`;
           }).join('')}
@@ -406,6 +409,17 @@ async function deletePo(id) {
     await api.del('/purchase_order/' + id);
     showToast('PO berhasil dihapus');
     renderPembelianPage('po');
+  } catch (e) {
+    showAlert('Gagal: ' + (e.message || 'Error'), 'error');
+  }
+}
+
+async function deletePr(id) {
+  if (!await showConfirm('Hapus PR ini?')) return;
+  try {
+    await api.del('/purchase_order/' + id);
+    showToast('PR berhasil dihapus');
+    switchPrPoTab('pr');
   } catch (e) {
     showAlert('Gagal: ' + (e.message || 'Error'), 'error');
   }
