@@ -2310,9 +2310,8 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const penerimaCount = pmMap[displayJenjang]?.total_penerima || 0;
       if (!penerimaCount) continue;
 
-      // Faktor pengali: sebulan penuh dibagi panjang siklus
-      const totalHari = Math.max(Number(s.total_hari) || 1, 1);
-      const multiplier = hariKerja / totalHari;
+      // PR mengikuti durasi siklus (tanpa ekstrapolasi bulanan)
+      const multiplier = 1;
 
       // --- A. Menu-based ingredients ---
       const [items] = await db.query(
