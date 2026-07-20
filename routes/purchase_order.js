@@ -26,6 +26,38 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
       return res.status(404).json({ error: 'Siklus tidak ditemukan' });
     }
 
+    // Penerima manfaat per kategori (real-time)
+    const [pmByJenjang] = await db.query(
+      `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang,
+              COALESCE(SUM(paket_besar + paket_kecil), 0) AS total_penerima
+       FROM penerima_manfaat WHERE tenant_id=?
+       GROUP BY kategori_penerima`,
+      [req.user.tenant_id]
+    );
+    const JENJANG_DB_MAP = {
+      'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
+      'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+      'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
+      'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
+      'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
+      'Balita': ['Balita'],
+    };
+    const dbToDisplay = {};
+    for (const [display, dbVals] of Object.entries(JENJANG_DB_MAP)) {
+      for (const dv of dbVals) dbToDisplay[dv] = display;
+    }
+    const pmMap = {};
+    for (const p of pmByJenjang) {
+      const display = dbToDisplay[p.jenjang] || p.jenjang;
+      if (!pmMap[display]) pmMap[display] = { total_penerima: 0 };
+      pmMap[display].total_penerima += Number(p.total_penerima);
+    }
+    const siklusPmMap = {};
+    for (const s of siklusList) {
+      const display = dbToDisplay[s.kategori_penerima || ''] || s.kategori_penerima || '';
+      siklusPmMap[s.id] = pmMap[display]?.total_penerima || 0;
+    }
+
     // ====================================================================
     // 1. KUMPULKAN DATA DARI SIKLUS MENU ITEM (menu composition)
     // ====================================================================
@@ -99,9 +131,8 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
         `SELECT smib.siklus_id, smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
                  bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
                  bb.kode as kode, bb.kategori_sp as bb_kategori_sp,
-                smi.jumlah_porsi, sm.kategori_penerima
+                sm.kategori_penerima
          FROM siklus_menu_item_bahan smib
-         JOIN siklus_menu_item smi ON smi.siklus_id=smib.siklus_id AND smi.hari_ke=smib.hari_ke
          JOIN siklus_menu sm ON sm.id=smib.siklus_id
          JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
          WHERE smib.siklus_id IN (${ph})
@@ -144,7 +175,7 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
           const spValues = spMap[jenjang] || {};
           const spVal = spValues[gb.kategori_sp] || 0;
           const berat1Sp = Number(gb.berat_1_sp || 0);
-          const jumlahPorsi = Number(gb.jumlah_porsi) || 0;
+          const jumlahPorsi = siklusPmMap[gb.siklus_id] || 0;
           if (spVal <= 0 || berat1Sp <= 0 || jumlahPorsi <= 0) continue;
 
           const cellKey = gb.siklus_id + '-' + gb.hari_ke + '-' + gb.kategori_sp;
@@ -192,7 +223,7 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
     const items = Object.values(agg).map(b => {
       let qty = b.total_qty;
       let satuan = b.satuan;
-      if (['gram', 'g', 'gr'].includes(b.satuan?.toLowerCase())) {
+      if (['gram', 'g', 'gr', 'kg'].includes(b.satuan?.toLowerCase())) {
         qty = qty / 1000;
         satuan = 'kg';
       }
@@ -335,7 +366,6 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
         `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
                 bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp
          FROM siklus_menu_item_bahan smib
-         JOIN siklus_menu_item smi ON smi.siklus_id=smib.siklus_id AND smi.hari_ke=smib.hari_ke
          JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
          WHERE smib.siklus_id=?`,
         [s.id]

@@ -2305,8 +2305,6 @@ router.post('/siklus/buat-pr', async (req, res) => {
 
     for (const s of siklusList) {
       const siklusId = s.id;
-      const totalHariSiklus = Number(s.total_hari) || 1;
-      const scale = hariKerja / totalHariSiklus; // berapa kali siklus berulang dalam periode
       const kategoriPenerima = s.kategori_penerima || '';
       const displayJenjang = dbToDisplay[kategoriPenerima] || kategoriPenerima;
       const penerimaCount = pmMap[displayJenjang]?.total_penerima || 0;
@@ -2350,7 +2348,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
           if (!agg[key]) {
             agg[key] = { bahan_baku_id: br.bahan_baku_id, bahan_nama: br.bahan_nama, kode: br.kode || '', satuan: br.satuan, harga_satuan: Number(br.harga_satuan) || 0, total_qty: 0 };
           }
-          agg[key].total_qty += beratKotor * scale;
+          agg[key].total_qty += beratKotor;
         }
       }
 
@@ -2360,7 +2358,6 @@ router.post('/siklus/buat-pr', async (req, res) => {
                 bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
                 bb.kode
          FROM siklus_menu_item_bahan smib
-         JOIN siklus_menu_item smi ON smi.siklus_id=smib.siklus_id AND smi.hari_ke=smib.hari_ke
          JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
          WHERE smib.siklus_id=?`,
         [siklusId]
@@ -2403,7 +2400,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
           if (!agg[key]) {
             agg[key] = { bahan_baku_id: gb.bahan_baku_id, bahan_nama: gb.bahan_nama, kode: gb.kode || '', satuan: gb.satuan, harga_satuan: Number(gb.harga_satuan) || 0, total_qty: 0 };
           }
-          agg[key].total_qty += beratKotor * scale;
+          agg[key].total_qty += beratKotor;
         }
       }
     }
@@ -2427,7 +2424,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
     const bahanList = Object.values(agg).map(b => {
       let qty = b.total_qty;
       let satuan = b.satuan;
-      if (['gram', 'g', 'gr'].includes(b.satuan?.toLowerCase())) {
+      if (['gram', 'g', 'gr', 'kg'].includes(b.satuan?.toLowerCase())) {
         qty = qty / 1000;
         satuan = 'kg';
       }
