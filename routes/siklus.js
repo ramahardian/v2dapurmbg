@@ -2310,6 +2310,10 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const penerimaCount = pmMap[displayJenjang]?.total_penerima || 0;
       if (!penerimaCount) continue;
 
+      // Faktor pengali: sebulan penuh dibagi panjang siklus
+      const totalHari = Math.max(Number(s.total_hari) || 1, 1);
+      const multiplier = hariKerja / totalHari;
+
       // --- A. Menu-based ingredients ---
       const [items] = await db.query(
         `SELECT si.* FROM siklus_menu_item si
@@ -2348,7 +2352,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
           if (!agg[key]) {
             agg[key] = { bahan_baku_id: br.bahan_baku_id, bahan_nama: br.bahan_nama, kode: br.kode || '', satuan: br.satuan, harga_satuan: Number(br.harga_satuan) || 0, total_qty: 0 };
           }
-          agg[key].total_qty += beratKotor;
+          agg[key].total_qty += beratKotor * multiplier;
         }
       }
 
@@ -2400,7 +2404,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
           if (!agg[key]) {
             agg[key] = { bahan_baku_id: gb.bahan_baku_id, bahan_nama: gb.bahan_nama, kode: gb.kode || '', satuan: gb.satuan, harga_satuan: Number(gb.harga_satuan) || 0, total_qty: 0 };
           }
-          agg[key].total_qty += beratKotor;
+          agg[key].total_qty += beratKotor * multiplier;
         }
       }
     }
