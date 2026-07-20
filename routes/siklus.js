@@ -429,10 +429,21 @@ router.get('/siklus/recipe-names', async (req, res) => {
       bahanMap[key].push({ id: br.bahan_baku_id, nama: br.bahan_nama });
     }
 
+    // Buat map per hari untuk aggregasi bahan dari grid picker
+    const bahanByDay = {};
+    for (const br of bahanRows) {
+      if (!bahanByDay[br.hari_ke]) bahanByDay[br.hari_ke] = [];
+      if (!bahanByDay[br.hari_ke].some(function(b) { return b.id === br.bahan_baku_id; })) {
+        bahanByDay[br.hari_ke].push({ id: br.bahan_baku_id, nama: br.bahan_nama });
+      }
+    }
+
     const names = [];
     for (const it of items) {
       if (it.menu_nama && it.menu_nama.trim()) {
-        names.push({ source: 'menu', hari_ke: it.hari_ke, hari_nama: it.hari_nama, nama: it.menu_nama.trim() });
+        // Lampirkan bahan dari grid picker untuk menu items
+        const dayBahan = bahanByDay[it.hari_ke] || [];
+        names.push({ source: 'menu', hari_ke: it.hari_ke, hari_nama: it.hari_nama, nama: it.menu_nama.trim(), bahan: dayBahan });
       }
       if (it.resep_map) {
         try {
