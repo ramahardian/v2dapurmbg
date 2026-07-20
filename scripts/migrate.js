@@ -400,6 +400,63 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip FK menu_id)'); }
 
+  // Missing indexes for performance
+  try {
+    const [idx1] = await q("SHOW INDEX FROM siklus_menu WHERE Key_name='idx_siklus_menu_tenant_status'");
+    if (!idx1.length) {
+      await q('CREATE INDEX idx_siklus_menu_tenant_status ON siklus_menu (tenant_id, status)');
+      log('✓ Index: siklus_menu (tenant_id, status)');
+    }
+  } catch (e) { log('  (skip idx_siklus_menu_tenant_status)'); }
+
+  try {
+    const [idx2] = await q("SHOW INDEX FROM siklus_menu_item WHERE Key_name='idx_siklus_item_siklus_hari'");
+    if (!idx2.length) {
+      await q('CREATE INDEX idx_siklus_item_siklus_hari ON siklus_menu_item (siklus_id, hari_ke)');
+      log('✓ Index: siklus_menu_item (siklus_id, hari_ke)');
+    }
+  } catch (e) { log('  (skip idx_siklus_item_siklus_hari)'); }
+
+  try {
+    const [idx3] = await q("SHOW INDEX FROM siklus_menu_item_bahan WHERE Key_name='idx_siklus_bahan_baku'");
+    if (!idx3.length) {
+      await q('CREATE INDEX idx_siklus_bahan_baku ON siklus_menu_item_bahan (bahan_baku_id)');
+      log('✓ Index: siklus_menu_item_bahan (bahan_baku_id)');
+    }
+  } catch (e) { log('  (skip idx_siklus_bahan_baku)'); }
+
+  try {
+    const [idx4] = await q("SHOW INDEX FROM menu_bahan WHERE Key_name='idx_menu_bahan_menu'");
+    if (!idx4.length) {
+      await q('CREATE INDEX idx_menu_bahan_menu ON menu_bahan (menu_id, bahan_baku_id)');
+      log('✓ Index: menu_bahan (menu_id, bahan_baku_id)');
+    }
+  } catch (e) { log('  (skip idx_menu_bahan_menu)'); }
+
+  try {
+    const [idx5] = await q("SHOW INDEX FROM produksi WHERE Key_name='idx_produksi_tenant_tanggal_menu'");
+    if (!idx5.length) {
+      await q('CREATE INDEX idx_produksi_tenant_tanggal_menu ON produksi (tenant_id, tanggal_produksi, menu_id)');
+      log('✓ Index: produksi (tenant_id, tanggal_produksi, menu_id)');
+    }
+  } catch (e) { log('  (skip idx_produksi_tenant_tanggal_menu)'); }
+
+  try {
+    const [idx6] = await q("SHOW INDEX FROM budget WHERE Key_name='idx_budget_tenant_periode_kategori'");
+    if (!idx6.length) {
+      await q('CREATE INDEX idx_budget_tenant_periode_kategori ON budget (tenant_id, periode, kategori_penerima)');
+      log('✓ Index: budget (tenant_id, periode, kategori_penerima)');
+    }
+  } catch (e) { log('  (skip idx_budget_tenant_periode_kategori)'); }
+
+  try {
+    const [idx7] = await q("SHOW INDEX FROM bahan_baku WHERE Key_name='idx_bahan_baku_tenant_nama'");
+    if (!idx7.length) {
+      await q('CREATE INDEX idx_bahan_baku_tenant_nama ON bahan_baku (tenant_id, nama)');
+      log('✓ Index: bahan_baku (tenant_id, nama)');
+    }
+  } catch (e) { log('  (skip idx_bahan_baku_tenant_nama)'); }
+
   log('✓ Migrasi selesai!');
   return logs;
 }

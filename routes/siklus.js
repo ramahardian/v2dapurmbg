@@ -11,6 +11,87 @@ router.use((req, res, next) => {
   next();
 });
 
+// ── Batch query helpers ──────────────────────────────────────────
+
+async function batchLoadItems(siklusIds) {
+  if (!siklusIds.length) return {};
+  const ph = siklusIds.map(() => '?').join(',');
+  const [rows] = await db.query(
+    `SELECT si.*, m.nama as menu_nama_lengkap
+     FROM siklus_menu_item si
+     LEFT JOIN menu m ON m.id = si.menu_id
+     WHERE si.siklus_id IN (${ph})
+     ORDER BY si.siklus_id, si.hari_ke ASC`,
+    siklusIds
+  );
+  const map = {};
+  for (const r of rows) {
+    if (!map[r.siklus_id]) map[r.siklus_id] = [];
+    map[r.siklus_id].push(r);
+  }
+  return map;
+}
+
+async function batchLoadBahanCounts(siklusIds) {
+  if (!siklusIds.length) return {};
+  const ph = siklusIds.map(() => '?').join(',');
+  const [rows] = await db.query(
+    `SELECT siklus_id, hari_ke, COUNT(*) as bahan_count
+     FROM siklus_menu_item_bahan
+     WHERE siklus_id IN (${ph})
+     GROUP BY siklus_id, hari_ke`,
+    siklusIds
+  );
+  const map = {};
+  for (const r of rows) {
+    if (!map[r.siklus_id]) map[r.siklus_id] = {};
+    map[r.siklus_id][r.hari_ke] = r.bahan_count;
+  }
+  return map;
+}
+
+async function batchLoadGridBahanBySiklus(siklusIds) {
+  if (!siklusIds.length) return {};
+  const ph = siklusIds.map(() => '?').join(',');
+  const [rows] = await db.query(
+    `SELECT sb.siklus_id, sb.hari_ke, sb.kategori_sp, sb.bahan_baku_id,
+            COALESCE(b.nama, '(bahan dihapus)') AS nama, b.kalori, b.protein,
+            b.karbohidrat, b.lemak, b.serat, b.berat_1_sp, b.persen_bdd
+     FROM siklus_menu_item_bahan sb
+     LEFT JOIN bahan_baku b ON b.id = sb.bahan_baku_id
+     WHERE sb.siklus_id IN (${ph})`,
+    siklusIds
+  );
+  const bySiklus = {};
+  for (const r of rows) {
+    if (!bySiklus[r.siklus_id]) bySiklus[r.siklus_id] = [];
+    bySiklus[r.siklus_id].push(r);
+  }
+  return bySiklus;
+}
+
+async function batchLoadMenuBahan(menuIds) {
+  if (!menuIds.length) return {};
+  const ph = menuIds.map(() => '?').join(',');
+  const [rows] = await db.query(
+    `SELECT mb.menu_id, mb.jumlah, mb.bahan_baku_id, mb.keterangan,
+            b.nama, b.satuan, b.kategori_sp, b.persen_bdd, b.berat_1_sp,
+            b.kalori, b.protein, b.karbohidrat, b.lemak, b.serat, b.berat_per_satuan, b.kode, b.harga_satuan,
+            m.kategori_penerima
+     FROM menu_bahan mb
+     JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+     JOIN menu m ON m.id = mb.menu_id
+     WHERE mb.menu_id IN (${ph})`,
+    menuIds
+  );
+  const map = {};
+  for (const r of rows) {
+    if (!map[r.menu_id]) map[r.menu_id] = [];
+    map[r.menu_id].push(r);
+  }
+  return map;
+}
+
 /**
  * GET /siklus
  * Mengambil semua data siklus menu milik tenant yang sedang login.
@@ -21,28 +102,17 @@ router.get('/siklus', async (req, res) => {
     'SELECT * FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
     [req.user.tenant_id]
   );
+
+  const siklusIds = rows.map(s => s.id);
+  const itemsBySiklus = await batchLoadItems(siklusIds);
+  const bahanCountsBySiklus = await batchLoadBahanCounts(siklusIds);
+
   for (const s of rows) {
-    const [items] = await db.query(
-      'SELECT * FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke ASC',
-      [s.id]
-    );
-    
-    // Also check which items have bahan (ingredients) assigned via the grid picker
-    // This handles manually-created siklus where menu_id is empty but bahan are assigned
-    const [bahanCounts] = await db.query(
-      'SELECT hari_ke, COUNT(*) as bahan_count FROM siklus_menu_item_bahan WHERE siklus_id=? GROUP BY hari_ke',
-      [s.id]
-    );
-    const bahanMap = {};
-    for (const bc of bahanCounts) {
-      bahanMap[bc.hari_ke] = bc.bahan_count;
-    }
-    
-    // Mark items that have ingredients even without menu_id
+    const items = itemsBySiklus[s.id] || [];
+    const bahanMap = bahanCountsBySiklus[s.id] || {};
     for (const it of items) {
       it._has_bahan = (bahanMap[it.hari_ke] || 0) > 0;
     }
-    
     s.items = items;
   }
   res.json(rows);
@@ -58,25 +128,18 @@ router.get('/siklus/laporan', async (req, res) => {
     [req.user.tenant_id]
   );
 
+  const siklusIds = siklusList.map(s => s.id);
+  const itemsBySiklus = await batchLoadItems(siklusIds);
+  const bahanCountsBySiklus = await batchLoadBahanCounts(siklusIds);
+  const gridBahanBySiklus = await batchLoadGridBahanBySiklus(siklusIds);
+
   const result = [];
   let totalSiklus = 0, totalFilled = 0, totalDays = 0, totalUniqueMenus = 0;
   const allMenuSet = new Set();
 
   for (const s of siklusList) {
-    const [items] = await db.query(
-      'SELECT * FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke ASC',
-      [s.id]
-    );
-    
-    // Also check which items have manually-assigned ingredients via grid picker
-    const [bahanCounts] = await db.query(
-      'SELECT hari_ke, COUNT(*) as bahan_count FROM siklus_menu_item_bahan WHERE siklus_id=? GROUP BY hari_ke',
-      [s.id]
-    );
-    const bahanMap = {};
-    for (const bc of bahanCounts) {
-      bahanMap[bc.hari_ke] = bc.bahan_count;
-    }
+    const items = itemsBySiklus[s.id] || [];
+    const bahanMap = bahanCountsBySiklus[s.id] || {};
 
     const totalHari = s.total_hari || items.length || 7;
     const filledDays = items.filter(it => it.menu_id || (bahanMap[it.hari_ke] || 0) > 0).length;
@@ -86,13 +149,7 @@ router.get('/siklus/laporan', async (req, res) => {
     // Hitung estimasi gizi untuk item manual (via grid picker tanpa menu_id)
     const hasManual = items.some(it => !it.menu_id && (bahanMap[it.hari_ke] || 0) > 0);
     if (hasManual) {
-      const [gridBahan] = await db.query(
-        `SELECT sb.hari_ke, b.kalori, b.protein, b.karbohidrat, b.lemak, b.serat, b.berat_1_sp
-         FROM siklus_menu_item_bahan sb
-         JOIN bahan_baku b ON b.id = sb.bahan_baku_id
-         WHERE sb.siklus_id=?`,
-        [s.id]
-      );
+      const gridBahan = gridBahanBySiklus[s.id] || [];
       const gridByHari = {};
       for (const g of gridBahan) {
         if (!gridByHari[g.hari_ke]) gridByHari[g.hari_ke] = [];
@@ -167,18 +224,14 @@ router.get('/siklus/laporan/bahan', async (req, res) => {
     [req.user.tenant_id]
   );
 
+  const siklusIds = siklusList.map(s => s.id);
+  const itemsBySiklus = await batchLoadItems(siklusIds);
+
   const dayRows = [];
   const dayMap = {};
 
   for (const s of siklusList) {
-    const [items] = await db.query(
-      `SELECT si.*, m.gramasi_total
-       FROM siklus_menu_item si
-       LEFT JOIN menu m ON m.id = si.menu_id
-       WHERE si.siklus_id=? AND si.menu_id IS NOT NULL
-       ORDER BY si.hari_ke ASC`,
-      [s.id]
-    );
+    const items = (itemsBySiklus[s.id] || []).filter(it => it.menu_id);
 
     for (const it of items) {
       const dayKey = `${s.id}-${it.hari_ke}`;
@@ -197,37 +250,34 @@ router.get('/siklus/laporan/bahan', async (req, res) => {
     }
   }
 
-  for (const [key, day] of Object.entries(dayMap)) {
-    if (!day.menu_ids.length) continue;
-    const placeholders = day.menu_ids.map(() => '?').join(',');
-    const [bahanRows] = await db.query(
-      `SELECT mb.bahan_baku_id, b.nama as bahan_nama, b.satuan, b.persen_bdd, mb.jumlah, mb.menu_id, m.kategori_penerima
-       FROM menu_bahan mb
-       JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-       JOIN menu m ON m.id = mb.menu_id
-       WHERE mb.menu_id IN (${placeholders})`,
-      day.menu_ids
-    );
+  // Collect all unique menu_ids and batch-load their bahan
+  const allMenuIds = [...new Set(Object.values(dayMap).flatMap(d => d.menu_ids))];
+  const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
 
-    for (const br of bahanRows) {
-      const katDb = br.kategori_penerima || day.kategori_db;
-      const katDisplay = mapToDisplay(katDb);
-      const beratBersih = Number(br.jumlah) * day.jumlah_porsi;
-      const beratKotor = hitungBDD(beratBersih, br.persen_bdd);
-      dayRows.push({
-        hari_nama: day.hari_nama,
-        hari_ke: day.hari_ke,
-        siklus_id: day.siklus_id,
-        siklus_nama: day.siklus_nama,
-        kategori_db: katDb,
-        kategori: katDisplay,
-        bahan_id: br.bahan_baku_id,
-        bahan_nama: br.bahan_nama,
-        satuan: br.satuan,
-        jumlah: beratKotor,
-        jumlah_porsi: day.jumlah_porsi,
-        gramasi_total: beratKotor,
-      });
+  for (const day of Object.values(dayMap)) {
+    if (!day.menu_ids.length) continue;
+    for (const menuId of day.menu_ids) {
+      const bahanRows = menuBahanMap[menuId] || [];
+      for (const br of bahanRows) {
+        const katDb = br.kategori_penerima || day.kategori_db;
+        const katDisplay = mapToDisplay(katDb);
+        const beratBersih = Number(br.jumlah) * day.jumlah_porsi;
+        const beratKotor = hitungBDD(beratBersih, br.persen_bdd);
+        dayRows.push({
+          hari_nama: day.hari_nama,
+          hari_ke: day.hari_ke,
+          siklus_id: day.siklus_id,
+          siklus_nama: day.siklus_nama,
+          kategori_db: katDb,
+          kategori: katDisplay,
+          bahan_id: br.bahan_baku_id,
+          bahan_nama: br.nama,
+          satuan: br.satuan,
+          jumlah: beratKotor,
+          jumlah_porsi: day.jumlah_porsi,
+          gramasi_total: beratKotor,
+        });
+      }
     }
   }
 
@@ -325,28 +375,20 @@ router.get('/siklus/laporan/bahan-per-jenjang', async (req, res) => {
   }
   const activeJenjang = JENJANG_DISPLAY_ORDER.filter(j => pmByDisplay[j] && pmByDisplay[j] > 0);
 
+  const siklusIds = siklusList.map(s => s.id);
+  const itemsBySiklus = await batchLoadItems(siklusIds);
+  const allMenuIds = [...new Set(Object.values(itemsBySiklus).flatMap(arr => arr.filter(it => it.menu_id).map(it => it.menu_id)))];
+  const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
+
   const menus = [];
   let menuCounter = 0;
 
   for (const s of siklusList) {
-    const [items] = await db.query(
-      `SELECT si.hari_ke, si.hari_nama, si.menu_id, m.nama AS menu_nama, m.gramasi_total
-       FROM siklus_menu_item si
-       LEFT JOIN menu m ON m.id = si.menu_id
-       WHERE si.siklus_id=? AND si.menu_id IS NOT NULL
-       ORDER BY si.hari_ke ASC`,
-      [s.id]
-    );
+    const items = (itemsBySiklus[s.id] || []).filter(it => it.menu_id);
 
     for (const it of items) {
       menuCounter++;
-      const [bahanRows] = await db.query(
-        `SELECT b.nama, b.satuan, b.persen_bdd, b.kategori_sp, mb.jumlah AS berat_bersih
-         FROM menu_bahan mb
-         JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-         WHERE mb.menu_id=?`,
-        [it.menu_id]
-      );
+      const bahanRows = menuBahanMap[it.menu_id] || [];
 
       const bahanList = bahanRows.map(br => {
         const beratBersih = Number(br.berat_bersih || 0);
@@ -405,23 +447,14 @@ router.get('/siklus/recipe-names', async (req, res) => {
     [req.user.tenant_id]
   );
 
+  const siklusIds = siklusList.map(s => s.id);
+  const itemsBySiklus = await batchLoadItems(siklusIds);
+  const gridBahanBySiklus = await batchLoadGridBahanBySiklus(siklusIds);
+
   const result = [];
   for (const s of siklusList) {
-    const [items] = await db.query(
-      'SELECT hari_ke, hari_nama, menu_id, menu_nama, resep_map FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke ASC',
-      [s.id]
-    );
-
-    // Ambil bahan per hari_ke + kategori_sp
-    // Gunakan LEFT JOIN agar bahan tetap terbaca meskipun sudah dihapus dari tabel bahan_baku
-    const [bahanRows] = await db.query(
-      `SELECT b.siklus_id, b.hari_ke, b.kategori_sp, b.bahan_baku_id, COALESCE(bk.nama, '(bahan dihapus)') AS bahan_nama
-       FROM siklus_menu_item_bahan b
-       LEFT JOIN bahan_baku bk ON b.bahan_baku_id = bk.id
-       WHERE b.siklus_id=?
-       ORDER BY b.hari_ke, b.kategori_sp, COALESCE(bk.nama, '')`,
-      [s.id]
-    );
+    const items = itemsBySiklus[s.id] || [];
+    const bahanRows = gridBahanBySiklus[s.id] || [];
     const bahanMap = {};
     for (const br of bahanRows) {
       const key = br.hari_ke + '::' + br.kategori_sp;
@@ -1161,6 +1194,12 @@ router.get('/siklus/laporan/siklus-menu', async (req, res) => {
     };
   }
 
+  // Batch-load items and bahan for all siklus
+  const siklusIds = siklusList.map(s => s.id);
+  const itemsBySiklus = await batchLoadItems(siklusIds);
+  const allMenuIds = [...new Set(Object.values(itemsBySiklus).flatMap(arr => arr.filter(it => it.menu_id).map(it => it.menu_id)))];
+  const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
+
   // Kelompokkan siklus per jenjang
   const siklusByJenjang = {};
   for (const s of siklusList) {
@@ -1182,23 +1221,10 @@ router.get('/siklus/laporan/siklus-menu', async (req, res) => {
     if (!kebutuhanPerJenjang[displayJenjang]) kebutuhanPerJenjang[displayJenjang] = {};
 
     for (const s of siklusArr) {
-      const [items] = await db.query(
-        `SELECT si.*, m.nama as menu_nama_lengkap, m.gramasi_total
-         FROM siklus_menu_item si
-         LEFT JOIN menu m ON m.id = si.menu_id
-         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL
-         ORDER BY si.hari_ke ASC`,
-        [s.id]
-      );
+      const items = (itemsBySiklus[s.id] || []).filter(it => it.menu_id);
 
       for (const it of items) {
-        const [bahan] = await db.query(
-          `SELECT b.nama, b.kategori_sp, b.persen_bdd, mb.jumlah as berat_bersih
-           FROM menu_bahan mb
-           JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-           WHERE mb.menu_id=?`,
-          [it.menu_id]
-        );
+        const bahan = menuBahanMap[it.menu_id] || [];
 
         for (const b of bahan) {
           const namaLower = b.nama.trim().toLowerCase();
@@ -1285,17 +1311,23 @@ router.get('/siklus/laporan/menu-harian', async (req, res) => {
     [req.user.tenant_id]
   );
 
+  const siklusIds = siklusList.map(s => s.id);
+  const itemsBySiklus = await batchLoadItems(siklusIds);
+  const allMenuIds = [...new Set(Object.values(itemsBySiklus).flatMap(arr => arr.filter(it => it.menu_id).map(it => it.menu_id)))];
+  const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
+  const gridBahanBySiklus = await batchLoadGridBahanBySiklus(siklusIds);
+
   const KAT_DISPLAY = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu', 'Minyak'];
 
   const result = [];
   for (const s of siklusList) {
-    const [items] = await db.query(
-      `SELECT si.*, m.nama as menu_nama_lengkap
-       FROM siklus_menu_item si
-       LEFT JOIN menu m ON m.id = si.menu_id
-       WHERE si.siklus_id=? ORDER BY si.hari_ke ASC`,
-      [s.id]
-    );
+    const items = itemsBySiklus[s.id] || [];
+    const gridBahan = gridBahanBySiklus[s.id] || [];
+    const gridByHari = {};
+    for (const gb of gridBahan) {
+      if (!gridByHari[gb.hari_ke]) gridByHari[gb.hari_ke] = [];
+      gridByHari[gb.hari_ke].push(gb);
+    }
 
     const days = [];
     for (const it of items) {
@@ -1309,34 +1341,24 @@ router.get('/siklus/laporan/menu-harian', async (req, res) => {
       for (const kat of KAT_DISPLAY) day.kategori[kat] = [];
 
       if (it.menu_id) {
-        const [bahan] = await db.query(
-          `SELECT b.nama, COALESCE(b.kategori_sp, 'Lainnya') as kategori_sp
-           FROM menu_bahan mb
-           JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-           WHERE mb.menu_id=?`,
-          [it.menu_id]
-        );
+        const bahan = menuBahanMap[it.menu_id] || [];
         for (const b of bahan) {
-          if (day.kategori[b.kategori_sp]) {
-            if (!day.kategori[b.kategori_sp].includes(b.nama)) {
-              day.kategori[b.kategori_sp].push(b.nama);
+          const kat = b.kategori_sp || 'Lainnya';
+          if (day.kategori[kat]) {
+            if (!day.kategori[kat].includes(b.nama)) {
+              day.kategori[kat].push(b.nama);
             }
           }
         }
       }
 
       // Merge direct ingredient assignments from grid
-      const [gridBahan] = await db.query(
-        `SELECT b.nama, sb.kategori_sp
-         FROM siklus_menu_item_bahan sb
-         JOIN bahan_baku b ON b.id = sb.bahan_baku_id
-         WHERE sb.siklus_id=? AND sb.hari_ke=?`,
-        [s.id, it.hari_ke]
-      );
-      for (const b of gridBahan) {
-        if (day.kategori[b.kategori_sp]) {
-          if (!day.kategori[b.kategori_sp].includes(b.nama)) {
-            day.kategori[b.kategori_sp].push(b.nama);
+      const dayGrid = gridByHari[it.hari_ke] || [];
+      for (const b of dayGrid) {
+        const kat = b.kategori_sp || 'Lainnya';
+        if (day.kategori[kat]) {
+          if (!day.kategori[kat].includes(b.nama)) {
+            day.kategori[kat].push(b.nama);
           }
         }
       }
@@ -1602,6 +1624,13 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
     spByJenjang[r.jenjang][r.kategori_sp] = Number(r.sp_value);
   }
 
+  // Batch-load items and bahan for all selected siklus
+  const matchingSiklusIds = selectedSiklus.map(s => s.id);
+  const itemsBySiklus = await batchLoadItems(matchingSiklusIds);
+  const allMenuIds = [...new Set(Object.values(itemsBySiklus).flatMap(arr => arr.filter(it => it.menu_id).map(it => it.menu_id)))];
+  const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
+  const gridBahanBySiklus = await batchLoadGridBahanBySiklus(matchingSiklusIds);
+
   // Build data per jenjang
   const data = [];
 
@@ -1631,31 +1660,22 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
     let menuCounter = 0;
 
     for (const s of matchingSiklus) {
-      const [items] = await db.query(
-        `SELECT si.*, m.nama as menu_nama_lengkap
-         FROM siklus_menu_item si
-         LEFT JOIN menu m ON m.id = si.menu_id
-         WHERE si.siklus_id=?
-         ORDER BY si.hari_ke ASC`,
-        [s.id]
-      );
+      const items = itemsBySiklus[s.id] || [];
+      const gridBahan = gridBahanBySiklus[s.id] || [];
+      const gridByHari = {};
+      for (const gb of gridBahan) {
+        if (!gridByHari[gb.hari_ke]) gridByHari[gb.hari_ke] = [];
+        gridByHari[gb.hari_ke].push(gb);
+      }
 
       const hariList = [];
 
       for (const it of items) {
         menuCounter++;
         if (!it.menu_id) {
-          // For manually-assigned items (no menu_id), try to fetch bahan from siklus_menu_item_bahan
-          const [gridBahan] = await db.query(
-            `SELECT b.id, b.nama, b.kategori_sp, b.persen_bdd, b.berat_1_sp
-             FROM siklus_menu_item_bahan sb
-             JOIN bahan_baku b ON b.id = sb.bahan_baku_id
-             WHERE sb.siklus_id=? AND sb.hari_ke=?`,
-            [s.id, it.hari_ke]
-          );
-          
+          const dayGrid = gridByHari[it.hari_ke] || [];
           const bahanList = [];
-          for (const b of gridBahan) {
+          for (const b of dayGrid) {
             const namaLower = b.nama.trim().toLowerCase();
             const spRef = spRefByName[namaLower];
             const persenBdd = spRef ? spRef.bdd_persen : Number(b.persen_bdd || 100);
@@ -1693,13 +1713,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
           continue;
         }
 
-        const [bahanRows] = await db.query(
-          `SELECT b.id, b.nama, b.kategori_sp, b.persen_bdd, b.berat_1_sp, mb.jumlah as berat_bersih
-           FROM menu_bahan mb
-           JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-           WHERE mb.menu_id=?`,
-          [it.menu_id]
-        );
+        const bahanRows = menuBahanMap[it.menu_id] || [];
 
         const bahanList = [];
 
@@ -2363,46 +2377,74 @@ router.post('/siklus/hitung-budget-semua', async (req, res) => {
     }
 
     const results = [];
-    for (const siklus of siklusList) {
-      const [[existingBudget]] = await db.query(
-        `SELECT harga_per_porsi FROM budget WHERE tenant_id=? AND periode=? AND kategori_penerima=? LIMIT 1`,
-        [t, periode, siklus.kategori_penerima]
-      );
 
-      let hargaPerPorsi = existingBudget ? Number(existingBudget.harga_per_porsi) : 0;
+    // Batch-load existing budget entries for all siklus
+    const kategoriList = [...new Set(siklusList.map(s => s.kategori_penerima).filter(Boolean))];
+    const [existingBudgets] = await db.query(
+      `SELECT kategori_penerima, harga_per_porsi FROM budget
+       WHERE tenant_id=? AND periode=? AND kategori_penerima IN (${kategoriList.map(() => '?').join(',')})`,
+      [t, ...kategoriList]
+    );
+    const budgetPerKat = {};
+    for (const b of existingBudgets) {
+      budgetPerKat[b.kategori_penerima] = Number(b.harga_per_porsi);
+    }
+
+    // Batch-load reference prices for categories without existing budget
+    const missingKats = kategoriList.filter(k => !budgetPerKat[k] || budgetPerKat[k] === 0);
+    const refHargaMap = {};
+    if (missingKats.length) {
+      const [refRows] = await db.query(
+        `SELECT kategori_penerima, harga_per_porsi FROM budget
+         WHERE tenant_id=? AND kategori_penerima IN (${missingKats.map(() => '?').join(',')})
+         AND harga_per_porsi > 0 ORDER BY periode DESC`,
+        [t, ...missingKats]
+      );
+      for (const r of refRows) {
+        if (!refHargaMap[r.kategori_penerima]) {
+          refHargaMap[r.kategori_penerima] = Number(r.harga_per_porsi);
+        }
+      }
+    }
+
+    // Batch-load existing entry IDs
+    const [existingEntries] = await db.query(
+      `SELECT id, kategori_penerima FROM budget
+       WHERE tenant_id=? AND periode=? AND kategori_penerima IN (${kategoriList.map(() => '?').join(',')})`,
+      [t, ...kategoriList]
+    );
+    const existingEntryMap = {};
+    for (const e of existingEntries) {
+      existingEntryMap[e.kategori_penerima] = e.id;
+    }
+
+    for (const siklus of siklusList) {
+      const kat = siklus.kategori_penerima;
+      let hargaPerPorsi = budgetPerKat[kat] || 0;
       if (hargaPerPorsi === 0) {
-        const [[refHarga]] = await db.query(
-          `SELECT harga_per_porsi FROM budget WHERE tenant_id=? AND kategori_penerima=? AND harga_per_porsi > 0 ORDER BY periode DESC LIMIT 1`,
-          [t, siklus.kategori_penerima]
-        );
-        if (refHarga) hargaPerPorsi = Number(refHarga.harga_per_porsi);
+        hargaPerPorsi = refHargaMap[kat] || 0;
       }
 
       const jumlahPorsi = Number(siklus.jumlah_porsi) || 0;
       const totalBudget = hargaPerPorsi * jumlahPorsi * hariKerja;
 
-      const [existingEntry] = await db.query(
-        `SELECT id FROM budget WHERE tenant_id=? AND periode=? AND kategori_penerima=?`,
-        [t, periode, siklus.kategori_penerima]
-      );
-
-      if (existingEntry.length) {
+      if (existingEntryMap[kat]) {
         await db.query(
           `UPDATE budget SET jumlah_penerima=?, harga_per_porsi=?, total_budget=?
            WHERE id=? AND tenant_id=?`,
-          [jumlahPorsi, hargaPerPorsi, totalBudget, existingEntry[0].id, t]
+          [jumlahPorsi, hargaPerPorsi, totalBudget, existingEntryMap[kat], t]
         );
       } else {
         await db.query(
           `INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_per_porsi, total_budget, biaya_operasional)
            VALUES (?,?,?,?,?,?,?)`,
-          [t, periode, siklus.kategori_penerima, jumlahPorsi, hargaPerPorsi, totalBudget, 0]
+          [t, periode, kat, jumlahPorsi, hargaPerPorsi, totalBudget, 0]
         );
       }
 
       results.push({
         siklus: siklus.nama,
-        kategori: siklus.kategori_penerima,
+        kategori: kat,
         porsi: jumlahPorsi,
         harga: hargaPerPorsi,
         budget: totalBudget,

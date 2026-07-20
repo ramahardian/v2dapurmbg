@@ -783,6 +783,31 @@ CREATE TABLE menu_bahan (
     }
   });
 
+  // Endpoint jalankan FULL migrasi database (index, kolom, FK, tabel)
+  app.get('/api/migrate/run', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const { runMigration } = require('./scripts/migrate');
+      const logs = await runMigration();
+      const escapedLogs = logs.map(l => l.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('\n');
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;max-width:700px;margin:auto;background:#f5f5f4">
+          <h2 style="color:#16a34a;margin-bottom:1rem">✅ Migrasi Selesai</h2>
+          <pre style="background:#1c1917;color:#a3e635;padding:1rem;border-radius:0.5rem;overflow-x:auto;font-size:0.8rem;line-height:1.6">${escapedLogs}</pre>
+          <div style="margin-top:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap">
+            <a href="/api/migrate/cek-tabel" style="padding:0.5rem 1.25rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">📋 Cek Tabel</a>
+            <a href="/" style="padding:0.5rem 1.25rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a>
+          </div>
+        </div>`);
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#dc2626">❌ Migrasi Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+          <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a>
+        </div>`);
+    }
+  });
+
   // Endpoint isi berat_per_satuan bahan baku berdasarkan satuan (admin only)
   app.get('/api/migrate/berat-per-satuan', requireAuth, requireRole('admin'), async (req, res) => {
     try {
