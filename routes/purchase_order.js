@@ -228,89 +228,167 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
 // ====================================================================
 router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
   try {
+    const t = req.user.tenant_id;
     const { siklus_ids, jumlah_penerima } = req.body;
     if (!siklus_ids || !Array.isArray(siklus_ids) || !siklus_ids.length) {
       return res.status(400).json({ error: 'Pilih minimal satu siklus' });
     }
 
-    // 1. Hitung kebutuhan (sama seperti /sp/hitung-kebutuhan)
     const ph = siklus_ids.map(() => '?').join(',');
     const [siklusList] = await db.query(
       `SELECT id, nama, kategori_penerima, jumlah_porsi FROM siklus_menu WHERE tenant_id=? AND id IN (${ph})`,
-      [req.user.tenant_id, ...siklus_ids]
+      [t, ...siklus_ids]
     );
     if (!siklusList.length) return res.status(404).json({ error: 'Siklus tidak ditemukan' });
 
-    // Ambil data hari & menu dari siklus
-    const dayRows = [];
+    // Penerima manfaat per kategori
+    const [pmByJenjang] = await db.query(
+      `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang,
+              COALESCE(SUM(paket_besar + paket_kecil), 0) AS total_penerima
+       FROM penerima_manfaat WHERE tenant_id=?
+       GROUP BY kategori_penerima`,
+      [t]
+    );
+    const JENJANG_DB_MAP = {
+      'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
+      'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+      'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
+      'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
+      'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
+      'Balita': ['Balita'],
+    };
+    const dbToDisplay = {};
+    for (const [display, dbVals] of Object.entries(JENJANG_DB_MAP)) {
+      for (const dv of dbVals) dbToDisplay[dv] = display;
+    }
+    const pmMap = {};
+    for (const p of pmByJenjang) {
+      const display = dbToDisplay[p.jenjang] || p.jenjang;
+      if (!pmMap[display]) pmMap[display] = { total_penerima: 0 };
+      pmMap[display].total_penerima += Number(p.total_penerima);
+    }
+
+    // SP Referensi Bahan untuk BDD
+    const [spRefList] = await db.query(
+      'SELECT nama, bdd_persen FROM sp_referensi_bahan WHERE tenant_id=?',
+      [t]
+    );
+    const spRefByName = {};
+    for (const r of spRefList) {
+      const key = r.nama.trim().toLowerCase();
+      spRefByName[key] = Math.round(Number(r.bdd_persen || 0) * 100);
+    }
+
+    const agg = {};
+    let hasItems = false;
+
     for (const s of siklusList) {
+      const kategoriPenerima = s.kategori_penerima || '';
+      const displayJenjang = dbToDisplay[kategoriPenerima] || kategoriPenerima;
+      const penerimaCount = pmMap[displayJenjang]?.total_penerima || 0;
+      if (!penerimaCount) continue;
+
+      // --- A. Menu-based ingredients ---
       const [items] = await db.query(
-        `SELECT si.*, m.kategori_penerima as menu_kat FROM siklus_menu_item si
-         LEFT JOIN menu m ON m.id = si.menu_id
+        `SELECT si.* FROM siklus_menu_item si
          WHERE si.siklus_id=? AND si.menu_id IS NOT NULL`,
         [s.id]
       );
+      if (items.length) hasItems = true;
+
+      const menuPorsiMap = {};
       for (const it of items) {
-        dayRows.push({
-          siklus_id: s.id,
-          menu_id: it.menu_id,
-          jumlah_porsi: Number(it.jumlah_porsi) || 0,
-          kategori_db: it.menu_kat || s.kategori_penerima,
-        });
+        if (!menuPorsiMap[it.menu_id]) menuPorsiMap[it.menu_id] = 0;
+        menuPorsiMap[it.menu_id] += penerimaCount;
       }
-    }
 
-    const menuIds = [...new Set(dayRows.map(r => r.menu_id))];
-    if (!menuIds.length) return res.status(400).json({ error: 'Tidak ada menu di siklus yang dipilih' });
+      const menuIds = Object.keys(menuPorsiMap);
+      if (menuIds.length) {
+        const mph = menuIds.map(() => '?').join(',');
+        const [bahanRows] = await db.query(
+          `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah, b.nama, b.satuan, b.harga_satuan,
+                  b.persen_bdd, b.kategori_sp
+           FROM menu_bahan mb
+           JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+           WHERE mb.menu_id IN (${mph})`,
+          menuIds
+        );
 
-    const mph = menuIds.map(() => '?').join(',');
-    const [bahanRows] = await db.query(
-      `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah, b.nama, b.satuan, b.harga_satuan,
-              b.persen_bdd, b.kategori_sp
-       FROM menu_bahan mb
-       JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-       WHERE mb.menu_id IN (${mph})`,
-      menuIds
-    );
+        for (const br of bahanRows) {
+          const porsi = menuPorsiMap[br.menu_id] || 0;
+          if (!porsi) continue;
+          const beratBersih = Number(br.jumlah) * porsi;
+          const spRefBdd = spRefByName[(br.nama || '').trim().toLowerCase()];
+          const bdd = spRefBdd || Number(br.persen_bdd) || 100;
+          const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
 
-    const menuBahanMap = {};
-    for (const br of bahanRows) {
-      if (!menuBahanMap[br.menu_id]) menuBahanMap[br.menu_id] = [];
-      menuBahanMap[br.menu_id].push(br);
-    }
-
-    // Agregasi kebutuhan per bahan
-    const penerima = jumlah_penerima || 0;
-    const agg = {};
-    for (const day of dayRows) {
-      const bahanList = menuBahanMap[day.menu_id] || [];
-      for (const b of bahanList) {
-        const key = b.bahan_baku_id;
-        if (!agg[key]) {
-          agg[key] = {
-            bahan_baku_id: b.bahan_baku_id,
-            nama: b.nama,
-            satuan: b.satuan || 'g',
-            harga_satuan: Number(b.harga_satuan) || 0,
-            persen_bdd: Number(b.persen_bdd) || 100,
-            total_berat_kotor: 0,
-          };
+          const key = br.bahan_baku_id;
+          if (!agg[key]) {
+            agg[key] = { bahan_baku_id: br.bahan_baku_id, nama: br.nama, satuan: br.satuan || 'g', harga_satuan: Number(br.harga_satuan) || 0, total_berat_kotor: 0 };
+          }
+          agg[key].total_berat_kotor += beratKotor;
         }
-        const beratKotor = b.persen_bdd > 0
-          ? Number(b.jumlah) / (Number(b.persen_bdd) / 100)
-          : Number(b.jumlah);
-        agg[key].total_berat_kotor += beratKotor * day.jumlah_porsi;
+      }
+
+      // --- B. Grid-based ingredients ---
+      const [gridBahan] = await db.query(
+        `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
+                bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp
+         FROM siklus_menu_item_bahan smib
+         JOIN siklus_menu_item smi ON smi.siklus_id=smib.siklus_id AND smi.hari_ke=smib.hari_ke
+         JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
+         WHERE smib.siklus_id=?`,
+        [s.id]
+      );
+
+      if (gridBahan.length) {
+        hasItems = true;
+
+        const [spRows] = await db.query(
+          'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
+          [kategoriPenerima]
+        );
+        const spMap = {};
+        for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
+
+        const cellCount = {};
+        for (const gb of gridBahan) {
+          const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
+          if (!cellCount[cellKey]) cellCount[cellKey] = 0;
+          cellCount[cellKey]++;
+        }
+
+        for (const gb of gridBahan) {
+          const spVal = spMap[gb.kategori_sp] || 0;
+          const berat1Sp = Number(gb.berat_1_sp || 0);
+          if (spVal <= 0 || berat1Sp <= 0) continue;
+
+          const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
+          const bagi = cellCount[cellKey] || 1;
+          const spPerBahan = spVal / bagi;
+          const beratBersih = berat1Sp * spPerBahan * penerimaCount;
+          const spRefBdd = spRefByName[(gb.nama || '').trim().toLowerCase()];
+          const bdd = spRefBdd || Number(gb.persen_bdd || 100);
+          const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
+
+          const key = gb.bahan_baku_id;
+          if (!agg[key]) {
+            agg[key] = { bahan_baku_id: gb.bahan_baku_id, nama: gb.nama, satuan: gb.satuan || 'g', harga_satuan: Number(gb.harga_satuan) || 0, total_berat_kotor: 0 };
+          }
+          agg[key].total_berat_kotor += beratKotor;
+        }
       }
     }
 
-    // 2. Format items untuk PO
-    // NOTE: menu_bahan.jumlah selalu dalam gram (gramasi per porsi)
-    // sehingga total_berat_kotor dalam gram — konversi ke kg
-    const poItems = Object.values(agg).map(b => {
-      let qtyGram = b.total_berat_kotor; // selalu gram
-      let qty = Math.round(qtyGram / 1000 * 100) / 100; // konversi ke kg
+    if (!hasItems) {
+      return res.status(400).json({ error: 'Tidak ada menu atau bahan di siklus yang dipilih' });
+    }
+
+    // Format items ke kg + buffer 10%
+    const poItems = Object.values(agg).filter(b => b.total_berat_kotor > 0).map(b => {
+      let qty = Math.round(b.total_berat_kotor / 1000 * 100) / 100;
       let satuan = 'kg';
-      const buffer = Math.round(qty * 1.1 * 100) / 100; // buffer 10%
+      const buffer = Math.round(qty * 1.1 * 100) / 100;
       return {
         bahan_baku_id: b.bahan_baku_id,
         bahan_nama: b.nama,
@@ -324,7 +402,7 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
 
     if (!poItems.length) return res.status(400).json({ error: 'Tidak ada bahan yang perlu dibeli' });
 
-    // 3. Buat Purchase Request (PR)
+    // Buat PR
     const totalNilai = poItems.reduce((s, i) => s + i.subtotal, 0);
     const noPr = `PR/${Date.now().toString(36).toUpperCase()}`;
     const siklusRef = siklusList.map(s => s.nama).join(', ');
@@ -332,9 +410,9 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
     await db.query(
       `INSERT INTO purchase_order (tenant_id, no_po, tanggal, supplier_nama, item, total_nilai, status, catatan)
        VALUES (?, ?, CURDATE(), ?, ?, ?, 'Draft', ?)`,
-      [req.user.tenant_id, noPr, 'PR Otomatis dari Siklus',
+      [t, noPr, 'PR Otomatis dari Siklus',
        JSON.stringify(poItems), totalNilai,
-       `Dibuat otomatis dari siklus: ${siklusRef}. ${penerima > 0 ? 'Jumlah penerima: ' + penerima : ''}`]
+       `Dibuat otomatis dari siklus: ${siklusRef}`]
     );
 
     res.json({
