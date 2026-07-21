@@ -95,10 +95,24 @@ function renderPbdJenjangSection(jd) {
     html += sk.siklus_nama;
     html += '</div>';
 
-    // Per hari
+    // Day tabs (only if more than 1 day)
+    if (sk.hari.length > 1) {
+      html += '<div class="px-5 py-2 border-b border-stone-100">';
+      html += '<div class="flex gap-1 bg-stone-100 rounded-lg p-0.5 overflow-x-auto siklus-tab-bar" role="tablist">';
+      for (var h = 0; h < sk.hari.length; h++) {
+        var day = sk.hari[h];
+        var isFirst = h === 0;
+        html += '<button onclick="switchPbdTab(event, this)" class="px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all ' + (isFirst ? 'bg-white shadow-sm font-bold text-emerald-700' : 'text-stone-500 hover:text-stone-700 hover:bg-stone-200/50') + '" role="tab" aria-selected="' + (isFirst ? 'true' : 'false') + '">' + day.hari_nama + '</button>';
+      }
+      html += '</div></div>';
+    }
+
+    // Per hari — only active day visible
     for (var h = 0; h < sk.hari.length; h++) {
       var day = sk.hari[h];
+      html += '<div class="pbd-day-content' + (h > 0 ? ' hidden' : '') + '" role="tabpanel">';
       html += renderPbdMenuTable(day, jd.jumlah_siswa);
+      html += '</div>';
     }
   }
 
@@ -147,6 +161,30 @@ function renderPbdMenuTable(day, jumlahSiswa) {
 
   html += '</tbody></table></div></div>';
   return html;
+}
+
+function switchPbdTab(event, btn) {
+  var tabBar = btn.closest('.siklus-tab-bar');
+  if (!tabBar) return;
+
+  var tabs = tabBar.querySelectorAll('button');
+  var idx = -1;
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].className = 'px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all text-stone-500 hover:text-stone-700 hover:bg-stone-200/50';
+    tabs[i].setAttribute('aria-selected', 'false');
+    if (tabs[i] === btn) idx = i;
+  }
+  if (idx === -1) return;
+
+  btn.className = 'px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all bg-white shadow-sm font-bold text-emerald-700';
+  btn.setAttribute('aria-selected', 'true');
+
+  var section = tabBar.closest('.bg-white');
+  var contents = section.querySelectorAll('.pbd-day-content');
+  for (var i = 0; i < contents.length; i++) {
+    contents[i].classList.add('hidden');
+  }
+  if (contents[idx]) contents[idx].classList.remove('hidden');
 }
 
 function fmtPbdNum(v) {
