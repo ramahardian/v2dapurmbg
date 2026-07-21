@@ -1045,6 +1045,20 @@ router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
       total_hari = siklus_hari || 0;
     }
 
+    const JENJANG_DISPLAY_ORDER = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
+    const JENJANG_DB_MAP = {
+      'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
+      'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+      'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
+      'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
+      'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
+      'Balita': ['Balita'],
+    };
+    const dbToDisplay = {};
+    for (const [display, dbVals] of Object.entries(JENJANG_DB_MAP)) {
+      for (const dv of dbVals) dbToDisplay[dv] = display;
+    }
+
     const [penerima] = await db.query(
       `SELECT kategori_penerima, SUM(paket_besar + paket_kecil) as total_penerima
        FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IS NOT NULL
@@ -1061,9 +1075,10 @@ router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
     const budgetMap = {};
     const realisasiMap = {};
     for (const h of hargaList) {
-      hargaMap[h.kategori_penerima] = Number(h.harga_per_porsi);
-      budgetMap[h.kategori_penerima] = Number(h.total_budget || 0);
-      realisasiMap[h.kategori_penerima] = Number(h.realisasi || 0);
+      const displayKey = dbToDisplay[h.kategori_penerima] || h.kategori_penerima;
+      hargaMap[displayKey] = Number(h.harga_per_porsi);
+      budgetMap[displayKey] = Number(h.total_budget || 0);
+      realisasiMap[displayKey] = Number(h.realisasi || 0);
     }
 
     // Realisasi dari kas_bank (Pembayaran Supplier)
@@ -1096,7 +1111,7 @@ router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
     let grandPenerima = 0;
     let grandTotal = 0;
     const rows = penerima.map(p => {
-      const kategori = p.kategori_penerima;
+      const kategori = dbToDisplay[p.kategori_penerima] || p.kategori_penerima;
       const harga = hargaMap[kategori] || 0;
       const jmlPenerima = Number(p.total_penerima);
       const jmlHari = total_hari || 0;
