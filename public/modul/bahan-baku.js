@@ -228,11 +228,11 @@ function toggleSumberFilter() {
   const btn = document.getElementById('filter-koperasi-btn');
   if (btn) {
     if (bahanBakuState.sumber === 'koperasi') {
-      btn.classList.add('bg-[#1e40af]', 'text-white');
-      btn.classList.remove('border', 'border-stone-300', 'text-stone-700');
+      btn.classList.add('bg-[#1e40af]', 'text-white', 'hover:bg-[#1d4ed8]');
+      btn.classList.remove('border', 'border-stone-300', 'text-stone-700', 'hover:bg-stone-100');
     } else {
-      btn.classList.remove('bg-[#1e40af]', 'text-white');
-      btn.classList.add('border', 'border-stone-300', 'text-stone-700');
+      btn.classList.remove('bg-[#1e40af]', 'text-white', 'hover:bg-[#1d4ed8]');
+      btn.classList.add('border', 'border-stone-300', 'text-stone-700', 'hover:bg-stone-100');
     }
   }
   loadBahanBaku();
