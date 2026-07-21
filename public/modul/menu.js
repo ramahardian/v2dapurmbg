@@ -116,7 +116,7 @@ function renderMenuBySiklusHtml(data) {
   } else {
     siklusHtml = groups.map(s => {
       const statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-600';
-      const filledDays = s.days.filter(d => d.menu_id).length;
+      const filledDays = s.days.filter(d => d.menu_id || d._has_content).length;
       const coverage = s.total_hari ? Math.round((filledDays / s.total_hari) * 100) : 0;
 
       return `<div class="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
@@ -143,17 +143,19 @@ function renderMenuBySiklusHtml(data) {
         <div class="p-4">
           <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
             ${s.days.map(d => {
-              return `<div class="border border-stone-200 rounded-lg p-3 ${d.menu_id ? 'hover:border-[#1e40af]/30 hover:shadow-sm' : 'border-dashed bg-stone-50/50'} transition-all">
+              const isFilled = d.menu_id || d._has_content;
+              return `<div class="border rounded-lg p-3 transition-all ${isFilled ? (d.menu_id ? 'border-stone-200 hover:border-[#1e40af]/30 hover:shadow-sm' : 'border-emerald-200 bg-emerald-50/30 hover:border-emerald-300 hover:shadow-sm') : 'border-dashed bg-stone-50/50'} ">
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-[10px] font-semibold uppercase text-stone-400">Hari ${d.hari_ke}</span>
                   <span class="text-[10px] text-stone-400">${d.hari_nama}</span>
                 </div>
-                ${d.menu_id ? `
+                ${isFilled ? `
                   <div class="font-medium text-sm text-stone-800 truncate" title="${d.menu_nama}">${d.menu_nama}</div>
                   <div class="flex items-center gap-2 mt-1.5 text-[10px] text-stone-500">
                     <span>${d.jumlah_porsi} porsi</span>
                     ${d.kalori ? `<span class="mono">${fmtNum(d.kalori)} kkal</span>` : ''}
                     ${d.gramasi_total ? `<span class="mono">${fmtNum(d.gramasi_total)}g</span>` : ''}
+                    ${!d.menu_id && d._has_content ? '<span class="text-emerald-600 font-medium">Resep</span>' : ''}
                   </div>
                 ` : `<div class="text-sm text-stone-400 italic">Belum diisi</div>`}
               </div>`;

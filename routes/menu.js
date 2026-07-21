@@ -489,6 +489,7 @@ router.get('/menu/by-siklus', async (req, res) => {
     const ph = siklusIds.map(() => '?').join(',');
     const [rows] = await db.query(
       `SELECT si.siklus_id, si.hari_ke, si.hari_nama, si.menu_id, si.menu_nama, si.jumlah_porsi, si.kalori, si.protein, si.karbohidrat, si.lemak, si.serat,
+              si.resep_map,
               m.nama AS menu_nama_lengkap, m.gramasi_total, m.kategori_penerima AS menu_kategori
        FROM siklus_menu_item si
        LEFT JOIN menu m ON m.id = si.menu_id
@@ -507,15 +508,39 @@ router.get('/menu/by-siklus', async (req, res) => {
   const siklusGroups = [];
   for (const s of siklusList) {
     const items = allItems[s.id] || [];
-    const days = items.map(it => ({
-      hari_ke: it.hari_ke,
-      hari_nama: it.hari_nama,
-      menu_id: it.menu_id,
-      menu_nama: it.menu_nama || it.menu_nama_lengkap || '-',
-      jumlah_porsi: Number(it.jumlah_porsi) || 0,
-      kalori: Number(it.kalori || it.kalori) || 0,
-      gramasi_total: Number(it.gramasi_total) || 0,
-    }));
+    const days = items.map(it => {
+      // Determine menu name and content status
+      let menuNama = it.menu_nama || it.menu_nama_lengkap || null;
+      let hasContent = !!it.menu_id;
+
+      if (!it.menu_id) {
+        // Try resep_map to build combined name (only if no menu_nama in DB)
+        if (!menuNama && it.resep_map) {
+          try {
+            const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
+            const names = Object.values(map).filter(v => v && v.trim());
+            if (names.length) {
+              menuNama = names.join(' + ');
+            }
+          } catch (e) { /* ignore parse error */ }
+        }
+        // If we have any name at this point (from DB or resep_map), mark as content
+        if (menuNama) {
+          hasContent = true;
+        }
+      }
+
+      return {
+        hari_ke: it.hari_ke,
+        hari_nama: it.hari_nama,
+        menu_id: it.menu_id,
+        menu_nama: menuNama || '-',
+        jumlah_porsi: Number(it.jumlah_porsi) || 0,
+        kalori: Number(it.kalori || it.kalori) || 0,
+        gramasi_total: Number(it.gramasi_total) || 0,
+        _has_content: hasContent,
+      };
+    });
 
     siklusGroups.push({
       id: s.id,
