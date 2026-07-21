@@ -33,77 +33,82 @@ router.use(requireAuth);
  * Mendukung query parameters: search (string), page (number), limit (number)
  */
 router.get('/menu', async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-  const offset = (page - 1) * limit;
-  
-  // Build WHERE clause for search
-  let whereClause = 'WHERE m.tenant_id=?';
-  const queryParams = [req.user.tenant_id];
-  
-  if (req.query.search) {
-    whereClause += ' AND (m.nama LIKE ? OR m.kategori_penerima LIKE ? OR m.deskripsi LIKE ?)';
-    const searchTerm = `%${req.query.search}%`;
-    queryParams.push(searchTerm, searchTerm, searchTerm);
-  }
-  
-  // Get total count for pagination
-  const [totalCountResult] = await db.query(
-    `SELECT COUNT(*) as count FROM menu m ${whereClause}`, 
-    queryParams
-  );
-  const totalCount = totalCountResult[0].count;
-  
-  // Get paginated menus (tanpa JOIN, agar LIMIT/OFFSET tepat)
-  const menuSql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat
-        FROM menu m
-        ${whereClause}
-        ORDER BY m.id DESC
-        LIMIT ? OFFSET ?`;
-  const [menus] = await db.query(menuSql, [...queryParams, Number(limit), Number(offset)]);
-  
-  // Batch-fetch bahan untuk semua menu di halaman ini
-  const menuIds = menus.map(m => m.id);
-  const bahanMap = {};
-  if (menuIds.length > 0) {
-    const [bahanRows] = await db.query(
-      `SELECT mb.menu_id, mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.keterangan
-       FROM menu_bahan mb
-       LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
-       WHERE mb.menu_id IN (${menuIds.map(() => '?').join(',')})`,
-      menuIds
-    );
-    bahanRows.forEach(row => {
-      if (!bahanMap[row.menu_id]) bahanMap[row.menu_id] = [];
-      bahanMap[row.menu_id].push({
-        bahan_baku_id: row.bahan_baku_id,
-        nama: row.bahan_nama,
-        satuan: row.satuan,
-        kategori_sp: row.kategori_sp,
-        berat_1_sp: row.berat_1_sp,
-        persen_bdd: row.persen_bdd,
-        berat_per_satuan: row.berat_per_satuan,
-        jumlah: row.jumlah,
-        keterangan: row.keterangan || ''
-      });
-    });
-  }
-  
-  // Attach bahan to each menu
-  const menuList = menus.map(m => ({
-    ...m,
-    bahan: bahanMap[m.id] || []
-  }));
-  
-  res.json({
-    data: menuList,
-    pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      total: totalCount,
-      totalPages: Math.ceil(totalCount / limit)
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    
+    // Build WHERE clause for search
+    let whereClause = 'WHERE m.tenant_id=?';
+    const queryParams = [req.user.tenant_id];
+    
+    if (req.query.search) {
+      whereClause += ' AND (m.nama LIKE ? OR m.kategori_penerima LIKE ? OR m.deskripsi LIKE ?)';
+      const searchTerm = `%${req.query.search}%`;
+      queryParams.push(searchTerm, searchTerm, searchTerm);
     }
-  });
+    
+    // Get total count for pagination
+    const [totalCountResult] = await db.query(
+      `SELECT COUNT(*) as count FROM menu m ${whereClause}`, 
+      queryParams
+    );
+    const totalCount = totalCountResult[0].count;
+    
+    // Get paginated menus (tanpa JOIN, agar LIMIT/OFFSET tepat)
+    const menuSql = `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat
+          FROM menu m
+          ${whereClause}
+          ORDER BY m.id DESC
+          LIMIT ? OFFSET ?`;
+    const [menus] = await db.query(menuSql, [...queryParams, Number(limit), Number(offset)]);
+    
+    // Batch-fetch bahan untuk semua menu di halaman ini
+    const menuIds = menus.map(m => m.id);
+    const bahanMap = {};
+    if (menuIds.length > 0) {
+      const [bahanRows] = await db.query(
+        `SELECT mb.menu_id, mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.keterangan
+         FROM menu_bahan mb
+         LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+         WHERE mb.menu_id IN (${menuIds.map(() => '?').join(',')})`,
+        menuIds
+      );
+      bahanRows.forEach(row => {
+        if (!bahanMap[row.menu_id]) bahanMap[row.menu_id] = [];
+        bahanMap[row.menu_id].push({
+          bahan_baku_id: row.bahan_baku_id,
+          nama: row.bahan_nama,
+          satuan: row.satuan,
+          kategori_sp: row.kategori_sp,
+          berat_1_sp: row.berat_1_sp,
+          persen_bdd: row.persen_bdd,
+          berat_per_satuan: row.berat_per_satuan,
+          jumlah: row.jumlah,
+          keterangan: row.keterangan || ''
+        });
+      });
+    }
+    
+    // Attach bahan to each menu
+    const menuList = menus.map(m => ({
+      ...m,
+      bahan: bahanMap[m.id] || []
+    }));
+    
+    res.json({
+      data: menuList,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    });
+  } catch (e) {
+    console.error('GET /menu error:', e);
+    res.status(500).json({ error: 'Gagal memuat menu: ' + e.message });
+  }
 });
 
 /**
