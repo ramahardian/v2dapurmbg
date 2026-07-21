@@ -177,53 +177,85 @@ function route() {
   else if (m.crud) renderCrud(m.crud);
 }
 
-// ===== Stock Notification =====
+// ===== Notifications (Stock + Siklus) =====
 let stockNotifTimer = null;
 
-async function fetchStockNotif() {
+async function fetchNotif() {
   try {
-    const r = await fetch('/api/dashboard/low-stock', { credentials: 'include' });
-    if (!r.ok) return;
-    const d = await r.json();
-    const badge = document.getElementById('stock-notif-badge');
-    const list = document.getElementById('stock-notif-list');
-    if (!badge || !list) return;
+    const [stock, siklus] = await Promise.all([
+      fetch('/api/dashboard/low-stock', { credentials: 'include' }).then(r => r.ok ? r.json() : { count: 0, items: [] }),
+      fetch('/api/dashboard/siklus-notif', { credentials: 'include' }).then(r => r.ok ? r.json() : { count: 0, items: [] }),
+    ]);
 
-    if (d.count > 0) {
-      ['stock-notif-badge', 'stock-notif-badge-mobile'].forEach(id => {
-        const b = document.getElementById(id);
-        if (b) { b.textContent = d.count > 99 ? '99+' : d.count; b.classList.remove('hidden'); }
-      });
-      // Update dropdown if it's visible
-      if (!document.getElementById('stock-notif-dropdown')?.classList.contains('hidden')) {
-        renderStockNotifList(d, list);
+    const totalNotif = (stock.count || 0) + (siklus.count || 0);
+
+    // Update badge
+    ['stock-notif-badge', 'stock-notif-badge-mobile'].forEach(id => {
+      const b = document.getElementById(id);
+      if (!b) return;
+      if (totalNotif > 0) {
+        b.textContent = totalNotif > 99 ? '99+' : totalNotif;
+        b.classList.remove('hidden');
+      } else {
+        b.classList.add('hidden');
       }
-    } else {
-      ['stock-notif-badge', 'stock-notif-badge-mobile'].forEach(id => {
-        const b = document.getElementById(id);
-        if (b) b.classList.add('hidden');
-      });
-      if (!document.getElementById('stock-notif-dropdown')?.classList.contains('hidden')) {
-        list.innerHTML = '<div class="px-4 py-6 text-center text-sm text-emerald-600">✅ Semua stok aman</div>';
-      }
+    });
+
+    // Update dropdown if visible
+    const dd = document.getElementById('stock-notif-dropdown');
+    if (dd && !dd.classList.contains('hidden')) {
+      renderNotifList(stock, siklus);
     }
   } catch { /* silent */ }
 }
 
-function renderStockNotifList(d, list) {
-  if (!d.items?.length) {
-    list.innerHTML = '<div class="px-4 py-6 text-center text-sm text-emerald-600">✅ Semua stok aman</div>';
-    return;
+function renderNotifList(stock, siklus) {
+  const list = document.getElementById('stock-notif-list');
+  if (!list) return;
+
+  let html = '';
+
+  // Siklus section
+  if (siklus.count > 0) {
+    html += `<div class="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider" style="opacity:0.5">Siklus Menu</div>`;
+    html += siklus.items.slice(0, 5).map(it => {
+      const pct = it.coverage;
+      const barColor = pct < 50 ? 'bg-red-500' : pct < 80 ? 'bg-amber-500' : 'bg-blue-500';
+      return `<div class="px-4 py-2.5 border-b cursor-pointer hover:opacity-80" style="border-color:var(--border)" onclick="navigateTo('siklus')">
+        <div class="flex items-center justify-between">
+          <div class="text-sm font-medium truncate flex-1">${escHtml(it.nama)}</div>
+          <span class="text-xs font-bold ${pct < 50 ? 'text-red-600' : 'text-amber-600'} ml-2">${pct}%</span>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <div class="flex-1 h-1.5 rounded-full" style="background:var(--border)">
+            <div class="h-1.5 rounded-full ${barColor}" style="width:${pct}%"></div>
+          </div>
+          <span class="text-[10px]" style="opacity:0.5">${it.kosong}/${it.total_hari} kosong</span>
+        </div>
+      </div>`;
+    }).join('');
   }
-  list.innerHTML = d.items.map(it => `
-    <div class="px-4 py-2.5 flex items-center justify-between border-b" style="border-color:var(--border)">
-      <div class="min-w-0 flex-1">
-        <div class="text-sm font-medium truncate">${escHtml(it.nama)}</div>
-        <div class="text-[10px]" style="opacity:0.5">Min: ${it.min} ${it.satuan}</div>
+
+  // Stock section
+  if (stock.count > 0) {
+    if (html) html += `<div class="border-t" style="border-color:var(--border)"></div>`;
+    html += `<div class="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider" style="opacity:0.5">Stok Menipis</div>`;
+    html += stock.items.slice(0, 5).map(it => `
+      <div class="px-4 py-2.5 flex items-center justify-between border-b cursor-pointer hover:opacity-80" style="border-color:var(--border)" onclick="navigateTo('gudang')">
+        <div class="min-w-0 flex-1">
+          <div class="text-sm font-medium truncate">${escHtml(it.nama)}</div>
+          <div class="text-[10px]" style="opacity:0.5">Min: ${it.min} ${it.satuan}</div>
+        </div>
+        <div class="mono text-sm font-bold text-red-600 ml-3 whitespace-nowrap">${it.stok} ${it.satuan}</div>
       </div>
-      <div class="mono text-sm font-bold text-red-600 ml-3 whitespace-nowrap">${it.stok} ${it.satuan}</div>
-    </div>
-  `).join('');
+    `).join('');
+  }
+
+  if (!html) {
+    html = '<div class="px-4 py-6 text-center text-sm text-emerald-600">✅ Semua aman</div>';
+  }
+
+  list.innerHTML = html;
 }
 
 function toggleStockNotif() {
@@ -234,7 +266,7 @@ function toggleStockNotif() {
   dd.classList.toggle('hidden');
   if (isHidden && list) {
     list.innerHTML = '<div class="px-4 py-6 text-center text-sm" style="opacity:0.5">Memuat...</div>';
-    fetchStockNotif(); // will render into list when response comes
+    fetchNotif();
   }
 }
 
@@ -242,14 +274,21 @@ function closeStockNotif() {
   document.getElementById('stock-notif-dropdown')?.classList.add('hidden');
 }
 
+function navigateTo(key) {
+  closeStockNotif();
+  const link = document.querySelector(`a[data-key="${key}"]`);
+  if (link) { link.click(); }
+  else { window.location.href = '/' + key; }
+}
+
 // ===== Bootstrap =====
 initSidebar();
 init();
 preloadMenus();
 
-// Start periodic stock check (every 60 seconds)
+// Start periodic notification check (every 60 seconds)
 if (stockNotifTimer) clearInterval(stockNotifTimer);
-stockNotifTimer = setInterval(fetchStockNotif, 60000);
-setTimeout(fetchStockNotif, 3000); // first check after 3s
+stockNotifTimer = setInterval(fetchNotif, 60000);
+setTimeout(fetchNotif, 3000); // first check after 3s
 
 // ===== Dashboard =====

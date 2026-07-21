@@ -80,7 +80,7 @@
     <div class="font-bold text-lg flex-1" style="color:var(--text-body)">Dapur Sukaluyu</div>
     <div class="flex items-center gap-1">
       <div class="relative" id="stock-notif-wrap-mobile">
-        <button id="stock-notif-btn-mobile" onclick="toggleStockNotif()" class="p-2 rounded-lg relative" style="color:var(--text-body)" title="Notifikasi Stok">
+        <button id="stock-notif-btn-mobile" onclick="toggleStockNotif()" class="p-2 rounded-lg relative" style="color:var(--text-body)" title="Notifikasi">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
           <span id="stock-notif-badge-mobile" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 hidden" style="box-shadow:0 0 0 2px var(--bg-header)">0</span>
         </button>
@@ -128,7 +128,7 @@
         </div>
         <div class="flex items-center gap-1">
           <div class="relative" id="stock-notif-wrap">
-            <button id="stock-notif-btn" onclick="toggleStockNotif()" class="p-2 rounded-lg relative" style="color:var(--text-body)" title="Notifikasi Stok">
+            <button id="stock-notif-btn" onclick="toggleStockNotif()" class="p-2 rounded-lg relative" style="color:var(--text-body)" title="Notifikasi">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
               <span id="stock-notif-badge" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 hidden" style="box-shadow:0 0 0 2px var(--bg-header)">0</span>
             </button>
@@ -157,16 +157,19 @@
     </div>
   </div>
 
-  <!-- Stock Notification Dropdown (fixed, works on all screen sizes) -->
-  <div id="stock-notif-dropdown" class="fixed right-4 top-16 w-72 rounded-xl shadow-lg border z-50 hidden" style="background:var(--bg-card);border-color:var(--border);color:var(--text-body)">
+  <!-- Notification Dropdown -->
+  <div id="stock-notif-dropdown" class="fixed right-4 top-16 w-80 rounded-xl shadow-lg border z-50 hidden" style="background:var(--bg-card);border-color:var(--border);color:var(--text-body)">
     <div class="px-4 py-3 border-b font-bold text-sm flex items-center gap-2" style="border-color:var(--border)">
-      <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
-      Notifikasi Stok
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      Notifikasi
     </div>
-    <div id="stock-notif-list" class="max-h-[300px] overflow-y-auto">
+    <div id="stock-notif-list" class="max-h-[350px] overflow-y-auto">
       <div class="px-4 py-6 text-center text-sm" style="opacity:0.5">Memuat...</div>
     </div>
-    <a href="/gudang" data-key="gudang" class="block px-4 py-2.5 text-xs font-medium text-center border-t" style="border-color:var(--border);opacity:0.7" onclick="closeStockNotif()">Lihat di Gudang →</a>
+    <div class="flex border-t" style="border-color:var(--border)">
+      <a href="/gudang" data-key="gudang" class="flex-1 block px-4 py-2.5 text-xs font-medium text-center" style="opacity:0.7" onclick="closeStockNotif()">Stok</a>
+      <a href="/siklus" data-key="siklus" class="flex-1 block px-4 py-2.5 text-xs font-medium text-center border-l" style="border-color:var(--border);opacity:0.7" onclick="closeStockNotif()">Siklus</a>
+    </div>
   </div>
 
   <!-- Toast container -->

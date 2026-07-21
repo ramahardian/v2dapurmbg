@@ -188,5 +188,64 @@ router.get('/dashboard/low-stock', async (req, res) => {
   res.json({ count, items });
 });
 
+/**
+ * GET /dashboard/siklus-notif
+ * Notifikasi siklus menu yang belum terisi penuh (coverage < 100%)
+ */
+router.get('/dashboard/siklus-notif', async (req, res) => {
+  const t = req.user.tenant_id;
+  const [rows] = await db.query(
+    `SELECT s.id, s.nama, s.kategori_penerima, s.total_hari, s.status,
+            COUNT(si.id) as item_count,
+            SUM(CASE WHEN si.menu_id IS NOT NULL THEN 1 ELSE 0 END) as with_menu
+     FROM siklus_menu s
+     LEFT JOIN siklus_menu_item si ON si.siklus_id = s.id
+     WHERE s.tenant_id = ?
+     GROUP BY s.id`,
+    [t]
+  );
+
+  // Batch check which items have grid bahan
+  const siklusIds = rows.map(r => r.id);
+  const filledBySiklus = {};
+  if (siklusIds.length) {
+    const ph = siklusIds.map(() => '?').join(',');
+    const [bahanDays] = await db.query(
+      `SELECT DISTINCT sb.siklus_id, sb.hari_ke
+       FROM siklus_menu_item_bahan sb
+       WHERE sb.siklus_id IN (${ph})`,
+      siklusIds
+    );
+    for (const b of bahanDays) {
+      if (!filledBySiklus[b.siklus_id]) filledBySiklus[b.siklus_id] = new Set();
+      filledBySiklus[b.siklus_id].add(b.hari_ke);
+    }
+  }
+
+  const notifItems = [];
+  for (const r of rows) {
+    const menuFilled = Number(r.with_menu) || 0;
+    const manualDays = filledBySiklus[r.id] ? filledBySiklus[r.id].size : 0;
+    const totalFilled = Math.max(menuFilled, manualDays);
+    const coverage = r.total_hari > 0 ? Math.round((totalFilled / r.total_hari) * 100) : 0;
+
+    if (coverage < 100) {
+      notifItems.push({
+        id: r.id,
+        nama: r.nama,
+        kategori_penerima: r.kategori_penerima,
+        total_hari: Number(r.total_hari),
+        filled: totalFilled,
+        kosong: Number(r.total_hari) - totalFilled,
+        coverage,
+        status: r.status,
+      });
+    }
+  }
+
+  notifItems.sort((a, b) => a.coverage - b.coverage);
+  res.json({ count: notifItems.length, items: notifItems.slice(0, 20) });
+});
+
 module.exports = router;
 
