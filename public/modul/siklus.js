@@ -192,6 +192,7 @@ async function loadSiklusDetail(id) {
         <div class="flex flex-wrap gap-2">
           <button onclick="generateProduksi(${data.id})" class="px-3 py-1.5 text-sm border border-emerald-300 bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Buat Produksi</button>
           <button onclick="hitungBudgetSiklus(${data.id})" class="px-3 py-1.5 text-sm border border-blue-300 bg-blue-50 text-blue-700 rounded hover:bg-blue-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Buat Budget</button>
+          <button onclick="renderProduksiHarian(${data.id})" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-700 rounded hover:bg-amber-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Produksi Harian</button>
           <button onclick="renderSiklusLaporan(${data.id})" class="px-3 py-1.5 text-sm border border-purple-300 bg-purple-50 text-purple-700 rounded hover:bg-purple-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Laporan + Banding SP</button>
           <button onclick="editSiklus(${data.id})" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50">Edit Siklus</button>
           <button onclick="document.getElementById('siklus-detail').innerHTML=''" class="px-3 py-1.5 text-sm text-stone-500 hover:text-stone-900">Tutup</button>
@@ -435,6 +436,140 @@ async function renderSiklusLaporan(id) {
     }
   }
   window['_laporanSiklus_'+id] = { items, siklus, stats };
+}
+
+// ===== Laporan Produksi Harian per Siklus =====
+async function renderProduksiHarian(id) {
+  var wrap = document.getElementById('siklus-detail');
+  if (!wrap) return;
+  wrap.scrollIntoView({ behavior: 'smooth' });
+  
+  wrap.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
+  
+  try {
+    var data = await api.get('/siklus/' + id + '/laporan/produksi-harian');
+    var { siklus, ringkasan, days } = data;
+    
+    var html = '<div class="bg-white border border-stone-200 rounded-lg p-5">';
+    
+    // Header
+    html += '<div class="flex flex-wrap justify-between items-center mb-4 gap-2">' +
+      '<div>' +
+        '<h3 class="font-bold text-lg">📋 Laporan Produksi Harian</h3>' +
+        '<div class="text-sm font-medium text-stone-700 mt-1">' + siklus.nama + '</div>' +
+        '<div class="text-xs text-stone-500">Kategori: <b>' + (siklus.kategori_penerima || 'Semua') + '</b> • Status: <b class="capitalize">' + siklus.status + '</b></div>' +
+      '</div>' +
+      '<div class="flex gap-2">' +
+        '<button onclick="loadSiklusDetail(' + id + ')" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50">← Kembali ke Siklus</button>' +
+        '<button onclick="window.print()" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2 2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print</button>' +
+      '</div>' +
+    '</div>';
+    
+    // Ringkasan cards
+    html += '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">' +
+      '<div class="bg-amber-50 rounded-lg p-4">' +
+        '<div class="text-xs text-amber-700 uppercase font-medium">Total Hari</div>' +
+        '<div class="text-2xl font-bold text-amber-800 mt-1">' + ringkasan.total_hari + '</div>' +
+      '</div>' +
+      '<div class="bg-emerald-50 rounded-lg p-4">' +
+        '<div class="text-xs text-emerald-700 uppercase font-medium">Hari Terisi</div>' +
+        '<div class="text-2xl font-bold text-emerald-800 mt-1">' + ringkasan.hari_terisi + '</div>' +
+        '<div class="text-xs text-emerald-600 mt-1">' + (ringkasan.total_hari ? Math.round(ringkasan.hari_terisi / ringkasan.total_hari * 100) : 0) + '% coverage</div>' +
+      '</div>' +
+      '<div class="bg-blue-50 rounded-lg p-4">' +
+        '<div class="text-xs text-blue-700 uppercase font-medium">Total Penerima</div>' +
+        '<div class="text-2xl font-bold text-blue-800 mt-1">' + fmtNum(ringkasan.total_penerima) + '</div>' +
+        '<div class="text-xs text-blue-600">porsi/hari</div>' +
+      '</div>' +
+      '<div class="bg-orange-50 rounded-lg p-4">' +
+        '<div class="text-xs text-orange-700 uppercase font-medium">Total Kebutuhan</div>' +
+        '<div class="text-2xl font-bold text-orange-800 mt-1">' + fmtNum(ringkasan.total_kebutuhan_kg) + '</div>' +
+        '<div class="text-xs text-orange-600">kg (semua hari)</div>' +
+      '</div>' +
+    '</div>';
+    
+    if (!days || !days.length) {
+      html += '<div class="text-center py-16 text-stone-400">Tidak ada data</div>';
+    } else {
+      // Per-day tables
+      for (var d of days) {
+        if (!d.bahan || !d.bahan.length) {
+          html += '<div class="bg-stone-50 border border-dashed border-stone-300 rounded-lg p-5 mb-4 text-center text-sm text-stone-400">' +
+            '<div class="font-semibold text-stone-600 mb-1">Hari ' + d.hari_ke + ' — ' + d.hari_nama + '</div>' +
+            '<div class="italic">' + (d.menu_nama || 'Belum diisi') + '</div>' +
+            '<div class="text-xs mt-2">Tidak ada bahan</div>' +
+          '</div>';
+          continue;
+        }
+        
+        html += '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">';
+        
+        // Day header
+        html += '<div class="px-5 py-3 bg-stone-50 border-b border-stone-200">' +
+          '<div class="flex items-center justify-between">' +
+            '<div>' +
+              '<div class="font-bold text-stone-700">Hari ' + d.hari_ke + ' — ' + d.hari_nama + '</div>' +
+              '<div class="text-sm text-emerald-700 font-medium mt-0.5">' + d.menu_nama + '</div>' +
+            '</div>' +
+            '<div class="text-right text-xs text-stone-500">' +
+              '<div>Porsi: <b>' + fmtNum(d.jumlah_porsi) + '</b></div>' +
+              '<div>Total: <b class="text-amber-700">' + fmtNum(d.total_kebutuhan_kg) + ' kg</b></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+        
+        // Table
+        html += '<div class="overflow-x-auto"><table class="w-full text-xs">' +
+          '<thead class="bg-stone-50/50"><tr>' +
+            '<th class="text-left px-4 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Bahan</th>' +
+            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">SP</th>' +
+            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">1 SP (g)</th>' +
+            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">BDD</th>' +
+            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Kg/pcs/btl</th>' +
+            '<th class="text-left px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Ket</th>' +
+          '</tr></thead><tbody>';
+        
+        for (var b of d.bahan) {
+          var bddLabel = b.persen_bdd < 100 ? b.persen_bdd + '%' : '—';
+          var spLabel = b.sp_value > 0 ? b.sp_value : '—';
+          var displayQty = b.display_qty;
+          var displaySat = b.display_satuan;
+          
+          html += '<tr class="border-t border-stone-100 hover:bg-stone-50/50 transition-colors">' +
+            '<td class="px-4 py-2.5 font-medium text-stone-700">' + b.nama + '</td>' +
+            '<td class="px-3 py-2.5 text-right mono text-stone-600">' + spLabel + '</td>' +
+            '<td class="px-3 py-2.5 text-right mono text-stone-600">' + (b.berat_1_sp || '—') + '</td>' +
+            '<td class="px-3 py-2.5 text-right mono text-stone-600">' + bddLabel + '</td>' +
+            '<td class="px-3 py-2.5 text-right mono font-bold text-stone-800">' + (typeof displayQty === 'number' ? fmtNum(displayQty) : displayQty) + ' ' + displaySat + '</td>' +
+            '<td class="px-3 py-2.5 text-xs text-stone-400">' +
+              (b.buffer_persen > 0 ? 'Buffer ' + b.buffer_persen + '%' : '') +
+              (b.persen_bdd < 100 && b.buffer_persen > 0 ? ' • ' : '') +
+              (b.persen_bdd < 100 && !b.buffer_persen ? 'BDD ' + b.persen_bdd + '%' : '') +
+            '</td>' +
+          '</tr>';
+        }
+        
+        html += '</tbody></table></div></div>';
+      }
+    }
+    
+    // Grand total footer
+    html += '<div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between mt-2">' +
+      '<div class="text-sm text-amber-800">' +
+        '<span class="font-semibold">Grand Total Kebutuhan:</span> ' + fmtNum(ringkasan.total_kebutuhan_kg) + ' kg untuk ' + ringkasan.total_hari + ' hari' +
+        ' (' + ringkasan.hari_terisi + ' hari terisi)' +
+      '</div>' +
+      '<div class="text-amber-600 text-xs">' + siklus.nama + '</div>' +
+    '</div>';
+    
+    html += '</div>'; // close wrapper
+    
+    wrap.innerHTML = html;
+    
+  } catch (e) {
+    console.error('Produksi harian render error:', e);
+    wrap.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan produksi harian: ' + e.message + '</div>';
+  }
 }
 
 async function hitungSpSiklus(id) {

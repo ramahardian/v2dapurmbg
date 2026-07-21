@@ -1232,6 +1232,207 @@ router.get('/siklus/:id/laporan', async (req, res) => {
 });
 
 /**
+ * GET /siklus/:id/laporan/produksi-harian
+ * Laporan produksi harian dari grid bahan (siklus_menu_item_bahan).
+ * Menampilkan per hari: menu name (combined dari resep_map), tabel bahan dengan kebutuhan kg
+ * berdasarkan SP × berat_1_sp × jumlah_porsi / BDD.
+ * jumlah_porsi = total penerima manfaat aktif untuk kategori_penerima siklus.
+ */
+router.get('/siklus/:id/laporan/produksi-harian', async (req, res) => {
+  try {
+    // 1. Ambil siklus
+    const [[siklus]] = await db.query(
+      'SELECT * FROM siklus_menu WHERE id=? AND tenant_id=?',
+      [req.params.id, req.user.tenant_id]
+    );
+    if (!siklus) return res.status(404).json({ error: 'Siklus tidak ditemukan' });
+
+    // 2. Ambil items per hari
+    const [items] = await db.query(
+      'SELECT * FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke ASC',
+      [req.params.id]
+    );
+
+    // 3. Ambil grid bahan
+    const [gridBahan] = await db.query(
+      `SELECT sb.hari_ke, sb.kategori_sp, sb.bahan_baku_id,
+              COALESCE(b.nama, '(bahan dihapus)') AS nama, 
+              b.satuan, b.berat_1_sp, b.persen_bdd, b.buffer_persen
+       FROM siklus_menu_item_bahan sb
+       LEFT JOIN bahan_baku b ON b.id = sb.bahan_baku_id
+       WHERE sb.siklus_id=?`,
+      [req.params.id]
+    );
+
+    // 4. Standar SP untuk kategori_penerima siklus
+    const spMap = {};
+    if (siklus.kategori_penerima) {
+      const [spRows] = await db.query(
+        'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
+        [siklus.kategori_penerima]
+      );
+      for (const r of spRows) spMap[r.kategori_sp] = Number(r.sp_value);
+    }
+
+    // 5. Penerima Manfaat — total untuk kategori_penerima siklus
+    let jumlahPorsi = 0;
+    if (siklus.kategori_penerima) {
+      const [[pmRow]] = await db.query(
+        'SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima=?',
+        [req.user.tenant_id, siklus.kategori_penerima]
+      );
+      jumlahPorsi = Number(pmRow.total) || 0;
+    }
+    if (!jumlahPorsi) {
+      jumlahPorsi = Number(siklus.jumlah_porsi) || 0;
+    }
+
+    // 6. Siapkan buildGridNama helper (sama seperti endpoint lain)
+    const gridNamaByHari = {};
+    for (const g of gridBahan) {
+      if (!gridNamaByHari[g.hari_ke]) gridNamaByHari[g.hari_ke] = [];
+      gridNamaByHari[g.hari_ke].push({ kategori_sp: g.kategori_sp, nama: g.nama });
+    }
+    const KAT_ORDER = ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
+    function buildGridNama(hariKe) {
+      const dayBahan = gridNamaByHari[hariKe] || [];
+      if (!dayBahan.length) return null;
+      const grouped = {};
+      for (const b of dayBahan) {
+        const kat = b.kategori_sp || 'Lainnya';
+        if (!grouped[kat]) grouped[kat] = [];
+        grouped[kat].push(b.nama);
+      }
+      const parts = [];
+      for (const kat of KAT_ORDER) {
+        if (grouped[kat] && grouped[kat].length) parts.push(grouped[kat].join(', '));
+      }
+      for (const [kat, names] of Object.entries(grouped)) {
+        if (!KAT_ORDER.includes(kat)) parts.push(names.join(', ') + ' (' + kat + ')');
+      }
+      return parts.length ? parts.join(' + ') : null;
+    }
+
+    // 7. Hitung cell count: berapa bahan dalam satu (hari_ke + kategori_sp)
+    const cellCount = {};
+    for (const gb of gridBahan) {
+      const key = gb.hari_ke + '|' + (gb.kategori_sp || 'Lainnya');
+      if (!cellCount[key]) cellCount[key] = 0;
+      cellCount[key]++;
+    }
+
+    // 8. Group grid bahan by hari_ke
+    const bahanByDay = {};
+    for (const gb of gridBahan) {
+      if (!bahanByDay[gb.hari_ke]) bahanByDay[gb.hari_ke] = [];
+      bahanByDay[gb.hari_ke].push(gb);
+    }
+
+    // 9. Build days data
+    const days = items.map(it => {
+      // Build combined menu name
+      let menuNama = it.menu_nama || null;
+      if (!it.menu_id) {
+        menuNama = null;
+        if (it.resep_map) {
+          try {
+            const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
+            const names = Object.values(map).filter(v => v && v.trim());
+            if (names.length) menuNama = names.join(' + ');
+          } catch (e) {}
+        }
+        if (!menuNama) {
+          const gridNama = buildGridNama(it.hari_ke);
+          if (gridNama) menuNama = gridNama;
+        }
+        if (!menuNama) menuNama = 'Menu Hari ' + it.hari_ke;
+      }
+
+      // Calculate ingredients for this day
+      const dayBahan = bahanByDay[it.hari_ke] || [];
+      const bahanRows = [];
+      
+      for (const gb of dayBahan) {
+        const kat = gb.kategori_sp || 'Lainnya';
+        const key = gb.hari_ke + '|' + kat;
+        const countInCell = cellCount[key] || 1;
+        const spValue = spMap[kat] || 0;
+        const spPerItem = countInCell > 0 ? spValue / countInCell : 0;
+        const berat1Sp = Number(gb.berat_1_sp || 0);
+        const persenBdd = Number(gb.persen_bdd || 100);
+        
+        // Berat bersih per item = SP_per_item × berat_1_sp × jumlah_porsi
+        const beratBersih = spPerItem * berat1Sp * jumlahPorsi;
+        // Berat kotor = berat bersih / (BDD% / 100)
+        const beratKotor = persenBdd > 0 ? Math.round((beratBersih / (persenBdd / 100)) * 100) / 100 : beratBersih;
+        // Kebutuhan dalam kg
+        const kebutuhanKg = Math.round((beratKotor / 1000) * 100) / 100;
+        
+        // Display value: jika satuan = pcs/buah, tampilkan pcs, selainnya kg
+        const satuan = gb.satuan || 'kg';
+        const isPcs = ['pcs', 'buah', 'btl', 'pack'].includes(satuan.toLowerCase());
+        const displayQty = isPcs ? Math.round(kebutuhanKg) : kebutuhanKg;
+        const displaySatuan = isPcs ? satuan : 'kg';
+        
+        bahanRows.push({
+          bahan_baku_id: gb.bahan_baku_id,
+          nama: gb.nama,
+          satuan: gb.satuan,
+          kategori_sp: kat,
+          sp_value: spValue,
+          sp_per_item: Math.round(spPerItem * 100) / 100,
+          berat_1_sp: berat1Sp,
+          persen_bdd: persenBdd,
+          jumlah_porsi: jumlahPorsi,
+          berat_bersih: Math.round(beratBersih * 100) / 100,
+          berat_kotor: beratKotor,
+          kebutuhan_kg: kebutuhanKg,
+          buffer_persen: Number(gb.buffer_persen || 0),
+          display_qty: displayQty,
+          display_satuan: displaySatuan,
+        });
+      }
+
+      return {
+        hari_ke: it.hari_ke,
+        hari_nama: it.hari_nama,
+        menu_id: it.menu_id,
+        menu_nama: menuNama,
+        jumlah_porsi: jumlahPorsi,
+        bahan: bahanRows,
+        total_bahan: bahanRows.length,
+        total_kebutuhan_kg: Math.round(bahanRows.reduce((s, b) => s + b.kebutuhan_kg, 0) * 100) / 100,
+      };
+    });
+
+    // 10. Ringkasan
+    const totalKebutuhan = days.reduce((s, d) => s + d.total_kebutuhan_kg, 0);
+    const filledDays = days.filter(d => d.bahan.length > 0).length;
+
+    res.json({
+      siklus: {
+        id: siklus.id,
+        nama: siklus.nama,
+        kategori_penerima: siklus.kategori_penerima,
+        status: siklus.status,
+        jumlah_porsi: jumlahPorsi,
+      },
+      ringkasan: {
+        total_hari: days.length,
+        hari_terisi: filledDays,
+        hari_kosong: days.length - filledDays,
+        total_penerima: jumlahPorsi,
+        total_kebutuhan_kg: Math.round(totalKebutuhan * 100) / 100,
+      },
+      days,
+    });
+  } catch (err) {
+    console.error('Produksi harian error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * GET /siklus/laporan/siklus-menu
  * Mengembalikan data siklus menu per hari yang dikelompokkan berdasarkan kategori_sp (kelompok bahan).
  * Untuk ditampilkan dalam laporan Siklus Menu 10 Hari dan Identifikasi Resep.
