@@ -5,6 +5,15 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
+// Helper: cek apakah tanggal tertentu adalah hari libur
+async function cekHariLibur(tenant_id, tanggal) {
+  const [rows] = await db.query(
+    'SELECT id, nama FROM hari_libur WHERE tenant_id=? AND tanggal=?',
+    [tenant_id, tanggal]
+  );
+  return rows.length > 0 ? rows[0] : null;
+}
+
 router.get('/absensi', requireRole('admin', 'keuangan'), async (req, res) => {
   const { karyawan_id, tanggal_awal, tanggal_akhir, status, page = '1', limit = '50' } = req.query;
   const pageNum = Math.max(1, parseInt(page));
@@ -32,6 +41,17 @@ router.post('/absensi', requireRole('admin', 'keuangan'), async (req, res) => {
   const { karyawan_id, tanggal, status, jam_masuk, jam_keluar, keterangan } = req.body;
   if (!karyawan_id) return res.status(400).json({ error: 'Karyawan wajib dipilih' });
   if (!tanggal) return res.status(400).json({ error: 'Tanggal wajib diisi' });
+
+  // Cek apakah tanggal adalah hari libur
+  const libur = await cekHariLibur(req.user.tenant_id, tanggal);
+  if (libur) {
+    return res.status(403).json({
+      error: `Tidak bisa input absensi: ${tanggal} adalah hari libur (${libur.nama})`,
+      libur: true,
+      nama_libur: libur.nama,
+    });
+  }
+
   const [r] = await db.query(
     `INSERT INTO absensi (tenant_id, karyawan_id, tanggal, status, jam_masuk, jam_keluar, keterangan) VALUES (?,?,?,?,?,?,?)`,
     [req.user.tenant_id, karyawan_id, tanggal, status || 'Hadir', jam_masuk || null, jam_keluar || null, keterangan || null]
@@ -42,6 +62,20 @@ router.post('/absensi', requireRole('admin', 'keuangan'), async (req, res) => {
 
 router.put('/absensi/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   const { status, jam_masuk, jam_keluar, keterangan } = req.body;
+
+  // Cek tanggal dari record absensi
+  const [[existing]] = await db.query('SELECT tanggal FROM absensi WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
+  if (existing) {
+    const libur = await cekHariLibur(req.user.tenant_id, existing.tanggal);
+    if (libur) {
+      return res.status(403).json({
+        error: `Tidak bisa edit absensi: ${existing.tanggal} adalah hari libur (${libur.nama})`,
+        libur: true,
+        nama_libur: libur.nama,
+      });
+    }
+  }
+
   const sets = []; const vals = [];
   if (status !== undefined) { sets.push('status=?'); vals.push(status); }
   if (jam_masuk !== undefined) { sets.push('jam_masuk=?'); vals.push(jam_masuk); }
@@ -55,6 +89,17 @@ router.put('/absensi/:id', requireRole('admin', 'keuangan'), async (req, res) =>
 });
 
 router.delete('/absensi/:id', requireRole('admin', 'keuangan'), async (req, res) => {
+  const [[existing]] = await db.query('SELECT tanggal FROM absensi WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
+  if (existing) {
+    const libur = await cekHariLibur(req.user.tenant_id, existing.tanggal);
+    if (libur) {
+      return res.status(403).json({
+        error: `Tidak bisa hapus absensi: ${existing.tanggal} adalah hari libur (${libur.nama})`,
+        libur: true,
+        nama_libur: libur.nama,
+      });
+    }
+  }
   await db.query(`DELETE FROM absensi WHERE id=? AND tenant_id=?`, [req.params.id, req.user.tenant_id]);
   res.json({ ok: true });
 });

@@ -27,6 +27,7 @@ const TABLES = {
   divisi: ['nama'],
   sp_referensi_bahan: ['nama', 'kategori', 'berat_bersih', 'bdd_persen', 'berat_kotor', 'energi', 'protein', 'lemak', 'karbohidrat', 'serat'],
   akun: ['kode', 'nama', 'bp', 'tipe', 'is_active'],
+  hari_libur: ['tanggal', 'nama', 'kategori'],
 };
 
 /**
@@ -46,6 +47,7 @@ const REQUIRED_FIELDS = {
   divisi: ['nama'],
   sp_referensi_bahan: ['nama', 'berat_bersih'],
   akun: ['kode', 'nama', 'bp'],
+  hari_libur: ['tanggal', 'nama'],
 };
 
 /**
@@ -75,6 +77,7 @@ const SEARCHABLE_FIELDS = {
   kas_bank: ['tipe', 'kategori', 'akun', 'deskripsi', 'no_transaksi'],
   akun: ['kode', 'nama', 'bp'],
   sp_referensi_bahan: ['nama', 'kategori'],
+  hari_libur: ['nama', 'kategori', 'tanggal'],
 };
 
 /**
@@ -163,6 +166,8 @@ const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (
       fromClause = `${table} pb LEFT JOIN supplier s ON s.id = pb.supplier_id AND s.tenant_id = pb.tenant_id`;
       whereClause = 'WHERE pb.tenant_id=?';
       orderByClause = 'ORDER BY pb.id DESC';
+    } else if (table === 'hari_libur') {
+      orderByClause = 'ORDER BY tanggal DESC, id DESC';
     }
     
     // Filter: untuk purchase_order, bedakan PR vs PO via prefix no_po

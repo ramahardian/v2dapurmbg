@@ -14,6 +14,21 @@ async function runMigration() {
   // Buat tabel yang mungkin belum ada (CREATE TABLE IF NOT EXISTS)
   // Tabel-tabel utama sudah dibuat oleh schema.sql, ini hanya untuk jaga-jaga
 
+  // Tabel Hari Libur
+  await q(`CREATE TABLE IF NOT EXISTS hari_libur (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    tanggal DATE NOT NULL,
+    nama VARCHAR(200) NOT NULL,
+    kategori ENUM('Nasional','Perusahaan','Mingguan') DEFAULT 'Perusahaan',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_tanggal_tenant (tanggal, tenant_id),
+    INDEX idx_tenant (tenant_id),
+    INDEX idx_tanggal (tenant_id, tanggal)
+  ) ENGINE=InnoDB`);
+  log('[OK] Tabel hari_libur tersedia');
+
   await q(`CREATE TABLE IF NOT EXISTS siklus_menu_item_bahan (
     id INT AUTO_INCREMENT PRIMARY KEY,
     siklus_id INT NOT NULL,

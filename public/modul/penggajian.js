@@ -314,25 +314,45 @@ function openAbsensiForm(a) {
   document.getElementById('absensi-modal').classList.remove('hidden');
   document.getElementById('absensi-modal').classList.add('flex');
 }
-function saveAbsensi() {
+async function saveAbsensi() {
   const id = document.getElementById('absensi-id').value;
+  const tanggal = document.getElementById('absensi-tanggal').value;
   const payload = {
     karyawan_id: +(document.getElementById('absensi-karyawan').value || 0),
-    tanggal: document.getElementById('absensi-tanggal').value,
+    tanggal: tanggal,
     status: document.getElementById('absensi-status').value,
     jam_masuk: document.getElementById('absensi-masuk').value,
     jam_keluar: document.getElementById('absensi-keluar').value,
     keterangan: document.getElementById('absensi-keterangan').value,
   };
   if (!validateForm([{ id: 'absensi-karyawan', label: 'Karyawan', type: 'select' }, { id: 'absensi-tanggal', label: 'Tanggal' }])) return;
-  const isEdit = !!id;
-  if (isEdit) {
-    api.put('/absensi/' + id, payload).then(() => loadAbsensi());
-  } else {
-    api.post('/absensi', payload).then(() => loadAbsensi());
+
+  // Cek hari libur
+  try {
+    const cek = await api.get('/hari-libur/cek?tanggal=' + tanggal);
+    if (cek && cek.libur) {
+      showAlert('Tidak bisa input/edit absensi: ' + tanggal + ' adalah hari libur (' + cek.data.nama + ')', 'error');
+      return;
+    }
+  } catch (e) { /* skip if endpoint not ready */ }
+
+  try {
+    if (id) {
+      await api.put('/absensi/' + id, payload);
+    } else {
+      await api.post('/absensi', payload);
+    }
+    document.getElementById('absensi-modal').classList.add('hidden');
+    document.getElementById('absensi-modal').classList.remove('flex');
+    loadAbsensi();
+  } catch (err) {
+    var msg = err.error || err.message || 'Gagal simpan';
+    if (err.libur) {
+      showAlert('Tidak bisa input/edit absensi: tanggal ini adalah hari libur (' + (err.nama_libur || '') + ')', 'error');
+    } else {
+      showAlert(msg, 'error');
+    }
   }
-  document.getElementById('absensi-modal').classList.add('hidden');
-  document.getElementById('absensi-modal').classList.remove('flex');
 }
 
 // ===== Payroll Helpers =====

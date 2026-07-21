@@ -40,5 +40,6 @@ router.use(require('./laporan_reports'));
 router.use('/mobile', require('./mobileAbsensi'));
 router.use(require('./alterBahanSumber'));
 router.use(require('./system'));
+router.use('/hari-libur', require('./hariLibur'));
 
 module.exports = router;

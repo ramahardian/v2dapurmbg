@@ -20,20 +20,26 @@ async function renderPanduanSDM() {
       link: { label: 'Buka Izin/Cuti', action: "navigate('ijin-cuti')" }
     },
     {
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2"/><path d="M12 14v2l1 1"/></svg>',
+      title: '4. Hari Libur',
+      desc: 'Atur kalender hari libur nasional & perusahaan. Tanggal yang ditandai sebagai libur akan <strong>mengunci absensi</strong> — tidak bisa input/edit/hapus absensi pada tanggal tersebut. Kategori: Nasional, Perusahaan, atau Mingguan.',
+      link: { label: 'Buka Hari Libur', action: "navigate('hari-libur')" }
+    },
+    {
       icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
-      title: '4. Payroll Bulanan',
+      title: '5. Payroll Bulanan',
       desc: 'Hitung gaji per periode (bulan/tahun): gaji pokok + tunjangan - potongan = total gaji. Status: Draft → Dibayar. Saat dibayar, otomatis buat jurnal di Kas & Bank (keluar, kategori Gaji, akun Dana Operasional).',
       link: { label: 'Buka Payroll', action: "navigate('payroll')" }
     },
     {
       icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-      title: '5. Payroll Mingguan',
+      title: '6. Payroll Mingguan',
       desc: 'Rekap kehadiran per minggu (7 hari). Tampil jam masuk/keluar per hari, total hadir, upah per hari (gaji_pokok/26), total gaji mingguan. Bisa "Bayar & Jurnal" → auto jurnal ke Kas Bank.',
       link: { label: 'Buka Payroll Mingguan', action: "navigate('payroll?tab=mingguan')" }
     },
     {
       icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-      title: '6. Shift & Jadwal',
+      title: '7. Shift & Jadwal',
       desc: 'Buat shift (nama, jam masuk/keluar, warna) lalu atur jadwal karyawan per divisi. Data ini membantu HR mengelola jam kerja dan absensi yang seharusnya.',
       link: { label: 'Buka Shift', action: "navigate('shift')" }
     },
@@ -57,6 +63,11 @@ async function renderPanduanSDM() {
         <div class="flex-1 bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center">
           <div class="font-semibold text-emerald-700 mb-1">Izin/Cuti</div>
           <div class="text-emerald-500">Approve → potong payroll</div>
+        </div>
+        <div class="flex items-center justify-center text-stone-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+        <div class="flex-1 bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+          <div class="font-semibold text-red-700 mb-1">Hari Libur</div>
+          <div class="text-red-500">Kunci absensi</div>
         </div>
         <div class="flex items-center justify-center text-stone-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
         <div class="flex-1 bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
@@ -90,7 +101,7 @@ async function renderPanduanSDM() {
   <div class="space-y-6">
     <div class="bg-gradient-to-r from-stone-800 to-stone-900 text-white rounded-2xl p-6 md:p-8">
       <h1 class="text-2xl md:text-3xl font-bold">Panduan SDM</h1>
-      <p class="text-stone-300 mt-2">Alur lengkap manajemen SDM: Karyawan → Absensi → Izin/Cuti → Payroll → Jurnal Otomatis</p>
+      <p class="text-stone-300 mt-2">Alur lengkap manajemen SDM: Karyawan → Absensi → Izin/Cuti → Hari Libur → Payroll → Jurnal Otomatis</p>
     </div>
 
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -131,6 +142,7 @@ async function renderPanduanSDM() {
         <li>• <strong>Gaji pokok = upah harian</strong>. Total gaji mingguan = hadir × gaji_pokok. Bulanan = Σ mingguan.</li>
         <li>• <strong>Absensi → Payroll otomatis</strong>. Saat buka Payroll Mingguan, sistem ambil data absensi 7 hari.</li>
         <li>• <strong>Izin/Cuti approve</strong> → status di absensi jadi "Izin"/"Cuti", ikut hitung potongan di payroll.</li>
+        <li>• <strong>Hari Libur</strong> — tanggal yang ditandai libur di menu "Hari Libur" akan <strong>mengunci absensi</strong>. Tidak bisa input/edit/hapus absensi pada tanggal tersebut.</li>
         <li>• <strong>Bayar Payroll</strong> (bulanan/mingguan) → auto buat jurnal Kas & Bank keluar, kategori Gaji, akun Dana Operasional (kode 2100).</li>
         <li>• <strong>Shift</strong> dipakai untuk validasi jam masuk/keluar di absensi mobile (GPS + foto).</li>
       </ul>

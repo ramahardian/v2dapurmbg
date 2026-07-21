@@ -401,6 +401,20 @@ CREATE TABLE IF NOT EXISTS jadwal_karyawan (
   INDEX idx_jadwal_tanggal (tenant_id, tanggal_mulai)
 ) ENGINE=InnoDB;
 
+-- Hari Libur (kalender libur nasional/perusahaan)
+CREATE TABLE IF NOT EXISTS hari_libur (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  tanggal DATE NOT NULL,
+  nama VARCHAR(200) NOT NULL,
+  kategori ENUM('Nasional','Perusahaan','Mingguan') DEFAULT 'Perusahaan',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  UNIQUE KEY uk_tanggal_tenant (tanggal, tenant_id),
+  INDEX idx_tenant (tenant_id),
+  INDEX idx_tanggal (tenant_id, tanggal)
+) ENGINE=InnoDB;
+
 -- Alter absensi: tambah kolom shift_id (jika belum ada)
 -- Note: MySQL tidak mendukung IF NOT EXISTS untuk ADD COLUMN, gunakan query terpisah jika perlu
 
