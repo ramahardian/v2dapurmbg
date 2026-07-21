@@ -1245,6 +1245,8 @@ function pilihSemuaResepDariSiklus(hariKe, resepJson) {
       window._gridDirty = true;
     }
   }
+  // Clear menu_nama agar digenerate ulang dari resep saat disimpan
+  if (gd && gd[hariKe]) gd[hariKe].menu_nama = '';
   closeSiklusRecipePicker();
   for (var ri = 0; ri < resepList.length; ri++) {
     refreshGridSection(hariKe, resepList[ri].kategori_sp);
