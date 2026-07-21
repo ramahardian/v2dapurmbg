@@ -166,7 +166,7 @@ async function reloadSiklusList() {
       </div>
       ${s.catatan ? `<div class="text-xs text-stone-400 italic mb-3 line-clamp-1">${s.catatan}</div>` : ''}
       <div class="flex items-center justify-between pt-3 border-t border-stone-100">
-        <div class="text-xs text-stone-400">${filledCount} menu terisi</div>
+        <div class="text-xs text-stone-400">${filledCount} hari terisi</div>
         <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onclick="event.stopPropagation();loadSiklusDetail(${s.id})" class="px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">Detail</button>
           <button onclick="event.stopPropagation();renderSiklusLaporan(${s.id})" class="px-2.5 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Laporan</button>
@@ -202,7 +202,7 @@ async function loadSiklusDetail(id) {
           const totalK = Number(it.kalori || 0) + Number(it.protein || 0) + Number(it.karbohidrat || 0) + Number(it.lemak || 0) + Number(it.serat || 0);
           return `<div class="border border-stone-200 rounded-lg p-4">
             <div class="text-xs font-semibold uppercase text-stone-500 mb-2">Hari ${it.hari_ke} — ${it.hari_nama}</div>
-            <div class="font-bold text-sm mb-1">${it.menu_nama || '<span class="text-stone-400">Belum diisi</span>'}</div>
+            <div class="font-bold text-sm mb-1">${it.menu_nama || (it._has_bahan ? '<span class="text-emerald-600">Manual (grid)</span>' : '<span class="text-stone-400">Belum diisi</span>')}</div>
             <div class="text-xs text-stone-500 mb-2">${fmtNum(it.jumlah_porsi)} porsi</div>
             ${(it.menu_nama || it._has_bahan) ? `<div class="grid grid-cols-3 gap-1 text-[10px] mb-2">
               <div class="bg-stone-50 rounded p-1 text-center"><div class="text-stone-400">Kal</div><div class=\"mono font-semibold\">${fmtNum(it.kalori)}</div></div>
@@ -823,7 +823,7 @@ async function openSiklusForm(editing) {
           if (parts.length) items[ii].menu_nama = parts.join(' + ');
         }
       }
-      if (!items[ii].menu_nama) items[ii].menu_nama = 'Manual Hari ' + items[ii].hari_ke;
+
     }
     var payload = { nama, total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', items };
     try {
@@ -859,11 +859,14 @@ function openGridPicker(hk, rk) {
   if (!gd[hk]) return;
   var sel = gd[hk].bahan[rk] || [];
   var selIds = sel.map(function(b) { return b.id; });
-  var html = '<div class="p-4"><div class="font-bold text-sm mb-3 text-stone-700">Pilih Bahan — ' + rk + ' (Menu ' + hk + ')</div><div class="max-h-[250px] overflow-y-auto space-y-0.5">';
+  var html = '<div class="p-4"><div class="font-bold text-sm mb-3 text-stone-700">Pilih Bahan — ' + rk + ' (Menu ' + hk + ')</div>' +
+    '<div class="mb-3"><input id="gp-search" placeholder="Cari bahan..." oninput="filterGridPicker()" class="w-full h-10 px-3 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" /></div>' +
+    '<div id="gp-list" class="max-h-[250px] overflow-y-auto space-y-0.5">';
   for (var i = 0; i < list.length; i++) {
     var b = list[i];
-    html += '<label class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-stone-50 cursor-pointer text-sm"><input type="checkbox" value="' + b.id + '" ' + (selIds.indexOf(b.id) !== -1 ? 'checked' : '') + ' class="rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"> ' + b.nama + '</label>';
+    html += '<label class="gp-item flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-stone-50 cursor-pointer text-sm"><input type="checkbox" value="' + b.id + '" ' + (selIds.indexOf(b.id) !== -1 ? 'checked' : '') + ' class="rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"> ' + b.nama + '</label>';
   }
+  html += '</div>';
   html += '</div>' +
     '<div class="mt-3 pt-3 border-t border-dashed border-stone-200">' +
       '<div class="text-xs font-semibold text-stone-500 mb-1.5">Tambah Bahan Baru</div>' +
@@ -919,6 +922,13 @@ function saveGridPicker(hk, rk) {
   openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, kategori_penerima: '', total_hari: items.length, status: curStatus, items: items } : { nama: curNama, kategori_penerima: '', total_hari: items.length, status: curStatus, items: items });
 }
 function closeGridPicker() { var m = document.getElementById('siklus-modal'); if (m) m.remove(); _gridPickerOpen = false; }
+function filterGridPicker() {
+  var q = (document.getElementById('gp-search')?.value || '').toLowerCase();
+  var items = document.querySelectorAll('#siklus-modal .gp-item');
+  for (var i = 0; i < items.length; i++) {
+    items[i].style.display = items[i].textContent.toLowerCase().includes(q) ? '' : 'none';
+  }
+}
 
 // Photo upload for siklus menu items
 async function openSiklusFormHariChange(input) {
