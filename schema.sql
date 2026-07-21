@@ -83,8 +83,10 @@ CREATE TABLE IF NOT EXISTS menu_bahan (
   menu_id INT NOT NULL,
   bahan_baku_id INT NOT NULL,
   jumlah DECIMAL(15,3) NOT NULL,
+  keterangan VARCHAR(255) DEFAULT '',
   FOREIGN KEY (menu_id) REFERENCES menu(id) ON DELETE CASCADE,
-  FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id) ON DELETE CASCADE
+  FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id) ON DELETE CASCADE,
+  INDEX idx_menu_bahan_menu (menu_id, bahan_baku_id)
 ) ENGINE=InnoDB;
 
 -- Supplier

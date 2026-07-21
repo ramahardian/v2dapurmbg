@@ -68,8 +68,8 @@ router.get('/menu', async (req, res) => {
     const bahanMap = {};
     if (menuIds.length > 0) {
       const [bahanRows] = await db.query(
-        `SELECT mb.menu_id, mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.keterangan
-         FROM menu_bahan mb
+       `SELECT mb.menu_id, mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.keterangan
+        FROM menu_bahan mb
          LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
          WHERE mb.menu_id IN (${menuIds.map(() => '?').join(',')})`,
         menuIds

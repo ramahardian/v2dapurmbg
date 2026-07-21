@@ -688,6 +688,20 @@ CREATE TABLE menu_bahan (
     res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center">${results.map(r => `<div style="margin:0.25rem 0">${r}</div>`).join('')}<a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
   });
 
+  // Endpoint migrasi: tambah kolom keterangan di menu_bahan
+  app.get('/api/migrate/keterangan-menu-bahan', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [c] = await db.query("SHOW COLUMNS FROM menu_bahan LIKE 'keterangan'");
+      if (c.length) {
+        return res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Kolom keterangan sudah ada</h2><a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
+      }
+      await db.query("ALTER TABLE menu_bahan ADD COLUMN keterangan VARCHAR(255) DEFAULT '' AFTER jumlah");
+      res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Kolom keterangan berhasil ditambahkan</h2><a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#dc2626">❌ Gagal</h2><p>${e.message}</p></div>`);
+    }
+  });
+
   // Endpoint migrasi: tambah kolom gramasi_besar & gramasi_kecil ke menu
   app.get('/api/migrate/gramasi-besar-kecil', requireAuth, requireRole('admin'), async (req, res) => {
     try {
