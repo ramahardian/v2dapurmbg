@@ -71,4 +71,20 @@ router.get('/system/migrate', requireRole('admin'), (req, res) => {
 </html>`);
 });
 
+// GET /system/cek-budget — debug: lihat data budget
+router.get('/system/cek-budget', requireRole('admin'), async (req, res) => {
+  try {
+    const { periode, kategori } = req.query;
+    let sql = 'SELECT * FROM budget WHERE tenant_id=?';
+    const params = [req.user.tenant_id];
+    if (periode) { sql += ' AND periode=?'; params.push(periode); }
+    if (kategori) { sql += ' AND kategori_penerima=?'; params.push(kategori); }
+    sql += ' ORDER BY periode DESC';
+    const [rows] = await db.query(sql, params);
+    res.json({ ok: true, total: rows.length, data: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
