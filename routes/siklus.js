@@ -104,16 +104,32 @@ router.get('/siklus', async (req, res) => {
   );
 
   const siklusIds = rows.map(s => s.id);
-  const itemsBySiklus = await batchLoadItems(siklusIds);
-  const bahanCountsBySiklus = await batchLoadBahanCounts(siklusIds);
+  if (!siklusIds.length) return res.json([]);
+
+  // Ambil count items yang terisi (menu_id OR ada grid bahan di hari yg sama)
+  // Kirim count saja, bukan items — items detail di-fetch via /siklus/:id
+  const ph = siklusIds.map(() => '?').join(',');
+  const [itemCounts] = await db.query(
+    `SELECT si.siklus_id,
+            COUNT(*) as item_count,
+            SUM(CASE WHEN si.menu_id IS NOT NULL THEN 1 ELSE 0 END) as with_menu,
+            SUM(CASE WHEN si.menu_id IS NULL AND sb.bahan_count > 0 THEN 1 ELSE 0 END) as with_manual
+     FROM siklus_menu_item si
+     LEFT JOIN (SELECT siklus_id, hari_ke, COUNT(*) as bahan_count FROM siklus_menu_item_bahan GROUP BY siklus_id, hari_ke) sb
+       ON sb.siklus_id = si.siklus_id AND sb.hari_ke = si.hari_ke
+     WHERE si.siklus_id IN (${ph})
+     GROUP BY si.siklus_id`,
+    siklusIds
+  );
+
+  const countMap = {};
+  for (const r of itemCounts) countMap[r.siklus_id] = r;
 
   for (const s of rows) {
-    const items = itemsBySiklus[s.id] || [];
-    const bahanMap = bahanCountsBySiklus[s.id] || {};
-    for (const it of items) {
-      it._has_bahan = (bahanMap[it.hari_ke] || 0) > 0;
-    }
-    s.items = items;
+    const c = countMap[s.id] || { item_count: 0, with_menu: 0, with_manual: 0 };
+    s.item_count = c.item_count;
+    s.menu_count = Number(c.with_menu);
+    s.filled_count = Number(c.with_menu) + Number(c.with_manual);
   }
   res.json(rows);
 });

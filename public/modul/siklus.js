@@ -150,7 +150,7 @@ async function reloadSiklusList() {
 
   wrap.innerHTML = selectAllHtml + list.map(s => {
     const statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-600';
-    const menuCount = (s.items || []).filter(it => it.menu_id || it._has_bahan).length;
+    const filledCount = s.filled_count || 0;
     return `<div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-lg hover:border-stone-300 transition-all duration-200 group">
       <div class="flex justify-between items-start mb-3">
         <div class="flex items-center gap-3 min-w-0">
@@ -166,7 +166,7 @@ async function reloadSiklusList() {
       </div>
       ${s.catatan ? `<div class="text-xs text-stone-400 italic mb-3 line-clamp-1">${s.catatan}</div>` : ''}
       <div class="flex items-center justify-between pt-3 border-t border-stone-100">
-        <div class="text-xs text-stone-400">${menuCount} menu terisi</div>
+        <div class="text-xs text-stone-400">${filledCount} menu terisi</div>
         <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onclick="event.stopPropagation();loadSiklusDetail(${s.id})" class="px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">Detail</button>
           <button onclick="event.stopPropagation();renderSiklusLaporan(${s.id})" class="px-2.5 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Laporan</button>
