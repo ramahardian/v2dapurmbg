@@ -28,6 +28,7 @@ const FILES = [
   'perencanaan.js',
   'total-kebutuhan.js',
   'ijin-cuti.js',
+  'hari-libur.js',
   'definisi.js',
   'inti.js',
 ];
