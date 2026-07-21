@@ -11,72 +11,72 @@ function renderPanduanAhliGizi() {
       link: { label: 'Buka Referensi SP', action: "navigate('sp-referensi')" }
     },
     {
-      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x=\"2\" y=\"2\" width=\"20\" height=\"8\" rx=\"2\" ry=\"2\"/><rect x=\"2\" y=\"14\" width=\"20\" height=\"8\" rx=\"2\" ry=\"2\"/><circle cx=\"6\" cy=\"6\" r=\"2\"/><circle cx=\"6\" cy=\"18\" r=\"2\"/></svg>',
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/></svg>',
       title: '2. Standar SP',
-      desc: 'Atur nilai Standar Penukar per jenjang per kategori SP. Jenjang: TK/PAUD, SD/MI (1-3), SD/MI (4-6), SMP/MTs SMA/SMK, Bumil/Busui, Balita. Default sudah sesuai pedoman gizi — sesuaikan jika diperlukan.',
+      desc: 'Atur nilai Standar Penukar per jenjang per kategori SP. Jenjang: TK/PAUD, SD/MI (1-3), SD/MI (4-6), SMP/MTs, SMA/SMK, Bumil/Busui, Balita. Default sudah sesuai pedoman gizi — sesuaikan jika diperlukan.',
       link: { label: 'Buka Standar SP', action: "navigate('standar-sp')" }
     },
     {
-      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox=\"0 0 24 24\"><path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\"/><path d=\"M7 2v20\"/><path d=\"M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\"/></svg>',
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>',
       title: '3. Menu & Gizi',
       desc: 'Buat resep menu dengan memilih bahan baku. Gramasi per porsi terisi otomatis berdasarkan SP. Masukkan kandungan gizi (kalori, protein, lemak, karbohidrat, serat) untuk setiap menu. <strong class="text-amber-700">Ahli Gizi tidak perlu input harga</strong> — harga diatur oleh bagian Keuangan.',
       link: { label: 'Buka Menu', action: "navigate('menu')" }
     },
     {
-      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\" ry=\"2\"/><line x1=\"16\" y1=\"2\" x2=\"16\" y2=\"6\"/><line x1=\"8\" y1=\"2\" x2=\"8\" y2=\"6\"/><line x1=\"3\" y1=\"10\" x2=\"21\" y2=\"10\"/></svg>',
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
       title: '4. Susun Siklus Menu',
-      desc: 'Atur menu per hari dalam siklus. Pilih jenjang penerima, atur jumlah porsi, lengkapi hari 1-10. Setelah selesai ubah status menjadi <strong>Aktif</strong> agar masuk perhitungan kebutuhan dan laporan keuangan.',
+      desc: 'Atur menu per hari dalam siklus (1-14 hari). Dua cara: (a) <strong>Pilih Menu</strong> dari daftar — cepat, nutrisi otomatis; (b) <strong>Bahan Grid</strong> (matriks kategori SP × hari) — fleksibel untuk kombinasi bebas. Setelah selesai ubah status menjadi <strong>Aktif</strong> agar masuk perhitungan.',
       link: { label: 'Buka Siklus', action: "navigate('siklus')" }
     },
     {
-      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox=\"0 0 24 24\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/><polyline points=\"14 2 14 8 20 8\"/><line x1=\"16\" y1=\"13\" x2=\"8\" y2=\"13\"/><line x1=\"16\" y1=\"17\" x2=\"8\" y2=\"17\"/></svg>',
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
       title: '5. Cek Perhitungan BDD',
-      desc: 'Lihat rincian kebutuhan bahan per menu per jenjang. Menampilkan: Berat Bersih (g) × BDD(%) → Berat Kotor (g) × jumlah penerima ÷ 1000 = Kebutuhan (kg). BDD bersumber dari Referensi SP (prioritas) atau data Bahan Baku.',
+      desc: 'Lihat rincian kebutuhan bahan per menu per jenjang. Filter per siklus atau tampilkan semua <strong>Aktif</strong>. Menampilkan: Berat Bersih (g), BDD (%) — <strong class="text-emerald-600">prioritas dari Referensi SP (hijau)</strong> atau data Bahan Baku, Berat Kotor (g), Kebutuhan (kg). Dilengkapi <strong>Kalkulator BDD</strong> mandiri untuk simulasi real-time.',
       link: { label: 'Buka Perhitungan BDD', action: "navigate('perhitungan-bdd')" }
     },
     {
-      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox=\"0 0 24 24\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/><polyline points=\"14 2 14 8 20 8\"/><rect x=\"8\" y=\"13\" width=\"3\" height=\"4\"/><rect x=\"13\" y=\"11\" width=\"3\" height=\"6\"/></svg>',
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="13" width="3" height="4"/><rect x="13" y="11" width="3" height="6"/></svg>',
       title: '6. Perencanaan Kebutuhan Pangan',
-      desc: 'Rekap final kebutuhan bahan per hari lintas semua jenjang. Menampilkan: total porsi, kebutuhan per jenjang (kg), total kebutuhan, buffer 10%, dan rincian pembelian (kg/pcs). Hasil ini yang akan digunakan untuk Purchase Request.',
+      desc: 'Rekap final kebutuhan bahan per hari lintas semua jenjang. Dua tampilan: <strong>Per Hari</strong> (tabel per jenjang + buffer 10%) dan <strong>Rekap per Jenjang</strong> (akumulasi seluruh hari). Dilengkapi tombol <strong class="text-emerald-700">Buat Draft PR</strong> untuk langsung generate Purchase Request.',
       link: { label: 'Buka Perencanaan', action: "navigate('perencanaan')" }
     },
     {
-      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox=\"0 0 24 24\"><circle cx=\"9\" cy=\"21\" r=\"1\"/><circle cx=\"20\" cy=\"21\" r=\"1\"/><path d=\"M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6\"/></svg>',
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
       title: '7. Total Kebutuhan Pangan',
-      desc: 'Ringkasan per hari yang lebih sederhana — menampilkan nama menu, bahan, jumlah pembelian (kg/pcs/btl). Dua hari ditampilkan berdampingan untuk memudahkan belanja.',
+      desc: 'Ringkasan per hari yang lebih sederhana — dua hari ditampilkan <strong>berdampingan</strong>. Menampilkan nama menu, bahan, dan jumlah pembelian (kg/pcs/btl). Juga memiliki tombol <strong class="text-emerald-700">Buat Draft PR</strong> untuk akses cepat.',
       link: { label: 'Buka Total Kebutuhan', action: "navigate('total-kebutuhan')" }
+    },
+    {
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>',
+      title: '8. Buat Draft Purchase Request (PR)',
+      desc: 'Dari halaman <strong>Perencanaan</strong> atau <strong>Total Kebutuhan</strong>, klik tombol <strong class="text-emerald-700">Buat Draft PR</strong>. Pilih siklus Aktif → sistem otomatis: hitung kebutuhan + buffer 10%, buat <span class="px-1.5 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800 font-bold">Draft</span> PR dengan detail bahan dan estimasi subtotal. Siap ditinjau Keuangan di menu <strong>Pembelian → Purchase Order</strong>.',
+      link: { label: 'Buka Perencanaan', action: "navigate('perencanaan')" }
     },
   ];
 
   // ===================== BAGIAN 2: INTEGRASI KEUANGAN =====================
   const stepsFinance = [
     {
-      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>',
-      title: '8. 🔄 Buat Draft Purchase Request',
-      desc: '<strong class="text-blue-700">Fitur Baru!</strong> Hasil perencanaan kebutuhan dari siklus bisa langsung diubah menjadi Draft Purchase Request (PR). Cukup buka halaman <strong>Perencanaan</strong> atau <strong>Total Kebutuhan</strong>, <strong>klik tombol 🗃️ Buat Draft PR</strong> di filter bar (warna hijau), masukkan nomor siklus yang ingin dibuatkan PR (pisah koma), dan sistem otomatis generate PR dengan status <span class="px-1.5 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800 font-bold">Draft</span>. PR siap ditinjau oleh bagian Keuangan di menu <strong>Pembelian → Purchase Order</strong>.',
-      link: { label: 'Buka Perencanaan', action: "navigate('perencanaan')" }
-    },
-    {
-      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox=\"0 0 24 24\"><path d=\"M12 1v22\"/><path d=\"M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6\"/></svg>',
-      title: '9. 💰 Keuangan Atur Harga Bahan',
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+      title: '9. Keuangan Atur Harga Bahan',
       desc: 'Bagian Keuangan mengisi <strong>harga_satuan</strong> di master Bahan Baku. Harga bisa di-input manual atau dari sinkronisasi API koperasi. <strong class="text-amber-700">Ahli Gizi tidak bisa mengubah harga</strong> — proteksi sudah aktif secara otomatis.',
       link: { label: 'Buka Bahan Baku', action: "navigate('bahan-baku')" }
     },
     {
-      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox=\"0 0 24 24\"><rect x=\"2\" y=\"3\" width=\"20\" height=\"14\" rx=\"2\" ry=\"2\"/><line x1=\"8\" y1=\"21\" x2=\"16\" y2=\"21\"/><line x1=\"12\" y1=\"17\" x2=\"12\" y2=\"21\"/></svg>',
-      title: '10. 📋 Penerimaan Barang → Auto Stok Masuk',
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+      title: '10. Penerimaan Barang → Auto Stok Masuk',
       desc: 'Saat barang datang dan QC Lolos, buat <strong>Penerimaan Barang</strong> dengan status Lolos. Sistem otomatis: (a) menambah stok bahan baku, (b) mencatat stok masuk, <strong class="text-green-700">(c) membuat jurnal double-entry</strong> (Debit Persediaan / Kredit Hutang).',
       link: { label: 'Buka Pembelian', action: "navigate('pembelian')" }
     },
     {
       icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8M16 17H8"/><path d="M10 9H8"/></svg>',
-      title: '11. 📊 Laporan Biaya Produksi per Siklus',
-      desc: '<strong class="text-blue-700">Fitur Baru!</strong> Bagian Keuangan bisa melihat estimasi biaya bahan baku per siklus: total biaya, rata-rata per hari, dan biaya per porsi. Data dihitung otomatis dari kebutuhan bahan × harga_satuan. Buka halaman <strong>Laporan</strong> dan pilih tab <strong>Biaya Produksi</strong> untuk melihat data.',
+      title: '11. Laporan Biaya Produksi per Siklus',
+      desc: 'Bagian Keuangan bisa melihat estimasi biaya bahan baku per siklus: total biaya, rata-rata per hari, dan biaya per porsi. Data dihitung otomatis dari kebutuhan bahan × harga_satuan. Buka halaman <strong>Laporan → RAB + Pembelian</strong> dan pilih tab <strong>Biaya Produksi</strong>.',
       link: { label: 'Buka Laporan', action: "navigate('laporan-rab-pembelian')" }
     },
     {
-      icon: '<svg class=\"w-8 h-8\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path d=\"M12 20V10\"/><path d=\"M18 20V4\"/><path d=\"M6 20v-4\"/></svg>',
-      title: '12. 🏦 Laporan Keuangan Otomatis',
+      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>',
+      title: '12. Laporan Keuangan Otomatis',
       desc: 'Semua transaksi pembelian bahan baku otomatis tercatat di: <strong>Jurnal Umum</strong> → <strong>Buku Besar</strong> → <strong>Neraca</strong> & <strong>Laba Rugi</strong>. Tidak perlu entry manual — alur dari Ahli Gizi → Pembelian → Stok → Jurnal berjalan otomatis.',
       link: { label: 'Buka Laporan Keuangan', action: "navigate('laporan-keuangan')" }
     },
@@ -89,36 +89,54 @@ function renderPanduanAhliGizi() {
       <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       Diagram Alur Lengkap
     </h3>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
       <!-- Kolom Ahli Gizi -->
       <div class="border border-emerald-200 rounded-xl overflow-hidden">
         <div class="bg-emerald-50 px-4 py-2.5 font-semibold text-emerald-800 border-b border-emerald-200 flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          🟢 AHLI GIZI
+          AHLI GIZI
         </div>
         <div class="p-4 space-y-2">
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Referensi SP Bahan (gizi + BDD)</div>
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Standar SP (target porsi)</div>
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Menu Gizi (komposisi + nutrisi)</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Siklus Menu 10 Hari</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Siklus Menu 14 Hari</div>
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Perhitungan BDD + Kebutuhan (kg)</div>
-          <div class="mt-2 pt-2 border-t border-emerald-100 text-emerald-600 text-xs">✅ Tidak perlu input harga</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Perencanaan Kebutuhan Pangan</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Buat Draft PR</div>
+          <div class="mt-2 pt-2 border-t border-emerald-100 text-emerald-600 text-xs">Tanpa input harga</div>
         </div>
       </div>
 
       <!-- Kolom Keuangan -->
       <div class="border border-blue-200 rounded-xl overflow-hidden">
         <div class="bg-blue-50 px-4 py-2.5 font-semibold text-blue-800 border-b border-blue-200 flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 6v6l4 2\"/></svg>
-          🔵 KEUANGAN
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          KEUANGAN
         </div>
         <div class="p-4 space-y-2">
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Atur harga_satuan di Bahan Baku</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> 🔄 Terima Draft PR dari Ahli Gizi</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Buat PO → Penerimaan Barang</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> ✅ Auto-Stok Masuk + <strong class="text-green-700">Auto-Jurnal</strong></div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> 📊 Laporan Biaya Produksi per Siklus</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> 🏦 Jurnal → Buku Besar → Neraca</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Terima Draft PR dari Ahli Gizi</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Buat PO</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Penerimaan Barang + QC</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Auto-Stok Masuk + <strong class="text-green-700">Auto-Jurnal</strong></div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Laporan Biaya Produksi per Siklus</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Jurnal Buku Besar Neraca</div>
+        </div>
+      </div>
+
+      <!-- Kolom Gudang -->
+      <div class="border border-purple-200 rounded-xl overflow-hidden">
+        <div class="bg-purple-50 px-4 py-2.5 font-semibold text-purple-800 border-b border-purple-200 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><path d="M12 6v12"/></svg>
+          GUDANG & PRODUKSI
+        </div>
+        <div class="p-4 space-y-2">
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500"></span> Terima Barang + QC (Lolos/Retur)</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500"></span> Stok Masuk Otomatis</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500"></span> Produksi Dapur (rencana realisasi)</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500"></span> Stok Keluar Otomatis</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500"></span> Distribusi ke Penerima</div>
         </div>
       </div>
     </div>
@@ -166,7 +184,7 @@ function renderPanduanAhliGizi() {
     <!-- SECTION: AHLI GIZI -->
     <div class="mb-4 flex items-center gap-2">
       <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">BAGIAN AHLI GIZI</span>
-      <span class="text-xs text-stone-400">Langkah 1-7 — fokus pada data gizi, tanpa harga</span>
+      <span class="text-xs text-stone-400">Langkah 1-8 — fokus pada data gizi, tanpa harga</span>
     </div>
     <div class="grid gap-3">
       ${stepsGizi.map(function(s) {
@@ -177,7 +195,7 @@ function renderPanduanAhliGizi() {
     <!-- SECTION: INTEGRASI KEUANGAN -->
     <div class="mt-8 mb-4 flex items-center gap-2">
       <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">INTEGRASI KEUANGAN</span>
-      <span class="text-xs text-stone-400">Langkah 8-12 — otomatis, tidak perlu input manual</span>
+      <span class="text-xs text-stone-400">Langkah 9-12 — otomatis, tidak perlu input manual</span>
     </div>
     <div class="grid gap-3">
       ${stepsFinance.map(function(s) {
@@ -199,23 +217,23 @@ function renderPanduanAhliGizi() {
 
     <!-- FOOTER: RINGKASAN ROLE -->
     <div class="mt-8 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-5 text-sm">
-      <div class="font-bold text-amber-800 mb-2">🎯 Ringkasan Pembagian Peran</div>
+      <div class="font-bold text-amber-800 mb-2">Ringkasan Pembagian Peran</div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="flex items-start gap-2">
           <span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-700 shrink-0 mt-0.5">GIZI</span>
-          <span class="text-stone-600"><strong>Ahli Gizi:</strong> input data gizi, BDD, menu, siklus, hitung kebutuhan (kg) — <strong class="text-amber-700">tanpa harga</strong></span>
+          <span class="text-stone-600"><strong>Ahli Gizi:</strong> input data gizi, BDD, menu, siklus, hitung kebutuhan (kg), buat Draft PR — <strong class="text-amber-700">tanpa harga</strong></span>
         </div>
         <div class="flex items-start gap-2">
           <span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-700 shrink-0 mt-0.5">DANA</span>
-          <span class="text-stone-600"><strong>Keuangan:</strong> atur harga bahan, terima PR, buat PO, pantau biaya produksi, laporan keuangan</span>
+          <span class="text-stone-600"><strong>Keuangan:</strong> atur harga bahan, terima PR, proses jadi PO, QC Penerimaan, pembayaran, laporan keuangan</span>
         </div>
         <div class="flex items-start gap-2">
           <span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-700 shrink-0 mt-0.5">STOK</span>
-          <span class="text-stone-600"><strong>Gudang:</strong> terima barang, QC, stok masuk otomatis, stok keluar untuk produksi</span>
+          <span class="text-stone-600"><strong>Gudang:</strong> stok masuk (otomatis dari penerimaan), stok keluar (otomatis dari produksi), mutasi stok</span>
         </div>
         <div class="flex items-start gap-2">
-          <span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 shrink-0 mt-0.5">💰</span>
-          <span class="text-stone-600"><strong>Sistem:</strong> auto-jurnal double-entry, buku besar, neraca, laba rugi — semua <strong>otomatis</strong></span>
+          <span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 shrink-0 mt-0.5">SISTEM</span>
+          <span class="text-stone-600"><strong>Otomatis:</strong> auto-jurnal double-entry, buku besar, neraca, laba rugi — tanpa entry manual</span>
         </div>
       </div>
     </div>
