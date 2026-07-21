@@ -504,7 +504,26 @@ router.get('/menu/by-siklus', async (req, res) => {
     }
   }
 
+  // 3b. Batch-load grid bahan data (siklus_menu_item_bahan) untuk fallback nama
+  let gridBahanBySiklus = {};
+  if (siklusIds.length) {
+    const ph = siklusIds.map(() => '?').join(',');
+    const [gridRows] = await db.query(
+      `SELECT sb.siklus_id, sb.hari_ke, sb.kategori_sp, COALESCE(b.nama, '(bahan dihapus)') AS bahan_nama
+       FROM siklus_menu_item_bahan sb
+       LEFT JOIN bahan_baku b ON b.id = sb.bahan_baku_id
+       WHERE sb.siklus_id IN (${ph})`,
+      siklusIds
+    );
+    for (const g of gridRows) {
+      if (!gridBahanBySiklus[g.siklus_id]) gridBahanBySiklus[g.siklus_id] = {};
+      if (!gridBahanBySiklus[g.siklus_id][g.hari_ke]) gridBahanBySiklus[g.siklus_id][g.hari_ke] = [];
+      gridBahanBySiklus[g.siklus_id][g.hari_ke].push({ kategori_sp: g.kategori_sp, nama: g.bahan_nama });
+    }
+  }
+
   // 4. Build siklus groups
+  const KAT_ORDER = ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
   const siklusGroups = [];
   for (const s of siklusList) {
     const items = allItems[s.id] || [];
@@ -514,7 +533,7 @@ router.get('/menu/by-siklus', async (req, res) => {
       let hasContent = !!it.menu_id;
 
       if (!it.menu_id) {
-        // Try resep_map to build combined name (only if no menu_nama in DB)
+        // Priority 1: resep_map (explicit recipe names from Identifikasi Resep)
         if (!menuNama && it.resep_map) {
           try {
             const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
@@ -524,7 +543,37 @@ router.get('/menu/by-siklus', async (req, res) => {
             }
           } catch (e) { /* ignore parse error */ }
         }
-        // If we have any name at this point (from DB or resep_map), mark as content
+
+        // Priority 2: fallback ke nama bahan dari grid picker (siklus_menu_item_bahan)
+        if (!menuNama) {
+          const dayBahan = (gridBahanBySiklus[s.id] || {})[it.hari_ke] || [];
+          if (dayBahan.length) {
+            // Build combined name using kategori_sp order: "Nasi (Karbohidrat) + Ayam (Protein Hewani)"
+            const grouped = {};
+            for (const b of dayBahan) {
+              const kat = b.kategori_sp || 'Lainnya';
+              if (!grouped[kat]) grouped[kat] = [];
+              grouped[kat].push(b.nama);
+            }
+            const parts = [];
+            for (const kat of KAT_ORDER) {
+              if (grouped[kat] && grouped[kat].length) {
+                parts.push(grouped[kat].join(', '));
+              }
+            }
+            // Add any extra categories not in standard order
+            for (const [kat, names] of Object.entries(grouped)) {
+              if (!KAT_ORDER.includes(kat)) {
+                parts.push(names.join(', ') + ' (' + kat + ')');
+              }
+            }
+            if (parts.length) {
+              menuNama = parts.join(' + ');
+            }
+          }
+        }
+
+        // If we have any name at this point (from DB, resep_map, or grid), mark as content
         if (menuNama) {
           hasContent = true;
         }
