@@ -162,8 +162,9 @@ function route() {
   document.querySelectorAll('.sidebar-link').forEach(a => a.classList.toggle('active', a.dataset.key === key));
   document.querySelectorAll('.sidebar-dropdown').forEach(dd => {
     const hasActive = dd.querySelector('.sidebar-link.active');
+    const isParentMatch = dd.querySelector('.sidebar-dropdown-parent')?.dataset.key === key;
     dd.classList.toggle('open', !!hasActive);
-    dd.querySelector('.sidebar-dropdown-parent')?.classList.toggle('active', !!hasActive);
+    dd.querySelector('.sidebar-dropdown-parent')?.classList.toggle('active', !!isParentMatch);
   });
   document.title = m.title + ' — Dapur Sukaluyu';
   document.getElementById('page-title').textContent = m.title;

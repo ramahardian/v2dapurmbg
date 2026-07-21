@@ -255,7 +255,7 @@ function openForm(cfg, editing) {
     const payload = {};
     cfg.fields.forEach(f => {
       const v = document.getElementById('f-' + f.k).value;
-      let val = f.type === 'number' ? Number(v) || 0 : v;
+      let val = f.type === 'number' ? Number(String(v).replace(/\./g, '').replace(',', '.')) || 0 : v;
       if (f.fmt === 'pct') val = val / 100;
       payload[f.k] = val;
     });

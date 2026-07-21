@@ -1046,7 +1046,7 @@ router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
 
     const [hargaList] = await db.query(
       `SELECT kategori_penerima, harga_per_porsi, total_budget, realisasi FROM budget
-       WHERE tenant_id=? AND periode=? AND harga_per_porsi > 0`,
+       WHERE tenant_id=? AND periode=?`,
       [t, periode]
     );
     const hargaMap = {};
