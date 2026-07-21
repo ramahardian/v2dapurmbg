@@ -760,29 +760,29 @@ router.get('/siklus/:id', async (req, res) => {
   // Mark items that have ingredients even without menu_id
   for (const it of items) {
     it._has_bahan = (bahanMap[it.hari_ke] || 0) > 0;
-    // Fix up existing manual items: set porsi from siklus header and default menu name
+    // Fix up existing manual items: set porsi from siklus header and rebuild menu name
     if (it._has_bahan && !it.menu_id) {
       if (!it.jumlah_porsi || it.jumlah_porsi === 0) {
         it.jumlah_porsi = Number(siklus.jumlah_porsi) || 1;
       }
+      // Always rebuild menu_nama from resep_map or grid, ignoring any DB placeholder
+      it.menu_nama = null;
+      // Priority 1: resep_map (explicit recipe names like "Nasi Kebuli")
+      if (it.resep_map) {
+        try {
+          const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
+          const names = Object.values(map).filter(v => v && v.trim());
+          if (names.length) it.menu_nama = names.join(' + ');
+        } catch (e) { /* ignore */ }
+      }
+      // Priority 2: grid bahan names
       if (!it.menu_nama || !it.menu_nama.trim()) {
-        // Priority 1: resep_map (explicit recipe names)
-        if (it.resep_map) {
-          try {
-            const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
-            const names = Object.values(map).filter(v => v && v.trim());
-            if (names.length) it.menu_nama = names.join(' + ');
-          } catch (e) { /* ignore */ }
-        }
-        // Priority 2: grid bahan names
-        if (!it.menu_nama || !it.menu_nama.trim()) {
-          const gridNama = buildGridNama(it.hari_ke);
-          if (gridNama) it.menu_nama = gridNama;
-        }
-        // Final fallback
-        if (!it.menu_nama || !it.menu_nama.trim()) {
-          it.menu_nama = 'Menu Hari ' + it.hari_ke;
-        }
+        const gridNama = buildGridNama(it.hari_ke);
+        if (gridNama) it.menu_nama = gridNama;
+      }
+      // Final fallback
+      if (!it.menu_nama || !it.menu_nama.trim()) {
+        it.menu_nama = 'Menu Hari ' + it.hari_ke;
       }
     }
   }
@@ -1038,25 +1038,24 @@ router.get('/siklus/:id/laporan', async (req, res) => {
       if (!it.jumlah_porsi || it.jumlah_porsi === 0) {
         it.jumlah_porsi = Number(siklus.jumlah_porsi) || 1;
       }
-      // Construct menu_nama from resep_map if available
+      // Always rebuild menu_nama from resep_map or grid, ignoring any DB placeholder
+      it.menu_nama = null;
+      // Priority 1: resep_map (explicit recipe names like "Nasi Kebuli")
+      if (it.resep_map) {
+        try {
+          const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
+          const names = Object.values(map).filter(v => v && v.trim());
+          if (names.length) it.menu_nama = names.join(' + ');
+        } catch (e) { /* ignore */ }
+      }
+      // Priority 2: grid bahan names
       if (!it.menu_nama || !it.menu_nama.trim()) {
-        // Priority 1: resep_map (explicit recipe names)
-        if (it.resep_map) {
-          try {
-            const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
-            const names = Object.values(map).filter(v => v && v.trim());
-            if (names.length) it.menu_nama = names.join(' + ');
-          } catch (e) { /* ignore */ }
-        }
-        // Priority 2: grid bahan names
-        if (!it.menu_nama || !it.menu_nama.trim()) {
-          const gridNama = buildGridNama(it.hari_ke);
-          if (gridNama) it.menu_nama = gridNama;
-        }
-        // Final fallback
-        if (!it.menu_nama || !it.menu_nama.trim()) {
-          it.menu_nama = 'Menu Hari ' + it.hari_ke;
-        }
+        const gridNama = buildGridNama(it.hari_ke);
+        if (gridNama) it.menu_nama = gridNama;
+      }
+      // Final fallback
+      if (!it.menu_nama || !it.menu_nama.trim()) {
+        it.menu_nama = 'Menu Hari ' + it.hari_ke;
       }
     }
   }

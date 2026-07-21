@@ -528,13 +528,13 @@ router.get('/menu/by-siklus', async (req, res) => {
   for (const s of siklusList) {
     const items = allItems[s.id] || [];
     const days = items.map(it => {
-      // Determine menu name and content status
-      let menuNama = it.menu_nama || it.menu_nama_lengkap || null;
+      // For items with menu_id, use menu name from DB. For items without, rebuild always.
+      let menuNama = it.menu_id ? (it.menu_nama || it.menu_nama_lengkap || null) : null;
       let hasContent = !!it.menu_id;
 
       if (!it.menu_id) {
-        // Priority 1: resep_map (explicit recipe names from Identifikasi Resep)
-        if (!menuNama && it.resep_map) {
+        // Priority 1: resep_map (explicit recipe names like "Nasi Kebuli")
+        if (it.resep_map) {
           try {
             const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
             const names = Object.values(map).filter(v => v && v.trim());
@@ -544,11 +544,10 @@ router.get('/menu/by-siklus', async (req, res) => {
           } catch (e) { /* ignore parse error */ }
         }
 
-        // Priority 2: fallback ke nama bahan dari grid picker (siklus_menu_item_bahan)
+        // Priority 2: fallback ke nama bahan dari grid picker
         if (!menuNama) {
           const dayBahan = (gridBahanBySiklus[s.id] || {})[it.hari_ke] || [];
           if (dayBahan.length) {
-            // Build combined name using kategori_sp order: "Nasi (Karbohidrat) + Ayam (Protein Hewani)"
             const grouped = {};
             for (const b of dayBahan) {
               const kat = b.kategori_sp || 'Lainnya';
@@ -561,7 +560,6 @@ router.get('/menu/by-siklus', async (req, res) => {
                 parts.push(grouped[kat].join(', '));
               }
             }
-            // Add any extra categories not in standard order
             for (const [kat, names] of Object.entries(grouped)) {
               if (!KAT_ORDER.includes(kat)) {
                 parts.push(names.join(', ') + ' (' + kat + ')');
@@ -573,7 +571,6 @@ router.get('/menu/by-siklus', async (req, res) => {
           }
         }
 
-        // If we have any name at this point (from DB, resep_map, or grid), mark as content
         if (menuNama) {
           hasContent = true;
         }
