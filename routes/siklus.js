@@ -2268,8 +2268,8 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
           const satuanBahan = b.satuan || bakuInfo.satuan || 'kg';
           const bufferPersen = Number(b.buffer_persen) || bakuInfo.buffer_persen || 10;
 
-          if (!hariMap[hk][displayJenjang][namaDisplay]) {
-            hariMap[hk][displayJenjang][namaDisplay] = {
+          if (!hariMap[hk][displayJenjang][b.nama]) {
+            hariMap[hk][displayJenjang][b.nama] = {
               nama: b.nama,
               nama_display: namaDisplay,
               kategori_sp: b.kategori_sp,
@@ -2282,13 +2282,13 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
             };
           }
           // Aggregate across multiple menu items on the same day (e.g., same ingredient in different menus)
-          hariMap[hk][displayJenjang][namaDisplay].kebutuhan_kg += kebutuhanKg;
+          hariMap[hk][displayJenjang][b.nama].kebutuhan_kg += kebutuhanKg;
           // Add per-porsi berat_kotor (use the max if multiple entries for same ingredient)
-          hariMap[hk][displayJenjang][namaDisplay].berat_kotor = Math.max(hariMap[hk][displayJenjang][namaDisplay].berat_kotor, beratKotor);
+          hariMap[hk][displayJenjang][b.nama].berat_kotor = Math.max(hariMap[hk][displayJenjang][b.nama].berat_kotor, beratKotor);
           // Keep the first berat_bersih & persen_bdd (should be same across menus)
-          if (!hariMap[hk][displayJenjang][namaDisplay].berat_bersih) {
-            hariMap[hk][displayJenjang][namaDisplay].berat_bersih = beratBersih;
-            hariMap[hk][displayJenjang][namaDisplay].persen_bdd = persenBdd;
+          if (!hariMap[hk][displayJenjang][b.nama].berat_bersih) {
+            hariMap[hk][displayJenjang][b.nama].berat_bersih = beratBersih;
+            hariMap[hk][displayJenjang][b.nama].persen_bdd = persenBdd;
           }
         }
       }
@@ -2388,10 +2388,10 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     // Sort bahan by kategori_sp order: Karbohidrat, Protein Hewani, Protein Nabati, Sayur, Buah, Susu, Minyak
     const KATEGORI_ORDER = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu', 'Minyak'];
     bahanList.sort((a, b) => {
-      const aRef = activeJenjang.find(j => hariMap[hk][j] && hariMap[hk][j][a.nama_display]);
-      const bRef = activeJenjang.find(j => hariMap[hk][j] && hariMap[hk][j][b.nama_display]);
-      const aKat = aRef ? hariMap[hk][aRef][a.nama_display].kategori_sp : '';
-      const bKat = bRef ? hariMap[hk][bRef][b.nama_display].kategori_sp : '';
+      const aRef = activeJenjang.find(j => hariMap[hk][j] && hariMap[hk][j][a.nama]);
+      const bRef = activeJenjang.find(j => hariMap[hk][j] && hariMap[hk][j][b.nama]);
+      const aKat = aRef ? hariMap[hk][aRef][a.nama].kategori_sp : '';
+      const bKat = bRef ? hariMap[hk][bRef][b.nama].kategori_sp : '';
       return KATEGORI_ORDER.indexOf(aKat) - KATEGORI_ORDER.indexOf(bKat);
     });
 
