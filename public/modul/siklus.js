@@ -866,16 +866,16 @@ function openGridPicker(hk, rk) {
     var b = list[i];
     html += '<label class="gp-item flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-stone-50 cursor-pointer text-sm"><input type="checkbox" value="' + b.id + '" ' + (selIds.indexOf(b.id) !== -1 ? 'checked' : '') + ' class="rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"> ' + b.nama + '</label>';
   }
-  html += '</div>';
   html += '</div>' +
-    '<div class="mt-3 pt-3 border-t border-dashed border-stone-200">' +
+    '<div class="mt-4 pt-3 border-t border-dashed border-stone-200">' +
       '<div class="text-xs font-semibold text-stone-500 mb-1.5">Tambah Bahan Baru</div>' +
       '<div class="flex gap-2">' +
         '<input id="gp-new-nama" placeholder="Nama bahan..." class="flex-1 h-9 px-3 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" />' +
         '<button onclick="tambahBahanGrid(\'' + rk + '\',' + hk + ')" class="shrink-0 px-3 h-9 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg">Tambah</button>' +
       '</div>' +
     '</div>' +
-    '<div class="flex justify-end gap-2 mt-3 pt-3 border-t border-stone-100"><button onclick="closeGridPicker()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Batal</button><button onclick="saveGridPicker(' + hk + ',\'' + rk + '\')" class="px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg">Simpan</button></div></div>';
+    '<div class="flex justify-end gap-2 mt-4 pt-3 border-t border-stone-100"><button onclick="closeGridPicker()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Batal</button><button onclick="saveGridPicker(' + hk + ',\'' + rk + '\')" class="px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg">Simpan</button></div>' +
+  '</div>';
   showModal('Pilih Bahan', html, 'max-w-sm');
 }
 
