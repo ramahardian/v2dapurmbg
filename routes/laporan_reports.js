@@ -1037,10 +1037,9 @@ router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
       [t, periode]
     );
     if (!total_hari) {
-      // Fallback ke siklus aktif jika belum ada produksi
       const [[{ siklus_hari }]] = await db.query(
         `SELECT COALESCE(MAX(total_hari), 0) as siklus_hari
-         FROM siklus_menu WHERE tenant_id=? AND status='Aktif'`,
+         FROM siklus_menu WHERE tenant_id=? AND status IN ('Aktif','Draft')`,
         [t]
       );
       total_hari = siklus_hari || 0;
