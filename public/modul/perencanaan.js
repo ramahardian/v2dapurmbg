@@ -255,7 +255,8 @@ function renderPerencanaanRekap(data) {
 
 function fmtPncNum(v) {
   if (v == null || isNaN(v)) return '0,00';
-  return Number(v).toFixed(2).replace('.', ',');
+  var n = Number(v);
+  return n === Math.floor(n) ? String(n) : n.toFixed(2).replace('.', ',');
 }
 
 function exportPncCsv() {
