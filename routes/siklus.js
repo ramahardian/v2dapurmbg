@@ -2200,7 +2200,10 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     );
     if (!matchingSiklus.length) continue;
 
-    const jenjangSp = spByJenjang[displayJenjang] || {};
+    const jenjangSp = {};
+    for (const dv of jenjangDbVariants) {
+      if (spByJenjang[dv]) Object.assign(jenjangSp, spByJenjang[dv]);
+    }
 
     for (const s of matchingSiklus) {
       const items = itemsBySiklus[s.id] || [];
