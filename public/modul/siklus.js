@@ -183,13 +183,13 @@ async function loadSiklusDetail(id) {
   const wrap = document.getElementById('siklus-detail');
   wrap.innerHTML = `
     <div class="bg-white border border-stone-200 rounded-lg p-5">
-      <div class="flex justify-between items-center mb-4">
+      <div class="mb-4">
         <div>
           <h3 class="font-bold text-lg">${data.nama}</h3>
           <div class="text-xs text-stone-500 mt-1">Kategori: <b>${data.kategori_penerima || '-'}</b> • Porsi/hari: <b>${fmtNum(data.jumlah_porsi)}</b> • Status: <b class="capitalize">${data.status}</b></div>
           ${data.catatan ? `<div class="text-xs text-stone-400 mt-1">${data.catatan}</div>` : ''}
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2 mt-3">
           <button onclick="generateProduksi(${data.id})" class="px-3 py-1.5 text-sm border border-emerald-300 bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Buat Produksi</button>
           <button onclick="hitungBudgetSiklus(${data.id})" class="px-3 py-1.5 text-sm border border-blue-300 bg-blue-50 text-blue-700 rounded hover:bg-blue-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Buat Budget</button>
           <button onclick="renderProduksiHarian(${data.id})" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-700 rounded hover:bg-amber-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Produksi Harian</button>
