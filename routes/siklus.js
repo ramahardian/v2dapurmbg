@@ -1661,7 +1661,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
       : [displayJenjang];
 
     const matchingSiklus = selectedSiklus.filter(s =>
-      s.kategori_penerima && jenjangDbVariants.includes(s.kategori_penerima)
+      !s.kategori_penerima || jenjangDbVariants.includes(s.kategori_penerima)
     );
     if (!matchingSiklus.length) continue;
 
@@ -1883,7 +1883,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
 
     const jenjangDbVariants = JENJANG_DB_MAP[displayJenjang] || [displayJenjang];
     const matchingSiklus = activeSiklus.filter(s =>
-      s.kategori_penerima && jenjangDbVariants.includes(s.kategori_penerima)
+      !s.kategori_penerima || jenjangDbVariants.includes(s.kategori_penerima)
     );
     if (!matchingSiklus.length) continue;
 
