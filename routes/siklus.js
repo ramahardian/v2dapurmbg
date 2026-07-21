@@ -409,7 +409,7 @@ router.get('/siklus/laporan/bahan-per-jenjang', async (req, res) => {
       const bahanRows = menuBahanMap[it.menu_id] || [];
 
       const bahanList = bahanRows.map(br => {
-        const beratBersih = Number(br.berat_bersih || 0);
+        const beratBersih = Number(br.jumlah || 0);
         const persenBdd = Number(br.persen_bdd || 100);
         const beratKotor = persenBdd > 0
           ? Math.round((beratBersih / (persenBdd / 100)) * 100) / 100
@@ -1546,7 +1546,7 @@ router.get('/siklus/laporan/siklus-menu', async (req, res) => {
           const namaLower = b.nama.trim().toLowerCase();
           const spRef = spRefByName[namaLower];
           const persenBdd = spRef ? spRef.bdd_persen : Number(b.persen_bdd || 100);
-          const beratBersih = Number(b.berat_bersih || 0);
+          const beratBersih = Number(b.jumlah || 0);
           const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
           const kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
 
@@ -2037,7 +2037,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
           const namaLower = b.nama.trim().toLowerCase();
           const spRef = spRefByName[namaLower];
           const persenBdd = spRef ? spRef.bdd_persen : Number(b.persen_bdd || 100);
-          const beratBersih = Number(b.berat_bersih || 0);
+          const beratBersih = Number(b.jumlah || 0);
           const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
           const kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
           const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || null) : null;
@@ -2247,8 +2247,8 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
           let beratBersih, beratKotor, kebutuhanKg;
 
           if (it.menu_id) {
-            // Menu tradisional: pakai berat dari menu_bahan
-            beratBersih = Number(b.berat_bersih || 0);
+            // Menu tradisional: pakai berat dari menu_bahan (mb.jumlah)
+            beratBersih = Number(b.jumlah || 0);
             beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
             kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
           } else {
