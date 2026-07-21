@@ -158,6 +158,7 @@ function renderPerencanaanRekap(data) {
         if (!pj) continue;
         var dayKg = Number(pj.kebutuhan_kg != null ? pj.kebutuhan_kg : pj) || 0;
         if (dayKg <= 0) continue;
+        var bufPersen = b.buffer_persen != null ? b.buffer_persen : 10;
         if (!agg[jenjang][nama]) {
           agg[jenjang][nama] = {
             nama_display: b.nama_display || nama,
@@ -167,10 +168,11 @@ function renderPerencanaanRekap(data) {
             ref_berat_kotor: pj.berat_kotor || 0,
             total_kebutuhan: 0,
             total_buffer: 0,
+            buffer_persen: bufPersen,
           };
         }
         agg[jenjang][nama].total_kebutuhan += dayKg;
-        agg[jenjang][nama].total_buffer += dayKg * 0.1;
+        agg[jenjang][nama].total_buffer += dayKg * (bufPersen / 100);
       }
     }
   }
@@ -212,7 +214,7 @@ function renderPerencanaanRekap(data) {
     html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Kotor (g)</th>';
     html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Jml Siswa</th>';
     html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan (kg)</th>';
-    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">+10%</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">+' + (bahanAgg[names[0]] ? bahanAgg[names[0]].buffer_persen : 10) + '%</th>';
     html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Rincian</th>';
     html += '</tr></thead><tbody>';
 
@@ -222,8 +224,17 @@ function renderPerencanaanRekap(data) {
       var buf = b.total_buffer;
       var tot = k + buf;
       grandTtl += k; grandBuf += buf;
+      var bufferPct = b.buffer_persen || 10;
+      var bufAmt = k * (bufferPct / 100);
       var satuan = (b.kategori_sp === 'Buah' || b.kategori_sp === 'Susu') ? 'pcs' : 'kg';
-      var rinci = Math.ceil(tot) + satuan;
+      var rinci;
+      if (b.kategori_sp === 'Minyak') {
+        rinci = '';
+      } else if (b.kategori_sp === 'Buah' || b.kategori_sp === 'Susu') {
+        rinci = Math.ceil(pmCount * hari.length) + 'pcs';
+      } else {
+        rinci = Math.ceil(tot) + satuan;
+      }
 
       html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
       html += '<td class="px-3 py-2 text-sm font-medium">' + b.nama_display + '</td>';

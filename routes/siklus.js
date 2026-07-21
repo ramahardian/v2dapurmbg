@@ -56,7 +56,8 @@ async function batchLoadGridBahanBySiklus(siklusIds) {
   const [rows] = await db.query(
     `SELECT sb.siklus_id, sb.hari_ke, sb.kategori_sp, sb.bahan_baku_id,
             COALESCE(b.nama, '(bahan dihapus)') AS nama, b.kalori, b.protein,
-            b.karbohidrat, b.lemak, b.serat, b.berat_1_sp, b.persen_bdd
+            b.karbohidrat, b.lemak, b.serat, b.berat_1_sp, b.persen_bdd,
+            b.satuan, b.buffer_persen
      FROM siklus_menu_item_bahan sb
      LEFT JOIN bahan_baku b ON b.id = sb.bahan_baku_id
      WHERE sb.siklus_id IN (${ph})`,
@@ -77,6 +78,7 @@ async function batchLoadMenuBahan(menuIds) {
     `SELECT mb.menu_id, mb.jumlah, mb.bahan_baku_id, mb.keterangan,
             b.nama, b.satuan, b.kategori_sp, b.persen_bdd, b.berat_1_sp,
             b.kalori, b.protein, b.karbohidrat, b.lemak, b.serat, b.berat_per_satuan, b.kode, b.harga_satuan,
+            b.buffer_persen,
             m.kategori_penerima
      FROM menu_bahan mb
      JOIN bahan_baku b ON b.id = mb.bahan_baku_id
@@ -1854,7 +1856,20 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     };
   }
 
-  // 4. Standar SP per jenjang
+  // 4. Bahan Baku info (buffer_persen, satuan) by name
+  const [bahanBakuInfo] = await db.query(
+    'SELECT nama, buffer_persen, satuan FROM bahan_baku WHERE tenant_id=?',
+    [req.user.tenant_id]
+  );
+  const bakuInfoByName = {};
+  for (const bb of bahanBakuInfo) {
+    bakuInfoByName[bb.nama.trim().toLowerCase()] = {
+      buffer_persen: Number(bb.buffer_persen) || 10,
+      satuan: bb.satuan || 'kg',
+    };
+  }
+
+  // 5. Standar SP per jenjang
   const [allStandarSp] = await db.query('SELECT jenjang, kategori_sp, sp_value FROM standar_sp');
   const spByJenjang = {};
   for (const r of allStandarSp) {
@@ -1950,6 +1965,11 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
             namaDisplay = b.nama + ' ' + String(spValue).replace('.', ',') + ' SP';
           }
 
+          const bakuKey = namaLower;
+          const bakuInfo = bakuInfoByName[bakuKey] || {};
+          const satuanBahan = b.satuan || bakuInfo.satuan || 'kg';
+          const bufferPersen = Number(b.buffer_persen) || bakuInfo.buffer_persen || 10;
+
           if (!hariMap[hk][displayJenjang][namaDisplay]) {
             hariMap[hk][displayJenjang][namaDisplay] = {
               nama: b.nama,
@@ -1959,6 +1979,8 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
               persen_bdd: persenBdd,
               berat_kotor: beratKotor,
               kebutuhan_kg: 0,
+              satuan: satuanBahan,
+              buffer_persen: bufferPersen,
             };
           }
           // Aggregate across multiple menu items on the same day (e.g., same ingredient in different menus)
@@ -2034,13 +2056,22 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
         totalKg += val;
       }
 
-      const bufferKg = Math.round(totalKg * 1.1 * 100) / 100;
+      const bufferPersen = ref.buffer_persen || 10;
+      const bufferMultiplier = 1 + (bufferPersen / 100);
+      const bufferKg = Math.round(totalKg * bufferMultiplier * 100) / 100;
 
-      // Rincian: if total porsi matches a "per pcs" ingredient, show pcs; else show kg
-      const isPcs = ref.kategori_sp === 'Buah' || ref.kategori_sp === 'Susu';
+      // Rincian berdasarkan satuan dan kategori_sp
+      const satuan = ref.satuan || 'kg';
+      const satLower = satuan.toLowerCase();
       let rincian;
-      if (isPcs) {
+
+      if (ref.kategori_sp === 'Susu' || ref.kategori_sp === 'Buah') {
+        // Susu & Buah: asumsi 1 pcs per porsi → rincian = total porsi + 'pcs'
         rincian = Math.round(dayTotalPorsi) + 'pcs';
+      } else if (ref.kategori_sp === 'Minyak') {
+        rincian = '';
+      } else if (satLower === 'pcs' || satLower === 'buah' || satLower === 'item' || satLower === 'pack') {
+        rincian = Math.round(dayTotalPorsi) + satuan;
       } else {
         rincian = Math.round(totalKg) + 'kg';
       }
@@ -2051,6 +2082,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
         per_jenjang: perJenjang,
         total_kebutuhan_kg: Math.round(totalKg * 100) / 100,
         kebutuhan_buffer_kg: bufferKg,
+        buffer_persen: bufferPersen,
         rincian: rincian,
       });
     }
@@ -2674,18 +2706,22 @@ router.post('/siklus/buat-pr', async (req, res) => {
       return res.status(400).json({ error: 'Tidak ada menu terisi di siklus yang dipilih' });
     }
 
-    // Ambil id_koperasi untuk mapping
+    // Ambil id_koperasi & buffer_persen untuk mapping
     const bahanIds = Object.keys(agg);
     const idKoperasiMap = {};
+    const bufferPersenMap = {};
     if (bahanIds.length) {
       const [rows] = await db.query(
-        `SELECT id, id_koperasi FROM bahan_baku WHERE id IN (${bahanIds.map(() => '?').join(',')}) AND tenant_id=?`,
+        `SELECT id, id_koperasi, COALESCE(buffer_persen, 10) AS buffer_persen FROM bahan_baku WHERE id IN (${bahanIds.map(() => '?').join(',')}) AND tenant_id=?`,
         [...bahanIds, t]
       );
-      for (const r of rows) idKoperasiMap[r.id] = r.id_koperasi;
+      for (const r of rows) {
+        idKoperasiMap[r.id] = r.id_koperasi;
+        bufferPersenMap[r.id] = Number(r.buffer_persen) || 10;
+      }
     }
 
-    // Format output dengan buffer 10% dan konversi satuan
+    // Format output dengan buffer dan konversi satuan
     const bahanList = Object.values(agg).map(b => {
       let qty = b.total_qty;
       let satuan = b.satuan;
@@ -2708,7 +2744,8 @@ router.post('/siklus/buat-pr', async (req, res) => {
       if (satuan !== b.satuan && b.berat_per_satuan > 0 && !['gram', 'g', 'gr', 'kg'].includes(satuanAsli)) {
         harga = b.harga_satuan / (b.berat_per_satuan / 1000);
       }
-      const buffer = Math.round(qty * 1.1 * 100) / 100;
+      const bp = bufferPersenMap[b.bahan_baku_id] || 10;
+      const buffer = Math.round(qty * (1 + bp / 100) * 100) / 100;
       return {
         bahan_baku_id: b.bahan_baku_id,
         id_koperasi: idKoperasiMap[b.bahan_baku_id] || null,

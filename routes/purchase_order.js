@@ -212,16 +212,18 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
     // ====================================================================
     // 4. FORMAT OUTPUT
     // ====================================================================
-    // Ambil id_koperasi untuk mapping
+    // Ambil id_koperasi & buffer_persen untuk mapping
     const bahanIds = Object.keys(agg);
     const idKoperasiMap = {};
+    const bufferPersenMap = {};
     if (bahanIds.length) {
       const [rows] = await db.query(
-        `SELECT id, id_koperasi FROM bahan_baku WHERE id IN (${bahanIds.map(() => '?').join(',')}) AND tenant_id=?`,
+        `SELECT id, id_koperasi, COALESCE(buffer_persen, 10) AS buffer_persen FROM bahan_baku WHERE id IN (${bahanIds.map(() => '?').join(',')}) AND tenant_id=?`,
         [...bahanIds, req.user.tenant_id]
       );
       for (const r of rows) {
         idKoperasiMap[r.id] = r.id_koperasi;
+        bufferPersenMap[r.id] = Number(r.buffer_persen) || 10;
       }
     }
 
@@ -232,7 +234,8 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
         qty = qty / 1000;
         satuan = 'kg';
       }
-      const buffer = Math.round(qty * 1.1 * 100) / 100;
+      const bp = bufferPersenMap[b.bahan_baku_id] || 10;
+      const buffer = Math.round(qty * (1 + bp / 100) * 100) / 100;
       return {
         bahan_baku_id: b.bahan_baku_id,
         id_koperasi: idKoperasiMap[b.bahan_baku_id] || null,
@@ -343,7 +346,8 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
         const mph = menuIds.map(() => '?').join(',');
         const [bahanRows] = await db.query(
           `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah, b.nama, b.satuan, b.harga_satuan,
-                  b.persen_bdd, b.kategori_sp, b.berat_per_satuan
+                  b.persen_bdd, b.kategori_sp, b.berat_per_satuan,
+                  COALESCE(b.buffer_persen, 10) AS buffer_persen
            FROM menu_bahan mb
            JOIN bahan_baku b ON b.id = mb.bahan_baku_id
            WHERE mb.menu_id IN (${mph})`,
@@ -360,7 +364,7 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
 
           const key = br.bahan_baku_id;
           if (!agg[key]) {
-            agg[key] = { bahan_baku_id: br.bahan_baku_id, nama: br.nama, satuan: br.satuan || 'g', harga_satuan: Number(br.harga_satuan) || 0, berat_per_satuan: Number(br.berat_per_satuan) || 0, total_berat_kotor: 0 };
+            agg[key] = { bahan_baku_id: br.bahan_baku_id, nama: br.nama, satuan: br.satuan || 'g', harga_satuan: Number(br.harga_satuan) || 0, berat_per_satuan: Number(br.berat_per_satuan) || 0, buffer_persen: Number(br.buffer_persen) || 10, total_berat_kotor: 0 };
           }
           agg[key].total_berat_kotor += beratKotor;
         }
@@ -371,7 +375,8 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
       if (items.length === 0) {
         const [gridBahanRaw] = await db.query(
           `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
-                  bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp, bb.berat_per_satuan
+                  bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp, bb.berat_per_satuan,
+                  COALESCE(bb.buffer_persen, 10) AS buffer_persen
            FROM siklus_menu_item_bahan smib
            JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
            WHERE smib.siklus_id=?`,
@@ -410,7 +415,7 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
 
             const key = gb.bahan_baku_id;
             if (!agg[key]) {
-              agg[key] = { bahan_baku_id: gb.bahan_baku_id, nama: gb.nama, satuan: gb.satuan || 'g', harga_satuan: Number(gb.harga_satuan) || 0, berat_per_satuan: Number(gb.berat_per_satuan) || 0, total_berat_kotor: 0 };
+              agg[key] = { bahan_baku_id: gb.bahan_baku_id, nama: gb.nama, satuan: gb.satuan || 'g', harga_satuan: Number(gb.harga_satuan) || 0, berat_per_satuan: Number(gb.berat_per_satuan) || 0, buffer_persen: Number(gb.buffer_persen) || 10, total_berat_kotor: 0 };
             }
             agg[key].total_berat_kotor += beratKotor;
           }
@@ -436,7 +441,8 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
         qty = Math.round(qty / 1000 * 100) / 100;
         satuan = 'kg';
       }
-      const buffer = Math.round(qty * 1.1 * 100) / 100;
+      const bp = b.buffer_persen || 10;
+      const buffer = Math.round(qty * (1 + bp / 100) * 100) / 100;
       return {
         bahan_baku_id: b.bahan_baku_id,
         bahan_nama: b.nama,
