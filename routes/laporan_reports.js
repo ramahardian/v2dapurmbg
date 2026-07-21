@@ -1031,11 +1031,20 @@ router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
     const t = req.user.tenant_id;
     const periode = req.query.periode || new Date().toISOString().slice(0, 7);
 
-    const [[{ total_hari }]] = await db.query(
+    let [[{ total_hari }]] = await db.query(
       `SELECT COUNT(DISTINCT tanggal_produksi) as total_hari
        FROM produksi WHERE tenant_id=? AND DATE_FORMAT(tanggal_produksi, '%Y-%m')=?`,
       [t, periode]
     );
+    if (!total_hari) {
+      // Fallback ke siklus aktif jika belum ada produksi
+      const [[{ siklus_hari }]] = await db.query(
+        `SELECT COALESCE(MAX(total_hari), 0) as siklus_hari
+         FROM siklus_menu WHERE tenant_id=? AND status='Aktif'`,
+        [t]
+      );
+      total_hari = siklus_hari || 0;
+    }
 
     const [penerima] = await db.query(
       `SELECT kategori_penerima, SUM(paket_besar + paket_kecil) as total_penerima
