@@ -1,4 +1,5 @@
 const express = require('express');
+const db = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { runMigration } = require('../scripts/migrate');
 
