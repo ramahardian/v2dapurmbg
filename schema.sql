@@ -73,7 +73,8 @@ CREATE TABLE IF NOT EXISTS menu (
   jenis_porsi ENUM('besar','kecil') DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-  INDEX idx_tenant (tenant_id)
+  INDEX idx_tenant (tenant_id),
+  INDEX idx_tenant_id (tenant_id, id)
 ) ENGINE=InnoDB;
 
 -- Komposisi bahan per menu

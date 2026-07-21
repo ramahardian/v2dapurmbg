@@ -674,6 +674,21 @@ CREATE TABLE menu_bahan (
     }
   });
 
+  // Endpoint migrasi: tambah composite index (tenant_id, id) untuk mempercepat query /menu
+  app.get('/api/migrate/index-menu-tenant-id', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      await db.query('ALTER TABLE menu ADD INDEX idx_tenant_id (tenant_id, id)');
+      res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Index berhasil ditambahkan</h2><a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
+    } catch (e) {
+      // SQL Error 1061 = duplicate key name
+      if (e.errno === 1061) {
+        res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Index sudah ada</h2><a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
+      } else {
+        res.status(500).send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#dc2626">❌ Gagal</h2><p>${e.message}</p></div>`);
+      }
+    }
+  });
+
   // Endpoint migrasi: tambah kolom gramasi_besar & gramasi_kecil ke menu
   app.get('/api/migrate/gramasi-besar-kecil', requireAuth, requireRole('admin'), async (req, res) => {
     try {
