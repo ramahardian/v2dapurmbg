@@ -242,6 +242,105 @@ if (cluster.isMaster && WORKERS > 1) {
     }
   });
 
+  // Endpoint debug: cek data menu_bahan untuk Ayam Potong (admin only)
+  app.get('/api/debug/ayam-bahan', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [rows] = await db.query(`
+        SELECT mb.jumlah, b.nama, b.satuan, b.berat_1_sp, b.persen_bdd
+        FROM menu_bahan mb
+        JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+        WHERE LOWER(b.nama) LIKE '%ayam%'
+      `);
+      let html = `
+        <div style="font-family:sans-serif;padding:2rem;max-width:700px;margin:auto">
+          <h2 style="margin-bottom:1rem">🐔 Data Ayam di menu_bahan</h2>
+          <p style="color:#6b7280;margin-bottom:1rem">Ditemukan ${rows.length} baris</p>
+          <table style="width:100%;border-collapse:collapse;font-size:0.875rem">
+            <thead><tr style="background:#f5f5f4">
+              <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:left">Nama</th>
+              <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right">Jumlah</th>
+              <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:center">Satuan</th>
+              <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right">berat_1_sp</th>
+              <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right">persen_bdd</th>
+            </tr></thead><tbody>`;
+      for (const r of rows) {
+        const color = Number(r.jumlah) === 0 ? '#dc2626' : '#16a34a';
+        html += `<tr style="background:${Number(r.jumlah) === 0 ? '#fef2f2' : '#f0fdf4'}">
+          <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4">${r.nama}</td>
+          <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right;font-weight:600;color:${color}">${r.jumlah || 0}</td>
+          <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:center">${r.satuan || '-'}</td>
+          <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right">${r.berat_1_sp || 0}</td>
+          <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right">${r.persen_bdd || 0}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>
+        <div style="margin-top:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap">
+          <a href="/api/debug/ayam-perencanaan" style="padding:0.5rem 1.25rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">📊 Debug Perencanaan Ayam</a>
+          <a href="/" style="padding:0.5rem 1.25rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a>
+        </div>
+      </div>`;
+      res.send(html);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem"><h2 style="color:#dc2626">❌ Error</h2><p>${e.message}</p></div>`);
+    }
+  });
+
+
+  // Endpoint debug: trace perencanaan untuk Ayam Potong (admin only)
+  app.get('/api/debug/ayam-perencanaan', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      // Ambil siklus aktif
+      const [siklusList] = await db.query("SELECT id, nama, kategori_penerima, jumlah_porsi, status FROM siklus_menu WHERE tenant_id=? AND status='Aktif' ORDER BY id", [req.user.tenant_id]);
+      
+      // Ambil items
+      const activeIds = siklusList.map(s => s.id);
+      const ph = activeIds.map(() => '?').join(',');
+      const [items] = await db.query(`SELECT si.*, m.nama as menu_nama_lengkap FROM siklus_menu_item si LEFT JOIN menu m ON m.id = si.menu_id WHERE si.siklus_id IN (${ph}) ORDER BY si.siklus_id, si.hari_ke`, activeIds);
+      
+      // Ambil menu_ids
+      const menuIds = [...new Set(items.filter(it => it.menu_id).map(it => it.menu_id))];
+      const mh = menuIds.map(() => '?').join(',');
+      const [bahanRows] = await db.query(`SELECT mb.menu_id, mb.jumlah, mb.bahan_baku_id, b.nama, b.satuan, b.kategori_sp, b.persen_bdd, b.berat_1_sp FROM menu_bahan mb JOIN bahan_baku b ON b.id = mb.bahan_baku_id WHERE mb.menu_id IN (${mh})`, menuIds);
+      
+      let html = `<div style="font-family:sans-serif;padding:2rem;max-width:900px;margin:auto">
+        <h2 style="margin-bottom:1rem">🔍 Debug Perencanaan Ayam</h2>
+        <p style="color:#6b7280;margin-bottom:1rem">Siklus aktif: ${siklusList.length} | Items: ${items.length} | Menu bahan: ${bahanRows.length}</p>
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem">
+          <thead><tr style="background:#f5f5f4">
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">Menu ID</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">Nama Bahan</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">mb.jumlah</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">kategori_sp</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">persen_bdd</th>
+          </tr></thead><tbody>`;
+      
+      for (const b of bahanRows) {
+        const isAyam = b.nama && b.nama.toLowerCase().includes('ayam');
+        const bg = isAyam ? '#fef2f2' : '#f9fafb';
+        const jmlColor = Number(b.jumlah) === 0 ? 'color:#dc2626;font-weight:700' : 'color:#16a34a';
+        if (isAyam || Number(b.jumlah) === 0) {
+          html += `<tr style="background:${bg}">
+            <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${b.menu_id}</td>
+            <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;font-weight:${isAyam ? '700' : '400'}">${b.nama}</td>
+            <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right;${jmlColor}">${b.jumlah || 0}</td>
+            <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${b.kategori_sp || '-'}</td>
+            <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${b.persen_bdd || 0}</td>
+          </tr>`;
+        }
+      }
+      
+      html += `</tbody></table>
+        <div style="margin-top:1.5rem">
+          <a href="/api/debug/ayam-bahan" style="padding:0.5rem 1.25rem;background:#6366f1;color:white;text-decoration:none;border-radius:0.5rem">🐔 Kembali ke Ayam Bahan</a>
+          <a href="/" style="padding:0.5rem 1.25rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a>
+        </div>
+      </div>`;
+      res.send(html);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem"><h2 style="color:#dc2626">❌ Error</h2><p>${e.message}</p></div>`);
+    }
+  });
+
   // Endpoint hapus SEMUA data absensi (admin only)
   app.get('/api/migrate/hapus-absensi', requireAuth, requireRole('admin'), async (req, res) => {
     try {
