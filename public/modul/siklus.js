@@ -915,6 +915,12 @@ function saveGridPicker(hk, rk) {
   for (var i = 0; i < checks.length; i++) ids.push(Number(checks[i].value));
   if (!gd[hk]) { if (m) m.remove(); _gridPickerOpen = false; return; }
   gd[hk].bahan[rk] = ids.map(function(id) { var f = list.find(function(b) { return b.id === id; }); return f ? { id: f.id, nama: f.nama } : null; }).filter(Boolean);
+  // Auto-fill Identifikasi Resep from selected bahan names if still empty
+  if (!gd[hk].resep_map) gd[hk].resep_map = {};
+  if (!gd[hk].resep_map[rk]) {
+    var bahanNames = gd[hk].bahan[rk].map(function(b) { return b.nama; });
+    gd[hk].resep_map[rk] = bahanNames.length ? bahanNames.join(', ') : '';
+  }
   if (m) m.remove(); _gridPickerOpen = false;
   window._gridDirty = true;
   var curNama = (document.getElementById('sk-nama')?.value) || '';
@@ -1112,12 +1118,19 @@ async function openSiklusRecipePicker() {
       for (var ni = 0; ni < s.names.length; ni++) {
         var n = s.names[ni];
         if (n.source === 'menu') {
-          html += '<div class="px-4 py-2 flex items-center gap-2 text-stone-400">' +
-            '<span class="text-xs shrink-0 w-8">H' + n.hari_ke + '</span>' +
-            '<span class="text-xs shrink-0 w-14">' + escHtml(n.hari_nama || '') + '</span>' +
+          var resepForDay = s.names.filter(function(x) { return x.source === 'resep' && x.hari_ke === n.hari_ke; });
+          var resepData = resepForDay.map(function(x) { return { kategori_sp: x.kategori_sp, nama: x.nama, bahan: x.bahan || [] }; });
+          var resepJson = JSON.stringify(resepData);
+          html += '<button type="button" onclick="pilihSemuaResepDariSiklus(' + n.hari_ke + ',\'' + resepJson.replace(/'/g, "\\'") + '\')" class="w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors">' +
+            '<div class="flex items-center gap-2">' +
+            '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
+            '<span class="text-xs text-stone-500 shrink-0 w-14">' + escHtml(n.hari_nama || '') + '</span>' +
             '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-700 shrink-0">Menu</span>' +
-            '<span class="text-sm truncate">' + escHtml(n.nama) + '</span>' +
-          '</div>';
+            '<span class="text-sm font-medium text-stone-800 truncate">' + escHtml(n.nama) + '</span>' +
+            (n.bahan && n.bahan.length ? '<span class="text-[10px] text-stone-400 shrink-0">' + n.bahan.length + ' bahan</span>' : '') +
+            '<svg class="w-4 h-4 text-stone-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>' +
+            '</div>' +
+          '</button>';
         } else {
           var bahanJson = JSON.stringify(n.bahan || []);
           html += '<button type="button" onclick="pilihResepDariSiklus(' + n.hari_ke + ',\'' + escHtml(n.kategori_sp || '') + '\',\'' + escHtml(n.nama) + '\',\'' + bahanJson.replace(/'/g, "\\'") + '\')" class="w-full text-left px-4 py-2 hover:bg-stone-50 transition-colors">' +
@@ -1211,4 +1224,30 @@ function pilihResepDariSiklus(hariKe, kategoriSp, namaResep, bahanStr) {
   closeSiklusRecipePicker();
   refreshGridSection(hariKe, kategoriSp);
   showToast('Nama resep diambil: ' + namaResep, 'success');
+}
+
+function pilihSemuaResepDariSiklus(hariKe, resepJson) {
+  var resepList = JSON.parse(resepJson);
+  if (!resepList.length) return;
+  var gd = window._gridData;
+  for (var i = 0; i < resepList.length; i++) {
+    var r = resepList[i];
+    var inputs = document.querySelectorAll('input[data-field="resep"]');
+    for (var j = 0; j < inputs.length; j++) {
+      var inp = inputs[j];
+      if (Number(inp.getAttribute('data-hk')) === hariKe && inp.getAttribute('data-kat') === r.kategori_sp) {
+        inp.value = r.nama;
+        break;
+      }
+    }
+    if (r.bahan && r.bahan.length && gd && gd[hariKe] && gd[hariKe].bahan) {
+      gd[hariKe].bahan[r.kategori_sp] = r.bahan;
+      window._gridDirty = true;
+    }
+  }
+  closeSiklusRecipePicker();
+  for (var ri = 0; ri < resepList.length; ri++) {
+    refreshGridSection(hariKe, resepList[ri].kategori_sp);
+  }
+  showToast('Menu Hari ' + hariKe + ' diisi dari siklus', 'success');
 }
