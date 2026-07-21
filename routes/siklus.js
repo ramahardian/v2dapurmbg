@@ -1965,7 +1965,10 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
     );
     if (!matchingSiklus.length) continue;
 
-    const jenjangSp = spByJenjang[displayJenjang] || {};
+    const jenjangSp = {};
+    for (const dv of jenjangDbVariants) {
+      if (spByJenjang[dv]) Object.assign(jenjangSp, spByJenjang[dv]);
+    }
 
     const jenjangData = {
       jenjang: displayJenjang,
