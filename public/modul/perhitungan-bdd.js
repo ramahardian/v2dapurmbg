@@ -6,7 +6,9 @@ async function renderPerhitunganBdd() {
     const r = await fetch('/api/template/perhitungan-bdd', { credentials: 'include' });
     if (!r.ok) throw new Error((await r.json()).error || 'Gagal memuat');
     c.innerHTML = await r.text();
-    await loadPbdData();
+    var pendingId = window._pbdPendingSiklusId;
+    window._pbdPendingSiklusId = null;
+    await loadPbdData(pendingId || undefined);
   } catch (err) {
     c.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat: ' + err.message + '</div>';
   }

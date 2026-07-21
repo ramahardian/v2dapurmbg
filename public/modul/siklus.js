@@ -170,6 +170,7 @@ async function reloadSiklusList() {
         <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onclick="event.stopPropagation();loadSiklusDetail(${s.id})" class="px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">Detail</button>
           <button onclick="event.stopPropagation();renderSiklusLaporan(${s.id})" class="px-2.5 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">Laporan</button>
+          <button onclick="event.stopPropagation();bukaKebutuhanPangan(${s.id})" class="px-2.5 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">Kebutuhan</button>
           <button onclick="event.stopPropagation();editSiklus(${s.id})" class="px-2.5 py-1 text-xs font-medium text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">Edit</button>
           <button onclick="event.stopPropagation();deleteSiklus(${s.id})" class="px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">Hapus</button>
         </div>
@@ -629,6 +630,10 @@ async function deleteSelectedSiklus() {
 async function editSiklus(id) {
   const data = await api.get('/siklus/' + id);
   openSiklusForm(data);
+}
+function bukaKebutuhanPangan(id) {
+  window._pbdPendingSiklusId = id;
+  navigate('perhitungan-bdd');
 }
 
 async function openSiklusForm(editing) {
