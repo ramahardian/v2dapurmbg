@@ -2,32 +2,35 @@
 let menuState = { page: 1, limit: 10, search: '', total: 0, totalPages: 1 };
 let menuViewMode = 'list'; // 'list' | 'siklus'
 
+async function ensureBahanBakuLoaded() {
+  if (window._bahanBaku) return;
+  const [bahan, spRef] = await Promise.all([
+    api.get('/bahan_baku'),
+    api.get('/sp_referensi_bahan').catch(() => []),
+  ]);
+  window._bahanBaku = bahan;
+  window._spRefList = Array.isArray(spRef) ? spRef : [];
+  window._spRefMap = {};
+  (window._spRefList || []).forEach(function(r) {
+    window._spRefMap[r.nama] = {
+      berat_bersih: Number(r.berat_bersih),
+      bdd_persen: Number(r.bdd_persen),
+      energi: Number(r.energi) || 0,
+      protein: Number(r.protein) || 0,
+      lemak: Number(r.lemak) || 0,
+      karbohidrat: Number(r.karbohidrat) || 0,
+      serat: Number(r.serat) || 0,
+    };
+  });
+}
+
 async function renderMenu() {
   const c = document.getElementById('content');
   if (!c) return;
   c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
-    // Load bahan baku and sp_referensi_bahan regardless of view mode
-    const [bahan, spRef] = await Promise.all([
-      api.get('/bahan_baku'),
-      api.get('/sp_referensi_bahan').catch(() => []),
-    ]);
-    window._bahanBaku = bahan;
-    window._spRefList = Array.isArray(spRef) ? spRef : [];
-    window._spRefMap = {};
-    (window._spRefList || []).forEach(function(r) {
-      window._spRefMap[r.nama] = {
-        berat_bersih: Number(r.berat_bersih),
-        bdd_persen: Number(r.bdd_persen),
-        energi: Number(r.energi) || 0,
-        protein: Number(r.protein) || 0,
-        lemak: Number(r.lemak) || 0,
-        karbohidrat: Number(r.karbohidrat) || 0,
-        serat: Number(r.serat) || 0,
-      };
-    });
-
     if (menuViewMode === 'siklus') {
+      await ensureBahanBakuLoaded();
       await renderMenuBySiklus(c);
       return;
     }
@@ -411,6 +414,7 @@ function toggleGramasiKecil(kat) {
 }
 
 async function openMenuForm(editing) {
+  await ensureBahanBakuLoaded();
   const m = editing || { nama: '', kategori_penerima: '', deskripsi: '', gramasi_total: 0, gramasi_besar: 0, gramasi_kecil: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
   document.getElementById('modal-title').textContent = editing ? 'Edit Menu' : 'Menu Baru';
   document.getElementById('modal-body').innerHTML = `
