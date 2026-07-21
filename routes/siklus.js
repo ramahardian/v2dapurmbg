@@ -115,11 +115,11 @@ router.get('/siklus', async (req, res) => {
             SUM(CASE WHEN si.menu_id IS NOT NULL THEN 1 ELSE 0 END) as with_menu,
             SUM(CASE WHEN si.menu_id IS NULL AND sb.bahan_count > 0 THEN 1 ELSE 0 END) as with_manual
      FROM siklus_menu_item si
-     LEFT JOIN (SELECT siklus_id, hari_ke, COUNT(*) as bahan_count FROM siklus_menu_item_bahan GROUP BY siklus_id, hari_ke) sb
+     LEFT JOIN (SELECT siklus_id, hari_ke, COUNT(*) as bahan_count FROM siklus_menu_item_bahan WHERE siklus_id IN (${ph}) GROUP BY siklus_id, hari_ke) sb
        ON sb.siklus_id = si.siklus_id AND sb.hari_ke = si.hari_ke
      WHERE si.siklus_id IN (${ph})
      GROUP BY si.siklus_id`,
-    siklusIds
+    [...siklusIds, ...siklusIds]
   );
 
   const countMap = {};

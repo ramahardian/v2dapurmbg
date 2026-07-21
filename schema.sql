@@ -252,7 +252,8 @@ CREATE TABLE IF NOT EXISTS siklus_menu (
   catatan TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-  INDEX idx_tenant (tenant_id)
+  INDEX idx_tenant (tenant_id),
+  INDEX idx_siklus_tenant_id (tenant_id, id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS siklus_menu_item (
