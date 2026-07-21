@@ -728,7 +728,7 @@ router.get('/siklus/:id', async (req, res) => {
           try {
             const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
             const names = Object.values(map).filter(v => v && v.trim());
-            if (names.length) it.menu_nama = names.join(', ');
+            if (names.length) it.menu_nama = names.join(' + ');
           } catch (e) { /* ignore */ }
         }
         if (!it.menu_nama || !it.menu_nama.trim()) {
@@ -952,7 +952,7 @@ router.get('/siklus/:id/laporan', async (req, res) => {
           try {
             const map = typeof it.resep_map === 'string' ? JSON.parse(it.resep_map) : it.resep_map;
             const names = Object.values(map).filter(v => v && v.trim());
-            if (names.length) it.menu_nama = names.join(', ');
+            if (names.length) it.menu_nama = names.join(' + ');
           } catch (e) { /* ignore */ }
         }
         // Final fallback
