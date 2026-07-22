@@ -790,10 +790,16 @@ async function selectSiklusMenuName(nama, bahanJson) {
   // Load bahan dari siklus
   var bahan = [];
   try { bahan = JSON.parse(bahanJson || '[]'); } catch(e) { bahan = []; }
+  
+  // Konfirmasi jika sudah ada bahan di form
+  if (bahan.length && window._menuBahan.some(function(b) { return b.nama; })) {
+    if (!await showConfirm('Akan mengganti ' + window._menuBahan.filter(function(b){return b.nama;}).length + ' bahan yang sudah ada dengan ' + bahan.length + ' bahan dari siklus. Lanjutkan?')) {
+      return;
+    }
+  }
+  
   if (bahan.length) {
-    // Clear existing bahan
     window._menuBahan = [];
-    // Add each bahan using selectBahan to auto-fill jumlah
     for (var i = 0; i < bahan.length; i++) {
       if (!bahan[i].nama) continue;
       window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: 'g', nama: '', keterangan: '' });
