@@ -239,38 +239,48 @@ const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (
       if (missing.length) {
         return res.status(400).json({ error: `Field wajib harus diisi: ${missing.join(', ')}` });
       }
-      
-      // Cek duplikat field unik per-tenant
-      const uniqueFields = UNIQUE_FIELDS[table] || {};
-      for (const [field, label] of Object.entries(uniqueFields)) {
-        if (req.body[field]) {
-          const [dupe] = await db.query(`SELECT id FROM ${table} WHERE ${field}=? AND tenant_id=?`, [req.body[field].trim(), req.user.tenant_id]);
-          if (dupe.length) {
-            return res.status(409).json({ error: `${label} "${req.body[field].trim()}" sudah ada` });
+
+      // Cek duplikat + INSERT dalam 1 transaksi (cegah TOCTOU race)
+      const conn = await db.getConnection();
+      try {
+        await conn.beginTransaction();
+        const uniqueFields = UNIQUE_FIELDS[table] || {};
+        for (const [field, label] of Object.entries(uniqueFields)) {
+          if (req.body[field]) {
+            const [dupe] = await conn.query(`SELECT id FROM ${table} WHERE ${field}=? AND tenant_id=? FOR UPDATE`, [req.body[field].trim(), req.user.tenant_id]);
+            if (dupe.length) {
+              await conn.rollback();
+              conn.release();
+              return res.status(409).json({ error: `${label} "${req.body[field].trim()}" sudah ada` });
+            }
           }
         }
-      }
-      
-      // Panggil helper untuk merakit query INSERT
-      const { sql, vals } = buildInsert(table, req.body, req.user.tenant_id);
-      const [r] = await db.query(sql, vals);
-      
-      // Ambil kembali data yang baru saja dimasukkan untuk dikembalikan sebagai response
-      const [rows] = await db.query(`SELECT * FROM ${table} WHERE id=?`, [r.insertId]);
+        
+        const { sql, vals } = buildInsert(table, req.body, req.user.tenant_id);
+        const [r] = await conn.query(sql, vals);
+        
+        const [rows] = await conn.query(`SELECT * FROM ${table} WHERE id=? AND tenant_id=?`, [r.insertId, req.user.tenant_id]);
+        await conn.commit();
+        conn.release();
 
-      // 🔁 AUTO STOK MASUK: Penerimaan Barang Lolos QC → Stok Masuk
-      if (table === 'penerimaan_barang' && req.body.status_qc === 'Lolos' && rows.length) {
-        autoStokMasukFromPenerimaan(rows[0], req.user.tenant_id).catch(e => console.error('Auto stok masuk gagal (CREATE):', e));
-      }
-      // 🔁 AUTO STOK KELUAR: Produksi Diproduksi/Selesai → Stok Keluar
-      if (table === 'produksi' && (req.body.status === 'Diproduksi' || req.body.status === 'Selesai') && rows.length) {
-        autoStokKeluarFromProduksi(rows[0], req.user.tenant_id).catch(e => console.error('Auto stok keluar gagal (CREATE):', e));
-      }
+        // 🔁 AUTO STOK MASUK: Penerimaan Barang Lolos QC → Stok Masuk (fire-and-forget no await)
+        if (table === 'penerimaan_barang' && req.body.status_qc === 'Lolos' && rows.length) {
+          autoStokMasukFromPenerimaan(rows[0], req.user.tenant_id).catch(e => console.error('Auto stok masuk gagal (CREATE):', e));
+        }
+        // 🔁 AUTO STOK KELUAR: Produksi Diproduksi/Selesai → Stok Keluar (fire-and-forget no await)
+        if (table === 'produksi' && (req.body.status === 'Diproduksi' || req.body.status === 'Selesai') && rows.length) {
+          autoStokKeluarFromProduksi(rows[0], req.user.tenant_id).catch(e => console.error('Auto stok keluar gagal (CREATE):', e));
+        }
 
-      res.json(rows[0]);
+        res.json(rows[0]);
+      } catch (innerErr) {
+        await conn.rollback();
+        conn.release();
+        throw innerErr;
+      }
     } catch (e) { 
       console.error(e); 
-      res.status(400).json({ error: 'Gagal menyimpan' }); 
+      res.status(500).json({ error: 'Gagal menyimpan' }); 
     }
   });
   
@@ -298,13 +308,13 @@ const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (
       await db.query(`UPDATE ${table} ${sql} WHERE id=? AND tenant_id=?`, vals);
       
       // Ambil data terbaru setelah di-update
-      const [rows] = await db.query(`SELECT * FROM ${table} WHERE id=?`, [req.params.id]);
+      const [rows] = await db.query(`SELECT * FROM ${table} WHERE id=? AND tenant_id=?`, [req.params.id, req.user.tenant_id]);
 
-      // 🔁 AUTO STOK MASUK: Penerimaan Barang Lolos QC → Stok Masuk
+      // 🔁 AUTO STOK MASUK: Penerimaan Barang Lolos QC → Stok Masuk (fire-and-forget no await)
       if (table === 'penerimaan_barang' && req.body.status_qc === 'Lolos' && rows.length) {
         autoStokMasukFromPenerimaan(rows[0], req.user.tenant_id).catch(e => console.error('Auto stok masuk gagal (UPDATE):', e));
       }
-      // 🔁 AUTO STOK KELUAR: Produksi Diproduksi/Selesai → Stok Keluar
+      // 🔁 AUTO STOK KELUAR: Produksi Diproduksi/Selesai → Stok Keluar (fire-and-forget no await)
       if (table === 'produksi' && (req.body.status === 'Diproduksi' || req.body.status === 'Selesai') && rows.length) {
         autoStokKeluarFromProduksi(rows[0], req.user.tenant_id).catch(e => console.error('Auto stok keluar gagal (UPDATE):', e));
       }
@@ -333,7 +343,7 @@ const roleMiddleware = tableRoles[table] ? requireRole(...tableRoles[table]) : (
       res.json(rows[0]);
     } catch (e) { 
       console.error(e); 
-      res.status(400).json({ error: 'Gagal' }); 
+      res.status(500).json({ error: 'Gagal' }); 
     }
   });
   
@@ -447,7 +457,7 @@ async function autoStokMasukFromPenerimaan(penerimaan, tenantId) {
     // 🔁 AUTO JURNAL: Stok Masuk (Pembelian) → Jurnal Umum
     if (totalNilai > 0) {
       try {
-        await autoPostPembelianToJurnal(penerimaan, tenantId, totalNilai);
+        await autoPostPembelianToJurnal(penerimaan, tenantId, totalNilai, items);
       } catch (e) {
         console.error('Auto jurnal stok masuk gagal:', e.message);
       }
@@ -461,14 +471,7 @@ async function autoStokMasukFromPenerimaan(penerimaan, tenantId) {
 }
 
 // 🔁 AUTO JURNAL: Pembelian Bahan Baku → Jurnal Double Entry
-async function autoPostPembelianToJurnal(penerimaan, tenantId, totalNilai) {
-  // Cek duplikat
-  const [[existing]] = await db.query(
-    'SELECT id FROM jurnal WHERE tenant_id=? AND sumber_transaksi=? AND sumber_id=?',
-    [tenantId, 'penerimaan_barang', penerimaan.id]
-  );
-  if (existing) return;
-
+async function autoPostPembelianToJurnal(penerimaan, tenantId, totalNilai, items) {
   // Cari akun Persediaan Bahan Baku (1300) & Hutang Usaha (3000)
   const [[akunPersediaan]] = await db.query(
     'SELECT id FROM akun WHERE tenant_id=? AND kode=?',
@@ -487,6 +490,17 @@ async function autoPostPembelianToJurnal(penerimaan, tenantId, totalNilai) {
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
+
+    // Cek duplikat dalam transaksi dgn FOR UPDATE (cegah race condition)
+    const [[existing]] = await conn.query(
+      'SELECT id FROM jurnal WHERE tenant_id=? AND sumber_transaksi=? AND sumber_id=? FOR UPDATE',
+      [tenantId, 'penerimaan_barang', penerimaan.id]
+    );
+    if (existing) {
+      await conn.commit();
+      return;
+    }
+
     const [jr] = await conn.query(
       `INSERT INTO jurnal (tenant_id, no_jurnal, tanggal, sumber_transaksi, sumber_id, deskripsi)
        VALUES (?, ?, ?, 'penerimaan_barang', ?, ?)`,
@@ -500,7 +514,7 @@ async function autoPostPembelianToJurnal(penerimaan, tenantId, totalNilai) {
       `INSERT INTO jurnal_detail (jurnal_id, akun_id, debit, kredit, deskripsi)
        VALUES (?, ?, ?, 0, ?)`,
       [jurnalId, akunPersediaan.id, totalNilai,
-       `Pembelian ${items.length} jenis bahan - ${penerimaan.no_dokumen}`]
+        `Pembelian ${items ? items.length + ' jenis' : ''} bahan - ${penerimaan.no_dokumen}`]
     );
 
     // Kredit: Hutang Usaha
@@ -582,26 +596,36 @@ async function recalculateRealisasi(tenantId) {
     perPeriode[b.periode].push(b);
   }
 
-  let updated = 0;
-  for (const [periode, entries] of Object.entries(perPeriode)) {
-    const totalKas = kasMap[periode] || 0;
-    if (totalKas <= 0) continue;
-    const totalBudget = entries.reduce((s, e) => s + Number(e.total_budget), 0);
-    if (totalBudget <= 0) {
-      const share = totalKas / entries.length;
-      for (const e of entries) {
-        await db.query('UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?', [share, e.id, t]);
-        updated++;
-      }
-    } else {
-      for (const e of entries) {
-        const share = totalKas * (Number(e.total_budget) / totalBudget);
-        await db.query('UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?', [share, e.id, t]);
-        updated++;
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    let updated = 0;
+    for (const [periode, entries] of Object.entries(perPeriode)) {
+      const totalKas = kasMap[periode] || 0;
+      if (totalKas <= 0) continue;
+      const totalBudget = entries.reduce((s, e) => s + Number(e.total_budget), 0);
+      if (totalBudget <= 0) {
+        const share = totalKas / entries.length;
+        for (const e of entries) {
+          await conn.query('UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?', [share, e.id, t]);
+          updated++;
+        }
+      } else {
+        for (const e of entries) {
+          const share = totalKas * (Number(e.total_budget) / totalBudget);
+          await conn.query('UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?', [share, e.id, t]);
+          updated++;
+        }
       }
     }
+    await conn.commit();
+    return updated;
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
   }
-  return updated;
 }
 
 router.post('/budget/recalculate-realisasi', requireRole('admin', 'keuangan'), async (req, res) => {

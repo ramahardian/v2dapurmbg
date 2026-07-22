@@ -245,7 +245,7 @@ if (cluster.isMaster && WORKERS > 1) {
   // Endpoint hapus SEMUA data absensi (admin only)
   app.get('/api/migrate/hapus-absensi', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-      const [[{ total }]] = await db.query('SELECT COUNT(*) AS total FROM absensi');
+      const [[{ total }]] = await db.query('SELECT COUNT(*) AS total FROM absensi WHERE tenant_id=?', [req.user.tenant_id]);
 
       if (req.query.confirm !== '1') {
         return res.send(`
@@ -268,7 +268,7 @@ if (cluster.isMaster && WORKERS > 1) {
           </div>`);
       }
 
-      await db.query('DELETE FROM absensi');
+      await db.query('DELETE FROM absensi WHERE tenant_id=?', [req.user.tenant_id]);
 
       res.send(`
         <div style="font-family:sans-serif;padding:2rem;text-align:center">

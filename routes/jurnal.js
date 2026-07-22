@@ -11,22 +11,14 @@ const roleFinance = requireRole('admin', 'keuangan');
  * ===================================
  *  AUTO-POST: Kas Bank → Jurnal Umum
  * ===================================
- * Dipanggil dari routes/crud.js setelah insert/update kas_bank
+ * Dipanggil dari routes/generic.js setelah insert/update kas_bank
  * agar setiap transaksi kas tercatat otomatis di jurnal double-entry.
  */
 async function autoPostKasBankToJurnal(kas, tenant_id) {
-  // Cek duplikat: sudah pernah di-post?
-  const [[existing]] = await db.query(
-    'SELECT id FROM jurnal WHERE tenant_id=? AND sumber_transaksi=? AND sumber_id=?',
-    [tenant_id, 'kas_bank', kas.id]
-  );
-  if (existing) return;
-
   // Tentukan akun debit/kredit berdasarkan tipe & kategori transaksi
   let akunDebitId, akunKreditId, deskripsiDetail;
 
   if (kas.tipe === 'masuk') {
-    // Kas Masuk: Debit Kas, Kredit Pendapatan
     const [[akunKas]] = await db.query(
       'SELECT id FROM akun WHERE tenant_id=? AND kode=?',
       [tenant_id, '1100']
@@ -44,7 +36,6 @@ async function autoPostKasBankToJurnal(kas, tenant_id) {
       return;
     }
   } else {
-    // Kas Keluar: Debit Biaya, Kredit Kas
     const [[akunKas]] = await db.query(
       'SELECT id FROM akun WHERE tenant_id=? AND kode=?',
       [tenant_id, '1100']
@@ -77,6 +68,16 @@ async function autoPostKasBankToJurnal(kas, tenant_id) {
   try {
     await conn.beginTransaction();
 
+    // Cek duplikat dalam transaksi yg sama dgn FOR UPDATE (cegah race condition)
+    const [[existing]] = await conn.query(
+      'SELECT id FROM jurnal WHERE tenant_id=? AND sumber_transaksi=? AND sumber_id=? FOR UPDATE',
+      [tenant_id, 'kas_bank', kas.id]
+    );
+    if (existing) {
+      await conn.commit();
+      return;
+    }
+
     const [jr] = await conn.query(
       `INSERT INTO jurnal (tenant_id, no_jurnal, tanggal, sumber_transaksi, sumber_id, deskripsi)
        VALUES (?, ?, ?, 'kas_bank', ?, ?)`,
@@ -85,14 +86,12 @@ async function autoPostKasBankToJurnal(kas, tenant_id) {
     );
     const jurnalId = jr.insertId;
 
-    // Debit entry
     await conn.query(
       `INSERT INTO jurnal_detail (jurnal_id, akun_id, debit, kredit, deskripsi)
        VALUES (?, ?, ?, 0, ?)`,
       [jurnalId, akunDebitId, jumlah, deskripsiDetail]
     );
 
-    // Kredit entry
     await conn.query(
       `INSERT INTO jurnal_detail (jurnal_id, akun_id, debit, kredit, deskripsi)
        VALUES (?, ?, 0, ?, ?)`,
@@ -215,39 +214,55 @@ router.get('/laporan/buku-besar', roleFinance, async (req, res) => {
   if (akun_id) {
     akunList = akunList.filter(a => Number(a.id) === Number(akun_id));
   }
+  if (!akunList.length) return res.json({ result: [], periode: { start, end }, total_akun: 0 });
+
+  // Batch: saldo awal semua akun (2 queries)
+  const [saldoDebit] = await db.query(
+    `SELECT jd.akun_id, COALESCE(SUM(jd.debit), 0) AS total
+     FROM jurnal_detail jd
+     JOIN jurnal j ON j.id = jd.jurnal_id
+     WHERE j.tenant_id=? AND j.tanggal < ?
+     GROUP BY jd.akun_id`,
+    [t, start]
+  );
+  const [saldoKredit] = await db.query(
+    `SELECT jd.akun_id, COALESCE(SUM(jd.kredit), 0) AS total
+     FROM jurnal_detail jd
+     JOIN jurnal j ON j.id = jd.jurnal_id
+     WHERE j.tenant_id=? AND j.tanggal < ?
+     GROUP BY jd.akun_id`,
+    [t, start]
+  );
+  const debitMap = Object.fromEntries(saldoDebit.map(r => [Number(r.akun_id), Number(r.total)]));
+  const kreditMap = Object.fromEntries(saldoKredit.map(r => [Number(r.akun_id), Number(r.total)]));
+
+  // Batch: semua transaksi periode ini
+  const akunIds = akunList.map(a => a.id);
+  const [allTransaksi] = await db.query(
+    `SELECT jd.akun_id, j.tanggal, j.no_jurnal, j.deskripsi AS jurnal_deskripsi,
+            jd.debit, jd.kredit, jd.deskripsi AS detail_deskripsi
+     FROM jurnal_detail jd
+     JOIN jurnal j ON j.id = jd.jurnal_id
+     WHERE j.tenant_id=? AND jd.akun_id IN (${akunIds.map(() => '?').join(',')}) AND j.tanggal BETWEEN ? AND ?
+     ORDER BY jd.akun_id, j.tanggal ASC, j.id ASC`,
+    [t, ...akunIds, start, end]
+  );
+  const transByAkun = {};
+  for (const tr of allTransaksi) {
+    const aid = Number(tr.akun_id);
+    if (!transByAkun[aid]) transByAkun[aid] = [];
+    transByAkun[aid].push(tr);
+  }
 
   const result = [];
   for (const akun of akunList) {
-    // Saldo awal (sebelum start date)
-    const [[{ saldo_awal_debit } = { saldo_awal_debit: 0 }]] = await db.query(
-      `SELECT COALESCE(SUM(jd.debit), 0) AS saldo_awal_debit
-       FROM jurnal_detail jd
-       JOIN jurnal j ON j.id = jd.jurnal_id
-       WHERE j.tenant_id=? AND jd.akun_id=? AND j.tanggal < ?`,
-      [t, akun.id, start]
-    );
-    const [[{ saldo_awal_kredit } = { saldo_awal_kredit: 0 }]] = await db.query(
-      `SELECT COALESCE(SUM(jd.kredit), 0) AS saldo_awal_kredit
-       FROM jurnal_detail jd
-       JOIN jurnal j ON j.id = jd.jurnal_id
-       WHERE j.tenant_id=? AND jd.akun_id=? AND j.tanggal < ?`,
-      [t, akun.id, start]
-    );
-
+    const saldoAwalDebit = debitMap[Number(akun.id)] || 0;
+    const saldoAwalKredit = kreditMap[Number(akun.id)] || 0;
     let saldoAwal = akun.saldo_normal === 'Debit'
-      ? Number(saldo_awal_debit) - Number(saldo_awal_kredit)
-      : Number(saldo_awal_kredit) - Number(saldo_awal_debit);
+      ? saldoAwalDebit - saldoAwalKredit
+      : saldoAwalKredit - saldoAwalDebit;
 
-    // Transaksi periode ini
-    const [transaksi] = await db.query(
-      `SELECT j.tanggal, j.no_jurnal, j.deskripsi AS jurnal_deskripsi,
-              jd.debit, jd.kredit, jd.deskripsi AS detail_deskripsi
-       FROM jurnal_detail jd
-       JOIN jurnal j ON j.id = jd.jurnal_id
-       WHERE j.tenant_id=? AND jd.akun_id=? AND j.tanggal BETWEEN ? AND ?
-       ORDER BY j.tanggal ASC, j.id ASC`,
-      [t, akun.id, start, end]
-    );
+    const transaksi = transByAkun[Number(akun.id)] || [];
 
     let saldoBerjalan = saldoAwal;
     const mutasi = transaksi.map(t => {
@@ -268,7 +283,6 @@ router.get('/laporan/buku-besar', roleFinance, async (req, res) => {
 
     const totalDebit = transaksi.reduce((s, t) => s + Number(t.debit), 0);
     const totalKredit = transaksi.reduce((s, t) => s + Number(t.kredit), 0);
-    const saldoAkhir = saldoBerjalan;
 
     result.push({
       akun_id: akun.id,
@@ -279,7 +293,7 @@ router.get('/laporan/buku-besar', roleFinance, async (req, res) => {
       saldo_awal: saldoAwal,
       total_debit: totalDebit,
       total_kredit: totalKredit,
-      saldo_akhir: saldoAkhir,
+      saldo_akhir: saldoBerjalan,
       mutasi,
     });
   }
@@ -299,29 +313,40 @@ router.get('/laporan/neraca', roleFinance, async (req, res) => {
     [t]
   );
 
+  if (!akunList.length) {
+    return res.json({ tanggal: tglNeraca, aktiva: { total: 0, rincian: [] }, kewajiban: { total: 0, rincian: [] }, ekuitas: { total: 0, modal: 0, laba_berjalan: 0, rincian: [] }, laba_rugi: { total_pendapatan: 0, total_biaya: 0, laba_rugi_berjalan: 0, rincian: [] }, total_pasiva: 0, selisih: 0 });
+  }
+
+  // Batch: saldo debit & kredit per akun sampai tglNeraca
+  const [debitRows] = await db.query(
+    `SELECT jd.akun_id, COALESCE(SUM(jd.debit), 0) AS total
+     FROM jurnal_detail jd
+     JOIN jurnal j ON j.id = jd.jurnal_id
+     WHERE j.tenant_id=? AND j.tanggal <= ?
+     GROUP BY jd.akun_id`,
+    [t, tglNeraca]
+  );
+  const [kreditRows] = await db.query(
+    `SELECT jd.akun_id, COALESCE(SUM(jd.kredit), 0) AS total
+     FROM jurnal_detail jd
+     JOIN jurnal j ON j.id = jd.jurnal_id
+     WHERE j.tenant_id=? AND j.tanggal <= ?
+     GROUP BY jd.akun_id`,
+    [t, tglNeraca]
+  );
+  const debitMap = Object.fromEntries(debitRows.map(r => [Number(r.akun_id), Number(r.total)]));
+  const kreditMap = Object.fromEntries(kreditRows.map(r => [Number(r.akun_id), Number(r.total)]));
+
   const rincian = [];
   let totalAktiva = 0, totalKewajiban = 0, totalEkuitas = 0;
 
   for (const akun of akunList) {
-    // Hitung saldo dari jurnal_detail sampai tanggal neraca
-    const [[{ totalDebit } = { totalDebit: 0 }]] = await db.query(
-      `SELECT COALESCE(SUM(jd.debit), 0) AS totalDebit
-       FROM jurnal_detail jd
-       JOIN jurnal j ON j.id = jd.jurnal_id
-       WHERE j.tenant_id=? AND jd.akun_id=? AND j.tanggal <= ?`,
-      [t, akun.id, tglNeraca]
-    );
-    const [[{ totalKredit } = { totalKredit: 0 }]] = await db.query(
-      `SELECT COALESCE(SUM(jd.kredit), 0) AS totalKredit
-       FROM jurnal_detail jd
-       JOIN jurnal j ON j.id = jd.jurnal_id
-       WHERE j.tenant_id=? AND jd.akun_id=? AND j.tanggal <= ?`,
-      [t, akun.id, tglNeraca]
-    );
+    const totalDebit = debitMap[Number(akun.id)] || 0;
+    const totalKredit = kreditMap[Number(akun.id)] || 0;
 
     let saldo = akun.saldo_normal === 'Debit'
-      ? Number(totalDebit) - Number(totalKredit)
-      : Number(totalKredit) - Number(totalDebit);
+      ? totalDebit - totalKredit
+      : totalKredit - totalDebit;
 
     if (saldo !== 0) {
       rincian.push({

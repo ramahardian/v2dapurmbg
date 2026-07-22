@@ -43,6 +43,14 @@ for (const [endpoint, sign] of [['stok_masuk', 1], ['stok_keluar', -1]]) {
     const conn = await db.getConnection();
     try {
       await conn.beginTransaction();
+      // Cek stok cukup untuk stok_keluar
+      if (sign < 0) {
+        const [[bb]] = await conn.query('SELECT stok_saat_ini FROM bahan_baku WHERE id=? AND tenant_id=?', [bahan_baku_id, req.user.tenant_id]);
+        if (!bb) return res.status(400).json({ error: 'Bahan baku tidak ditemukan' });
+        if (Number(bb.stok_saat_ini) < Number(jumlah)) {
+          return res.status(400).json({ error: `Stok tidak mencukupi (tersedia: ${bb.stok_saat_ini}, dibutuhkan: ${jumlah})` });
+        }
+      }
       await conn.query(
         `INSERT INTO ${endpoint} (tenant_id, tanggal, bahan_baku_id, jumlah, ${sign > 0 ? 'sumber' : 'tujuan'}, catatan) VALUES (?,?,?,?,?,?)`,
         [req.user.tenant_id, tanggal, bahan_baku_id, jumlah, sign > 0 ? sumber : tujuan, catatan || null]);

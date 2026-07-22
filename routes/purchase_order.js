@@ -585,38 +585,6 @@ router.get('/laporan/biaya-produksi', async (req, res) => {
 // ====================================================================
 
 /**
- * PUT /purchase_order/:id
- * Update status atau data purchase order
- */
-router.put('/purchase_order/:id', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const t = req.user.tenant_id;
-    const updates = req.body;
-    
-    // Build SET clause dynamically
-    const allowed = ['no_po', 'tanggal', 'supplier_id', 'supplier_nama', 'item', 'total_nilai', 'status', 'unit_dapur', 'catatan'];
-    const sets = [];
-    const params = [];
-    for (const key of allowed) {
-      if (updates[key] !== undefined) {
-        sets.push(key + '=?');
-        params.push(updates[key]);
-      }
-    }
-    if (!sets.length) return res.status(400).json({ error: 'Tidak ada data yang diupdate' });
-    
-    params.push(id, t);
-    await db.query(`UPDATE purchase_order SET ${sets.join(', ')} WHERE id=? AND tenant_id=?`, params);
-    
-    res.json({ ok: true });
-  } catch (e) {
-    console.error('PUT purchase_order error:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/**
  * POST /purchase_order/:id/terima
  * Menerima barang PO → update stok otomatis
  */

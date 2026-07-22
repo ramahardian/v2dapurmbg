@@ -138,7 +138,7 @@ router.post('/menu', async (req, res) => {
   }
   // Load sp_referensi_bahan dan bahan_baku untuk lookup nama
   const spRefMap = {};
-  try { const [spRefRows] = await db.query('SELECT nama, berat_bersih, energi, protein, lemak, karbohidrat, serat FROM sp_referensi_bahan'); for (const r of spRefRows) spRefMap[r.nama] = { berat_bersih: Number(r.berat_bersih) || 0, energi: Number(r.energi) || 0, protein: Number(r.protein) || 0, lemak: Number(r.lemak) || 0, karbohidrat: Number(r.karbohidrat) || 0, serat: Number(r.serat) || 0 }; } catch (e) { /* table optional */ }
+  try { const [spRefRows] = await db.query('SELECT nama, berat_bersih, energi, protein, lemak, karbohidrat, serat FROM sp_referensi_bahan WHERE tenant_id=?', [req.user.tenant_id]); for (const r of spRefRows) spRefMap[r.nama] = { berat_bersih: Number(r.berat_bersih) || 0, energi: Number(r.energi) || 0, protein: Number(r.protein) || 0, lemak: Number(r.lemak) || 0, karbohidrat: Number(r.karbohidrat) || 0, serat: Number(r.serat) || 0 }; } catch (e) { /* table optional */ }
   const [bbRows] = await db.query('SELECT id, nama FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
   const bbNamaMap = {};
   for (const r of bbRows) bbNamaMap[r.id] = r.nama;
@@ -181,7 +181,7 @@ router.post('/menu', async (req, res) => {
         }
         // Auto-create bahan_baku jika ID tidak ditemukan tapi nama tersedia
         if (!idBahan && b.nama) {
-          const [existingBb] = await db.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [req.user.tenant_id, b.nama]);
+          const [existingBb] = await conn.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [req.user.tenant_id, b.nama]);
           if (existingBb.length) {
             idBahan = existingBb[0].id;
           } else {
@@ -306,7 +306,7 @@ router.put('/menu/:id', async (req, res) => {
       jumlahPorsi = Number(pmRow[0].total);
     }
     const spRefMap = {};
-    try { const [spRefRows] = await db.query('SELECT nama, berat_bersih, energi, protein, lemak, karbohidrat, serat FROM sp_referensi_bahan'); for (const r of spRefRows) spRefMap[r.nama] = { berat_bersih: Number(r.berat_bersih) || 0, energi: Number(r.energi) || 0, protein: Number(r.protein) || 0, lemak: Number(r.lemak) || 0, karbohidrat: Number(r.karbohidrat) || 0, serat: Number(r.serat) || 0 }; } catch (e) { /* table optional */ }
+    try { const [spRefRows] = await db.query('SELECT nama, berat_bersih, energi, protein, lemak, karbohidrat, serat FROM sp_referensi_bahan WHERE tenant_id=?', [req.user.tenant_id]); for (const r of spRefRows) spRefMap[r.nama] = { berat_bersih: Number(r.berat_bersih) || 0, energi: Number(r.energi) || 0, protein: Number(r.protein) || 0, lemak: Number(r.lemak) || 0, karbohidrat: Number(r.karbohidrat) || 0, serat: Number(r.serat) || 0 }; } catch (e) { /* table optional */ }
     const [bbRows] = await db.query('SELECT id, nama FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
     const bbNamaMap = {};
     for (const r of bbRows) bbNamaMap[r.id] = r.nama;
@@ -349,11 +349,11 @@ router.put('/menu/:id', async (req, res) => {
         }
         // Auto-create bahan_baku jika ID tidak ditemukan tapi nama tersedia
         if (!idBahan && b.nama) {
-          const [existingBb] = await db.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [req.user.tenant_id, b.nama]);
+          const [existingBb] = await conn.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [req.user.tenant_id, b.nama]);
           if (existingBb.length) {
             idBahan = existingBb[0].id;
           } else {
-            const [bbInsert] = await db.query(
+            const [bbInsert] = await conn.query(
               `INSERT INTO bahan_baku (tenant_id, nama, satuan, kategori_sp, berat_1_sp, persen_bdd, berat_per_satuan, kalori, protein, karbohidrat, lemak, serat)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
               [req.user.tenant_id, b.nama, b.satuan || 'g', b.kategori_sp || null,
@@ -702,7 +702,7 @@ router.post('/menu/recalculate-nutrisi', async (req, res) => {
     const tenantId = req.user.tenant_id;
     // Load sp_referensi_bahan for nutrition lookup
     const spRefNutri = {};
-    try { const [rows] = await db.query('SELECT nama, energi, protein, lemak, karbohidrat, serat FROM sp_referensi_bahan'); for (const r of rows) spRefNutri[r.nama] = r; } catch (e) {}
+    try { const [rows] = await db.query('SELECT nama, energi, protein, lemak, karbohidrat, serat FROM sp_referensi_bahan WHERE tenant_id=?', [tenantId]); for (const r of rows) spRefNutri[r.nama] = r; } catch (e) {}
     const [menuBahanJoin] = await db.query(
       `SELECT DISTINCT mb.menu_id, mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
        FROM menu_bahan mb
