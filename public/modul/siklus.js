@@ -665,15 +665,18 @@ function toggleSelectAll(master) {
 function updateSelectedCount() {
   var checked = document.querySelectorAll('.siklus-checkbox:checked').length;
   var btn = document.getElementById('siklus-delete-selected');
+  var div = document.getElementById('siklus-divider-selected');
   var countEl = document.getElementById('siklus-selected-count');
   if (!btn || !countEl) return;
   if (checked > 0) {
     btn.classList.remove('hidden');
     btn.classList.add('inline-flex');
+    if (div) div.classList.remove('hidden');
     countEl.textContent = checked;
   } else {
     btn.classList.add('hidden');
     btn.classList.remove('inline-flex');
+    if (div) div.classList.add('hidden');
   }
 }
 
