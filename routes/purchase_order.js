@@ -61,7 +61,7 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
     const siklusPmMap = {};
     for (const s of siklusList) {
       const jenjangList = getJenjangList(s.kategori_penerima);
-      siklusPmMap[s.id] = jenjangList.reduce((sum, k) => {
+      siklusPmMap[s.id] = Number(s.jumlah_porsi) || jenjangList.reduce((sum, k) => {
         const display = dbToDisplay[k] || k;
         return sum + (pmMap[display]?.total_penerima || 0);
       }, 0);
@@ -359,7 +359,7 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
 
     for (const s of siklusList) {
       const jenjangList = getJenjangList(s.kategori_penerima);
-      const penerimaCount = jenjangList.reduce((sum, k) => {
+      const penerimaCount = Number(s.jumlah_porsi) || jenjangList.reduce((sum, k) => {
         const jenjang = dbToDisplay[k] || k;
         return sum + (pmMap[jenjang]?.total_penerima || 0);
       }, 0);

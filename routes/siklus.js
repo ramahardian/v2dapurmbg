@@ -3010,7 +3010,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const siklusId = s.id;
       const kategoriPenerima = s.kategori_penerima || '';
       const displayJenjang = dbToDisplay[kategoriPenerima] || kategoriPenerima;
-      const penerimaCount = pmMap[displayJenjang]?.total_penerima || 0;
+      const penerimaCount = Number(s.jumlah_porsi) || pmMap[displayJenjang]?.total_penerima || 0;
       if (!penerimaCount) continue;
 
       // PR mengikuti durasi siklus (tanpa ekstrapolasi bulanan)
