@@ -286,6 +286,95 @@ if (cluster.isMaster && WORKERS > 1) {
   });
 
 
+  // Endpoint fix: update berat_1_sp Ayam Potong (admin only)
+  app.get('/api/debug/fix-ayam-bahan', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [before] = await db.query("SELECT id, nama, berat_1_sp, persen_bdd, satuan FROM bahan_baku WHERE LOWER(nama)='ayam potong' AND berat_1_sp=0");
+
+      if (!before.length) {
+        return res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#16a34a">✅ Sudah OK</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">Tidak ada "Ayam Potong" dengan berat_1_sp=0 yang perlu diupdate.</p>
+          <a href="/api/debug/ayam-bahan" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#6366f1;color:white;text-decoration:none;border-radius:0.5rem">🐔 Cek Ayam Bahan</a>
+        </div>`);
+      }
+
+      if (req.query.confirm !== '1') {
+        let table = `<table style="width:100%;border-collapse:collapse;font-size:0.875rem;margin:1rem 0">
+          <thead><tr style="background:#f5f5f4">
+            <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4">ID</th>
+            <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4">Nama</th>
+            <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right">berat_1_sp</th>
+            <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right">persen_bdd</th>
+            <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4">satuan</th>
+          </tr></thead><tbody>`;
+        for (const r of before) {
+          table += `<tr style="background:#fef2f2">
+            <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4">${r.id}</td>
+            <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;font-weight:700">${r.nama}</td>
+            <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right;color:#dc2626;font-weight:700">${r.berat_1_sp || 0}</td>
+            <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right">${r.persen_bdd || 0}</td>
+            <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4">${r.satuan || '-'}</td>
+          </tr>`;
+        }
+        table += `</tbody></table>`;
+        return res.send(`<div style="font-family:sans-serif;padding:2rem;max-width:600px;margin:auto;text-align:center">
+          <h2 style="color:#d97706">⚠️ Konfirmasi Update</h2>
+          <p>Akan mengupdate <b>${before.length}</b> baris Ayam Potong:</p>
+          ${table}
+          <p style="font-size:0.9rem;color:#6b7280;margin:1rem 0">
+            <b>berat_1_sp</b>: <span style="color:#dc2626">0</span> → <span style="color:#16a34a">40</span><br>
+            <b>persen_bdd</b>: <span style="color:#dc2626">100</span> → <span style="color:#16a34a">50</span><br>
+            <b>satuan</b>: <span style="color:#dc2626">Kg</span> → <span style="color:#16a34a">g</span>
+          </p>
+          <a href="?confirm=1" style="display:inline-block;padding:0.75rem 2rem;background:#d97706;color:white;text-decoration:none;border-radius:0.5rem;font-weight:600">✅ Ya, Update!</a>
+          <br><br>
+          <a href="/api/debug/sp-bahan" style="color:#6b7280;font-size:0.875rem">← Batal</a>
+        </div>`);
+      }
+
+      const [result] = await db.query(
+        "UPDATE bahan_baku SET berat_1_sp = 40, persen_bdd = 50, satuan = 'g' WHERE LOWER(nama)='ayam potong' AND tenant_id=?",
+        [req.user.tenant_id]
+      );
+
+      const [after] = await db.query("SELECT id, nama, berat_1_sp, persen_bdd, satuan FROM bahan_baku WHERE LOWER(nama)='ayam potong'");
+      let table = `<table style="width:100%;border-collapse:collapse;font-size:0.875rem;margin:1rem 0">
+        <thead><tr style="background:#f5f5f4">
+          <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4">ID</th>
+          <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4">Nama</th>
+          <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right">berat_1_sp</th>
+          <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right">persen_bdd</th>
+          <th style="padding:0.5rem 1rem;border:1px solid #e7e5e4">satuan</th>
+        </tr></thead><tbody>`;
+      for (const r of after) {
+        table += `<tr style="background:#f0fdf4">
+          <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4">${r.id}</td>
+          <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;font-weight:700">${r.nama}</td>
+          <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right;color:#16a34a;font-weight:700">${r.berat_1_sp || 0}</td>
+          <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4;text-align:right">${r.persen_bdd || 0}</td>
+          <td style="padding:0.5rem 1rem;border:1px solid #e7e5e4">${r.satuan || '-'}</td>
+        </tr>`;
+      }
+      table += `</tbody></table>`;
+
+      const msg = result.affectedRows > 0
+        ? `<h2 style="color:#16a34a">✅ Berhasil!</h2><p>${result.affectedRows} baris diupdate.</p>`
+        : `<h2 style="color:#d97706">⚠️ Tidak ada perubahan</h2><p>Tidak ada baris yang diupdate (mungkin sudah benar).</p>`;
+
+      res.send(`<div style="font-family:sans-serif;padding:2rem;max-width:600px;margin:auto;text-align:center">
+        ${msg}
+        ${table}
+        <div style="margin-top:1.5rem;display:flex;gap:0.75rem;justify-content:center">
+          <a href="/api/debug/sp-bahan" style="padding:0.5rem 1.25rem;background:#6366f1;color:white;text-decoration:none;border-radius:0.5rem">📊 Cek SP Bahan</a>
+          <a href="/" style="padding:0.5rem 1.25rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a>
+        </div>
+      </div>`);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem"><h2 style="color:#dc2626">❌ Error</h2><p>${e.message}</p></div>`);
+    }
+  });
+
   // Endpoint debug: cek data SP referensi & bahan_baku (admin only)
   app.get('/api/debug/sp-bahan', requireAuth, requireRole('admin'), async (req, res) => {
     try {
