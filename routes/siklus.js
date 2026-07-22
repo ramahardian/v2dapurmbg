@@ -2148,7 +2148,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
  */
 router.get('/siklus/laporan/perencanaan', async (req, res) => {
   try {
-  const tanggalMulai = req.query.tanggal_mulai || new Date().toISOString().slice(0, 10);
+  let tanggalMulai = req.query.tanggal_mulai || '';
   const tanggalSelesai = req.query.tanggal_selesai || '';
 
   // 1. Siklus list
@@ -2364,14 +2364,25 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     }
   }
 
-  // 6. Merge per-siklus data into date-based output
+  // 6. Tentukan filterStart — jika tidak ada tanggal_mulai dari user, pakai min(siklus.tanggal_mulai)
+  //    atau today sebagai fallback
+  if (!tanggalMulai) {
+    const tanggalList = activeSiklus
+      .map(s => s.tanggal_mulai)
+      .filter(Boolean)
+      .sort();
+    tanggalMulai = tanggalList.length > 0 ? tanggalList[0] : new Date().toISOString().slice(0, 10);
+  }
   const filterStart = new Date(tanggalMulai);
+
+  // totalHari = max durasi siklus aktif. Tapi batasi agar tidak overflow.
   let totalHari = Math.max(...activeSiklus.map(s => s.total_hari || 7), 7);
   if (tanggalSelesai) {
     const filterEnd = new Date(tanggalSelesai);
     const diffDays = Math.floor((filterEnd.getTime() - filterStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     if (diffDays > 0 && diffDays < totalHari) totalHari = diffDays;
   }
+
   const hariResult = [];
 
   for (let d = 0; d < totalHari; d++) {
@@ -2392,17 +2403,15 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       const siklusData = perSiklusMap[s.id];
       if (!siklusData) continue;
 
-      let hk = d + 1; // default sequential for legacy siklus
-
-      if (s.tanggal_mulai) {
-        // Offset hari_ke based on actual siklus start date
-        const siklusStart = new Date(s.tanggal_mulai);
-        const diffTime = currentDate.getTime() - siklusStart.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        hk = diffDays + 1;
-        const maxHk = s.total_hari || 7;
-        if (hk < 1 || hk > maxHk) continue; // this date is outside this siklus' range
-      }
+      // Tentukan hari_ke (hk) berdasarkan tanggal aktual siklus.
+      // Kalau siklus tidak punya tanggal_mulai, fallback ke filterStart
+      // supaya pemfilteran tanggal tetap bermakna.
+      const siklusStart = s.tanggal_mulai ? new Date(s.tanggal_mulai) : new Date(filterStart);
+      const diffTime = currentDate.getTime() - siklusStart.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const hk = diffDays + 1;
+      const maxHk = s.total_hari || 7;
+      if (hk < 1 || hk > maxHk) continue; // this date is outside this siklus' range
 
       const dayData = siklusData[hk];
       if (!dayData) continue;
