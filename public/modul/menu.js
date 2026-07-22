@@ -428,23 +428,25 @@ async function openMenuForm(editing) {
       </div>
     </div>
     <div class="mt-3"><label class="text-sm">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
-    <div class="flex items-center gap-1.5 mt-3 bg-white border border-stone-200 rounded-xl p-2.5 shadow-sm">
-      <div class="flex items-center gap-1 text-[10px] text-stone-400 font-medium mr-1">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <span>Nutrisi</span>
+    <div class="flex items-center gap-3 mt-3 bg-white border border-stone-200 rounded-xl px-3 py-2 shadow-sm">
+      <div class="flex items-center gap-1.5 shrink-0">
+        <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span class="text-[10px] font-medium text-stone-400 uppercase tracking-wider">Gizi</span>
       </div>
-      ${[['kalori','Kalori','kkal','orange'],['protein','Protein','g','blue'],['karbohidrat','Karbo','g','emerald'],['lemak','Lemak','g','yellow'],['serat','Serat','g','violet']].map(([k,l,u,c]) =>
-        `<div class="flex items-center gap-1 px-2 py-1 rounded-lg ${Number(m[k] || 0) > 0 ? 'bg-'+c+'-50' : 'bg-stone-50'}">
-          <div id="m-${k}-disp" class="text-xs font-semibold ${Number(m[k] || 0) > 0 ? 'text-'+c+'-700' : 'text-stone-400'} mono">${Math.round(Number(m[k] || 0) * 10) / 10}</div>
-          <span class="text-[9px] ${Number(m[k] || 0) > 0 ? 'text-'+c+'-500' : 'text-stone-300'}">${u}</span>
-        </div>`
-      ).join('')}
+      <div class="flex items-center gap-2 flex-wrap">
+        ${[['kalori','Energi','kkal','bg-orange-50','text-orange-700','text-orange-400'],['protein','Protein','g','bg-blue-50','text-blue-700','text-blue-400'],['karbohidrat','Karbo','g','bg-emerald-50','text-emerald-700','text-emerald-400'],['lemak','Lemak','g','bg-yellow-50','text-yellow-700','text-yellow-400'],['serat','Serat','g','bg-violet-50','text-violet-700','text-violet-400']].map(([k,l,u,bg,clr,uc]) =>
+          `<div class="flex flex-col items-center px-2.5 py-1 rounded-lg ${Number(m[k] || 0) > 0 ? bg : 'bg-stone-50'} min-w-[48px]">
+            <span class="text-[8px] uppercase ${Number(m[k] || 0) > 0 ? clr : 'text-stone-400'} font-medium">${l}</span>
+            <span id="m-${k}-disp" class="text-xs font-bold ${Number(m[k] || 0) > 0 ? clr : 'text-stone-400'} mono leading-tight">${Math.round(Number(m[k] || 0) * 10) / 10}<span class="text-[9px] ${Number(m[k] || 0) > 0 ? uc : 'text-stone-300'} ml-0.5">${u}</span></span>
+          </div>`
+        ).join('')}
+      </div>
       <input id="m-kalori" type="hidden" value="${m.kalori || 0}" />
       <input id="m-protein" type="hidden" value="${m.protein || 0}" />
       <input id="m-karbohidrat" type="hidden" value="${m.karbohidrat || 0}" />
       <input id="m-lemak" type="hidden" value="${m.lemak || 0}" />
       <input id="m-serat" type="hidden" value="${m.serat || 0}" />
-      <button type="button" onclick="hitungNutrisiAI()" class="ml-auto shrink-0 px-2 h-7 text-[10px] font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 whitespace-nowrap transition-colors" title="Hitung nutrisi pakai AI">✨ AI</button>
+      <button type="button" onclick="hitungNutrisiAI()" class="ml-auto shrink-0 px-2.5 h-8 text-[10px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg whitespace-nowrap transition-colors" title="Hitung nutrisi pakai AI">✨ AI</button>
     </div>
 
     <div class="border-t border-stone-200 mt-4 pt-3">
