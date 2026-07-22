@@ -152,11 +152,10 @@ function openStokForm(tipe) {
   const bahanList = _bahanListCache || [];
   const supplierList = _supplierListCache || [];
   const sumberHtml = tipe === 'masuk'
-    ? `<select id="s-sumber" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
-        <option value="">— Pilih Supplier —</option>
-        ${supplierList.map(s => `<option value="${s.nama}">${s.nama}</option>`).join('')}
-        <option value="Lainnya">Lainnya (tulis manual)</option>
-      </select>`
+    ? `<input id="s-sumber" list="s-supplier-list" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" placeholder="Ketik atau pilih supplier" autocomplete="off" />
+        <datalist id="s-supplier-list">
+          ${supplierList.map(s => `<option value="${s.nama}">`).join('')}
+        </datalist>`
     : `<input id="s-sumber" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" placeholder="cth: Produksi Menu A" />`;
   document.getElementById('modal-body').innerHTML = `
     <div class="mb-3"><label class="text-sm">Tanggal</label>
@@ -185,7 +184,15 @@ function openStokForm(tipe) {
         jumlah: +document.getElementById('s-jumlah').value,
         catatan: document.getElementById('s-catatan').value,
       };
-      payload[tipe === 'masuk' ? 'sumber' : 'tujuan'] = document.getElementById('s-sumber').value;
+      var sumberVal = document.getElementById('s-sumber').value.trim();
+      payload[tipe === 'masuk' ? 'sumber' : 'tujuan'] = sumberVal;
+      // Auto-create supplier jika nama baru (stok masuk)
+      if (tipe === 'masuk' && sumberVal && !_supplierListCache.some(function(s) { return s.nama.toLowerCase() === sumberVal.toLowerCase(); })) {
+        try {
+          await api.post('/supplier', { nama: sumberVal });
+          _supplierListCache = null; // refresh cache
+        } catch {}
+      }
       await api.post('/stok_' + tipe, payload);
       closeModal(); renderGudang();
     } catch (e) {
