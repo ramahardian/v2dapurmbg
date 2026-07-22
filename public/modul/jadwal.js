@@ -32,7 +32,7 @@ async function openShiftForm(editing) {
     if (!divisiList.length) return '<div class="text-xs text-stone-400 italic">Belum ada divisi. Buat divisi dulu di menu Divisi.</div>';
     return divisiList.map(function(d) {
       var checked = selectedDivisi.indexOf(d.id) !== -1 ? 'checked' : '';
-      return '<label class="flex items-center gap-2 p-1.5 rounded hover:bg-stone-50 cursor-pointer"><input type="checkbox" class="sf-divisi-cb" value="' + d.id + '" ' + checked + ' /><span class="text-sm">' + d.nama + '</span></label>';
+      return '<label class="flex items-center gap-2 p-1.5 rounded hover:bg-stone-50 cursor-pointer"><input type="checkbox" class="sf-divisi-cb cb-modern" value="' + d.id + '" ' + checked + ' /><span class="text-sm">' + d.nama + '</span></label>';
     }).join('');
   }
   document.getElementById('modal-title').textContent = editing ? 'Edit Shift' : 'Shift Baru';

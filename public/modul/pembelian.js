@@ -147,7 +147,7 @@ async function openBuatPrForm() {
         <div class="mt-1 space-y-1 max-h-48 overflow-y-auto border border-stone-200 rounded-lg p-2">
           ${siklusList.filter(s => s.status === 'Aktif').map((s, i) => `
             <label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-1.5 rounded">
-              <input type="checkbox" class="pr-siklus-check" value="${s.id}" data-hari="${Number(s.total_hari) || 7}" checked>
+              <input type="checkbox" class="pr-siklus-check cb-modern" value="${s.id}" data-hari="${Number(s.total_hari) || 7}" checked>
               <span class="text-sm">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi, ${Number(s.total_hari) || 7} hari)</span>
             </label>
           `).join('')}
@@ -771,7 +771,7 @@ async function openSiklusPicker() {
       <div class="mt-1 space-y-1 max-h-48 overflow-y-auto border border-stone-200 rounded-lg p-2">
         ${siklusList.map(s => `
           <label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-1.5 rounded">
-            <input type="checkbox" class="siklus-check" value="${s.id}">
+            <input type="checkbox" class="siklus-check cb-modern" value="${s.id}">
             <span class="text-sm">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi)</span>
           </label>
         `).join('')}

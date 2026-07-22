@@ -1,6 +1,12 @@
 let currentUser = null;
 let currentTenant = null;
 
+(function() {
+  var s = document.createElement('style');
+  s.textContent = '.cb-modern{appearance:none!important;-webkit-appearance:none!important;width:18px!important;height:18px!important;border:2px solid #d4d4d4!important;border-radius:5px!important;background:#fff!important;cursor:pointer!important;position:relative!important;transition:all .2s ease!important;flex-shrink:0!important}.cb-modern:hover{border-color:#a3a3a3!important;background:#fafafa!important}.cb-modern:checked{border-color:#059669!important;background:#059669!important}.cb-modern:checked::after{content:"";position:absolute;top:2px;left:5px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}.cb-modern:focus-visible{outline:2px solid #05966944;outline-offset:2px;border-color:#059669}';
+  document.head.appendChild(s);
+})();
+
 async function init() {
   initDarkMode();
   try {

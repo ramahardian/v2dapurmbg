@@ -322,7 +322,7 @@ function renderMenuHtml(menus) {
         <thead class="bg-stone-50">
           <tr>
             <th class="text-left px-4 py-3 text-xs font-semibold uppercase w-10">
-              <input type="checkbox" id="menu-select-all" onchange="toggleSelectAllMenu(this)" class="w-4 h-4 rounded border-stone-300 text-[#1e40af] focus:ring-[#1e40af]/30">
+              <input type="checkbox" id="menu-select-all" onchange="toggleSelectAllMenu(this)" class="cb-modern">
             </th>
             <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
             <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Kategori</th>
@@ -336,7 +336,7 @@ function renderMenuHtml(menus) {
             ${menus.length > 0 ? menus.map(m => `
             <tr class="border-t border-stone-100">
               <td class="px-4 py-3 text-sm">
-                <input type="checkbox" value="${m.id}" onchange="updateSelectedMenuCount()" class="menu-checkbox w-4 h-4 rounded border-stone-300 text-[#1e40af] focus:ring-[#1e40af]/30">
+                <input type="checkbox" value="${m.id}" onchange="updateSelectedMenuCount()" class="menu-checkbox cb-modern">
               </td>
               <td class="px-4 py-3 text-sm font-medium truncate max-w-[180px]" title="${m.nama}">${m.nama}</td>
               <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
