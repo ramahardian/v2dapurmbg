@@ -85,7 +85,8 @@ function renderPbdJenjangSection(jd, idx) {
   html += '<span class="ml-3 text-sm font-normal">Jumlah Siswa: <strong>' + fmtPbdNum(jd.jumlah_siswa) + '</strong> orang</span></div>';
   html += '<div class="flex items-center gap-2 text-xs">';
   html += '<span>' + jd.siklus.length + ' siklus</span>';
-  html += '<button onclick="exportPbdExcel(' + idx + ')" class="px-2.5 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1" title="Export Excel"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> XLSX</button>';
+  html += '<button onclick="exportPbdExcel(' + idx + ')" class="px-2.5 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1 text-xs" title="Export Excel"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> XLSX</button>';
+  html += '<button onclick="exportPbdPdf(' + idx + ')" class="px-2.5 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-1 text-xs" title="Export PDF"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> PDF</button>';
   html += '</div>';
   html += '</div>';
 
@@ -195,6 +196,52 @@ function fmtPbdNum(v) {
   if (v == null || isNaN(v)) return '0,00';
   var n = Number(v);
   return n === Math.floor(n) ? String(n) : n.toFixed(2).replace('.', ',');
+}
+
+function exportPbdPdf(idx) {
+  var data = window._pbdData;
+  if (!data || !data[idx]) { showAlert('Data tidak tersedia', 'error'); return; }
+  var jd = data[idx];
+
+  var rowsHtml = '';
+  for (var s = 0; s < jd.siklus.length; s++) {
+    var sk = jd.siklus[s];
+    for (var h = 0; h < sk.hari.length; h++) {
+      var day = sk.hari[h];
+      rowsHtml += '<tr><td colspan="6" style="font-weight:700;background:#f0f0f0;padding:6px 10px">' + day.menu_label + ' — ' + day.hari_nama + '</td></tr>';
+      if (day.bahan && day.bahan.length) {
+        for (var i = 0; i < day.bahan.length; i++) {
+          var b = day.bahan[i];
+          rowsHtml += '<tr><td style="padding:4px 10px">' + b.nama_display + '</td><td style="padding:4px 10px;text-align:right">' + b.berat_bersih + '</td><td style="padding:4px 10px;text-align:right">' + b.persen_bdd + '%</td><td style="padding:4px 10px;text-align:right">' + b.berat_kotor + '</td><td style="padding:4px 10px;text-align:right">' + jd.jumlah_siswa + '</td><td style="padding:4px 10px;text-align:right">' + b.kebutuhan_kg + '</td></tr>';
+        }
+      }
+    }
+  }
+
+  var win = window.open('', '_blank');
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>BDD - ' + jd.jenjang + '</title>';
+  html += '<style>body{font-family:sans-serif;padding:30px 40px}';
+  html += 'h1{font-size:16pt;margin-bottom:4px}h2{font-size:11pt;color:#555;font-weight:400;margin-top:0;margin-bottom:16px}';
+  html += 'table{width:100%;border-collapse:collapse;font-size:10pt}';
+  html += 'th{background:#166534;color:#fff;padding:8px 10px;text-align:right}';
+  html += 'th:first-child{text-align:left}';
+  html += 'td,th{border:1px solid #ccc}';
+  html += '@media print{body{padding:30px 40px}}</style></head><body>';
+  html += '<h1>Perhitungan BDD — ' + jd.jenjang + '</h1>';
+  html += '<h2>Jumlah Siswa: ' + jd.jumlah_siswa + ' orang | ' + jd.siklus.length + ' siklus</h2>';
+  html += '<table><thead><tr>';
+  html += '<th style="text-align:left">Bahan Pangan</th>';
+  html += '<th>Berat Bersih (g)</th>';
+  html += '<th>BDD (%)</th>';
+  html += '<th>Berat Kotor (g)</th>';
+  html += '<th>Jumlah Siswa</th>';
+  html += '<th>Kebutuhan (kg)</th>';
+  html += '</tr></thead><tbody>';
+  html += rowsHtml;
+  html += '</tbody></table></body></html>';
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function() { win.print(); }, 500);
 }
 
 function exportPbdExcel(idx) {

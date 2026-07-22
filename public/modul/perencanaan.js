@@ -42,6 +42,8 @@ async function loadPerencanaanData(tanggalMulai) {
     html += '<button onclick="buatPrDariSiklus()" class="ml-auto h-10 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2">';
     html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>\n    Buat Draft PR';
     html += '</button>';
+    html += '<button onclick="exportPncExcel()" class="px-2.5 py-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1 text-xs" title="Export Excel"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> XLSX</button>';
+    html += '<button onclick="exportPncPdf()" class="px-2.5 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-1 text-xs" title="Export PDF"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> PDF</button>';
     html += '<div class="text-xs text-stone-400">' + (hari ? hari.length + ' hari' : '0 hari') + '</div>';
     html += '</div>';
 
@@ -270,8 +272,102 @@ function fmtPncNum(v) {
   return n === Math.floor(n) ? String(n) : n.toFixed(2).replace('.', ',');
 }
 
-function exportPncCsv() {
-  showAlert('Export CSV: gunakan Print atau salin dari tabel', 'info');
+function exportPncExcel() {
+  var data = _perencanaanData;
+  if (!data || !data.hari || !data.hari.length) { showAlert('Tidak ada data', 'error'); return; }
+  var hari = data.hari;
+  var jl = data.jenjang_list || [];
+
+  var rows = [];
+
+  var headerRow = ['Bahan Pangan'].concat(jl).concat(['Total Porsi', 'Kebutuhan Pangan (kg)', '1-10%', 'Rincian']);
+  rows.push(headerRow);
+
+  for (var h = 0; h < hari.length; h++) {
+    var day = hari[h];
+    rows.push([day.header_tanggal, '', '', '', '', '', '', '', '', '']);
+    if (day.bahan && day.bahan.length) {
+      for (var i = 0; i < day.bahan.length; i++) {
+        var b = day.bahan[i];
+        var row = [b.nama_display || b.nama];
+        for (var j = 0; j < jl.length; j++) {
+          var pj = b.per_jenjang[jl[j]];
+          var val = pj != null ? (pj.kebutuhan_kg != null ? pj.kebutuhan_kg : pj) : null;
+          row.push(val != null ? Number(val) : '');
+        }
+        row.push(day.total_porsi);
+        row.push(b.total_kebutuhan_kg != null ? Number(b.total_kebutuhan_kg) : '');
+        row.push(b.kebutuhan_buffer_kg != null ? Number(b.kebutuhan_buffer_kg) : '');
+        row.push(b.rincian || '');
+        rows.push(row);
+      }
+    }
+  }
+
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+
+  var colW = [{ wch: 22 }];
+  for (var j = 0; j < jl.length; j++) colW.push({ wch: 16 });
+  colW.push({ wch: 12 }, { wch: 18 }, { wch: 12 }, { wch: 16 });
+  ws['!cols'] = colW;
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Perencanaan');
+  XLSX.writeFile(wb, 'Perencanaan Kebutuhan Pangan.xlsx');
+}
+
+function exportPncPdf() {
+  var data = _perencanaanData;
+  if (!data || !data.hari || !data.hari.length) { showAlert('Tidak ada data', 'error'); return; }
+  var hari = data.hari;
+  var jl = data.jenjang_list || [];
+
+  var tableHtml = '';
+  for (var h = 0; h < hari.length; h++) {
+    var day = hari[h];
+    tableHtml += '<tr><td colspan="' + (jl.length + 4) + '" style="font-weight:700;background:#e0f2fe;padding:8px 10px;font-size:11pt">' + day.header_tanggal + '</td></tr>';
+    if (day.bahan && day.bahan.length) {
+      for (var i = 0; i < day.bahan.length; i++) {
+        var b = day.bahan[i];
+        tableHtml += '<tr>';
+        tableHtml += '<td style="padding:4px 10px;font-weight:500">' + (b.nama_display || b.nama) + '</td>';
+        for (var j = 0; j < jl.length; j++) {
+          var pj = b.per_jenjang[jl[j]];
+          var val = pj != null ? (pj.kebutuhan_kg != null ? pj.kebutuhan_kg : pj) : null;
+          tableHtml += '<td style="padding:4px 10px;text-align:right">' + (val != null ? Number(val).toFixed(2).replace('.', ',') : '—') + '</td>';
+        }
+        tableHtml += '<td style="padding:4px 10px;text-align:right">' + day.total_porsi + '</td>';
+        tableHtml += '<td style="padding:4px 10px;text-align:right;font-weight:600">' + (b.total_kebutuhan_kg != null ? Number(b.total_kebutuhan_kg).toFixed(2).replace('.', ',') : '') + '</td>';
+        tableHtml += '<td style="padding:4px 10px;text-align:right;font-weight:600">' + (b.kebutuhan_buffer_kg != null ? Number(b.kebutuhan_buffer_kg).toFixed(2).replace('.', ',') : '') + '</td>';
+        tableHtml += '<td style="padding:4px 10px;text-align:right;font-weight:600">' + (b.rincian || '') + '</td>';
+        tableHtml += '</tr>';
+      }
+    }
+  }
+
+  var thHtml = '<tr>';
+  thHtml += '<th style="padding:8px 10px;text-align:left;background:#0369a1;color:#fff">Bahan Pangan</th>';
+  for (var j = 0; j < jl.length; j++) {
+    thHtml += '<th style="padding:8px 10px;text-align:right;background:#0369a1;color:#fff">' + jl[j] + '</th>';
+  }
+  thHtml += '<th style="padding:8px 10px;text-align:right;background:#0369a1;color:#fff">Total Porsi</th>';
+  thHtml += '<th style="padding:8px 10px;text-align:right;background:#0369a1;color:#fff">Kebutuhan (kg)</th>';
+  thHtml += '<th style="padding:8px 10px;text-align:right;background:#0369a1;color:#fff">1-10%</th>';
+  thHtml += '<th style="padding:8px 10px;text-align:right;background:#0369a1;color:#fff">Rincian</th>';
+  thHtml += '</tr>';
+
+  var win = window.open('', '_blank');
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Perencanaan Kebutuhan Pangan</title>';
+  html += '<style>body{font-family:sans-serif;padding:30px 40px}';
+  html += 'h1{font-size:16pt;margin-bottom:4px}';
+  html += 'table{width:100%;border-collapse:collapse;font-size:9pt}';
+  html += 'td,th{border:1px solid #ccc}';
+  html += '@media print{body{padding:30px 40px}}</style></head><body>';
+  html += '<h1>PERENCANAAN KEBUTUHAN PANGAN</h1>';
+  html += '<table><thead>' + thHtml + '</thead><tbody>' + tableHtml + '</tbody></table></body></html>';
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function() { win.print(); }, 500);
 }
 
 // ===== Buat Draft Purchase Request dari Siklus =====
