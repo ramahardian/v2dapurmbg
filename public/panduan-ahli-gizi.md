@@ -238,4 +238,4 @@ Tidak perlu entry manual — alur dari Ahli Gizi → Pembelian → Stok → Jurn
 - **Duplikasi data penerima** — hindari entri ganda karena akan menggandakan total porsi. Cek data secara berkala.
 - **Prioritas BDD** — sistem menggunakan BDD dari **Referensi SP Bahan** terlebih dahulu. Jika tidak ada, fallback ke data **Bahan Baku**.
 - **Siklus harus Aktif** — hanya siklus dengan status **Aktif** yang masuk perhitungan Perencanaan dan pembuatan PR.
-- **Jangan ubah harga** — Ahli Gizi hanya fokus pada data gizi dan kebutuhan bahan (kg). Harga adalah domain Keuangan.
+- **Jangan ubah harga** — Ahli Gizi hanya fokus pada data gizi dan kebutuh an bahan (kg). Harga adalah domain Keuangan.
