@@ -548,9 +548,10 @@ async function hitungGramasiBesarKecil() {
       hitung++;
     }
     if (!hitung) { showAlert('Bahan belum punya berat_1_sp', 'warning'); return; }
-    document.getElementById('m-gramasi-besar').value = Math.round(gBesar * 100) / 100;
-    document.getElementById('m-gramasi-kecil').value = Math.round(gKecil * 100) / 100;
-    showToast('Gramasi terisi dari SP', 'success');
+    var elBesar = document.getElementById('m-gramasi-besar');
+    if (elBesar) elBesar.value = Math.round(gBesar * 100) / 100;
+    var elKecil = document.getElementById('m-gramasi-kecil');
+    if (elKecil) elKecil.value = Math.round(gKecil * 100) / 100;
   } catch(e){ showAlert('Error: ' + e.message, 'error'); }
 }
 
