@@ -387,11 +387,15 @@ async function buatPrDariSiklus() {
       var s = aktif[i];
       var porsi = Number(s.jumlah_porsi) || Number(s.pm_porsi) || 0;
       var jenjang = typeof fmtJenjang === 'function' ? fmtJenjang(s.kategori_penerima) : (s.kategori_penerima || 'Semua');
-      bodyHtml += '<label class="flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition-all duration-150">';
+      var hasNoJenjang = !s.kategori_penerima || s.kategori_penerima === 'null' || s.kategori_penerima === '[]';
+      bodyHtml += '<label class="flex items-center gap-3 p-3 rounded-xl border ' + (hasNoJenjang ? 'border-amber-200 bg-amber-50/30' : 'border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/30') + ' cursor-pointer transition-all duration-150">';
       bodyHtml += '<input type="checkbox" value="' + i + '" class="siklus-pr-cb cb-modern">';
       bodyHtml += '<div class="flex-1 min-w-0">';
       bodyHtml += '<div class="font-medium text-sm text-stone-800">' + s.nama + '</div>';
-      bodyHtml += '<div class="text-xs text-stone-500 mt-0.5">' + jenjang + ' · ' + fmtPncNum(porsi) + ' porsi · ' + s.total_hari + ' hari · Status: <span class="font-semibold text-emerald-600">' + s.status + '</span></div>';
+      bodyHtml += '<div class="text-xs text-stone-500 mt-0.5">' + jenjang + ' · ' + fmtPncNum(porsi) + ' porsi · ' + s.total_hari + ' hari · Status: <span class="font-semibold ' + (s.status === 'Aktif' ? 'text-emerald-600' : 'text-amber-600') + '">' + s.status + '</span></div>';
+      if (hasNoJenjang && porsi < 1) {
+        bodyHtml += '<div class="text-[10px] text-amber-600 mt-1 flex items-center gap-1"><svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> Jenjang belum diatur — edit siklus untuk menetapkan kategori penerima</div>';
+      }
       bodyHtml += '</div>';
       bodyHtml += '</label>';
     }
