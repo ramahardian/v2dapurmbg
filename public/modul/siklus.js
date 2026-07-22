@@ -1,4 +1,10 @@
 // ===== Siklus Menu =====
+(function() {
+  var s = document.createElement('style');
+  s.textContent = '.cb-modern{appearance:none!important;-webkit-appearance:none!important;width:18px!important;height:18px!important;border:2px solid #d4d4d4!important;border-radius:5px!important;background:#fff!important;cursor:pointer!important;position:relative!important;transition:all .2s ease!important;flex-shrink:0!important}.cb-modern:hover{border-color:#a3a3a3!important;background:#fafafa!important}.cb-modern:checked{border-color:#059669!important;background:#059669!important}.cb-modern:checked::after{content:"";position:absolute;top:2px;left:5px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}.cb-modern:focus-visible{outline:2px solid #05966944;outline-offset:2px;border-color:#059669}';
+  document.head.appendChild(s);
+})();
+
 const HARI_OPTIONS = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
 
 const KAT_SP_ORDER = ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
@@ -143,7 +149,7 @@ async function reloadSiklusList() {
 
   var selectAllHtml = '<div class="col-span-full flex items-center gap-3 py-1">' +
     '<label class="flex items-center gap-2 text-sm text-stone-500 cursor-pointer">' +
-      '<input type="checkbox" id="siklus-select-all" onchange="toggleSelectAll(this)" class="w-4 h-4 rounded border-stone-300 text-[#1e40af] focus:ring-[#1e40af]/30">' +
+      '<input type="checkbox" id="siklus-select-all" onchange="toggleSelectAll(this)" class="cb-modern">' +
       'Pilih Semua' +
     '</label>' +
   '</div>';
@@ -154,7 +160,7 @@ async function reloadSiklusList() {
     return `<div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-lg hover:border-stone-300 transition-all duration-200 group">
       <div class="flex justify-between items-start mb-3">
         <div class="flex items-center gap-3 min-w-0">
-          <input type="checkbox" value="${s.id}" onchange="updateSelectedCount()" onclick="event.stopPropagation()" class="siklus-checkbox w-4 h-4 rounded border-stone-300 text-[#1e40af] focus:ring-[#1e40af]/30 shrink-0">
+          <input type="checkbox" value="${s.id}" onchange="updateSelectedCount()" onclick="event.stopPropagation()" class="siklus-checkbox cb-modern">
           <div class="font-semibold text-sm text-stone-800 group-hover:text-[#1e40af] transition-colors cursor-pointer" onclick="loadSiklusDetail(${s.id})">${s.nama}</div>
         </div>
         <span class="text-[10px] px-2.5 py-1 rounded-full font-medium ${statusColor} capitalize">${s.status}</span>
