@@ -185,7 +185,7 @@ async function loadSiklusDetail(id) {
       <div class="mb-4">
         <div>
           <h3 class="font-bold text-lg">${data.nama}</h3>
-          <div class="text-xs text-stone-500 mt-1">Kategori: <b>${data.kategori_penerima || '-'}</b> • Porsi/hari: <b>${fmtNum(data.jumlah_porsi)}</b> • Status: <b class="capitalize">${data.status}</b></div>
+          <div class="text-xs text-stone-500 mt-1">Status: <b class="capitalize">${data.status}</b></div>
           ${data.catatan ? `<div class="text-xs text-stone-400 mt-1">${data.catatan}</div>` : ''}
         </div>
         <div class="flex flex-wrap gap-2 mt-3">
@@ -262,7 +262,7 @@ async function renderSiklusLaporan(id) {
       <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
         <div>
           <h3 class="font-bold text-lg">Laporan: ${siklus.nama}</h3>
-          <div class="text-xs text-stone-500 mt-1">Status: <b class="capitalize">${siklus.status}</b> • Kategori: <b>${siklus.kategori_penerima || 'Semua'}</b></div>
+          <div class="text-xs text-stone-500 mt-1">Status: <b class="capitalize">${siklus.status}</b></div>
         </div>
         <div class="flex gap-2">
           <button onclick="hitungSpSiklus(${id})" class="px-3 py-1.5 text-sm border border-emerald-300 bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Hitung SP</button>
@@ -456,7 +456,7 @@ async function renderProduksiHarian(id) {
       '<div>' +
         '<h3 class="font-bold text-lg">📋 Laporan Produksi Harian</h3>' +
         '<div class="text-sm font-medium text-stone-700 mt-1">' + siklus.nama + '</div>' +
-        '<div class="text-xs text-stone-500">Kategori: <b>' + (siklus.kategori_penerima || 'Semua') + '</b> • Status: <b class="capitalize">' + siklus.status + '</b></div>' +
+        '<div class="text-xs text-stone-500">Status: <b class="capitalize">' + siklus.status + '</b></div>' +
       '</div>' +
       '<div class="flex gap-2">' +
         '<button onclick="loadSiklusDetail(' + id + ')" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50">← Kembali ke Siklus</button>' +
