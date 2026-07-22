@@ -15,15 +15,20 @@ async function renderTotalKebutuhan() {
   }
 }
 
-async function loadTotalKebutuhan(tanggalMulai) {
+async function loadTotalKebutuhan() {
   const wrap = document.getElementById('total-kebutuhan-content');
   if (!wrap) return;
   wrap.innerHTML = '<div class="flex items-center justify-center py-16"><svg class="animate-spin h-8 w-8 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
 
   try {
-    const params = tanggalMulai ? '?tanggal_mulai=' + tanggalMulai : '';
-    const res = await api.get('/siklus/laporan/perencanaan' + params);
-    const { jenjang_list, hari, pm_map, tanggal_mulai: tglMulai } = res;
+    const tglMulai = document.getElementById('tk-tanggal-mulai')?.value || '';
+    const tglSelesai = document.getElementById('tk-tanggal-selesai')?.value || '';
+    const params = new URLSearchParams();
+    if (tglMulai) params.set('tanggal_mulai', tglMulai);
+    if (tglSelesai) params.set('tanggal_selesai', tglSelesai);
+    const qs = params.toString() ? '?' + params.toString() : '';
+    const res = await api.get('/siklus/laporan/perencanaan' + qs);
+    const { jenjang_list, hari, pm_map, tanggal_mulai, tanggal_selesai } = res;
 
     // Hitung total jumlah_siswa semua jenjang
     var totalSiswaSemuaJenjang = 0;
@@ -35,8 +40,11 @@ async function loadTotalKebutuhan(tanggalMulai) {
 
     // ── Filter bar ──
     html += '<div class="bg-white border border-stone-200 rounded-xl p-4 mb-4 flex flex-wrap items-center gap-4 shadow-sm">';
-    html += '<label class="text-sm font-medium text-stone-700">Tanggal Mulai:</label>';
-    html += '<input type="date" value="' + (tglMulai || '') + '" onchange="loadTotalKebutuhan(this.value)" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
+    html += '<label class="text-sm font-medium text-stone-700">Dari:</label>';
+    html += '<input type="date" id="tk-tanggal-mulai" value="' + (tanggal_mulai || '') + '" onchange="loadTotalKebutuhan()" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
+    html += '<label class="text-sm font-medium text-stone-700">Sampai:</label>';
+    html += '<input type="date" id="tk-tanggal-selesai" value="' + (tanggal_selesai || '') + '" onchange="loadTotalKebutuhan()" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
+    html += '<button onclick="tkResetTanggal()" class="h-10 px-3 bg-white border border-stone-200 rounded-xl text-xs text-stone-500 hover:bg-stone-50 transition-colors" title="Reset filter">Reset</button>';
     html += '<button onclick="buatPrDariSiklus()" class="ml-auto h-10 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2">';
     html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>\n    Buat Draft PR';
     html += '</button>';
@@ -166,6 +174,14 @@ async function loadTotalKebutuhan(tanggalMulai) {
   } catch (err) {
     wrap.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal: ' + err.message + '</div>';
   }
+}
+
+function tkResetTanggal() {
+  var elMulai = document.getElementById('tk-tanggal-mulai');
+  var elSelesai = document.getElementById('tk-tanggal-selesai');
+  if (elMulai) elMulai.value = '';
+  if (elSelesai) elSelesai.value = '';
+  loadTotalKebutuhan();
 }
 
 function fmtTkNum(v) {

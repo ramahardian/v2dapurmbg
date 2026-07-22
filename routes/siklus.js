@@ -2149,6 +2149,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
 router.get('/siklus/laporan/perencanaan', async (req, res) => {
   try {
   const tanggalMulai = req.query.tanggal_mulai || new Date().toISOString().slice(0, 10);
+  const tanggalSelesai = req.query.tanggal_selesai || '';
 
   // 1. Siklus list
   const [siklusList] = await db.query(
@@ -2365,7 +2366,12 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
 
   // 6. Merge per-siklus data into date-based output
   const filterStart = new Date(tanggalMulai);
-  const totalHari = Math.max(...activeSiklus.map(s => s.total_hari || 7), 7);
+  let totalHari = Math.max(...activeSiklus.map(s => s.total_hari || 7), 7);
+  if (tanggalSelesai) {
+    const filterEnd = new Date(tanggalSelesai);
+    const diffDays = Math.floor((filterEnd.getTime() - filterStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (diffDays > 0 && diffDays < totalHari) totalHari = diffDays;
+  }
   const hariResult = [];
 
   for (let d = 0; d < totalHari; d++) {
@@ -2514,6 +2520,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     hari: hariResult,
     pm_map: Object.fromEntries(activeJenjang.map(j => [j, pmMap[j] ? pmMap[j].total_penerima : 0])),
     tanggal_mulai: tanggalMulai,
+    tanggal_selesai: tanggalSelesai || undefined,
   });
   } catch (e) {
     console.error('Perencanaan error:', e);
