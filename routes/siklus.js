@@ -134,11 +134,26 @@ router.get('/siklus', async (req, res) => {
   const countMap = {};
   for (const r of itemCounts) countMap[r.siklus_id] = r;
 
+  // Batch-load PM totals for all distinct jenjang
+  const allJenjang = [...new Set(rows.flatMap(s => parseKategoriPenerima(s.kategori_penerima)).filter(Boolean))];
+  const pmTotalMap = {};
+  if (allJenjang.length) {
+    const ph = allJenjang.map(() => '?').join(',');
+    const [pmRows] = await db.query(
+      `SELECT kategori_penerima, COALESCE(SUM(paket_besar + paket_kecil),0) AS total
+       FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})
+       GROUP BY kategori_penerima`,
+      [req.user.tenant_id, ...allJenjang]
+    );
+    for (const p of pmRows) pmTotalMap[p.kategori_penerima] = Number(p.total);
+  }
+
   for (const s of rows) {
     const c = countMap[s.id] || { item_count: 0, with_menu: 0, with_manual: 0 };
     s.item_count = c.item_count;
     s.menu_count = Number(c.with_menu);
     s.filled_count = Number(c.with_menu) + Number(c.with_manual);
+    s.pm_porsi = parseKategoriPenerima(s.kategori_penerima).reduce((sum, k) => sum + (pmTotalMap[k] || 0), 0);
   }
   res.json(rows);
 });
@@ -848,6 +863,18 @@ router.post('/siklus', async (req, res) => {
   const [existing] = await db.query('SELECT id FROM siklus_menu WHERE nama=? AND tenant_id=?', [nama.trim(), req.user.tenant_id]);
   if (existing.length) return res.status(409).json({ error: 'Siklus dengan nama "' + nama.trim() + '" sudah ada' });
   
+  // Auto-hitung jumlah_porsi dari PM berdasarkan jenjang
+  const jenjangList = parseKategoriPenerima(kategori_penerima);
+  const porsiFromPm = jenjangList.length ? await (async () => {
+    const ph = jenjangList.map(() => '?').join(',');
+    const [[{total}]] = await db.query(
+      `SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})`,
+      [req.user.tenant_id, ...jenjangList]
+    );
+    return Number(total) || 0;
+  })() : 0;
+  const finalPorsi = (jumlah_porsi || 0) || porsiFromPm;
+  
   const conn = await db.getConnection(); // Pinjam koneksi dari pool untuk transaksi
   
   try {
@@ -857,7 +884,7 @@ router.post('/siklus', async (req, res) => {
     const [r] = await conn.query(
       `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai)
        VALUES (?,?,?,?,?,?,?,?)`,
-      [req.user.tenant_id, nama, kategori_penerima || null, jumlah_porsi || 0, total_hari || 7, status || 'Draft', catatan || null, tanggal_mulai || null]
+      [req.user.tenant_id, nama, kategori_penerima || null, finalPorsi, total_hari || 7, status || 'Draft', catatan || null, tanggal_mulai || null]
     );
     
     // 2. Insert detail menu per hari (jika array items tersedia)
@@ -902,6 +929,18 @@ router.put('/siklus/:id', async (req, res) => {
     if (existing.length) return res.status(409).json({ error: 'Siklus dengan nama "' + nama.trim() + '" sudah ada' });
   }
   
+  // Auto-hitung jumlah_porsi dari PM berdasarkan jenjang
+  const jenjangList = parseKategoriPenerima(kategori_penerima);
+  const porsiFromPm = jenjangList.length ? await (async () => {
+    const ph = jenjangList.map(() => '?').join(',');
+    const [[{total}]] = await db.query(
+      `SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})`,
+      [req.user.tenant_id, ...jenjangList]
+    );
+    return Number(total) || 0;
+  })() : 0;
+  const finalPorsi = (jumlah_porsi || 0) || porsiFromPm;
+  
   const conn = await db.getConnection();
   
   try {
@@ -910,7 +949,7 @@ router.put('/siklus/:id', async (req, res) => {
     // 1. Update data header siklus
     await conn.query(
       `UPDATE siklus_menu SET nama=?, kategori_penerima=?, jumlah_porsi=?, total_hari=?, status=?, catatan=?, tanggal_mulai=? WHERE id=? AND tenant_id=?`,
-      [nama, kategori_penerima || null, jumlah_porsi || 0, total_hari || 7, status || 'Draft', catatan || null, tanggal_mulai || null, id, req.user.tenant_id]
+      [nama, kategori_penerima || null, finalPorsi, total_hari || 7, status || 'Draft', catatan || null, tanggal_mulai || null, id, req.user.tenant_id]
     );
     
     // 2. Hapus semua detail item lama berdasarkan siklus_id
