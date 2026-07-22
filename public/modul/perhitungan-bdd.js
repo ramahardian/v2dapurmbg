@@ -35,10 +35,11 @@ async function loadPbdData(siklusId) {
       return;
     }
 
+    window._pbdData = data;
+
     // Render per jenjang
     for (var j = 0; j < data.length; j++) {
-      var jd = data[j];
-      html += renderPbdJenjangSection(jd);
+      html += renderPbdJenjangSection(data[j], j);
     }
 
     // Legenda
@@ -72,7 +73,7 @@ function renderPbdFilter(siklusList, selectedId) {
   return html;
 }
 
-function renderPbdJenjangSection(jd) {
+function renderPbdJenjangSection(jd, idx) {
   var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6">';
 
   // Jenjang header
@@ -82,7 +83,10 @@ function renderPbdJenjangSection(jd) {
   html += '<div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between ' + jColors[jIdx % jColors.length] + '">';
   html += '<div><span class="font-bold text-base">' + jd.jenjang + '</span>';
   html += '<span class="ml-3 text-sm font-normal">Jumlah Siswa: <strong>' + fmtPbdNum(jd.jumlah_siswa) + '</strong> orang</span></div>';
-  html += '<div class="text-xs">' + jd.siklus.length + ' siklus</div>';
+  html += '<div class="flex items-center gap-2 text-xs">';
+  html += '<span>' + jd.siklus.length + ' siklus</span>';
+  html += '<button onclick="exportPbdExcel(' + idx + ')" class="px-2.5 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1" title="Export Excel"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> XLSX</button>';
+  html += '</div>';
   html += '</div>';
 
   // Per siklus
@@ -193,6 +197,41 @@ function fmtPbdNum(v) {
   return n === Math.floor(n) ? String(n) : n.toFixed(2).replace('.', ',');
 }
 
-function exportPbdCsv() {
-  showAlert('Export CSV: gunakan Print atau salin dari tabel', 'info');
+function exportPbdExcel(idx) {
+  var data = window._pbdData;
+  if (!data || !data[idx]) { showAlert('Data tidak tersedia', 'error'); return; }
+  var jd = data[idx];
+
+  var rows = [];
+
+  var headerRow = ['Menu', 'Bahan Pangan', 'Berat Bersih (g)', 'Persen BDD', 'Berat Kotor (g)', 'Jumlah Siswa', 'Kebutuhan (kg)'];
+  rows.push(headerRow);
+
+  for (var s = 0; s < jd.siklus.length; s++) {
+    var sk = jd.siklus[s];
+    for (var h = 0; h < sk.hari.length; h++) {
+      var day = sk.hari[h];
+      var menuLabel = day.menu_label + ' — ' + day.hari_nama;
+      if (!day.bahan || !day.bahan.length) {
+        rows.push([menuLabel, '', '', '', '', '', '']);
+      } else {
+        rows.push([menuLabel, day.bahan[0].nama_display, day.bahan[0].berat_bersih, day.bahan[0].persen_bdd + '%', day.bahan[0].berat_kotor, jd.jumlah_siswa, day.bahan[0].kebutuhan_kg]);
+        for (var i = 1; i < day.bahan.length; i++) {
+          var b = day.bahan[i];
+          rows.push(['', b.nama_display, b.berat_bersih, b.persen_bdd + '%', b.berat_kotor, jd.jumlah_siswa, b.kebutuhan_kg]);
+        }
+      }
+    }
+  }
+
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+
+  var colWidths = [
+    { wch: 22 }, { wch: 24 }, { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 14 }
+  ];
+  ws['!cols'] = colWidths;
+
+  XLSX.utils.book_append_sheet(wb, ws, jd.jenjang);
+  XLSX.writeFile(wb, 'BDD - ' + jd.jenjang + '.xlsx');
 }
