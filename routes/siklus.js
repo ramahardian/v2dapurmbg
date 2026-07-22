@@ -2255,7 +2255,10 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
           let beratBersih, beratKotor, kebutuhanKg;
 
           if (it.menu_id) {
-            beratBersih = Number(b.jumlah || 0);
+            // Apply standar_sp multiplier (consistent with grid-based path)
+            const spVal = b.kategori_sp ? (jenjangSp[b.kategori_sp] || 0) : 0;
+            const actualSp = spVal || 1;
+            beratBersih = Number(b.jumlah || 0) * actualSp;
             beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
             kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
           } else {
@@ -2293,6 +2296,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
               kebutuhan_kg: 0,
               satuan: satuanBahan,
               buffer_persen: bufferPersen,
+              keterangan: (it.menu_id && b.keterangan) || '',
             };
           }
           perSiklusMap[s.id][hk][displayJenjang][b.nama].kebutuhan_kg += kebutuhanKg;
@@ -2417,6 +2421,9 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
         rincian = Math.round(totalKg) + 'kg';
       }
 
+      const isCounted = ref.kategori_sp === 'Susu' || ref.kategori_sp === 'Buah' || satLower === 'pcs' || satLower === 'buah';
+      const ketValue = isCounted ? dayTotalPorsi : Math.round(totalKg * 100) / 100;
+
       bahanList.push({
         nama: ref.nama,
         nama_display: ref.nama_display,
@@ -2425,6 +2432,8 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
         kebutuhan_buffer_kg: bufferKg,
         buffer_persen: bufferPersen,
         rincian: rincian,
+        keterangan: ref.keterangan || '',
+        ket_display: ketValue,
       });
     }
 

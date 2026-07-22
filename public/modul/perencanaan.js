@@ -122,7 +122,7 @@ function renderPerencanaanDay(day, jenjangList) {
     html += '<td class="px-3 py-2 text-sm text-right mono">' + fmtPncNum(day.total_porsi) + '</td>';
     html += '<td class="px-3 py-2 text-sm text-right mono font-semibold">' + fmtPncNum(b.total_kebutuhan_kg) + '</td>';
     html += '<td class="px-3 py-2 text-sm text-right mono font-semibold text-sky-700">' + fmtPncNum(b.kebutuhan_buffer_kg) + '</td>';
-    html += '<td class="px-3 py-2 text-sm text-right mono font-bold">' + (b.rincian || '') + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold">' + (b.keterangan ? b.keterangan + ' ' : '') + (b.rincian || '') + '</td>';
     html += '</tr>';
   }
 

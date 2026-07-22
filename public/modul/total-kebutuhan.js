@@ -90,7 +90,8 @@ function renderDayCard(day) {
     html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
     html += '<td class="px-3 py-2 text-sm font-medium">' + b.nama + '</td>';
     html += '<td class="px-3 py-2 text-sm text-right mono font-semibold">' + b.rincian + '</td>';
-    html += '<td class="px-3 py-2 text-sm text-right mono text-stone-500">' + fmtTkNum(b.total_kebutuhan_kg) + '</td>';
+    var ketVal = b.ket_display != null ? b.ket_display : b.total_kebutuhan_kg;
+    html += '<td class="px-3 py-2 text-sm text-right mono text-stone-500">' + (b.keterangan ? b.keterangan + ' ' : '') + fmtTkNum(ketVal) + '</td>';
     html += '</tr>';
   }
 

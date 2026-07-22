@@ -522,7 +522,7 @@ function renderBahanList() {
         '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
       '</div>' +
       '<input type="text" value="' + displaySatuan + '" readonly class="col-span-1 h-9 px-2 border border-stone-200 rounded-md text-sm bg-stone-50 text-stone-500" />' +
-      '<input type="text" value="' + (b.jumlah || '0') + '" readonly class="col-span-2 h-9 px-2 border border-stone-200 rounded-md text-sm mono bg-stone-50 text-stone-600" title="Gram per porsi (1 SP)" />' +
+      '<input type="number" step="0.01" value="' + (b.jumlah || '0') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="col-span-2 h-9 px-2 border border-stone-200 rounded-md text-sm mono" title="Gram per porsi" />' +
       '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="col-span-4 h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
       '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
     '</div>';
