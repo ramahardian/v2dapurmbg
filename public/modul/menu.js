@@ -403,13 +403,13 @@ function attachMenuHandlers() {
 async function openMenuForm(editing) {
   await ensureBahanBakuLoaded();
   const m = editing || { nama: '', deskripsi: '', gramasi_total: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
-  document.getElementById('modal-title').textContent = editing ? 'Edit Menu' : 'Menu Baru';
+  document.getElementById('modal-title').innerHTML = (editing ? 'Edit Menu' : 'Menu Baru') + '<button onclick="event.stopPropagation();showMenuInfo()" class="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-stone-100 hover:bg-blue-100 hover:text-blue-700 text-stone-400 transition-colors" title="Info"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button>';
   document.getElementById('modal-body').innerHTML = `
     <div>
       <label class="text-sm font-medium">Nama Menu *</label>
       <div class="flex gap-2 mt-1">
         <input id="m-nama" value="${m.nama}" class="flex-1 h-10 px-3 border border-stone-200 rounded-md" />
-        <button type="button" onclick="openSiklusMenuPicker()" class="shrink-0 px-3 h-10 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 whitespace-nowrap" title="Ambil nama dari siklus">Siklus</button>
+        <button type="button" onclick="openSiklusMenuPicker()" class="shrink-0 px-3 h-10 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 whitespace-nowrap transition-colors" title="Ambil nama & bahan dari siklus">📋 Siklus</button>
       </div>
     </div>
     <div class="mt-3"><label class="text-sm font-medium">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
@@ -735,7 +735,8 @@ async function openSiklusMenuPicker() {
         var n = s.names[ni];
         if (n.source === 'menu') {
           // Menu items — clickable, untuk import bahan
-          html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + '\')" class="w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors">' +
+          var bahanJson = escHtml(JSON.stringify(n.bahan || []));
+    html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + "', '" + bahanJson + "')\" class=\"w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors\">" +
             '<div class="flex items-center gap-2">' +
             '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
             '<span class="text-xs text-stone-500 shrink-0 w-14">' + n.hari_nama + '</span>' +
@@ -783,10 +784,63 @@ async function openSiklusMenuPicker() {
   }
 }
 
-async function selectSiklusMenuName(nama) {
+async function selectSiklusMenuName(nama, bahanJson) {
   document.getElementById('m-nama').value = nama;
+  
+  // Load bahan dari siklus
+  var bahan = [];
+  try { bahan = JSON.parse(bahanJson || '[]'); } catch(e) { bahan = []; }
+  if (bahan.length) {
+    // Clear existing bahan
+    window._menuBahan = [];
+    // Add each bahan using selectBahan to auto-fill jumlah
+    for (var i = 0; i < bahan.length; i++) {
+      if (!bahan[i].nama) continue;
+      window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: 'g', nama: '', keterangan: '' });
+      await selectBahan(window._menuBahan.length - 1, bahan[i].nama);
+    }
+    showToast('Nama & ' + bahan.length + ' bahan diambil dari siklus', 'success');
+  } else {
+    showToast('Nama diambil dari siklus: ' + nama, 'success');
+  }
   closeSiklusMenuPicker();
-  showToast('Nama diambil dari siklus: ' + nama, 'success');
+}
+
+function showMenuInfo() {
+  var existing = document.getElementById('menu-info-popup');
+  if (existing) { existing.remove(); return; }
+  var div = document.createElement('div');
+  div.id = 'menu-info-popup';
+  div.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-black/30';
+  div.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6" onclick="event.stopPropagation()">' +
+    '<div class="flex items-center justify-between mb-4">' +
+      '<h3 class="font-bold text-stone-700">📋 Form Menu</h3>' +
+      '<button onclick="document.getElementById(\'menu-info-popup\').remove()" class="text-stone-400 hover:text-stone-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+    '</div>' +
+    '<div class="space-y-3 text-sm text-stone-600">' +
+      '<div class="flex gap-3 items-start">' +
+        '<span class="shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">1</span>' +
+        '<div><span class="font-semibold text-stone-700">Buat Resep</span><br>Tulis nama menu, deskripsi, dan tambahkan bahan-bahan. Jumlah gramasi per porsi auto terisi dari SP referensi.</div>' +
+      '</div>' +
+      '<div class="flex gap-3 items-start">' +
+        '<span class="shrink-0 w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">2</span>' +
+        '<div><span class="font-semibold text-stone-700">Gunakan di Siklus</span><br>Menu yang sudah dibuat bisa dipilih di modul <strong>Siklus</strong> → pilih menu per hari.</div>' +
+      '</div>' +
+      '<div class="flex gap-3 items-start">' +
+        '<span class="shrink-0 w-7 h-7 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-bold">3</span>' +
+        '<div><span class="font-semibold text-stone-700">Lihat Kebutuhan</span><br>Buka <strong>Perencanaan</strong> atau <strong>Total Kebutuhan</strong> untuk melihat total bahan yang harus dibeli.</div>' +
+      '</div>' +
+      '<div class="flex gap-3 items-start">' +
+        '<span class="shrink-0 w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold">4</span>' +
+        '<div><span class="font-semibold text-stone-700">Buat Pesanan</span><br>Dari Total Kebutuhan, klik <strong>Buat Draft PR</strong> untuk membuat Purchase Request ke pemasok.</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="mt-4 pt-3 border-t border-stone-100 text-xs text-stone-400 text-center">' +
+      '💡 Bisa juga ambil resep dari siklus yang sudah ada dengan tombol <strong>Siklus</strong>' +
+    '</div>' +
+  '</div>';
+  div.onclick = function() { div.remove(); };
+  document.body.appendChild(div);
 }
 
 function openAIDialog() {
