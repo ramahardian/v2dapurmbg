@@ -161,7 +161,6 @@ async function reloadSiklusList() {
       </div>
       <div class="flex items-center gap-4 text-xs text-stone-500 mb-3">
         <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>${s.kategori_penerima || 'Semua'}</span>
-        <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>${s.jumlah_porsi} porsi/hari</span>
         <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${s.total_hari} hari</span>
       </div>
       ${s.catatan ? `<div class="text-xs text-stone-400 italic mb-3 line-clamp-1">${s.catatan}</div>` : ''}
@@ -770,18 +769,6 @@ function bukaKebutuhanPangan(id) {
   navigate('perhitungan-bdd');
 }
 
-async function onKategoriChange(el) {
-  var kat = el.value;
-  var porsiInput = document.getElementById('sk-porsi');
-  if (kat) {
-    try {
-      var res = await api.get('/penerima_manfaat/total?kategori_penerima=' + encodeURIComponent(kat));
-      if (res && res.total) porsiInput.value = res.total;
-    } catch {}
-  }
-  if (window._siklusMeta) window._siklusMeta.kategori_penerima = kat;
-}
-
 async function openSiklusForm(editing) {
   const isEdit = !!(editing && editing.id);
   const s = editing || { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 7, status: 'Draft', catatan: '', items: HARI_OPTIONS.slice(0,7).map((h,i) => ({ hari_ke: i+1, hari_nama: h, menu_nama: '', jumlah_porsi: 0 })) };
@@ -864,10 +851,6 @@ async function openSiklusForm(editing) {
         <div class="flex flex-wrap gap-x-6 gap-y-4 items-end">
           <div class="min-w-[250px] flex-1"><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Nama Siklus</label><input id="sk-nama" value="${s.nama}" placeholder="cth: Siklus Menu SD" class="mt-1.5 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 text-sm font-medium transition-all" /></div>
 
-          <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Jenjang</label><select id="sk-kategori" onchange="onKategoriChange(this)" class="mt-1.5 h-11 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[150px]"><option value="">-- Pilih Jenjang --</option>${['TK/PAUD','SD 1-3','SD 4-6','SMP','SMA','Ibu Hamil','Ibu Menyusui','Balita'].map(k => '<option value="'+k+'"'+(s.kategori_penerima===k?' selected':'')+'>'+k+'</option>').join('')}</select></div>
-
-          <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Porsi/Hari</label><input id="sk-porsi" type="number" min="0" value="${s.jumlah_porsi||0}" class="mt-1.5 w-24 h-11 px-3 border border-stone-200 rounded-xl text-sm text-center" /></div>
-
           <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Hari</label><input id="sk-hari" type="number" min="1" max="14" value="${s.total_hari||7}" onchange="openSiklusFormHariChange(this)" class="mt-1.5 w-20 h-11 px-3 border border-stone-200 rounded-xl text-sm text-center" /></div>
 
           <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Status</label><select id="sk-status" class="mt-1.5 h-11 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[120px]">${statuses.map(st => '<option value="'+st+'"'+(s.status===st?' selected':'')+'>'+st+'</option>').join('')}</select></div>
@@ -946,7 +929,7 @@ async function openSiklusForm(editing) {
       var hasAnyBahan = rowKeys.some(function(rk) { return (day.bahan[rk] || []).length > 0; });
       var hasMenu = !!day.menu_id;
       if (!hasAnyBahan && !hasMenu) continue;
-      items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: day.menu_id || '', menu_nama: day.menu_nama || '', jumlah_porsi: day.jumlah_porsi || 0 });
+      items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: day.menu_id || '', menu_nama: day.menu_nama || '', jumlah_porsi: 0 });
       for (var ri = 0; ri < rowKeys.length; ri++) {
         var rk = rowKeys[ri], ids = (day.bahan[rk] || []).map(function(b) { return b.id; });
         gridPayload.push({ hari_ke: hk, kategori_sp: rk, bahan_baku_ids: ids });
@@ -965,9 +948,8 @@ async function openSiklusForm(editing) {
       resepMap[hk][inp.getAttribute('data-kat')] = val;
     }
     var meta = window._siklusMeta || {};
-    var jumlahPorsi = +document.getElementById('sk-porsi').value || 0;
     for (var ii = 0; ii < items.length; ii++) {
-      items[ii].jumlah_porsi = jumlahPorsi;
+      items[ii].jumlah_porsi = 0;
       if (!items[ii].menu_nama) {
         var hkKey = String(items[ii].hari_ke);
         var rmap = resepMap[hkKey];
@@ -982,8 +964,7 @@ async function openSiklusForm(editing) {
       }
 
     }
-    var kategoriPenerima = document.getElementById('sk-kategori').value || '';
-    var payload = { nama, kategori_penerima: kategoriPenerima, jumlah_porsi: jumlahPorsi, total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', items };
+    var payload = { nama, kategori_penerima: '', total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', items };
     try {
       var savedId = window._siklusFormId;
       if (isEdit) await api.put('/siklus/' + savedId, payload);
@@ -1079,11 +1060,10 @@ function saveGridPicker(hk, rk) {
   var curNama = (document.getElementById('sk-nama')?.value) || '';
   var curKat = (document.getElementById('sk-kategori')?.value) || '';
   var curStatus = (document.getElementById('sk-status')?.value) || 'Draft';
-  var curPorsi = +document.getElementById('sk-porsi')?.value || 0;
   var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
   var items = hkKeys.map(function(hk) {
     var d = window._gridData[Number(hk)];
-    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: curPorsi };
+    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
   });
   openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, items: items });
 }
@@ -1127,11 +1107,10 @@ async function openSiklusFormHariChange(input) {
   var curNama = document.getElementById('sk-nama').value;
   var curKat = (document.getElementById('sk-kategori')?.value) || '';
   var curStatus = document.getElementById('sk-status').value;
-  var curPorsi = +document.getElementById('sk-porsi')?.value || 0;
   var curId = window._siklusFormId;
   var items = Object.keys(window._gridData || {}).sort(function(a,b) { return Number(a)-Number(b); }).map(function(hk) {
     var d = window._gridData[hk];
-    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: curPorsi };
+    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
   });
   openSiklusForm(curId ? { id: curId, nama: curNama, kategori_penerima: curKat, total_hari: newTotal, status: curStatus, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: newTotal, status: curStatus, items: items });
 }
