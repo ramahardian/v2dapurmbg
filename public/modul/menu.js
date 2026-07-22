@@ -432,8 +432,39 @@ async function openMenuForm(editing) {
   renderBahanList();
   hitungNutrisi();
   
-  document.getElementById('modal-save').onclick = async () => {
+  // Cek duplikat nama — load menu names once
+  var existingNames = null;
+  api.get('/menu?limit=500').then(function(resp) {
+    existingNames = (resp.data || resp || []).filter(function(x) { return editing ? x.id !== editing.id : true; }).map(function(x) { return x.nama ? x.nama.toLowerCase().trim() : ''; });
+  }).catch(function() { existingNames = []; });
+  
+  function checkDuplicateName(val) {
+    var el = document.getElementById('m-nama');
+    var dupEl = document.getElementById('m-nama-dup');
+    var nama = (val || el.value).trim();
+    if (!nama || !existingNames) { if (dupEl) dupEl.classList.add('hidden'); el.classList.remove('border-red-400','bg-red-50'); return false; }
+    var isDup = existingNames.indexOf(nama.toLowerCase()) > -1;
+    if (isDup) {
+      el.classList.add('border-red-400','bg-red-50');
+      if (!dupEl) {
+        var p = document.createElement('p');
+        p.id = 'm-nama-dup';
+        p.className = 'text-xs text-red-600 mt-1';
+        p.textContent = '⚠ Nama menu "' + nama + '" sudah ada';
+        el.parentNode.appendChild(p);
+      } else { dupEl.classList.remove('hidden'); dupEl.textContent = '⚠ Nama menu "' + nama + '" sudah ada'; }
+    } else {
+      el.classList.remove('border-red-400','bg-red-50');
+      if (dupEl) dupEl.classList.add('hidden');
+    }
+    return isDup;
+  }
+  
+  document.getElementById('m-nama').addEventListener('input', function() { checkDuplicateName(this.value); });
+  
+  document.getElementById('modal-save').onclick = async function() {
     if (!validateForm([{ id: 'm-nama', label: 'Nama Menu' }])) return;
+    if (checkDuplicateName()) return showAlert('Nama menu sudah ada. Ganti nama terlebih dahulu.', 'warning');
     const payload = {
       nama: document.getElementById('m-nama').value,
       deskripsi: document.getElementById('m-deskripsi').value,
