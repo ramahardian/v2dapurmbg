@@ -3040,29 +3040,29 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const menuIds = Object.keys(menuPorsiMap);
       if (menuIds.length) {
         const mph = menuIds.map(() => '?').join(',');
-        const [bahanRows] = await db.query(
-          `SELECT mb.bahan_baku_id, b.nama as bahan_nama, b.satuan, b.harga_satuan,
-                  b.persen_bdd, b.kode, mb.jumlah, mb.menu_id, b.berat_per_satuan
-           FROM menu_bahan mb
-           JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-           WHERE mb.menu_id IN (${mph})`,
-          menuIds
-        );
+        const [bahanRows] = await db.query(           `SELECT mb.bahan_baku_id, b.nama as bahan_nama, b.satuan, b.harga_satuan,
+                   b.persen_bdd, b.kode, mb.jumlah, mb.menu_id, b.berat_per_satuan,
+                   b.kategori_sp, b.berat_1_sp
+            FROM menu_bahan mb
+            JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+            WHERE mb.menu_id IN (${mph})`,
+           menuIds
+         );
 
-        for (const br of bahanRows) {
-          const porsi = menuPorsiMap[br.menu_id] || 0;
-          if (!porsi) continue;
-          const beratBersih = Number(br.jumlah) * porsi;
-          const spRefBdd = spRefByName[(br.bahan_nama || '').trim().toLowerCase()];
-          const bdd = spRefBdd || Number(br.persen_bdd) || 100;
-          const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
+         for (const br of bahanRows) {
+           const porsi = menuPorsiMap[br.menu_id] || 0;
+           if (!porsi) continue;
+           const beratBersih = Number(br.jumlah) * porsi;
+           const spRefBdd = spRefByName[(br.bahan_nama || '').trim().toLowerCase()];
+           const bdd = spRefBdd || Number(br.persen_bdd) || 100;
+           const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
 
-          const key = br.bahan_baku_id;
-          if (!agg[key]) {
-            agg[key] = { bahan_baku_id: br.bahan_baku_id, bahan_nama: br.bahan_nama, kode: br.kode || '', satuan: br.satuan, harga_satuan: Number(br.harga_satuan) || 0, berat_per_satuan: Number(br.berat_per_satuan) || 0, total_qty: 0 };
-          }
-          agg[key].total_qty += beratKotor * multiplier;
-        }
+           const key = br.bahan_baku_id;
+           if (!agg[key]) {
+             agg[key] = { bahan_baku_id: br.bahan_baku_id, bahan_nama: br.bahan_nama, kode: br.kode || '', satuan: br.satuan, harga_satuan: Number(br.harga_satuan) || 0, berat_per_satuan: Number(br.berat_per_satuan) || 0, berat_1_sp: Number(br.berat_1_sp) || 0, kategori_sp: br.kategori_sp, total_qty: 0 };
+           }
+           agg[key].total_qty += beratKotor * multiplier;
+         }
       }
 
       // --- B. Grid-based ingredients (siklus_menu_item_bahan) ---
@@ -3070,23 +3070,23 @@ router.post('/siklus/buat-pr', async (req, res) => {
       // Jika sudah ada menu → bahan dihitung dari menu_bahan (akurat)
       // Grid SP hanya fallback untuk siklus tanpa menu
       if (items.length === 0) {
-        const [gridBahanRaw] = await db.query(
-          `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
-                  bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
-                  bb.kode, bb.berat_per_satuan
-           FROM siklus_menu_item_bahan smib
-           JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
-           WHERE smib.siklus_id=? AND smib.hari_ke BETWEEN ? AND ?`,
-          [siklusId, hariMulai, hariSelesai]
-        );
+        const [gridBahanRaw] = await db.query(           `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
+                   bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
+                   bb.kode, bb.berat_per_satuan, bb.kategori_sp AS bb_kategori_sp
+            FROM siklus_menu_item_bahan smib
+            JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
+            WHERE smib.siklus_id=? AND smib.hari_ke BETWEEN ? AND ?`,
+           [siklusId, hariMulai, hariSelesai]
+         );
 
-        if (gridBahanRaw.length) {
-          hasItems = true;
+         if (gridBahanRaw.length) {
+           hasItems = true;
 
-          const [spRows] = await db.query(
-            'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
-            [kategoriPenerima]
-          );
+           // Gunakan displayJenjang untuk query SP, bukan raw kategori_penerima
+           const [spRows] = await db.query(
+             'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
+             [displayJenjang]
+           );
           const spMap = {};
           for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
 
@@ -3111,10 +3111,9 @@ router.post('/siklus/buat-pr', async (req, res) => {
             const bdd = spRefBdd || Number(gb.persen_bdd || 100);
             const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
 
-            const key = gb.bahan_baku_id;
-            if (!agg[key]) {
-              agg[key] = { bahan_baku_id: gb.bahan_baku_id, bahan_nama: gb.bahan_nama, kode: gb.kode || '', satuan: gb.satuan, harga_satuan: Number(gb.harga_satuan) || 0, berat_per_satuan: Number(gb.berat_per_satuan) || 0, total_qty: 0 };
-            }
+            const key = gb.bahan_baku_id;             if (!agg[key]) {
+               agg[key] = { bahan_baku_id: gb.bahan_baku_id, bahan_nama: gb.bahan_nama, kode: gb.kode || '', satuan: gb.satuan, harga_satuan: Number(gb.harga_satuan) || 0, berat_per_satuan: Number(gb.berat_per_satuan) || 0, berat_1_sp: Number(gb.berat_1_sp) || 0, kategori_sp: gb.bb_kategori_sp, total_qty: 0 };
+             }
             agg[key].total_qty += beratKotor * multiplier;
           }
         }
@@ -3138,31 +3137,48 @@ router.post('/siklus/buat-pr', async (req, res) => {
         idKoperasiMap[r.id] = r.id_koperasi;
         bufferPersenMap[r.id] = Number(r.buffer_persen) || 10;
       }
-    }
+    }     // Format output dengan buffer dan konversi satuan
+     const bahanList = Object.values(agg).map(b => {
+       let qty = b.total_qty;
+       let satuan = b.satuan;
+       let harga = b.harga_satuan;
+       const satuanAsli = (b.satuan || '').toLowerCase();
+       const isGramSatuan = ['gram', 'g', 'gr', 'kg'].includes(satuanAsli);        const isPcsCategory = ['Buah', 'Susu'].includes(b.kategori_sp);
 
-    // Format output dengan buffer dan konversi satuan
-    const bahanList = Object.values(agg).map(b => {
-      let qty = b.total_qty;
-      let satuan = b.satuan;
-      let harga = b.harga_satuan;
-      const satuanAsli = (b.satuan || '').toLowerCase();
-      // Internal selalu gram → konversi ke satuan display
-      if (['gram', 'g', 'gr', 'kg'].includes(satuanAsli)) {
-        qty = qty / 1000;
-        satuan = 'kg';
-      } else if (b.berat_per_satuan > 0) {
-        // count-based satuan (pcs, karton, etc.): gram → count via berat_per_satuan
-        qty = qty / b.berat_per_satuan;
-        qty = Math.round(qty);
-      } else {
-        // fallback: gram → kg. Harga ikut dikonversi jika berat_per_satuan tersedia
-        qty = qty / 1000;
-        satuan = 'kg';
-      }
-      // Jika satuan display berbeda dari satuan asli, konversi harga juga
-      if (satuan !== b.satuan && b.berat_per_satuan > 0 && !['gram', 'g', 'gr', 'kg'].includes(satuanAsli)) {
-        harga = b.harga_satuan / (b.berat_per_satuan / 1000);
-      }
+        if (isPcsCategory) {
+          // Buah/Susu → konversi ke pcs
+          const perUnitBerat = Number(b.berat_per_satuan) > 0
+            ? Number(b.berat_per_satuan)
+            : (Number(b.berat_1_sp) || 0);
+          if (perUnitBerat > 0) {
+            qty = Math.round(qty / perUnitBerat);
+            satuan = 'pcs';
+          } else {
+            qty = Math.round(qty / 1000 * 100) / 100;
+            satuan = 'kg';
+          }
+        } else if (isGramSatuan) {
+          // Satuan gram/kg → konversi ke kg
+          qty = qty / 1000;
+          satuan = 'kg';
+        } else {
+          // Non-gram, non-Buah (Botol, Karton, pack, dll) → pertahankan satuan asli
+          const perUnitBerat = Number(b.berat_per_satuan) > 0
+            ? Number(b.berat_per_satuan)
+            : (Number(b.berat_1_sp) || 0);
+          if (perUnitBerat > 0) {
+            qty = Math.round(qty / perUnitBerat);
+            // satuan tetap asli
+          } else {
+            qty = Math.round(qty / 1000 * 100) / 100;
+            satuan = 'kg';
+          }
+        }
+
+       // Jika satuan display berubah dari satuan asli, konversi harga
+       if (satuan !== b.satuan && b.berat_per_satuan > 0 && !['gram', 'g', 'gr', 'kg'].includes(satuanAsli) && isPcsCategory) {
+         harga = b.harga_satuan / (b.berat_per_satuan / 1000);
+       }
       const bp = bufferPersenMap[b.bahan_baku_id] || 10;
       const buffer = Math.round(qty * (1 + bp / 100) * 100) / 100;
       return {
