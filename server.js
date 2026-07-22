@@ -866,6 +866,30 @@ CREATE TABLE menu_bahan (
     }
   });
 
+  // Endpoint add column tanggal_mulai ke siklus_menu (admin only)
+  app.get('/api/migrate/tanggal-mulai-siklus', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [cols] = await db.query("SHOW COLUMNS FROM siklus_menu LIKE 'tanggal_mulai'");
+      if (cols.length > 0) {
+        return res.send(`
+          <div style="font-family:sans-serif;padding:2rem;text-align:center;background:#f5f5f4;min-height:100vh">
+            <h2 style="color:#16a34a">✅ Kolom tanggal_mulai sudah ada</h2>
+            <p style="color:#6b7280;margin-top:0.5rem">Tidak perlu diubah.</p>
+            <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a>
+          </div>`);
+      }
+      await db.query("ALTER TABLE siklus_menu ADD COLUMN tanggal_mulai DATE DEFAULT NULL AFTER catatan");
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center;background:#f5f5f4;min-height:100vh">
+          <h2 style="color:#16a34a">✅ ALTER TABLE BERHASIL!</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">Kolom <code>tanggal_mulai</code> berhasil ditambahkan ke tabel <code>siklus_menu</code>.</p>
+          <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali ke Dashboard</a>
+        </div>`);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#dc2626">❌ Gagal</h2><p>${e.message}</p></div>`);
+    }
+  });
+
   // ── ERROR HANDLING ──────────────────────
   process.on('unhandledRejection', (err) => console.error('Unhandled Rejection:', err));
   app.use((err, req, res, next) => {

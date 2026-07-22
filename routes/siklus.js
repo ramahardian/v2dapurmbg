@@ -834,7 +834,7 @@ router.get('/siklus/:id', async (req, res) => {
  * header siklus tidak terbuat separuh jalan (menjaga konsistensi data).
  */
 router.post('/siklus', async (req, res) => {
-  const { nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, items } = req.body;
+  const { nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai, items } = req.body;
   if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama siklus wajib diisi' });
   
   // Cek duplikat nama siklus dalam satu tenant
@@ -848,9 +848,9 @@ router.post('/siklus', async (req, res) => {
     
     // 1. Insert data utama/header siklus menu
     const [r] = await conn.query(
-      `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan)
-       VALUES (?,?,?,?,?,?,?)`,
-      [req.user.tenant_id, nama, kategori_penerima || null, jumlah_porsi || 0, total_hari || 7, status || 'Draft', catatan || null]
+      `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [req.user.tenant_id, nama, kategori_penerima || null, jumlah_porsi || 0, total_hari || 7, status || 'Draft', catatan || null, tanggal_mulai || null]
     );
     
     // 2. Insert detail menu per hari (jika array items tersedia)
@@ -886,7 +886,7 @@ router.put('/siklus/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) return res.status(400).json({ error: 'ID siklus tidak valid' });
 
-  const { nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, items } = req.body;
+  const { nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai, items } = req.body;
   if (nama !== undefined && (!nama || !nama.trim())) return res.status(400).json({ error: 'Nama siklus wajib diisi' });
   
   // Cek duplikat nama saat update (kecuali dirinya sendiri)
@@ -902,8 +902,8 @@ router.put('/siklus/:id', async (req, res) => {
     
     // 1. Update data header siklus
     await conn.query(
-      `UPDATE siklus_menu SET nama=?, kategori_penerima=?, jumlah_porsi=?, total_hari=?, status=?, catatan=? WHERE id=? AND tenant_id=?`,
-      [nama, kategori_penerima || null, jumlah_porsi || 0, total_hari || 7, status || 'Draft', catatan || null, id, req.user.tenant_id]
+      `UPDATE siklus_menu SET nama=?, kategori_penerima=?, jumlah_porsi=?, total_hari=?, status=?, catatan=?, tanggal_mulai=? WHERE id=? AND tenant_id=?`,
+      [nama, kategori_penerima || null, jumlah_porsi || 0, total_hari || 7, status || 'Draft', catatan || null, tanggal_mulai || null, id, req.user.tenant_id]
     );
     
     // 2. Hapus semua detail item lama berdasarkan siklus_id
@@ -2100,7 +2100,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
 
   // 1. Siklus list
   const [siklusList] = await db.query(
-    'SELECT id, nama, kategori_penerima, jumlah_porsi, total_hari, status FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
+    'SELECT id, nama, kategori_penerima, jumlah_porsi, total_hari, status, tanggal_mulai FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
     [req.user.tenant_id]
   );
   const activeSiklus = siklusList.filter(s => s.status === 'Aktif');
@@ -2187,11 +2187,10 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
   const gridBahanBySiklus = await batchLoadGridBahanBySiklus(activeIds);
 
   // 5. Build per-hari × per-jenjang × per-bahan data
-  // Group by hari_nama (day name) so date filtering actually affects the data
-  const hariMap = {};     // hari_nama → { jenjang_display → { bahan_nama → { kebutuhan_kg } } }
-  const totalPorsiByHari = {}; // hari_nama → total porsi across jenjang
-  const menuNamesByHari = {}; // hari_nama → [menu_nama, ...]
-  const keToNama = {};    // siklus_id → { hari_ke → hari_nama }
+  // Data is keyed by siklus_id + hari_ke for proper date anchoring
+  const perSiklusMap = {}; // siklus_id → { hari_ke → { jenjang → { bahan → data } } }
+  const perSiklusPorsi = {}; // siklus_id → { hari_ke → total_porsi }
+  const perSiklusMenu = {}; // siklus_id → { hari_ke → [menu_nama] }
 
   for (const displayJenjang of activeJenjang) {
     const pmData = pmMap[displayJenjang];
@@ -2213,41 +2212,39 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       const items = itemsBySiklus[s.id] || [];
       const bahanMap = bahanCountsBySiklus[s.id] || {};
       const gridBahan = gridBahanBySiklus[s.id] || [];
-
-      if (!keToNama[s.id]) keToNama[s.id] = {};
-      for (const it of items) {
-        keToNama[s.id][it.hari_ke] = it.hari_nama;
-      }
-
       const gridByHari = {};
       for (const gb of gridBahan) {
-        const hn = keToNama[s.id] && keToNama[s.id][gb.hari_ke] ? keToNama[s.id][gb.hari_ke] : 'Hari ' + gb.hari_ke;
-        if (!gridByHari[hn]) gridByHari[hn] = [];
-        gridByHari[hn].push(gb);
+        if (!gridByHari[gb.hari_ke]) gridByHari[gb.hari_ke] = [];
+        gridByHari[gb.hari_ke].push(gb);
+      }
+
+      if (!perSiklusMap[s.id]) {
+        perSiklusMap[s.id] = {};
+        perSiklusPorsi[s.id] = {};
+        perSiklusMenu[s.id] = {};
       }
 
       for (const it of items) {
-        const hn = it.hari_nama;
-        const isManual = !it.menu_id && (bahanMap[it.hari_ke] || 0) > 0;
+        const hk = it.hari_ke;
+        const isManual = !it.menu_id && (bahanMap[hk] || 0) > 0;
 
-        // Skip item yang benar-benar kosong (tanpa menu_id dan tanpa grid bahan)
         if (!it.menu_id && !isManual) continue;
 
-        if (!hariMap[hn]) hariMap[hn] = {};
-        if (!hariMap[hn][displayJenjang]) hariMap[hn][displayJenjang] = {};
-        if (!totalPorsiByHari[hn]) totalPorsiByHari[hn] = 0;
-        totalPorsiByHari[hn] += penerimaCount;
-        if (!menuNamesByHari[hn]) menuNamesByHari[hn] = [];
+        if (!perSiklusMap[s.id][hk]) perSiklusMap[s.id][hk] = {};
+        if (!perSiklusMap[s.id][hk][displayJenjang]) perSiklusMap[s.id][hk][displayJenjang] = {};
+        if (!perSiklusPorsi[s.id][hk]) perSiklusPorsi[s.id][hk] = 0;
+        perSiklusPorsi[s.id][hk] += penerimaCount;
+        if (!perSiklusMenu[s.id][hk]) perSiklusMenu[s.id][hk] = [];
         const menuNama = it.menu_nama_lengkap || it.menu_nama || '';
-        if (menuNama && !menuNamesByHari[hn].includes(menuNama)) {
-          menuNamesByHari[hn].push(menuNama);
+        if (menuNama && !perSiklusMenu[s.id][hk].includes(menuNama)) {
+          perSiklusMenu[s.id][hk].push(menuNama);
         }
 
         let bahanRows;
         if (it.menu_id) {
           bahanRows = menuBahanMap[it.menu_id] || [];
         } else {
-          bahanRows = gridByHari[hn] || [];
+          bahanRows = gridByHari[hk] || [];
         }
 
         for (const b of bahanRows) {
@@ -2258,15 +2255,12 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
           let beratBersih, beratKotor, kebutuhanKg;
 
           if (it.menu_id) {
-            // Menu tradisional: pakai berat dari menu_bahan (mb.jumlah)
             beratBersih = Number(b.jumlah || 0);
             beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
             kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
           } else {
-            // Grid manual: estimasi berat dari SP value × berat_1_sp
             const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || 0) : 0;
             let beratPerSp = Number(b.berat_1_sp || 0);
-            // Fallback: jika berat_1_sp = 0, coba pakai sp_referensi_bahan.berat_bersih
             if (beratPerSp === 0) {
               const spRef = spRefByName[b.nama.trim().toLowerCase()];
               if (spRef && spRef.berat_bersih > 0) beratPerSp = spRef.berat_bersih;
@@ -2288,8 +2282,8 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
           const satuanBahan = b.satuan || bakuInfo.satuan || 'kg';
           const bufferPersen = Number(b.buffer_persen) || bakuInfo.buffer_persen || 10;
 
-          if (!hariMap[hn][displayJenjang][b.nama]) {
-            hariMap[hn][displayJenjang][b.nama] = {
+          if (!perSiklusMap[s.id][hk][displayJenjang][b.nama]) {
+            perSiklusMap[s.id][hk][displayJenjang][b.nama] = {
               nama: b.nama,
               nama_display: namaDisplay,
               kategori_sp: b.kategori_sp,
@@ -2301,64 +2295,99 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
               buffer_persen: bufferPersen,
             };
           }
-          // Aggregate across multiple menu items on the same day (e.g., same ingredient in different menus)
-          hariMap[hn][displayJenjang][b.nama].kebutuhan_kg += kebutuhanKg;
-          // Add per-porsi berat_kotor (use the max if multiple entries for same ingredient)
-          hariMap[hn][displayJenjang][b.nama].berat_kotor = Math.max(hariMap[hn][displayJenjang][b.nama].berat_kotor, beratKotor);
-          // Keep the first berat_bersih & persen_bdd (should be same across menus)
-          if (!hariMap[hn][displayJenjang][b.nama].berat_bersih) {
-            hariMap[hn][displayJenjang][b.nama].berat_bersih = beratBersih;
-            hariMap[hn][displayJenjang][b.nama].persen_bdd = persenBdd;
+          perSiklusMap[s.id][hk][displayJenjang][b.nama].kebutuhan_kg += kebutuhanKg;
+          perSiklusMap[s.id][hk][displayJenjang][b.nama].berat_kotor = Math.max(
+            perSiklusMap[s.id][hk][displayJenjang][b.nama].berat_kotor, beratKotor);
+          if (!perSiklusMap[s.id][hk][displayJenjang][b.nama].berat_bersih) {
+            perSiklusMap[s.id][hk][displayJenjang][b.nama].berat_bersih = beratBersih;
+            perSiklusMap[s.id][hk][displayJenjang][b.nama].persen_bdd = persenBdd;
           }
         }
       }
     }
   }
 
-  // 6. Transform to final response — iterate actual dates from tanggal_mulai
+  // 6. Merge per-siklus data into date-based output
+  const filterStart = new Date(tanggalMulai);
   const totalHari = Math.max(...activeSiklus.map(s => s.total_hari || 7), 7);
   const hariResult = [];
 
   for (let d = 0; d < totalHari; d++) {
-    const tgl = new Date(tanggalMulai);
-    tgl.setDate(tgl.getDate() + d);
-    const dayName = tgl.toLocaleDateString('id-ID', { weekday: 'long' });
-    const tglNum = tgl.getDate();
-    const blnNama = tgl.toLocaleDateString('id-ID', { month: 'long' });
-    const tahun = tgl.getFullYear();
+    const currentDate = new Date(filterStart);
+    currentDate.setDate(currentDate.getDate() + d);
+    const dayName = currentDate.toLocaleDateString('id-ID', { weekday: 'long' });
+    const tglNum = currentDate.getDate();
+    const blnNama = currentDate.toLocaleDateString('id-ID', { month: 'long' });
+    const tahun = currentDate.getFullYear();
     const headerTanggal = `${dayName}, ${tglNum} ${blnNama} ${tahun}`;
 
-    const dayData = hariMap[dayName];
-    if (!dayData) continue;
+    // Aggregate ingredients across all relevant siklus for this date
+    const merged = {}; // { jenjang: { bahan: data } }
+    let dayTotalPorsi = 0;
+    const dayMenuNames = [];
 
-    // Build set of all unique ingredient names across all jenjang for this day
-    const allBahan = new Set();
-    for (const j of activeJenjang) {
-      if (dayData[j]) {
-        for (const nama of Object.keys(dayData[j])) {
-          allBahan.add(nama);
+    for (const s of activeSiklus) {
+      const siklusData = perSiklusMap[s.id];
+      if (!siklusData) continue;
+
+      let hk = d + 1; // default sequential for legacy siklus
+
+      if (s.tanggal_mulai) {
+        // Offset hari_ke based on actual siklus start date
+        const siklusStart = new Date(s.tanggal_mulai);
+        const diffTime = currentDate.getTime() - siklusStart.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        hk = diffDays + 1;
+        const maxHk = s.total_hari || 7;
+        if (hk < 1 || hk > maxHk) continue; // this date is outside this siklus' range
+      }
+
+      const dayData = siklusData[hk];
+      if (!dayData) continue;
+
+      for (const jenjang of Object.keys(dayData)) {
+        if (!merged[jenjang]) merged[jenjang] = {};
+        for (const nama of Object.keys(dayData[jenjang])) {
+          const src = dayData[jenjang][nama];
+          if (!merged[jenjang][nama]) {
+            merged[jenjang][nama] = { ...src, kebutuhan_kg: 0 };
+          }
+          merged[jenjang][nama].kebutuhan_kg += src.kebutuhan_kg;
+          merged[jenjang][nama].berat_kotor = Math.max(merged[jenjang][nama].berat_kotor, src.berat_kotor);
+        }
+        dayTotalPorsi += pmMap[jenjang] ? pmMap[jenjang].total_penerima : 0;
+
+        const menus = perSiklusMenu[s.id] && perSiklusMenu[s.id][hk];
+        if (menus) {
+          for (const mn of menus) {
+            if (!dayMenuNames.includes(mn)) dayMenuNames.push(mn);
+          }
         }
       }
     }
 
-    const bahanList = [];
-    let dayTotalPorsi = 0;
+    if (!Object.keys(merged).length) continue;
 
-    for (const jenjang of activeJenjang) {
-      if (dayData[jenjang]) {
-        dayTotalPorsi += pmMap[jenjang] ? pmMap[jenjang].total_penerima : 0;
+    // Build set of all unique ingredient names across all jenjang for this day
+    const allBahan = new Set();
+    for (const j of Object.keys(merged)) {
+      for (const nama of Object.keys(merged[j])) {
+        allBahan.add(nama);
       }
     }
 
+    const bahanList = [];
+
     for (const namaBahan of allBahan) {
-      const firstJenjang = activeJenjang.find(j => dayData[j] && dayData[j][namaBahan]);
-      const ref = firstJenjang ? dayData[firstJenjang][namaBahan] : null;
+      const jenjangKeys = Object.keys(merged);
+      const firstJenjang = jenjangKeys.find(j => merged[j][namaBahan]);
+      const ref = firstJenjang ? merged[firstJenjang][namaBahan] : null;
       if (!ref) continue;
 
       const perJenjang = {};
       let totalKg = 0;
-      for (const j of activeJenjang) {
-        const refJ = dayData[j] && dayData[j][namaBahan];
+      for (const j of jenjangKeys) {
+        const refJ = merged[j][namaBahan];
         const val = refJ ? refJ.kebutuhan_kg : 0;
         perJenjang[j] = refJ ? {
           kebutuhan_kg: refJ.kebutuhan_kg,
@@ -2374,7 +2403,6 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       const bufferMultiplier = 1 + (bufferPersen / 100);
       const bufferKg = Math.round(totalKg * bufferMultiplier * 100) / 100;
 
-      // Rincian berdasarkan satuan dan kategori_sp
       const satuan = ref.satuan || 'kg';
       const satLower = satuan.toLowerCase();
       let rincian;
@@ -2400,13 +2428,13 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       });
     }
 
-    // Sort bahan by kategori_sp order
     const KATEGORI_ORDER = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu', 'Minyak'];
     bahanList.sort((a, b) => {
-      const aRef = activeJenjang.find(j => dayData[j] && dayData[j][a.nama]);
-      const bRef = activeJenjang.find(j => dayData[j] && dayData[j][b.nama]);
-      const aKat = aRef ? dayData[aRef][a.nama].kategori_sp : '';
-      const bKat = bRef ? dayData[bRef][b.nama].kategori_sp : '';
+      const jKeys = Object.keys(merged);
+      const aRef = jKeys.find(j => merged[j][a.nama]);
+      const bRef = jKeys.find(j => merged[j][b.nama]);
+      const aKat = aRef ? merged[aRef][a.nama].kategori_sp : '';
+      const bKat = bRef ? merged[bRef][b.nama].kategori_sp : '';
       return KATEGORI_ORDER.indexOf(aKat) - KATEGORI_ORDER.indexOf(bKat);
     });
 
@@ -2415,7 +2443,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       hari_nama: dayName,
       header_tanggal: headerTanggal,
       total_porsi: dayTotalPorsi,
-      menu_names: menuNamesByHari[dayName] || [],
+      menu_names: dayMenuNames,
       bahan: bahanList,
     });
   }

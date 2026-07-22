@@ -774,13 +774,14 @@ function bukaKebutuhanPangan(id) {
 
 async function openSiklusForm(editing) {
   const isEdit = !!(editing && editing.id);
-  const s = editing || { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 7, status: 'Draft', catatan: '', items: HARI_OPTIONS.slice(0,7).map((h,i) => ({ hari_ke: i+1, hari_nama: h, menu_nama: '', jumlah_porsi: 0 })) };
+  const s = editing || { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 7, status: 'Draft', catatan: '', tanggal_mulai: '', items: HARI_OPTIONS.slice(0,7).map((h,i) => ({ hari_ke: i+1, hari_nama: h, menu_nama: '', jumlah_porsi: 0 })) };
   // Preserve existing metadata when re-rendering (e.g. from saveGridPicker / hariChange)
   const prevMeta = window._siklusMeta;
   if (prevMeta) {
     if (!s.kategori_penerima && prevMeta.kategori_penerima) s.kategori_penerima = prevMeta.kategori_penerima;
     if ((!s.jumlah_porsi || s.jumlah_porsi === 0) && prevMeta.jumlah_porsi) s.jumlah_porsi = prevMeta.jumlah_porsi;
     if (!s.catatan && prevMeta.catatan) s.catatan = prevMeta.catatan;
+    if (!s.tanggal_mulai && prevMeta.tanggal_mulai) s.tanggal_mulai = prevMeta.tanggal_mulai;
   }
   const formData = JSON.parse(JSON.stringify(s));
 
@@ -855,6 +856,8 @@ async function openSiklusForm(editing) {
           <div class="min-w-[250px] flex-1"><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Nama Siklus</label><input id="sk-nama" value="${s.nama}" placeholder="cth: Siklus Menu SD" class="mt-1.5 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 text-sm font-medium transition-all" /></div>
 
           <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Hari</label><input id="sk-hari" type="number" min="1" max="14" value="${s.total_hari||7}" onchange="openSiklusFormHariChange(this)" class="mt-1.5 w-20 h-11 px-3 border border-stone-200 rounded-xl text-sm text-center" /></div>
+
+          <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Tgl Mulai</label><input id="sk-tanggal-mulai" type="date" value="${s.tanggal_mulai || ''}" class="mt-1.5 h-11 px-3 border border-stone-200 rounded-xl text-sm" /></div>
 
           <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Status</label><select id="sk-status" class="mt-1.5 h-11 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[120px]">${statuses.map(st => '<option value="'+st+'"'+(s.status===st?' selected':'')+'>'+st+'</option>').join('')}</select></div>
         </div>
@@ -967,7 +970,8 @@ async function openSiklusForm(editing) {
       }
 
     }
-    var payload = { nama, kategori_penerima: '', total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', items };
+    var tanggalMulai = document.getElementById('sk-tanggal-mulai').value || null;
+    var payload = { nama, kategori_penerima: '', total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', tanggal_mulai: tanggalMulai, items };
     try {
       var savedId = window._siklusFormId;
       if (isEdit) await api.put('/siklus/' + savedId, payload);

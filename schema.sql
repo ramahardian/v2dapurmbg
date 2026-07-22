@@ -252,6 +252,7 @@ CREATE TABLE IF NOT EXISTS siklus_menu (
   total_hari INT DEFAULT 7,
   status ENUM('Draft','Aktif','Arsip') DEFAULT 'Draft',
   catatan TEXT,
+  tanggal_mulai DATE DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   INDEX idx_tenant (tenant_id),
