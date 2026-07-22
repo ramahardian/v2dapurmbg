@@ -894,6 +894,7 @@ const tabColors = {
           '<span class="text-xs font-normal text-stone-500">' + r.suppliers.length + ' supplier</span></div>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
         '<thead class="bg-stone-50"><tr>' +
+        '<th class="w-6 px-1 py-2.5"></th>' +
         '<th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Supplier</th>' +
         '<th class="text-center px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wider">PO</th>' +
         '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Total Pembelian</th>' +
@@ -904,7 +905,7 @@ const tabColors = {
         '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">PO Terakhir</th>' +
         '</tr></thead><tbody>';
 
-        r.suppliers.forEach(function(s) {
+        r.suppliers.forEach(function(s, si) {
           var st = s.status;
           var statusBadges = '';
           if (st.draft > 0) statusBadges += '<span class="inline-block bg-stone-200 text-stone-600 text-[10px] px-1.5 py-0.5 rounded mr-0.5">Draft:' + st.draft + '</span>';
@@ -913,12 +914,18 @@ const tabColors = {
           if (st.dikirim > 0) statusBadges += '<span class="inline-block bg-amber-100 text-amber-600 text-[10px] px-1.5 py-0.5 rounded mr-0.5">Dikirim:' + st.dikirim + '</span>';
           if (st.diterima > 0) statusBadges += '<span class="inline-block bg-teal-100 text-teal-600 text-[10px] px-1.5 py-0.5 rounded mr-0.5">Diterima:' + st.diterima + '</span>';
 
+          var hasItems = s.items && s.items.length;
+          var detailId = 'rp-supplier-detail-' + si;
+
           tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
+            '<td class="px-1 py-2.5 text-center cursor-pointer" onclick="toggleRpSupplier(' + si + ')">' +
+            (hasItems ? '<span id="rp-supplier-arrow-' + si + '" class="text-stone-400 text-xs transition-transform inline-block">▶</span>' : '') +
+            '</td>' +
             '<td class="px-3 sm:px-4 py-2.5 font-medium">' + escHtml(s.supplier_nama) + '</td>' +
             '<td class="px-2 py-2.5 text-center font-bold text-sm">' + s.total_po + '</td>' +
           '<td class="px-3 sm:px-4 py-2.5 text-right mono font-semibold">' + fmtIdr(s.total_nilai) + '</td>' +
-          '<td class="px-3 sm:px-4 py-2.5 text-right mono text-xs text-emerald-600">' + fmtIdr(totalBayar) + '</td>' +
-          '<td class="px-3 sm:px-4 py-2.5 text-right mono text-xs font-semibold ' + bayarClass + '">' + fmtIdr(Math.abs(sisaTagihan)) + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 text-right mono text-xs text-emerald-600">' + fmtIdr(s.total_bayar) + '</td>' +
+          '<td class="px-3 sm:px-4 py-2.5 text-right mono text-xs font-semibold ' + (s.sisa_tagihan > 0 ? 'text-red-600' : 'text-emerald-600') + '">' + fmtIdr(Math.abs(s.sisa_tagihan || 0)) + '</td>' +
           '<td class="px-3 sm:px-4 py-2.5 text-right">' +
             '<div class="flex items-center justify-end gap-1.5">' +
             '<span class="text-xs font-medium">' + s.porsi_budget.toFixed(1) + '%</span>' +
@@ -926,6 +933,31 @@ const tabColors = {
             '</div></td>' +
             '<td class="px-2 py-2.5 text-center">' + (statusBadges || '<span class="text-stone-400 text-[10px]">—</span>') + '</td>' +
             '<td class="px-3 sm:px-4 py-2.5 text-right text-[10px] text-stone-500">' + (s.last_po_tanggal ? fmtDate(s.last_po_tanggal) : '-') + '</td></tr>';
+
+          // Detail row (hidden)
+          if (hasItems) {
+            tableContent += '<tr id="' + detailId + '" class="hidden">' +
+              '<td colspan="9" class="px-4 py-3 bg-stone-50/70">' +
+              '<table class="w-full text-[10px]">' +
+              '<thead><tr class="text-stone-500 border-b border-stone-200">' +
+              '<th class="px-2 py-1 text-left">No. PO</th>' +
+              '<th class="px-2 py-1 text-left">Tanggal</th>' +
+              '<th class="px-2 py-1 text-left">Bahan</th>' +
+              '<th class="px-2 py-1 text-center">Jumlah</th>' +
+              '<th class="px-2 py-1 text-right">Harga Satuan</th>' +
+              '<th class="px-2 py-1 text-right">Subtotal</th>' +
+              '</tr></thead><tbody>';
+            s.items.forEach(function(it) {
+              tableContent += '<tr class="border-b border-stone-100">' +
+                '<td class="px-2 py-1">' + escHtml(it.no_po) + '</td>' +
+                '<td class="px-2 py-1">' + fmtDate(it.po_tanggal) + '</td>' +
+                '<td class="px-2 py-1">' + escHtml(it.nama_bahan) + '</td>' +
+                '<td class="px-2 py-1 text-center">' + it.jumlah + ' ' + escHtml(it.satuan) + '</td>' +
+                '<td class="px-2 py-1 text-right mono">' + fmtIdr(it.harga_satuan) + '</td>' +
+                '<td class="px-2 py-1 text-right mono font-medium">' + fmtIdr(it.subtotal) + '</td></tr>';
+            });
+            tableContent += '</tbody></table></td></tr>';
+          }
         });
 
         tableContent += '</tbody></table></div></div>';
@@ -1532,6 +1564,14 @@ function gantiPeriodeRabPembelian() {
   lapState.page = 1;
   showLap('rab-pembelian');
 }
+
+function toggleRpSupplier(idx) {
+  var row = document.getElementById('rp-supplier-detail-' + idx);
+  var arrow = document.getElementById('rp-supplier-arrow-' + idx);
+  if (!row) return;
+  row.classList.toggle('hidden');
+  if (arrow) arrow.style.transform = row.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(90deg)';
+}
 // ===== Payroll Mingguan Helpers =====
 function pmGanti() {
   lapState.pm_bulan = document.getElementById('pm-bulan')?.value;
@@ -1741,39 +1781,23 @@ function renderResepTable(siklusList, kategori_order) {
   const KAT_MAP = { Karbohidrat: 'Makanan Pokok', 'Protein Hewani': 'Lauk Hewani', 'Protein Nabati': 'Lauk Nabati', Sayur: 'Sayur', Buah: 'Buah', Susu: 'Susu', Minyak: 'Minyak' };
   const ROW_KEYS = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
 
-  // Generate a separate tabel for each siklus
   let allHtml = '';
   for (let si = 0; si < siklusList.length; si++) {
     const s = siklusList[si];
     const days = s.days || [];
     if (!days.length) continue;
 
-    // Flatten days for this siklus only, group by hari_ke
-    const byDay = {};
+    let maxHari = 0;
     for (const d of days) {
-      if (!d.menu_id) continue;
-      const key = d.hari_ke;
-      if (!byDay[key]) {
-        byDay[key] = { hari_ke: d.hari_ke, hari_nama: d.hari_nama, catNames: {} };
-        for (const rk of ROW_KEYS) byDay[key].catNames[rk] = [];
-      }
-      const parts = (d.menu_nama || '').split(/[+,]/).map(s => s.trim()).filter(Boolean);
-      const catWithItems = ROW_KEYS.filter(k2 => d.kategori && d.kategori[k2] && d.kategori[k2].length > 0);
-      let pi = 0;
-      for (const ck of catWithItems) {
-        const name = pi < parts.length ? parts[pi] : (d.menu_nama || '');
-        if (!byDay[key].catNames[ck].includes(name)) byDay[key].catNames[ck].push(name);
-        pi++;
-      }
+      if (d.hari_ke > maxHari) maxHari = d.hari_ke;
     }
+    if (!maxHari) continue;
 
-    const dayKeys = Object.keys(byDay).sort((a, b) => Number(a) - Number(b));
-    if (!dayKeys.length) continue;
+    const dayKeys = Array.from({ length: maxHari }, (_, i) => i + 1);
 
-    // Siklus header
     allHtml += `<div class="mb-2 mt-${si > 0 ? 4 : 0} px-3 py-2 bg-amber-100 border border-amber-300 rounded-t-lg flex items-center justify-between">`;
     allHtml += `<span class="font-bold text-sm text-amber-900">🍽️ ${escHtml(s.nama || 'Siklus ' + (si+1))}</span>`;
-    allHtml += `<span class="text-xs text-amber-700">${escHtml(s.kategori_penerima || '-')} · ${dayKeys.length} hari</span>`;
+    allHtml += `<span class="text-xs text-amber-700">${escHtml(s.kategori_penerima || '-')} · ${maxHari} hari</span>`;
     allHtml += '</div>';
 
     let html = '<div class="overflow-x-auto border border-amber-300 rounded-b-lg">';
@@ -1782,8 +1806,8 @@ function renderResepTable(siklusList, kategori_order) {
     html += '<tr class="bg-amber-400 text-center font-bold">';
     html += '<th class="border border-stone-300 px-3 py-2 text-[11px]" style="color:#000">Kelompok Bahan Makanan</th>';
     for (const k of dayKeys) {
-      const d = byDay[k];
-      html += `<th class="border border-stone-300 px-3 py-2 text-center text-[11px]" style="color:#000">Menu ${k}<br><span class="text-[10px] font-normal">${d.hari_nama}</span></th>`;
+      const dayNama = days.find(d => d.hari_ke === k);
+      html += `<th class="border border-stone-300 px-3 py-2 text-center text-[11px]" style="color:#000">Menu ${k}<br><span class="text-[10px] font-normal">${dayNama ? dayNama.hari_nama : ''}</span></th>`;
     }
     html += '</tr>';
     html += '</thead>';
@@ -1797,8 +1821,17 @@ function renderResepTable(siklusList, kategori_order) {
       html += `<td class="border border-stone-300 px-3 py-2 font-bold ${isFirst ? 'bg-emerald-50' : ''}">${label}</td>`;
 
       for (const k of dayKeys) {
-        const d = byDay[k];
-        const names = d.catNames[rk];
+        const names = [];
+        for (const d of days) {
+          if (d.hari_ke === k) {
+            const katItems = d.kategori && d.kategori[rk];
+            if (katItems && katItems.length) {
+              for (const n of katItems) {
+                if (!names.includes(n)) names.push(n);
+              }
+            }
+          }
+        }
         const cell = names.length
           ? names.map(n => `<div class="py-0.5 font-medium text-teal-700">${n}</div>`).join('')
           : '<span class="text-stone-300">—</span>';

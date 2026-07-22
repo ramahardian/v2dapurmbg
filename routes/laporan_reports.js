@@ -1523,8 +1523,30 @@ router.get('/laporan/rab-pembelian-suplier', roleOps, async (req, res) => {
       [t, periode]
     );
 
+    // 7. Item detail per supplier
+    const supplierItemsMap = {};
+    for (const po of allPoItems) {
+      const supName = po.supplier_nama || '(Tanpa Nama)';
+      if (!supplierItemsMap[supName]) supplierItemsMap[supName] = [];
+      try {
+        const items = JSON.parse(po.item || '[]');
+        for (const it of items) {
+          supplierItemsMap[supName].push({
+            no_po: po.no_po,
+            po_tanggal: po.tanggal,
+            nama_bahan: it.nama_bahan || it.nama || '(tanpa nama)',
+            jumlah: Number(it.total_qty || it.jumlah || 0),
+            satuan: it.satuan || '',
+            harga_satuan: Number(it.harga_satuan || 0),
+            subtotal: Number(it.estimated_subtotal || it.subtotal || (Number(it.total_qty || it.jumlah || 0) * Number(it.harga_satuan || 0)) || 0),
+          });
+        }
+      } catch (e) { /* skip */ }
+    }
+
     const suppliersWithPayment = suppliers.map(s => ({
       ...s,
+      items: supplierItemsMap[s.supplier_nama] || [],
       total_bayar: totalBelanjaPO > 0 ? Math.round(Number(s.total_nilai) / totalBelanjaPO * total_bayar) : 0,
       sisa_tagihan: Number(s.total_nilai) - (totalBelanjaPO > 0 ? Math.round(Number(s.total_nilai) / totalBelanjaPO * total_bayar) : 0),
     }));
