@@ -2257,7 +2257,13 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
           } else {
             // Grid manual: estimasi berat dari SP value × berat_1_sp
             const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || 0) : 0;
-            const estWeightPerPerson = spValue * Number(b.berat_1_sp || 0);
+            let beratPerSp = Number(b.berat_1_sp || 0);
+            // Fallback: jika berat_1_sp = 0, coba pakai sp_referensi_bahan.berat_bersih
+            if (beratPerSp === 0) {
+              const spRef = spRefByName[b.nama.trim().toLowerCase()];
+              if (spRef && spRef.berat_bersih > 0) beratPerSp = spRef.berat_bersih;
+            }
+            const estWeightPerPerson = spValue * beratPerSp;
             beratBersih = estWeightPerPerson;
             beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
             kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;

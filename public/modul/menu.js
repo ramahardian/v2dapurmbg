@@ -451,7 +451,7 @@ async function openMenuForm(editing) {
 
     <div class="border-t border-stone-200 mt-4 pt-3">
       <div class="flex justify-between items-center mb-2">
-        <div class="font-semibold text-sm">Bahan & Gramasi</div>
+        <div class="font-semibold text-sm">Bahan</div>
         <button type="button" onclick="addBahanRow()" class="text-xs border border-stone-300 px-3 py-1 rounded">+ Tambah Bahan</button>
       </div>
       <div id="bahan-list" class="space-y-2"></div>
