@@ -418,6 +418,7 @@ function toggleGramasiKecil(kat) {
 async function openMenuForm(editing) {
   await ensureBahanBakuLoaded();
   const m = editing || { nama: '', kategori_penerima: '', deskripsi: '', gramasi_total: 0, gramasi_besar: 0, gramasi_kecil: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
+  const KAT_OPTIONS = ['TK/PAUD', 'SD 1-3', 'SD 4-6', 'SMP', 'SMA', 'Ibu Hamil', 'Ibu Menyusui', 'Balita'];
   document.getElementById('modal-title').textContent = editing ? 'Edit Menu' : 'Menu Baru';
   document.getElementById('modal-body').innerHTML = `
     <div>
@@ -428,6 +429,15 @@ async function openMenuForm(editing) {
       </div>
     </div>
     <div class="mt-3"><label class="text-sm">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
+    <div class="mt-3">
+      <label class="text-sm font-medium">Kategori Penerima <span class="text-stone-400 text-xs">(untuk hitung jumlah otomatis)</span></label>
+      <select id="m-kategori" onchange="loadSpMap(this.value)" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+        <option value="">— Pilih kategori —</option>
+        ${KAT_OPTIONS.map(function(k) {
+          return '<option value="' + k + '"' + (m.kategori_penerima === k ? ' selected' : '') + '>' + k + '</option>';
+        }).join('')}
+      </select>
+    </div>
     <div class="flex items-center gap-3 mt-3 bg-white border border-stone-200 rounded-xl px-3 py-2 shadow-sm">
       <div class="flex items-center gap-1.5 shrink-0">
         <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -459,11 +469,18 @@ async function openMenuForm(editing) {
     `;
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, keterangan: b.keterangan || '' }));
   renderBahanList();
+  
+  // Jika edit dan sudah punya kategori, load SP map
+  if (m.kategori_penerima) {
+    loadSpMap(m.kategori_penerima);
+  }
+  
   document.getElementById('modal-save').onclick = async () => {
     if (!validateForm([{ id: 'm-nama', label: 'Nama Menu' }])) return;
     const payload = {
       nama: document.getElementById('m-nama').value,
       deskripsi: document.getElementById('m-deskripsi').value,
+      kategori_penerima: document.getElementById('m-kategori').value,
       gramasi_total: Math.round((window._menuBahan || []).reduce(function(s,b){ return s + (Number(b.jumlah)||0); }, 0) * 100) / 100,
       kalori: +document.getElementById('m-kalori').value || 0,
       protein: +document.getElementById('m-protein').value || 0,
@@ -637,7 +654,7 @@ function renderBahanList() {
         '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
       '</div>' +
       '<input type="text" value="' + displaySatuan + '" readonly class="col-span-1 h-9 px-2 border border-stone-200 rounded-md text-sm bg-stone-50 text-stone-500" />' +
-      '<input type="number" value="' + (b.jumlah || '') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" placeholder="jumlah" class="col-span-2 h-9 px-2 border border-stone-200 rounded-md text-sm mono" />' +
+      '<input type="text" value="' + (b.jumlah || '0') + '" readonly class="col-span-2 h-9 px-2 border border-stone-200 rounded-md text-sm mono bg-stone-50 text-stone-600" title="Otomatis dari SP value × berat_1_sp" />' +
       '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="col-span-4 h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
       '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
     '</div>';
