@@ -2009,9 +2009,11 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
       ? JENJANG_DB_MAP[Object.keys(JENJANG_DB_MAP).find(k => JENJANG_DB_MAP[k].includes(displayJenjang))]
       : [displayJenjang];
 
-    const matchingSiklus = selectedSiklus.filter(s =>
-      !s.kategori_penerima || jenjangDbVariants.includes(s.kategori_penerima)
-    );
+    const matchingSiklus = selectedSiklus.filter(s => {
+      if (!s.kategori_penerima) return true;
+      const kps = parseKategoriPenerima(s.kategori_penerima);
+      return kps.some(kp => jenjangDbVariants.includes(kp));
+    });
     if (!matchingSiklus.length) continue;
 
     const jenjangSp = {};
