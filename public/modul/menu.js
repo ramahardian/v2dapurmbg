@@ -417,70 +417,41 @@ function toggleGramasiKecil(kat) {
 
 async function openMenuForm(editing) {
   await ensureBahanBakuLoaded();
-  const m = editing || { nama: '', kategori_penerima: '', deskripsi: '', gramasi_total: 0, gramasi_besar: 0, gramasi_kecil: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
-  const KAT_OPTIONS = ['TK/PAUD', 'SD 1-3', 'SD 4-6', 'SMP', 'SMA', 'Ibu Hamil', 'Ibu Menyusui', 'Balita'];
+  const m = editing || { nama: '', deskripsi: '', gramasi_total: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
   document.getElementById('modal-title').textContent = editing ? 'Edit Menu' : 'Menu Baru';
   document.getElementById('modal-body').innerHTML = `
     <div>
-      <label class="text-sm">Nama Menu *</label>
-      <div class="flex gap-2">
-        <input id="m-nama" value="${m.nama}" class="mt-1 flex-1 h-10 px-3 border border-stone-200 rounded-md" />
-        <button type="button" onclick="openSiklusMenuPicker()" class="mt-1 shrink-0 px-3 h-10 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 whitespace-nowrap" title="Ambil nama dari siklus">Siklus</button>
+      <label class="text-sm font-medium">Nama Menu *</label>
+      <div class="flex gap-2 mt-1">
+        <input id="m-nama" value="${m.nama}" class="flex-1 h-10 px-3 border border-stone-200 rounded-md" />
+        <button type="button" onclick="openSiklusMenuPicker()" class="shrink-0 px-3 h-10 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 whitespace-nowrap" title="Ambil nama dari siklus">Siklus</button>
       </div>
     </div>
-    <div class="mt-3"><label class="text-sm">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
-    <div class="mt-3">
-      <label class="text-sm font-medium">Kategori Penerima <span class="text-stone-400 text-xs">(untuk hitung jumlah otomatis)</span></label>
-      <select id="m-kategori" onchange="loadSpMap(this.value)" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
-        <option value="">— Pilih kategori —</option>
-        ${KAT_OPTIONS.map(function(k) {
-          return '<option value="' + k + '"' + (m.kategori_penerima === k ? ' selected' : '') + '>' + k + '</option>';
-        }).join('')}
-      </select>
-    </div>
-    <div class="flex items-center gap-3 mt-3 bg-white border border-stone-200 rounded-xl px-3 py-2 shadow-sm">
-      <div class="flex items-center gap-1.5 shrink-0">
-        <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <span class="text-[10px] font-medium text-stone-400 uppercase tracking-wider">Gizi</span>
-      </div>
-      <div class="flex items-center gap-2 flex-wrap">
-        ${[['kalori','Energi','kkal','bg-orange-50','text-orange-700','text-orange-400'],['protein','Protein','g','bg-blue-50','text-blue-700','text-blue-400'],['karbohidrat','Karbo','g','bg-emerald-50','text-emerald-700','text-emerald-400'],['lemak','Lemak','g','bg-yellow-50','text-yellow-700','text-yellow-400'],['serat','Serat','g','bg-violet-50','text-violet-700','text-violet-400']].map(([k,l,u,bg,clr,uc]) =>
-          `<div class="flex flex-col items-center px-2.5 py-1 rounded-lg ${Number(m[k] || 0) > 0 ? bg : 'bg-stone-50'} min-w-[48px]">
-            <span class="text-[8px] uppercase ${Number(m[k] || 0) > 0 ? clr : 'text-stone-400'} font-medium">${l}</span>
-            <span id="m-${k}-disp" class="text-xs font-bold ${Number(m[k] || 0) > 0 ? clr : 'text-stone-400'} mono leading-tight">${Math.round(Number(m[k] || 0) * 10) / 10}<span class="text-[9px] ${Number(m[k] || 0) > 0 ? uc : 'text-stone-300'} ml-0.5">${u}</span></span>
-          </div>`
-        ).join('')}
-      </div>
-      <input id="m-kalori" type="hidden" value="${m.kalori || 0}" />
-      <input id="m-protein" type="hidden" value="${m.protein || 0}" />
-      <input id="m-karbohidrat" type="hidden" value="${m.karbohidrat || 0}" />
-      <input id="m-lemak" type="hidden" value="${m.lemak || 0}" />
-      <input id="m-serat" type="hidden" value="${m.serat || 0}" />
-      <button type="button" onclick="hitungNutrisiAI()" class="ml-auto shrink-0 px-2.5 h-8 text-[10px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg whitespace-nowrap transition-colors" title="Hitung nutrisi pakai AI">✨ AI</button>
-    </div>
+    <div class="mt-3"><label class="text-sm font-medium">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
+    
+    <input id="m-kalori" type="hidden" value="${m.kalori || 0}" />
+    <input id="m-protein" type="hidden" value="${m.protein || 0}" />
+    <input id="m-karbohidrat" type="hidden" value="${m.karbohidrat || 0}" />
+    <input id="m-lemak" type="hidden" value="${m.lemak || 0}" />
+    <input id="m-serat" type="hidden" value="${m.serat || 0}" />
 
     <div class="border-t border-stone-200 mt-4 pt-3">
       <div class="flex justify-between items-center mb-2">
         <div class="font-semibold text-sm">Bahan</div>
-        <button type="button" onclick="addBahanRow()" class="text-xs border border-stone-300 px-3 py-1 rounded">+ Tambah Bahan</button>
+        <button type="button" onclick="addBahanRow()" class="text-xs border border-stone-300 px-3 py-1 rounded hover:bg-stone-50">+ Tambah Bahan</button>
       </div>
       <div id="bahan-list" class="space-y-2"></div>
     </div>
     `;
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, keterangan: b.keterangan || '' }));
   renderBahanList();
-  
-  // Jika edit dan sudah punya kategori, load SP map
-  if (m.kategori_penerima) {
-    loadSpMap(m.kategori_penerima);
-  }
+  hitungNutrisi();
   
   document.getElementById('modal-save').onclick = async () => {
     if (!validateForm([{ id: 'm-nama', label: 'Nama Menu' }])) return;
     const payload = {
       nama: document.getElementById('m-nama').value,
       deskripsi: document.getElementById('m-deskripsi').value,
-      kategori_penerima: document.getElementById('m-kategori').value,
       gramasi_total: Math.round((window._menuBahan || []).reduce(function(s,b){ return s + (Number(b.jumlah)||0); }, 0) * 100) / 100,
       kalori: +document.getElementById('m-kalori').value || 0,
       protein: +document.getElementById('m-protein').value || 0,
@@ -496,15 +467,14 @@ async function openMenuForm(editing) {
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
 }
-function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '', nama: '', keterangan: '' }); renderBahanList(); hitungNutrisi(); }
+function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '', nama: '', keterangan: '' }); renderBahanList(); }
 function removeBahanRow(i) { window._menuBahan.splice(i, 1); renderBahanList(); hitungNutrisi(); }
 function hitungNutrisi() {
-  var totalGramasi = 0, totalKalori = 0, totalProtein = 0, totalKarbo = 0, totalLemak = 0, totalSerat = 0;
+  var totalKalori = 0, totalProtein = 0, totalKarbo = 0, totalLemak = 0, totalSerat = 0;
   (window._menuBahan || []).forEach(function(b) {
-    if (!b.jumlah) return;
     var jml = +b.jumlah || 0;
+    if (!jml) return;
     var ref = window._spRefMap && window._spRefMap[b.nama];
-    totalGramasi += jml;
     if (ref) {
       totalKalori += jml / 100 * (ref.energi || 0);
       totalProtein += jml / 100 * (ref.protein || 0);
@@ -513,16 +483,10 @@ function hitungNutrisi() {
       totalSerat += jml / 100 * (ref.serat || 0);
     }
   });
-  var vals = {kalori: totalKalori, protein: totalProtein, karbohidrat: totalKarbo, lemak: totalLemak, serat: totalSerat};
-  var unitMap = {kalori:'kkal', protein:'g', karbohidrat:'g', lemak:'g', serat:'g'};
   ['kalori','protein','karbohidrat','lemak','serat'].forEach(function(k) {
-    var rounded = Math.round((vals[k]) * 100) / 100;
-    var hiddenEl = document.getElementById('m-' + k);
-    if (hiddenEl) hiddenEl.value = rounded;
-    var dispEl = document.getElementById('m-' + k + '-disp');
-    if (dispEl) dispEl.innerHTML = rounded + '<span class="text-[9px] text-stone-400 ml-0.5">' + unitMap[k] + '</span>';
+    var el = document.getElementById('m-' + k);
+    if (el) el.value = Math.round(({kalori:totalKalori,protein:totalProtein,karbohidrat:totalKarbo,lemak:totalLemak,serat:totalSerat})[k] * 100) / 100;
   });
-  // gramasi_total otomatis di backend — tidak perlu update DOM
 }
 
 async function hitungGramasiBesarKecil() {
@@ -655,7 +619,7 @@ function renderBahanList() {
         '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
       '</div>' +
       '<input type="text" value="' + displaySatuan + '" readonly class="col-span-1 h-9 px-2 border border-stone-200 rounded-md text-sm bg-stone-50 text-stone-500" />' +
-      '<input type="text" value="' + (b.jumlah || '0') + '" readonly class="col-span-2 h-9 px-2 border border-stone-200 rounded-md text-sm mono bg-stone-50 text-stone-600" title="Otomatis dari SP value × berat_1_sp" />' +
+      '<input type="text" value="' + (b.jumlah || '0') + '" readonly class="col-span-2 h-9 px-2 border border-stone-200 rounded-md text-sm mono bg-stone-50 text-stone-600" title="Gram per porsi (1 SP)" />' +
       '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="col-span-4 h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
       '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
     '</div>';
@@ -718,7 +682,7 @@ async function selectBahan(i, nama) {
     var spItem = (window._spRefList || []).find(function(r) { return r.nama === nama; });
     var kat = spItem ? spItem.kategori : (bb ? bb.kategori_sp : '');
     var berat1Sp = ref.berat_bersih;
-    var perPorsi = window._spMap && window._spMap[kat] ? window._spMap[kat] * berat1Sp : 0;
+    var perPorsi = berat1Sp;
     
     if (!bb) {
       // Auto-create bahan_baku jika belum ada di master
@@ -760,7 +724,7 @@ async function selectBahan(i, nama) {
     // FALLBACK: DATA DARI BAHAN BAKU (tanpa SP reference)
     var kat = bb.kategori_sp || '';
     var berat1Sp = Number(bb.berat_1_sp || 0);
-    var perPorsi = window._spMap && window._spMap[kat] ? window._spMap[kat] * berat1Sp : 0;
+    var perPorsi = berat1Sp; // Default: 1 SP = berat_1_sp gram
     
     window._menuBahan[i].bahan_baku_id = bb.id || '';
     window._menuBahan[i].nama = nama;
