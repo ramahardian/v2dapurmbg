@@ -1651,7 +1651,7 @@ router.get('/siklus/laporan/menu-harian', async (req, res) => {
         hari_ke: it.hari_ke,
         hari_nama: it.hari_nama,
         menu_id: it.menu_id,
-        menu_nama: it.menu_nama || null,
+        menu_nama: it.menu_nama_lengkap || it.menu_nama || null,
         kategori: {},
       };
       for (const kat of KAT_DISPLAY) day.kategori[kat] = [];

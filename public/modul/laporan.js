@@ -1667,14 +1667,12 @@ function renderDailyMenuTable(menuHarian, kategori_order) {
   const ROW_KEYS = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
   const ROW_LABELS = ROW_KEYS.map(k => KAT_MAP[k] || k);
 
-  // Generate a separate table for each siklus
   let allHtml = '';
   for (let si = 0; si < siklus.length; si++) {
     const s = siklus[si];
     const days = s.days || [];
     if (!days.length) continue;
 
-    // Find max hari_ke for this siklus
     let maxHari = 0;
     for (const d of days) {
       if (d.hari_ke > maxHari) maxHari = d.hari_ke;
@@ -1683,7 +1681,6 @@ function renderDailyMenuTable(menuHarian, kategori_order) {
 
     const dayKeys = Array.from({ length: maxHari }, (_, i) => i + 1);
 
-    // Siklus header
     allHtml += `<div class="mb-2 mt-${si > 0 ? 6 : 0} px-3 py-2 bg-amber-100 border border-amber-300 rounded-t-lg flex items-center justify-between">`;
     allHtml += `<span class="font-bold text-sm text-amber-900">📋 ${escHtml(s.nama || 'Siklus ' + (si+1))}</span>`;
     allHtml += `<span class="text-xs text-amber-700">${escHtml(s.kategori_penerima || '-')} · ${maxHari} hari</span>`;
@@ -1691,26 +1688,22 @@ function renderDailyMenuTable(menuHarian, kategori_order) {
 
     let html = '<div class="overflow-x-auto text-xs leading-relaxed border border-amber-300 rounded-b-lg">';
     html += '<table class="w-full border-collapse border border-stone-300">';
-
     html += '<thead>';
     html += '<tr class="bg-amber-400 text-center font-bold">';
     html += '<th class="border border-stone-300 px-3 py-2 text-[11px]" style="color:#000">Kelompok Bahan Makanan</th>';
     for (const k of dayKeys) {
-      const dayNama = days[k-1] ? days[k-1].hari_nama : '';
-      html += `<th class="border border-stone-300 px-3 py-2 text-center text-[11px]" style="color:#000">Menu ${k}<br><span class="text-[10px] font-normal">${dayNama}</span></th>`;
+      const dayNama = days.find(d => d.hari_ke === k);
+      html += `<th class="border border-stone-300 px-3 py-2 text-center text-[11px]" style="color:#000">Menu ${k}<br><span class="text-[10px] font-normal">${dayNama ? dayNama.hari_nama : ''}</span></th>`;
     }
     html += '</tr>';
     html += '</thead>';
-
     html += '<tbody>';
 
     for (let ri = 0; ri < ROW_KEYS.length; ri++) {
       const rowLabel = ROW_LABELS[ri];
       const isFirst = ri === 0;
-
       html += `<tr class="border border-stone-300 ${isFirst ? 'bg-sky-50' : ''}">`;
       html += `<td class="border border-stone-300 px-3 py-2 font-bold ${isFirst ? 'bg-sky-50' : ''}">${rowLabel}</td>`;
-
       for (const k of dayKeys) {
         const names = [];
         for (const d of days) {
@@ -1778,9 +1771,6 @@ function renderLapArusKas() { renderReportPage('arus-kas'); }
 function renderResepTable(siklusList, kategori_order) {
   if (!siklusList.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
 
-  const KAT_MAP = { Karbohidrat: 'Makanan Pokok', 'Protein Hewani': 'Lauk Hewani', 'Protein Nabati': 'Lauk Nabati', Sayur: 'Sayur', Buah: 'Buah', Susu: 'Susu', Minyak: 'Minyak' };
-  const ROW_KEYS = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
-
   let allHtml = '';
   for (let si = 0; si < siklusList.length; si++) {
     const s = siklusList[si];
@@ -1804,7 +1794,7 @@ function renderResepTable(siklusList, kategori_order) {
     html += '<table class="w-full border-collapse border border-stone-300 text-xs">';
     html += '<thead>';
     html += '<tr class="bg-amber-400 text-center font-bold">';
-    html += '<th class="border border-stone-300 px-3 py-2 text-[11px]" style="color:#000">Kelompok Bahan Makanan</th>';
+    html += '<th class="border border-stone-300 px-3 py-2 text-[11px]" style="color:#000">Nama Resep / Menu</th>';
     for (const k of dayKeys) {
       const dayNama = days.find(d => d.hari_ke === k);
       html += `<th class="border border-stone-300 px-3 py-2 text-center text-[11px]" style="color:#000">Menu ${k}<br><span class="text-[10px] font-normal">${dayNama ? dayNama.hari_nama : ''}</span></th>`;
@@ -1813,29 +1803,22 @@ function renderResepTable(siklusList, kategori_order) {
     html += '</thead>';
     html += '<tbody>';
 
-    for (let ri = 0; ri < ROW_KEYS.length; ri++) {
-      const rk = ROW_KEYS[ri];
-      const label = KAT_MAP[rk] || rk;
-      const isFirst = ri === 0;
-      html += `<tr class="border border-stone-300 ${isFirst ? 'bg-emerald-50' : ''}">`;
-      html += `<td class="border border-stone-300 px-3 py-2 font-bold ${isFirst ? 'bg-emerald-50' : ''}">${label}</td>`;
-
+    for (const kat of kategori_order) {
+      if (kat === 'Minyak') continue;
+      html += '<tr class="border border-stone-300">';
+      html += `<td class="border border-stone-300 px-3 py-2 font-bold">${kat}</td>`;
       for (const k of dayKeys) {
-        const names = [];
+        let menuName = '';
         for (const d of days) {
-          if (d.hari_ke === k) {
-            const katItems = d.kategori && d.kategori[rk];
+          if (d.hari_ke === k && d.menu_nama) {
+            const katItems = d.kategori && d.kategori[kat];
             if (katItems && katItems.length) {
-              for (const n of katItems) {
-                if (!names.includes(n)) names.push(n);
-              }
+              menuName = d.menu_nama;
+              break;
             }
           }
         }
-        const cell = names.length
-          ? names.map(n => `<div class="py-0.5 font-medium text-teal-700">${n}</div>`).join('')
-          : '<span class="text-stone-300">—</span>';
-        html += `<td class="border border-stone-300 px-3 py-2 align-top">${cell}</td>`;
+        html += `<td class="border border-stone-300 px-3 py-2 text-center font-medium text-teal-700">${menuName || '<span class="text-stone-300">—</span>'}</td>`;
       }
       html += '</tr>';
     }
