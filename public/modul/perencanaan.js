@@ -371,7 +371,6 @@ function exportPncPdf() {
 // ===== Buat Draft Purchase Request dari Siklus =====
 async function buatPrDariSiklus() {
   try {
-    // Ambil daftar siklus
     const siklusList = await api.get('/siklus');
     const aktif = siklusList.filter(s => s.status === 'Aktif');
     
@@ -380,42 +379,75 @@ async function buatPrDariSiklus() {
       return;
     }
 
-    // Tampilkan pilihan siklus via prompt sederhana
-    let msg = 'Pilih siklus yang akan dibuat PR:\n\n';
+    // Build modal body with checkboxes
+    let bodyHtml = '<div class="space-y-2">';
+    bodyHtml += '<p class="text-sm text-stone-500 mb-3">Pilih siklus yang akan dibuat Purchase Request:</p>';
+    
     for (var i = 0; i < aktif.length; i++) {
-      msg += (i+1) + '. ' + aktif[i].nama + ' (' + aktif[i].kategori_penerima + ' - ' + aktif[i].jumlah_porsi + ' porsi)\n';
+      var s = aktif[i];
+      var porsi = Number(s.jumlah_porsi) || Number(s.pm_porsi) || 0;
+      var jenjang = typeof fmtJenjang === 'function' ? fmtJenjang(s.kategori_penerima) : (s.kategori_penerima || 'Semua');
+      bodyHtml += '<label class="flex items-center gap-3 p-3 rounded-xl border border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition-all duration-150">';
+      bodyHtml += '<input type="checkbox" value="' + i + '" class="siklus-pr-cb cb-modern">';
+      bodyHtml += '<div class="flex-1 min-w-0">';
+      bodyHtml += '<div class="font-medium text-sm text-stone-800">' + s.nama + '</div>';
+      bodyHtml += '<div class="text-xs text-stone-500 mt-0.5">' + jenjang + ' · ' + fmtPncNum(porsi) + ' porsi · ' + s.total_hari + ' hari · Status: <span class="font-semibold text-emerald-600">' + s.status + '</span></div>';
+      bodyHtml += '</div>';
+      bodyHtml += '</label>';
     }
-    msg += '\nMasukkan nomor siklus (pisahkan dengan koma, misal: 1,2,3):';
-    
-    const input = prompt(msg);
-    if (!input) return;
-    
-    const selectedIndices = input.split(',').map(function(s) { return parseInt(s.trim()) - 1; }).filter(function(i) { return i >= 0 && i < aktif.length; });
-    if (!selectedIndices.length) {
-      showAlert('Pilihan tidak valid', 'error');
-      return;
+    bodyHtml += '</div>';
+
+    // Set modal
+    document.getElementById('modal-title').textContent = 'Buat Draft PR';
+    document.getElementById('modal-body').innerHTML = bodyHtml;
+    document.getElementById('modal-save').textContent = 'Buat PR (' + aktif.length + ' siklus)';
+    document.getElementById('modal-save').onclick = async function() {
+      var checked = document.querySelectorAll('.siklus-pr-cb:checked');
+      var indices = Array.from(checked).map(function(cb) { return parseInt(cb.value); }).filter(function(i) { return !isNaN(i) && i >= 0 && i < aktif.length; });
+      
+      if (!indices.length) {
+        showAlert('Pilih minimal satu siklus', 'warning');
+        return;
+      }
+
+      closeModal();
+      document.getElementById('modal-save').textContent = 'Simpan';
+      showAlert('Membuat Draft PR untuk ' + indices.length + ' siklus...', 'info');
+
+      var selectedSiklus = indices.map(function(i) { return aktif[i]; });
+      var siklusIds = selectedSiklus.map(function(s) { return s.id; });
+
+      try {
+        const result = await api.post('/purchase_order/create-pr-from-siklus', { siklus_ids: siklusIds });
+        if (result.ok) {
+          showAlert(
+            '✅ Draft PR berhasil dibuat!\n\n' +
+            'No. PR: ' + result.no_pr + '\n' +
+            'Total item: ' + result.total_items + ' bahan\n' +
+            'Total nilai: Rp ' + fmtPncNum(result.total_nilai) + '\n\n' +
+            'Cek di menu Pembelian → Purchase Order untuk melanjutkan.',
+            'success'
+          );
+        } else {
+          showAlert('Gagal: ' + (result.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        showAlert('Gagal: ' + err.message, 'error');
+      }
+    };
+
+    // Also reset save button text when modal is closed via cancel/X
+    function resetSaveText() {
+      document.getElementById('modal-save').textContent = 'Simpan';
     }
+    document.getElementById('modal-cancel-btn').addEventListener('click', resetSaveText, { once: true });
+    document.getElementById('modal-close-btn').addEventListener('click', resetSaveText, { once: true });
 
-    const selectedSiklus = selectedIndices.map(function(i) { return aktif[i]; });
-    const siklusIds = selectedSiklus.map(function(s) { return s.id; });
-
-    showAlert('Membuat Draft PR untuk ' + selectedSiklus.length + ' siklus...', 'info');
-    
-    const result = await api.post('/purchase_order/create-pr-from-siklus', {
-      siklus_ids: siklusIds
-    });
-
-    if (result.ok) {
-      showAlert(
-        '✅ Draft PR berhasil dibuat!\n\n' +
-        'No. PR: ' + result.no_pr + '\n' +
-        'Total item: ' + result.total_items + ' bahan\n' +
-        'Total nilai: Rp ' + fmtPncNum(result.total_nilai) + '\n\n' +
-        'Cek di menu Pembelian → Purchase Order untuk melanjutkan.',
-        'success'
-      );
-    } else {
-      showAlert('Gagal: ' + (result.error || 'Unknown error'), 'error');
+    // Show modal
+    var modal = document.getElementById('modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
     }
   } catch (err) {
     showAlert('Gagal: ' + err.message, 'error');
