@@ -115,7 +115,7 @@ async function reloadSiklusList() {
   if (searchVal) {
     list = list.filter(s =>
       (s.nama || '').toLowerCase().includes(searchVal) ||
-      (s.kategori_penerima || '').toLowerCase().includes(searchVal) ||
+      fmtJenjang(s.kategori_penerima).toLowerCase().includes(searchVal) ||
       (s.catatan || '').toLowerCase().includes(searchVal)
     );
   }
@@ -160,7 +160,7 @@ async function reloadSiklusList() {
         <span class="text-[10px] px-2.5 py-1 rounded-full font-medium ${statusColor} capitalize">${s.status}</span>
       </div>
       <div class="flex items-center gap-4 text-xs text-stone-500 mb-3">
-        <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>${s.kategori_penerima || 'Semua'}</span>
+        <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>${fmtJenjang(s.kategori_penerima)}</span>
         <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${s.total_hari} hari</span>
       </div>
       ${s.catatan ? `<div class="text-xs text-stone-400 italic mb-3 line-clamp-1">${s.catatan}</div>` : ''}
@@ -772,6 +772,22 @@ function bukaKebutuhanPangan(id) {
   navigate('perhitungan-bdd');
 }
 
+function fmtJenjang(kp) {
+  if (!kp) return 'Semua';
+  try { var p = JSON.parse(kp); if (Array.isArray(p)) return p.join(' + '); } catch {}
+  return kp;
+}
+function getJenjangChecked(kategoriPenerima, val) {
+  if (!kategoriPenerima) return false;
+  try { var p = JSON.parse(kategoriPenerima); if (Array.isArray(p)) return p.indexOf(val) !== -1; } catch {}
+  return kategoriPenerima === val;
+}
+function toggleJenjangCb(el) {
+  var p = el.closest('label');
+  if (el.checked) { p.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs cursor-pointer transition-all border-emerald-400 bg-emerald-50 text-emerald-700'; }
+  else { p.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs cursor-pointer transition-all border-stone-200 hover:border-stone-300 text-stone-500'; }
+}
+
 async function openSiklusForm(editing) {
   const isEdit = !!(editing && editing.id);
   const s = editing || { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 7, status: 'Draft', catatan: '', tanggal_mulai: '', items: HARI_OPTIONS.slice(0,7).map((h,i) => ({ hari_ke: i+1, hari_nama: h, menu_nama: '', jumlah_porsi: 0 })) };
@@ -858,6 +874,8 @@ async function openSiklusForm(editing) {
           <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Hari</label><input id="sk-hari" type="number" min="1" max="14" value="${s.total_hari||7}" onchange="openSiklusFormHariChange(this)" class="mt-1.5 w-20 h-11 px-3 border border-stone-200 rounded-xl text-sm text-center" /></div>
 
           <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Tgl Mulai</label><input id="sk-tanggal-mulai" type="date" value="${s.tanggal_mulai || ''}" class="mt-1.5 h-11 px-3 border border-stone-200 rounded-xl text-sm" /></div>
+
+          <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Jenjang</label><div id="sk-jenjang-list" class="mt-1.5 flex flex-wrap gap-2">${['TK/PAUD','SD 1-3','SD 4-6','SMP','SMA','Ibu Hamil','Ibu Menyusui','Balita'].map(k => { var checked = getJenjangChecked(s.kategori_penerima, k); return '<label class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs cursor-pointer transition-all ' + (checked ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-stone-200 hover:border-stone-300 text-stone-500') + '"><input type="checkbox" value="' + k + '" ' + (checked ? 'checked' : '') + ' class="jenjang-cb sr-only" onchange="toggleJenjangCb(this)">' + k + '</label>'; }).join('')}</div></div>
 
           <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Status</label><select id="sk-status" class="mt-1.5 h-11 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[120px]">${statuses.map(st => '<option value="'+st+'"'+(s.status===st?' selected':'')+'>'+st+'</option>').join('')}</select></div>
         </div>
@@ -971,7 +989,11 @@ async function openSiklusForm(editing) {
 
     }
     var tanggalMulai = document.getElementById('sk-tanggal-mulai').value || null;
-    var payload = { nama, kategori_penerima: '', total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', tanggal_mulai: tanggalMulai, items };
+    var jenjangCbs = document.querySelectorAll('.jenjang-cb:checked');
+    var jenjangVal = [];
+    for (var jci = 0; jci < jenjangCbs.length; jci++) jenjangVal.push(jenjangCbs[jci].value);
+    var kategori_penerima = jenjangVal.length === 0 ? '' : (jenjangVal.length === 1 ? jenjangVal[0] : JSON.stringify(jenjangVal));
+    var payload = { nama, kategori_penerima, total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', tanggal_mulai: tanggalMulai, items };
     try {
       var savedId = window._siklusFormId;
       if (isEdit) await api.put('/siklus/' + savedId, payload);

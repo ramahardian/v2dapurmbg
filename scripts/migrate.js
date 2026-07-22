@@ -481,6 +481,15 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi buffer_persen)'); }
 
+  // Multi-jenjang di siklus_menu
+  try {
+    const [kpCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'siklus_menu' AND COLUMN_NAME = 'kategori_penerima' AND DATA_TYPE = 'text'");
+    if (!kpCol.length) {
+      await q("ALTER TABLE siklus_menu MODIFY COLUMN kategori_penerima TEXT");
+      log('✓ Migrasi siklus_menu: kategori_penerima → TEXT (multi jenjang)');
+    }
+  } catch (e) { log('  (skip migrasi kategori_penerima TEXT): ' + e.message); }
+
   log('✓ Migrasi selesai!');
   return logs;
 }

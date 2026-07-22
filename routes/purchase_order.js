@@ -52,10 +52,19 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
       if (!pmMap[display]) pmMap[display] = { total_penerima: 0 };
       pmMap[display].total_penerima += Number(p.total_penerima);
     }
+    function getJenjangList(kp) {
+      if (!kp) return [];
+      try { const p = JSON.parse(kp); if (Array.isArray(p)) return p; } catch {}
+      return [kp];
+    }
+
     const siklusPmMap = {};
     for (const s of siklusList) {
-      const display = dbToDisplay[s.kategori_penerima || ''] || s.kategori_penerima || '';
-      siklusPmMap[s.id] = pmMap[display]?.total_penerima || 0;
+      const jenjangList = getJenjangList(s.kategori_penerima);
+      siklusPmMap[s.id] = jenjangList.reduce((sum, k) => {
+        const display = dbToDisplay[k] || k;
+        return sum + (pmMap[display]?.total_penerima || 0);
+      }, 0);
     }
 
     // ====================================================================
@@ -64,7 +73,8 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
     const dayRows = [];
     const siklusJenjangMap = {};
     for (const s of siklusList) {
-      siklusJenjangMap[s.id] = s.kategori_penerima || '';
+      const jenjangList = getJenjangList(s.kategori_penerima);
+      siklusJenjangMap[s.id] = jenjangList[0] || '';
       const [items] = await db.query(
         `SELECT si.*, m.gramasi_total FROM siklus_menu_item si
          LEFT JOIN menu m ON m.id = si.menu_id
@@ -318,13 +328,21 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
       spRefByName[key] = Math.round(Number(r.bdd_persen || 0) * 100);
     }
 
+    function getJenjangList(kp) {
+      if (!kp) return [];
+      try { const p = JSON.parse(kp); if (Array.isArray(p)) return p; } catch {}
+      return [kp];
+    }
+
     const agg = {};
     let hasItems = false;
 
     for (const s of siklusList) {
-      const kategoriPenerima = s.kategori_penerima || '';
-      const displayJenjang = dbToDisplay[kategoriPenerima] || kategoriPenerima;
-      const penerimaCount = pmMap[displayJenjang]?.total_penerima || 0;
+      const jenjangList = getJenjangList(s.kategori_penerima);
+      const penerimaCount = jenjangList.reduce((sum, k) => {
+        const jenjang = dbToDisplay[k] || k;
+        return sum + (pmMap[jenjang]?.total_penerima || 0);
+      }, 0);
       if (!penerimaCount) continue;
 
       // --- A. Menu-based ingredients ---
@@ -386,10 +404,10 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
         if (gridBahanRaw.length) {
           hasItems = true;
 
-          const [spRows] = await db.query(
-            'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
-            [kategoriPenerima]
-          );
+          const spSql = jenjangList.length === 1
+            ? 'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?'
+            : `SELECT kategori_sp, MAX(sp_value) AS sp_value FROM standar_sp WHERE jenjang IN (${jenjangList.map(() => '?').join(',')}) GROUP BY kategori_sp`;
+          const [spRows] = await db.query(spSql, jenjangList.length === 1 ? [jenjangList[0]] : jenjangList);
           const spMap = {};
           for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
 

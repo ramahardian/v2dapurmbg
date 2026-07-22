@@ -11,6 +11,13 @@ router.use((req, res, next) => {
   next();
 });
 
+// Helper: parse kategori_penerima (single string or JSON array) ke string[]
+function parseKategoriPenerima(kp) {
+  if (!kp) return [];
+  try { const p = JSON.parse(kp); if (Array.isArray(p)) return p; } catch {}
+  return [kp];
+}
+
 // ── Batch query helpers ──────────────────────────────────────────
 
 async function batchLoadItems(siklusIds) {
@@ -1126,12 +1133,13 @@ router.get('/siklus/:id/laporan', async (req, res) => {
 
   // 7. SP Comparison: Target (standar_sp) vs Realisasi (actual ingredients)
   let spComparison = [];
-  if (siklus.kategori_penerima) {
-    // 7a. Get target SP from standar_sp for this jenjang
-    const [spTargets] = await db.query(
-      'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
-      [siklus.kategori_penerima]
-    );
+  const spJenjangList = parseKategoriPenerima(siklus.kategori_penerima);
+  if (spJenjangList.length) {
+    // 7a. Get target SP from standar_sp for all assigned jenjang (max value per kategori)
+    const spSql = spJenjangList.length === 1
+      ? 'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?'
+      : `SELECT kategori_sp, MAX(sp_value) AS sp_value FROM standar_sp WHERE jenjang IN (${spJenjangList.map(() => '?').join(',')}) GROUP BY kategori_sp`;
+    const [spTargets] = await db.query(spSql, spJenjangList.length === 1 ? [spJenjangList[0]] : spJenjangList);
 
     // 7b. Get realisasi SP from actual ingredients in this siklus
     const realSpByKat = {};
@@ -1274,12 +1282,14 @@ router.get('/siklus/:id/laporan/produksi-harian', async (req, res) => {
       for (const r of spRows) spMap[r.kategori_sp] = Number(r.sp_value);
     }
 
-    // 5. Penerima Manfaat — total untuk kategori_penerima siklus
+    // 5. Penerima Manfaat — total untuk semua jenjang siklus
     let jumlahPorsi = 0;
-    if (siklus.kategori_penerima) {
+    const pmJenjangList = parseKategoriPenerima(siklus.kategori_penerima);
+    if (pmJenjangList.length) {
+      const ph = pmJenjangList.map(() => '?').join(',');
       const [[pmRow]] = await db.query(
-        'SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima=?',
-        [req.user.tenant_id, siklus.kategori_penerima]
+        `SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})`,
+        [req.user.tenant_id, ...pmJenjangList]
       );
       jumlahPorsi = Number(pmRow.total) || 0;
     }
@@ -2096,11 +2106,12 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
  * Format: per hari → tabel bahan dengan kolom per jenjang, total porsi, total kg, buffer, rincian.
  */
 router.get('/siklus/laporan/perencanaan', async (req, res) => {
+  try {
   const tanggalMulai = req.query.tanggal_mulai || new Date().toISOString().slice(0, 10);
 
   // 1. Siklus list
   const [siklusList] = await db.query(
-    'SELECT id, nama, kategori_penerima, jumlah_porsi, total_hari, status, tanggal_mulai FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
+    'SELECT * FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
     [req.user.tenant_id]
   );
   const activeSiklus = siklusList.filter(s => s.status === 'Aktif');
@@ -2199,7 +2210,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
 
     const jenjangDbVariants = JENJANG_DB_MAP[displayJenjang] || [displayJenjang];
     const matchingSiklus = activeSiklus.filter(s =>
-      !s.kategori_penerima || jenjangDbVariants.includes(s.kategori_penerima)
+      !s.kategori_penerima || parseKategoriPenerima(s.kategori_penerima).some(k => jenjangDbVariants.includes(k))
     );
     if (!matchingSiklus.length) continue;
 
@@ -2463,6 +2474,10 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     pm_map: Object.fromEntries(activeJenjang.map(j => [j, pmMap[j] ? pmMap[j].total_penerima : 0])),
     tanggal_mulai: tanggalMulai,
   });
+  } catch (e) {
+    console.error('Perencanaan error:', e);
+    res.status(500).json({ error: e.message || 'Gagal memuat perencanaan' });
+  }
 });
 
 /**
@@ -2526,10 +2541,13 @@ router.post('/siklus/generate-produksi', async (req, res) => {
     const menuNama = item.menu_nama || item.menu_nama_lengkap || 'Menu ' + item.hari_nama;
     const jumlahPorsi = item.jumlah_porsi || siklus.jumlah_porsi || 0;
 
+    const prodKategori = parseKategoriPenerima(siklus.kategori_penerima);
+    const prodJenjang = prodKategori[0] || '';
+
     const [result] = await db.query(
       `INSERT INTO produksi (tenant_id, tanggal_produksi, menu_id, menu_nama, kategori_penerima, jumlah_porsi, status, catatan)
        VALUES (?,?,?,?,?,?,?,?)`,
-      [t, tanggal_produksi, item.menu_id, menuNama, siklus.kategori_penerima, jumlahPorsi, 'Direncanakan',
+      [t, tanggal_produksi, item.menu_id, menuNama, prodJenjang, jumlahPorsi, 'Direncanakan',
        'Auto-generate dari siklus: ' + siklus.nama]
     );
 
@@ -2613,10 +2631,12 @@ router.post('/siklus/generate-produksi-batch', async (req, res) => {
       const menuNama = item.menu_nama || item.menu_nama_lengkap || 'Menu ' + hariNama;
       const jumlahPorsi = item.jumlah_porsi || siklus.jumlah_porsi || 0;
 
+      const prodKategori = parseKategoriPenerima(siklus.kategori_penerima);
+      const prodJenjang = prodKategori[0] || '';
       const [result] = await db.query(
         `INSERT INTO produksi (tenant_id, tanggal_produksi, menu_id, menu_nama, kategori_penerima, jumlah_porsi, status, catatan)
          VALUES (?,?,?,?,?,?,?,?)`,
-        [t, dateStr, item.menu_id, menuNama, siklus.kategori_penerima, jumlahPorsi, 'Direncanakan',
+        [t, dateStr, item.menu_id, menuNama, prodJenjang, jumlahPorsi, 'Direncanakan',
          'Auto-generate dari siklus: ' + siklus.nama]
       );
 
@@ -2667,23 +2687,26 @@ router.post('/siklus/hitung-budget', async (req, res) => {
       if (d.getDay() >= 1 && d.getDay() <= 5) hariKerja++; // Sen-Jum
     }
 
+    const budgetJenjangList = parseKategoriPenerima(siklus.kategori_penerima);
+    const budgetJenjang = budgetJenjangList[0] || ''; // Gunakan jenjang pertama untuk budget
+
     // Ambil harga_per_porsi dari budget yang sudah ada (jika ada)
-    const [[existingBudget]] = await db.query(
+    const [[existingBudget]] = budgetJenjang ? await db.query(
       `SELECT harga_per_porsi, biaya_operasional FROM budget
        WHERE tenant_id=? AND periode=? AND kategori_penerima=? LIMIT 1`,
-      [t, periode, siklus.kategori_penerima]
-    );
+      [t, periode, budgetJenjang]
+    ) : [null];
 
     let hargaPerPorsi = existingBudget ? Number(existingBudget.harga_per_porsi) : 0;
     let biayaOperasional = existingBudget ? Number(existingBudget.biaya_operasional) : 0;
 
     // Jika belum ada harga, cari dari budget periode lain untuk kategori yang sama
-    if (hargaPerPorsi === 0) {
+    if (hargaPerPorsi === 0 && budgetJenjang) {
       const [[refHarga]] = await db.query(
         `SELECT harga_per_porsi FROM budget
          WHERE tenant_id=? AND kategori_penerima=? AND harga_per_porsi > 0
          ORDER BY periode DESC LIMIT 1`,
-        [t, siklus.kategori_penerima]
+        [t, budgetJenjang]
       );
       if (refHarga) hargaPerPorsi = Number(refHarga.harga_per_porsi);
     }
@@ -2693,22 +2716,22 @@ router.post('/siklus/hitung-budget', async (req, res) => {
     const totalBudget = hargaPerPorsi * jumlahPorsi * hariKerja;
 
     // Cek apakah sudah ada entry budget untuk periode + kategori ini
-    const [existingEntry] = await db.query(
+    const [existingEntry] = budgetJenjang ? await db.query(
       `SELECT id FROM budget WHERE tenant_id=? AND periode=? AND kategori_penerima=?`,
-      [t, periode, siklus.kategori_penerima]
-    );
+      [t, periode, budgetJenjang]
+    ) : [[]];
 
-    if (existingEntry.length) {
+    if (existingEntry && existingEntry.length) {
       await db.query(
         `UPDATE budget SET jumlah_penerima=?, harga_per_porsi=?, total_budget=?
          WHERE id=? AND tenant_id=?`,
         [jumlahPorsi, hargaPerPorsi, totalBudget, existingEntry[0].id, t]
       );
-    } else {
+    } else if (budgetJenjang) {
       await db.query(
         `INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_per_porsi, total_budget, biaya_operasional)
          VALUES (?,?,?,?,?,?,?)`,
-        [t, periode, siklus.kategori_penerima, jumlahPorsi, hargaPerPorsi, totalBudget, biayaOperasional]
+        [t, periode, budgetJenjang, jumlahPorsi, hargaPerPorsi, totalBudget, biayaOperasional]
       );
     }
 
@@ -2716,12 +2739,12 @@ router.post('/siklus/hitung-budget', async (req, res) => {
       ok: true,
       siklus_nama: siklus.nama,
       periode,
-      kategori: siklus.kategori_penerima,
+      kategori: budgetJenjang,
       jumlah_porsi: jumlahPorsi,
       harga_per_porsi: hargaPerPorsi,
       hari_kerja: hariKerja,
       total_budget: totalBudget,
-      message: 'Budget ' + periode + ' untuk ' + siklus.kategori_penerima + ' berhasil dihitung: Rp' + totalBudget.toLocaleString('id-ID'),
+      message: 'Budget ' + periode + ' untuk ' + siklus.nama + ' berhasil dihitung: Rp' + totalBudget.toLocaleString('id-ID'),
     });
   } catch (err) {
     console.error('Hitung budget error:', err);
@@ -2759,8 +2782,12 @@ router.post('/siklus/hitung-budget-semua', async (req, res) => {
 
     const results = [];
 
-    // Batch-load existing budget entries for all siklus
-    const kategoriList = [...new Set(siklusList.map(s => s.kategori_penerima).filter(Boolean))];
+    // Batch-load existing budget entries for all siklus (flatten multi-jenjang)
+    function flatJenjang(s) {
+      const list = parseKategoriPenerima(s.kategori_penerima);
+      return list.length ? list : [''];
+    }
+    const kategoriList = [...new Set(siklusList.flatMap(flatJenjang).filter(Boolean))];
     const [existingBudgets] = await db.query(
       `SELECT kategori_penerima, harga_per_porsi FROM budget
        WHERE tenant_id=? AND periode=? AND kategori_penerima IN (${kategoriList.map(() => '?').join(',')})`,
@@ -2800,7 +2827,8 @@ router.post('/siklus/hitung-budget-semua', async (req, res) => {
     }
 
     for (const siklus of siklusList) {
-      const kat = siklus.kategori_penerima;
+      const katList = parseKategoriPenerima(siklus.kategori_penerima);
+      const kat = katList[0] || '';
       let hargaPerPorsi = budgetPerKat[kat] || 0;
       if (hargaPerPorsi === 0) {
         hargaPerPorsi = refHargaMap[kat] || 0;
