@@ -31,6 +31,13 @@ async function renderGudang() {
     // Load initial
     gudangState.tab = 'stok';
     await loadGudang();
+    // Pre-fetch untuk dropdown modal
+    if (!_bahanListCache) {
+      api.get('/bahan_baku').then(function(list) { _bahanListCache = Array.isArray(list) ? list : []; }).catch(function(){});
+    }
+    if (!_supplierListCache) {
+      api.get('/supplier').then(function(list) { _supplierListCache = Array.isArray(list) ? list : (list.data || []); }).catch(function(){});
+    }
   } catch (err) {
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat gudang: ${err.message}</div>`;
   }
@@ -140,17 +147,23 @@ function gudangGoToPage(page) {
 }
 let _bahanListCache = null;
 let _supplierListCache = null;
-function openStokForm(tipe) {
+async function openStokForm(tipe) {
   document.getElementById('modal-title').textContent = tipe === 'masuk' ? 'Barang Masuk' : 'Barang Keluar (Produksi)';
   document.getElementById('modal-save').style.display = '';
   if (!_bahanListCache) {
-    api.get('/bahan_baku').then(list => { _bahanListCache = Array.isArray(list) ? list : []; });
+    try {
+      var list = await api.get('/bahan_baku');
+      _bahanListCache = Array.isArray(list) ? list : [];
+    } catch { _bahanListCache = []; }
   }
   if (!_supplierListCache) {
-    api.get('/supplier').then(list => { _supplierListCache = Array.isArray(list) ? list : (list.data || []); });
+    try {
+      var list = await api.get('/supplier');
+      _supplierListCache = Array.isArray(list) ? list : (list.data || []);
+    } catch { _supplierListCache = []; }
   }
-  const bahanList = _bahanListCache || [];
-  const supplierList = _supplierListCache || [];
+  const bahanList = _bahanListCache;
+  const supplierList = _supplierListCache;
   const sumberHtml = tipe === 'masuk'
     ? `<input id="s-sumber" list="s-supplier-list" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" placeholder="Ketik atau pilih supplier" autocomplete="off" />
         <datalist id="s-supplier-list">
