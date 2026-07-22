@@ -428,13 +428,7 @@ async function openMenuForm(editing) {
       </div>
     </div>
     <div class="mt-3"><label class="text-sm">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
-    <div class="flex items-center gap-3 mt-3 bg-stone-50 rounded-lg p-2.5">
-      <div class="flex items-center gap-1.5">
-        <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
-        <span class="text-xs text-stone-500">Gramasi</span>
-        <span id="m-gramasi-total" class="text-sm font-semibold text-stone-700 mono">${Math.round((m.gramasi_total || 0) * 10) / 10}g</span>
-      </div>
-      <span class="text-stone-200">|</span>
+    <div class="flex items-center gap-2.5 mt-3 bg-stone-50 rounded-lg p-2">
       ${[['kalori','Kalori','kkal'],['protein','Protein','g'],['karbohidrat','Karbo','g'],['lemak','Lemak','g'],['serat','Serat','g']].map(([k,l,u]) =>
         `<div class="text-center"><div class="text-[9px] uppercase text-stone-400 font-medium">${l}</div><div id="m-${k}-disp" class="text-xs font-semibold text-stone-600 mono">${Math.round(Number(m[k] || 0) * 10) / 10}<span class="text-[9px] text-stone-400 ml-0.5">${u}</span></div></div>`
       ).join('')}
@@ -443,7 +437,7 @@ async function openMenuForm(editing) {
       <input id="m-karbohidrat" type="hidden" value="${m.karbohidrat || 0}" />
       <input id="m-lemak" type="hidden" value="${m.lemak || 0}" />
       <input id="m-serat" type="hidden" value="${m.serat || 0}" />
-      <button type="button" onclick="hitungNutrisiAI()" class="ml-auto shrink-0 px-2.5 h-7 text-[10px] font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100 whitespace-nowrap" title="Hitung nutrisi pakai AI">✨ AI</button>
+      <button type="button" onclick="hitungNutrisiAI()" class="ml-auto shrink-0 px-2 h-6 text-[9px] font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100 whitespace-nowrap" title="Hitung nutrisi pakai AI">✨ AI</button>
     </div>
 
     <div class="border-t border-stone-200 mt-4 pt-3">
@@ -461,7 +455,7 @@ async function openMenuForm(editing) {
     const payload = {
       nama: document.getElementById('m-nama').value,
       deskripsi: document.getElementById('m-deskripsi').value,
-      gramasi_total: +(document.getElementById('m-gramasi-total').textContent.replace('g','')) || 0,
+      gramasi_total: Math.round((window._menuBahan || []).reduce(function(s,b){ return s + (Number(b.jumlah)||0); }, 0) * 100) / 100,
       kalori: +document.getElementById('m-kalori').value || 0,
       protein: +document.getElementById('m-protein').value || 0,
       karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
@@ -502,8 +496,7 @@ function hitungNutrisi() {
     var dispEl = document.getElementById('m-' + k + '-disp');
     if (dispEl) dispEl.innerHTML = rounded + '<span class="text-[9px] text-stone-400 ml-0.5">' + unitMap[k] + '</span>';
   });
-  var gramasiEl = document.getElementById('m-gramasi-total');
-  if (gramasiEl) gramasiEl.textContent = Math.round(totalGramasi * 100) / 100 + 'g';
+  // gramasi_total otomatis di backend — tidak perlu update DOM
 }
 
 async function hitungGramasiBesarKecil() {
