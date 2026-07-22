@@ -286,6 +286,85 @@ if (cluster.isMaster && WORKERS > 1) {
   });
 
 
+  // Endpoint debug: cek data SP referensi & bahan_baku (admin only)
+  app.get('/api/debug/sp-bahan', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [bahan] = await db.query(`SELECT id, nama, kategori_sp, berat_1_sp, persen_bdd, satuan FROM bahan_baku WHERE LOWER(nama) LIKE '%ayam%' OR LOWER(nama) LIKE '%beras%' ORDER BY nama`);
+      const [spRef] = await db.query(`SELECT nama, berat_bersih, berat_kotor, bdd_persen FROM sp_referensi_bahan WHERE tenant_id=? AND (LOWER(nama) LIKE '%ayam%' OR LOWER(nama) LIKE '%beras%') ORDER BY nama`, [req.user.tenant_id]);
+      const [standarSp] = await db.query('SELECT jenjang, kategori_sp, sp_value FROM standar_sp');
+      
+      let html = `<div style="font-family:sans-serif;padding:2rem;max-width:800px;margin:auto">
+        <h2 style="margin-bottom:1.5rem">📊 Debug SP & Bahan</h2>
+        
+        <h3 style="margin-bottom:0.75rem">🫘 bahan_baku (Ayam & Beras)</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;margin-bottom:1.5rem">
+          <thead><tr style="background:#f5f5f4">
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">Nama</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">kategori_sp</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">berat_1_sp</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">persen_bdd</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">satuan</th>
+          </tr></thead><tbody>`;
+      for (const r of (bahan.length ? bahan : [{nama:'(kosong)', kategori_sp:'-', berat_1_sp:0, persen_bdd:0, satuan:'-'}])) {
+        const isAyam = r.nama && r.nama.toLowerCase().includes('ayam');
+        const bg = isAyam ? '#fefce8' : '#f0fdf4';
+        const warn = Number(r.berat_1_sp) === 0 ? 'color:#dc2626;font-weight:700' : '';
+        html += `<tr style="background:${bg}">
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;font-weight:${isAyam ? '700' : '400'}">${r.nama}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${r.kategori_sp || '-'}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right;${warn}">${r.berat_1_sp || 0}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">${r.persen_bdd || 0}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${r.satuan || '-'}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>
+        
+        <h3 style="margin-bottom:0.75rem">📖 sp_referensi_bahan (Ayam & Beras)</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;margin-bottom:1.5rem">
+          <thead><tr style="background:#f5f5f4">
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">Nama</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">berat_bersih</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">berat_kotor</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">bdd_persen</th>
+          </tr></thead><tbody>`;
+      for (const r of (spRef.length ? spRef : [{nama:'(kosong)', berat_bersih:0, berat_kotor:0, bdd_persen:0}])) {
+        html += `<tr>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${r.nama}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">${r.berat_bersih || 0}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">${r.berat_kotor || 0}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">${r.bdd_persen || 0}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>
+        
+        <h3 style="margin-bottom:0.75rem">📏 standar_sp (semua jenjang)</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;margin-bottom:1.5rem">
+          <thead><tr style="background:#f5f5f4">
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">Jenjang</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">kategori_sp</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">sp_value</th>
+          </tr></thead><tbody>`;
+      for (const r of standarSp) {
+        const isAyamKat = r.kategori_sp === 'Protein Hewani';
+        html += `<tr style="background:${isAyamKat ? '#fefce8' : '#fff'}">
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${r.jenjang}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;font-weight:${isAyamKat ? '700' : '400'}">${r.kategori_sp}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right;${isAyamKat && Number(r.sp_value) === 0 ? 'color:#dc2626' : ''}">${r.sp_value}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>
+        <div style="margin-top:1rem">
+          <a href="/api/debug/ayam-bahan" style="padding:0.5rem 1.25rem;background:#6366f1;color:white;text-decoration:none;border-radius:0.5rem;margin-right:0.5rem">🐔 Ayam Bahan</a>
+          <a href="/api/debug/semua-bahan" style="padding:0.5rem 1.25rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem;margin-right:0.5rem">📋 Semua Bahan</a>
+          <a href="/" style="padding:0.5rem 1.25rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a>
+        </div>
+      </div>`;
+      res.send(html);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem"><h2 style="color:#dc2626">❌ Error</h2><p>${e.message}</p></div>`);
+    }
+  });
+
   // Endpoint debug: cek SEMUA menu_bahan untuk semua siklus (admin only)
   app.get('/api/debug/semua-bahan', requireAuth, requireRole('admin'), async (req, res) => {
     try {
