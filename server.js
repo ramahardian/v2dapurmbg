@@ -286,54 +286,41 @@ if (cluster.isMaster && WORKERS > 1) {
   });
 
 
-  // Endpoint debug: trace perencanaan untuk Ayam Potong (admin only)
-  app.get('/api/debug/ayam-perencanaan', requireAuth, requireRole('admin'), async (req, res) => {
+  // Endpoint debug: cek SEMUA menu_bahan untuk semua siklus (admin only)
+  app.get('/api/debug/semua-bahan', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-      // Ambil siklus aktif
-      const [siklusList] = await db.query("SELECT id, nama, kategori_penerima, jumlah_porsi, status FROM siklus_menu WHERE tenant_id=? AND status='Aktif' ORDER BY id", [req.user.tenant_id]);
-      
-      // Ambil items
-      const activeIds = siklusList.map(s => s.id);
-      const ph = activeIds.map(() => '?').join(',');
-      const [items] = await db.query(`SELECT si.*, m.nama as menu_nama_lengkap FROM siklus_menu_item si LEFT JOIN menu m ON m.id = si.menu_id WHERE si.siklus_id IN (${ph}) ORDER BY si.siklus_id, si.hari_ke`, activeIds);
-      
-      // Ambil menu_ids
-      const menuIds = [...new Set(items.filter(it => it.menu_id).map(it => it.menu_id))];
-      const mh = menuIds.map(() => '?').join(',');
-      const [bahanRows] = await db.query(`SELECT mb.menu_id, mb.jumlah, mb.bahan_baku_id, b.nama, b.satuan, b.kategori_sp, b.persen_bdd, b.berat_1_sp FROM menu_bahan mb JOIN bahan_baku b ON b.id = mb.bahan_baku_id WHERE mb.menu_id IN (${mh})`, menuIds);
-      
+      const [rows] = await db.query(`
+        SELECT mb.id, mb.menu_id, mb.jumlah, mb.bahan_baku_id, b.nama, b.satuan
+        FROM menu_bahan mb
+        JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+        ORDER BY mb.menu_id, b.nama
+        LIMIT 50
+      `);
       let html = `<div style="font-family:sans-serif;padding:2rem;max-width:900px;margin:auto">
-        <h2 style="margin-bottom:1rem">🔍 Debug Perencanaan Ayam</h2>
-        <p style="color:#6b7280;margin-bottom:1rem">Siklus aktif: ${siklusList.length} | Items: ${items.length} | Menu bahan: ${bahanRows.length}</p>
+        <h2>📋 Semua menu_bahan (50 baris)</h2>
         <table style="width:100%;border-collapse:collapse;font-size:0.8rem">
           <thead><tr style="background:#f5f5f4">
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">ID</th>
             <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">Menu ID</th>
-            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">Nama Bahan</th>
-            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">mb.jumlah</th>
-            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">kategori_sp</th>
-            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">persen_bdd</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">Nama</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right">jumlah</th>
+            <th style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">satuan</th>
           </tr></thead><tbody>`;
-      
-      for (const b of bahanRows) {
-        const isAyam = b.nama && b.nama.toLowerCase().includes('ayam');
-        const bg = isAyam ? '#fef2f2' : '#f9fafb';
-        const jmlColor = Number(b.jumlah) === 0 ? 'color:#dc2626;font-weight:700' : 'color:#16a34a';
-        if (isAyam || Number(b.jumlah) === 0) {
-          html += `<tr style="background:${bg}">
-            <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${b.menu_id}</td>
-            <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;font-weight:${isAyam ? '700' : '400'}">${b.nama}</td>
-            <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right;${jmlColor}">${b.jumlah || 0}</td>
-            <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${b.kategori_sp || '-'}</td>
-            <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${b.persen_bdd || 0}</td>
-          </tr>`;
-        }
+      for (const r of rows) {
+        const isAyam = r.nama && r.nama.toLowerCase().includes('ayam');
+        const isZero = Number(r.jumlah) === 0;
+        const bg = isAyam ? (isZero ? '#fef2f2' : '#fefce8') : '#fff';
+        const jmlColor = isZero ? 'color:#dc2626;font-weight:700' : 'color:#16a34a';
+        html += `<tr style="background:${bg}">
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${r.id}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${r.menu_id}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;font-weight:${isAyam ? '700' : '400'}">${r.nama}${isAyam ? ' 🐔' : ''}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4;text-align:right;${jmlColor}">${r.jumlah || 0}</td>
+          <td style="padding:0.375rem 0.5rem;border:1px solid #e7e5e4">${r.satuan || '-'}</td>
+        </tr>`;
       }
-      
       html += `</tbody></table>
-        <div style="margin-top:1.5rem">
-          <a href="/api/debug/ayam-bahan" style="padding:0.5rem 1.25rem;background:#6366f1;color:white;text-decoration:none;border-radius:0.5rem">🐔 Kembali ke Ayam Bahan</a>
-          <a href="/" style="padding:0.5rem 1.25rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a>
-        </div>
+        <div style="margin-top:1.5rem"><a href="/" style="padding:0.5rem 1.25rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a></div>
       </div>`;
       res.send(html);
     } catch (e) {
