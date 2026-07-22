@@ -139,13 +139,25 @@ function gudangGoToPage(page) {
   loadGudang();
 }
 let _bahanListCache = null;
+let _supplierListCache = null;
 function openStokForm(tipe) {
   document.getElementById('modal-title').textContent = tipe === 'masuk' ? 'Barang Masuk' : 'Barang Keluar (Produksi)';
   document.getElementById('modal-save').style.display = '';
   if (!_bahanListCache) {
     api.get('/bahan_baku').then(list => { _bahanListCache = Array.isArray(list) ? list : []; });
   }
+  if (!_supplierListCache) {
+    api.get('/supplier').then(list => { _supplierListCache = Array.isArray(list) ? list : (list.data || []); });
+  }
   const bahanList = _bahanListCache || [];
+  const supplierList = _supplierListCache || [];
+  const sumberHtml = tipe === 'masuk'
+    ? `<select id="s-sumber" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
+        <option value="">— Pilih Supplier —</option>
+        ${supplierList.map(s => `<option value="${s.nama}">${s.nama}</option>`).join('')}
+        <option value="Lainnya">Lainnya (tulis manual)</option>
+      </select>`
+    : `<input id="s-sumber" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" placeholder="cth: Produksi Menu A" />`;
   document.getElementById('modal-body').innerHTML = `
     <div class="mb-3"><label class="text-sm">Tanggal</label>
       <input id="s-tanggal" type="date" value="${new Date().toISOString().slice(0,10)}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" /></div>
@@ -156,8 +168,8 @@ function openStokForm(tipe) {
       </select></div>
     <div class="mb-3"><label class="text-sm">Jumlah</label>
       <input id="s-jumlah" type="number" step="0.001" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md mono" /></div>
-    <div class="mb-3"><label class="text-sm">${tipe === 'masuk' ? 'Sumber / Supplier' : 'Tujuan (Produksi)'}</label>
-      <input id="s-sumber" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" /></div>
+    <div class="mb-3"><label class="text-sm">${tipe === 'masuk' ? 'Supplier' : 'Tujuan (Produksi)'}</label>
+      ${sumberHtml}</div>
     <div class="mb-3"><label class="text-sm">Catatan</label>
       <input id="s-catatan" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" /></div>`;
   document.getElementById('modal-save').onclick = async () => {
