@@ -77,64 +77,55 @@ function switchPncView(view) {
 function buildPncCurrentView() {
   if (!_perencanaanData) return '';
   if (_pncView === 'rekap') return renderPerencanaanRekap(_perencanaanData);
-  return renderPerencanaanTabel();
+  // Per Hari
+  var html = '';
+  var hari = _perencanaanData.hari || [];
+  var jl = _perencanaanData.jenjang_list || [];
+  for (var h = 0; h < hari.length; h++) html += renderPerencanaanDay(hari[h], jl);
+  return html;
 }
 
-function renderPerencanaanTabel() {
-  var data = _perencanaanData;
-  var hari = data.hari || [];
-  var jl = data.jenjang_list || [];
-
-  if (!hari.length) {
-    return '<div class="text-center py-16 text-stone-400 bg-white border border-stone-200 rounded-lg">Tidak ada data</div>';
-  }
-
-  // Filter bar summary
+function renderPerencanaanDay(day, jenjangList) {
   var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6">';
 
-  // Title
-  html += '<div class="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-center">';
-  html += '<h2 class="text-lg font-bold text-white uppercase tracking-wide">Perencanaan Kebutuhan Bahan Pangan</h2>';
+  // Day header
+  html += '<div class="px-5 py-3 bg-gradient-to-r from-sky-50 to-blue-50 border-b border-stone-200 flex items-center justify-between">';
+  html += '<div><span class="font-bold text-base text-sky-800">' + day.header_tanggal + '</span>';
+  html += '<span class="ml-3 text-sm text-stone-500">Total Porsi: <strong class="text-stone-700">' + fmtPncNum(day.total_porsi) + '</strong></span></div>';
   html += '</div>';
 
-  // Table
-  html += '<div class="overflow-x-auto"><table class="w-full text-sm border-collapse">';
-  html += '<thead><tr class="bg-amber-100 border-b border-amber-200">';
-  html += '<th class="px-3 py-2.5 text-left font-bold text-stone-700 min-w-[140px] whitespace-nowrap">Bahan Pangan</th>';
-  for (var j = 0; j < jl.length; j++) {
-    html += '<th class="px-3 py-2.5 text-right font-bold text-stone-700 whitespace-nowrap">' + jl[j] + '</th>';
+  if (!day.bahan || !day.bahan.length) {
+    html += '<div class="text-sm text-stone-400 italic px-5 py-4">Tidak ada bahan untuk hari ini</div></div>';
+    return html;
   }
-  html += '<th class="px-3 py-2.5 text-right font-bold text-stone-700 whitespace-nowrap">Total Porsi</th>';
-  html += '<th class="px-3 py-2.5 text-right font-bold text-stone-700 whitespace-nowrap">Kebutuhan Pangan (kg)</th>';
-  html += '<th class="px-3 py-2.5 text-right font-bold text-stone-700 whitespace-nowrap">1-10%</th>';
-  html += '<th class="px-3 py-2.5 text-right font-bold text-stone-700 whitespace-nowrap">Rincian</th>';
+
+  // Table
+  html += '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse">';
+  html += '<thead><tr class="border-b border-stone-200 bg-stone-50">';
+  html += '<th class="px-3 py-2 text-left font-semibold text-stone-600 min-w-[140px] whitespace-nowrap">Bahan Pangan</th>';
+  for (var j = 0; j < jenjangList.length; j++) {
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">' + jenjangList[j] + '</th>';
+  }
+  html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Total Porsi</th>';
+  html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan Pangan (kg)</th>';
+  html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">1-10%</th>';
+  html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Rincian</th>';
   html += '</tr></thead><tbody>';
 
-  for (var h = 0; h < hari.length; h++) {
-    var day = hari[h];
-
-    // Date separator row
-    html += '<tr class="bg-yellow-50 border-b border-yellow-200">';
-    html += '<td colspan="' + (jl.length + 5) + '" class="px-3 py-2 text-center font-bold text-stone-700 text-base">' + day.header_tanggal + '</td>';
-    html += '</tr>';
-
-    if (day.bahan && day.bahan.length) {
-      for (var i = 0; i < day.bahan.length; i++) {
-        var b = day.bahan[i];
-        html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
-        html += '<td class="px-3 py-2 text-sm font-medium">' + (b.nama_display || b.nama) + '</td>';
-        for (var j = 0; j < jl.length; j++) {
-          var pj = b.per_jenjang[jl[j]];
-          var val = pj != null ? (pj.kebutuhan_kg != null ? pj.kebutuhan_kg : pj) : null;
-          html += '<td class="px-3 py-2 text-sm text-right mono">' + (val != null ? fmtPncNum(val) : '—') + '</td>';
-        }
-        html += '<td class="px-3 py-2 text-sm text-right mono">' + fmtPncNum(day.total_porsi) + '</td>';
-        html += '<td class="px-3 py-2 text-sm text-right mono font-semibold">' + fmtPncNum(b.total_kebutuhan_kg) + '</td>';
-        html += '<td class="px-3 py-2 text-sm text-right mono font-semibold text-sky-700">' + fmtPncNum(b.kebutuhan_buffer_kg) + '</td>';
-        html += '<td class="px-3 py-2 text-sm text-right mono font-bold">' + (b.rincian || '') + '</td>';
-        html += '</tr>';
-      }
+  for (var i = 0; i < day.bahan.length; i++) {
+    var b = day.bahan[i];
+    html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
+    html += '<td class="px-3 py-2 text-sm font-medium">' + (b.nama_display || b.nama) + '</td>';
+    for (var j = 0; j < jenjangList.length; j++) {
+      var pj = b.per_jenjang[jenjangList[j]];
+      var val = pj != null ? (pj.kebutuhan_kg != null ? pj.kebutuhan_kg : pj) : null;
+      html += '<td class="px-3 py-2 text-sm text-right mono">' + (val != null ? fmtPncNum(val) : '—') + '</td>';
     }
+    html += '<td class="px-3 py-2 text-sm text-right mono">' + fmtPncNum(day.total_porsi) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-semibold">' + fmtPncNum(b.total_kebutuhan_kg) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-semibold text-sky-700">' + fmtPncNum(b.kebutuhan_buffer_kg) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold">' + (b.rincian || '') + '</td>';
+    html += '</tr>';
   }
 
   html += '</tbody></table></div></div>';
