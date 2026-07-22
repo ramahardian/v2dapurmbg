@@ -182,6 +182,104 @@ router.get('/laporan/laba-rugi', roleFinance, async (req, res) => {
 });
 
 // 7. HPP per Menu - Keuangan/Admin
+// Menghitung Harga Pokok Produksi per menu dari harga_satuan bahan baku
+// Yang sudah diupdate otomatis saat PO diterima (P1)
+router.get('/laporan/hpp', roleFinance, async (req, res) => {
+  const t = req.user.tenant_id;
+  try {
+    // Ambil semua menu dengan total HPP
+    const [menuRows] = await db.query(`
+      SELECT
+        m.id AS menu_id,
+        m.nama AS menu_nama,
+        m.kategori_penerima,
+        COUNT(mb.id) AS jumlah_bahan,
+        COALESCE(SUM(
+          CASE
+            WHEN b.berat_per_satuan IS NOT NULL AND b.berat_per_satuan > 0
+            THEN mb.jumlah * (b.harga_satuan / b.berat_per_satuan)
+            ELSE mb.jumlah * b.harga_satuan
+          END
+        ), 0) AS total_hpp
+      FROM menu m
+      LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
+      LEFT JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+      WHERE m.tenant_id = ?
+      GROUP BY m.id, m.nama, m.kategori_penerima
+      ORDER BY total_hpp DESC
+    `, [t]);
+
+    // Hitung statistik
+    const totalHppAll = menuRows.reduce((s, r) => s + Number(r.total_hpp), 0);
+    const menuDenganBahan = menuRows.filter(r => Number(r.jumlah_bahan) > 0);
+    const menuTanpaBahan = menuRows.filter(r => Number(r.jumlah_bahan) === 0);
+    const rataHpp = menuDenganBahan.length > 0
+      ? totalHppAll / menuDenganBahan.length
+      : 0;
+
+    // Ambil detail bahan untuk setiap menu
+    const menuIds = menuRows.map(r => r.menu_id);
+    const detailBahan = {};
+
+    if (menuIds.length > 0) {
+      // Batch query detail bahan untuk semua menu
+      const placeholders = menuIds.map(() => '?').join(',');
+      const [bahanDetails] = await db.query(`
+        SELECT
+          mb.menu_id,
+          b.nama AS bahan_nama,
+          mb.jumlah,
+          b.satuan,
+          b.harga_satuan,
+          b.berat_per_satuan,
+          CASE
+            WHEN b.berat_per_satuan IS NOT NULL AND b.berat_per_satuan > 0
+            THEN mb.jumlah * (b.harga_satuan / b.berat_per_satuan)
+            ELSE mb.jumlah * b.harga_satuan
+          END AS subtotal
+        FROM menu_bahan mb
+        JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+        WHERE mb.menu_id IN (${placeholders})
+        ORDER BY mb.menu_id, b.nama ASC
+      `, menuIds);
+
+      // Group by menu_id
+      for (const b of bahanDetails) {
+        if (!detailBahan[b.menu_id]) detailBahan[b.menu_id] = [];
+        detailBahan[b.menu_id].push({
+          bahan_nama: b.bahan_nama,
+          jumlah: Number(b.jumlah),
+          satuan: b.satuan || 'g',
+          harga: Number(b.harga_satuan),
+          subtotal: Number(b.subtotal),
+        });
+      }
+    }
+
+    // Format response untuk frontend
+    const rows = menuRows.map(r => ({
+      menu_id: r.menu_id,
+      menu_nama: r.menu_nama,
+      kategori_penerima: r.kategori_penerima || '-',
+      jumlah_bahan: Number(r.jumlah_bahan),
+      total_hpp: Number(r.total_hpp),
+    }));
+
+    res.json({
+      rows,
+      stats: {
+        total_hpp_all: totalHppAll,
+        rata_hpp: rataHpp,
+        menu_tanpa_bahan: menuTanpaBahan.length,
+        total_menu: menuRows.length,
+      },
+      detail_bahan: detailBahan,
+    });
+  } catch (err) {
+    console.error('HPP error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // 8. RAB Bulanan (agregat per periode) - Operasional/Produksi/Admin
 // Mendukung filter bulan & tahun untuk melihat detail per periode
