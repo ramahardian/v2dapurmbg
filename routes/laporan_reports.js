@@ -232,11 +232,13 @@ router.get('/laporan/hpp', roleFinance, async (req, res) => {
           b.satuan,
           b.harga_satuan,
           b.berat_per_satuan,
-          CASE
-            WHEN b.berat_per_satuan IS NOT NULL AND b.berat_per_satuan > 0
-            THEN mb.jumlah * (b.harga_satuan / b.berat_per_satuan)
-            ELSE mb.jumlah * b.harga_satuan
-          END AS subtotal
+          COALESCE(
+            CASE
+              WHEN b.berat_per_satuan IS NOT NULL AND b.berat_per_satuan > 0
+              THEN mb.jumlah * (COALESCE(b.harga_satuan,0) / b.berat_per_satuan)
+              ELSE mb.jumlah * COALESCE(b.harga_satuan,0)
+            END, 0
+          ) AS subtotal
         FROM menu_bahan mb
         JOIN bahan_baku b ON b.id = mb.bahan_baku_id
         WHERE mb.menu_id IN (${placeholders})
