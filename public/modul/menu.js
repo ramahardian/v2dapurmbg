@@ -820,29 +820,29 @@ function showMenuInfo() {
   div.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-black/30';
   div.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6" onclick="event.stopPropagation()">' +
     '<div class="flex items-center justify-between mb-4">' +
-      '<h3 class="font-bold text-stone-700">📋 Form Menu</h3>' +
+      '<h3 class="font-bold text-stone-700">Form Menu</h3>' +
       '<button onclick="document.getElementById(\'menu-info-popup\').remove()" class="text-stone-400 hover:text-stone-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
     '</div>' +
-    '<div class="space-y-3 text-sm text-stone-600">' +
+    '<div class="space-y-4 text-sm text-stone-600">' +
       '<div class="flex gap-3 items-start">' +
-        '<span class="shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">1</span>' +
+        '<span class="shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>' +
         '<div><span class="font-semibold text-stone-700">Buat Resep</span><br>Tulis nama menu, deskripsi, dan tambahkan bahan-bahan. Jumlah gramasi per porsi auto terisi dari SP referensi.</div>' +
       '</div>' +
       '<div class="flex gap-3 items-start">' +
-        '<span class="shrink-0 w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">2</span>' +
+        '<span class="shrink-0 w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>' +
         '<div><span class="font-semibold text-stone-700">Gunakan di Siklus</span><br>Menu yang sudah dibuat bisa dipilih di modul <strong>Siklus</strong> → pilih menu per hari.</div>' +
       '</div>' +
       '<div class="flex gap-3 items-start">' +
-        '<span class="shrink-0 w-7 h-7 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-bold">3</span>' +
+        '<span class="shrink-0 w-7 h-7 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>' +
         '<div><span class="font-semibold text-stone-700">Lihat Kebutuhan</span><br>Buka <strong>Perencanaan</strong> atau <strong>Total Kebutuhan</strong> untuk melihat total bahan yang harus dibeli.</div>' +
       '</div>' +
       '<div class="flex gap-3 items-start">' +
-        '<span class="shrink-0 w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold">4</span>' +
+        '<span class="shrink-0 w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>' +
         '<div><span class="font-semibold text-stone-700">Buat Pesanan</span><br>Dari Total Kebutuhan, klik <strong>Buat Draft PR</strong> untuk membuat Purchase Request ke pemasok.</div>' +
       '</div>' +
     '</div>' +
     '<div class="mt-4 pt-3 border-t border-stone-100 text-xs text-stone-400 text-center">' +
-      '💡 Bisa juga ambil resep dari siklus yang sudah ada dengan tombol <strong>Siklus</strong>' +
+      '<svg class="w-3.5 h-3.5 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg> Bisa juga ambil resep dari siklus yang sudah ada dengan tombol <strong>Siklus</strong>' +
     '</div>' +
   '</div>';
   div.onclick = function() { div.remove(); };
