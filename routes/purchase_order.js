@@ -580,4 +580,149 @@ router.get('/laporan/biaya-produksi', async (req, res) => {
   }
 });
 
+// ====================================================================
+// P1: Terima Barang — update stok otomatis
+// ====================================================================
+
+/**
+ * PUT /purchase_order/:id
+ * Update status atau data purchase order
+ */
+router.put('/purchase_order/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const t = req.user.tenant_id;
+    const updates = req.body;
+    
+    // Build SET clause dynamically
+    const allowed = ['no_po', 'tanggal', 'supplier_id', 'supplier_nama', 'item', 'total_nilai', 'status', 'unit_dapur', 'catatan'];
+    const sets = [];
+    const params = [];
+    for (const key of allowed) {
+      if (updates[key] !== undefined) {
+        sets.push(key + '=?');
+        params.push(updates[key]);
+      }
+    }
+    if (!sets.length) return res.status(400).json({ error: 'Tidak ada data yang diupdate' });
+    
+    params.push(id, t);
+    await db.query(`UPDATE purchase_order SET ${sets.join(', ')} WHERE id=? AND tenant_id=?`, params);
+    
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('PUT purchase_order error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * POST /purchase_order/:id/terima
+ * Menerima barang PO → update stok otomatis
+ */
+router.post('/purchase_order/:id/terima', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const t = req.user.tenant_id;
+    
+    // Ambil data PO
+    const [[po]] = await db.query('SELECT * FROM purchase_order WHERE id=? AND tenant_id=?', [id, t]);
+    if (!po) return res.status(404).json({ error: 'PO tidak ditemukan' });
+    if (po.status === 'Diterima') return res.status(400).json({ error: 'PO sudah diterima sebelumnya' });
+    
+    // Parse items
+    let items = [];
+    try { items = JSON.parse(po.item); } catch { items = []; }
+    if (!items.length) return res.status(400).json({ error: 'PO tidak memiliki item' });
+    
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+      
+      const hasil = [];
+      for (const item of items) {
+        const namaBahan = item.nama || item.bahan_nama || '';
+        const qty = Number(item.qty || item.qty_buffer || item.total_qty || 0);
+        const satuan = item.satuan || 'kg';
+        
+        if (!namaBahan || qty <= 0) {
+          hasil.push({ nama: namaBahan || '?', status: 'skip', alasan: 'qty 0' });
+          continue;
+        }
+        
+        // Cari bahan_baku_id
+        let bahanBakuId = Number(item.bahan_baku_id) || 0;
+        if (!bahanBakuId) {
+          const [[bb]] = await conn.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [t, namaBahan]);
+          if (bb) bahanBakuId = bb.id;
+        }
+        
+        if (!bahanBakuId) {
+          hasil.push({ nama: namaBahan, status: 'skip', alasan: 'bahan tidak ditemukan di master' });
+          continue;
+        }
+        
+        // Konversi qty ke gram jika satuan = kg
+        let qtyGram = qty;
+        if (['kg', 'kilogram'].includes(satuan.toLowerCase())) {
+          qtyGram = qty * 1000;
+        }
+        
+        // 1. Update stok_saat_ini di bahan_baku
+        await conn.query(
+          'UPDATE bahan_baku SET stok_saat_ini = COALESCE(stok_saat_ini, 0) + ? WHERE id=? AND tenant_id=?',
+          [qtyGram, bahanBakuId, t]
+        );
+        
+        // 2. Insert ke stok_masuk
+        await conn.query(
+          'INSERT INTO stok_masuk (tenant_id, tanggal, bahan_baku_id, jumlah, sumber, catatan) VALUES (?, CURDATE(), ?, ?, ?, ?)',
+          [t, bahanBakuId, qtyGram, 'PO: ' + (po.no_po || ''), 'Penerimaan dari PO #' + id]
+        );
+        
+        // 3. Update harga_satuan jika ada harga baru
+        const harga = Number(item.harga || item.harga_satuan || 0);
+        if (harga > 0) {
+          // Simpan harga lama ke harga_sebelumnya, update harga_satuan
+          await conn.query(
+            'UPDATE bahan_baku SET harga_sebelumnya = harga_satuan, harga_satuan = ? WHERE id=? AND tenant_id=?',
+            [harga, bahanBakuId, t]
+          );
+        }
+        
+        hasil.push({ nama: namaBahan, qty: qtyGram, satuan: 'g', status: 'ok' });
+      }
+      
+      // Update status PO
+      await conn.query('UPDATE purchase_order SET status=? WHERE id=? AND tenant_id=?', ['Diterima', id, t]);
+      
+      // Insert ke penerimaan_barang
+      const noDokumen = 'PB-' + (po.no_po || id);
+      await conn.query(
+        'INSERT INTO penerimaan_barang (tenant_id, no_dokumen, tanggal_terima, supplier_id, supplier_nama, ref_po, item, total_nilai, status_qc, catatan) VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, ?, ?)',
+        [t, noDokumen, po.supplier_id || null, po.supplier_nama || '', po.no_po || '', po.item, po.total_nilai || 0, 'Lolos', 'Penerimaan otomatis dari PO']
+      );
+      
+      await conn.commit();
+      
+      const sukses = hasil.filter(h => h.status === 'ok').length;
+      const gagal = hasil.filter(h => h.status === 'skip').length;
+      res.json({
+        ok: true,
+        message: `${sukses} bahan diterima, ${gagal} gagal`,
+        detail: hasil,
+        no_dokumen: noDokumen,
+      });
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
+  } catch (e) {
+    console.error('Terima PO error:', e);
+    res.status(500).json({ error: 'Gagal menerima PO: ' + e.message });
+  }
+});
+
 module.exports = router;

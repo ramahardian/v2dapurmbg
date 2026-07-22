@@ -447,6 +447,9 @@ function renderPoTable(rows) {
             <button onclick="deletePo(${r.id})" class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
+            ${r.status === 'Dikirim' ? `<button onclick="terimaPo(${r.id})" class="text-emerald-600 hover:text-emerald-800 p-1.5 inline-flex items-center" title="Terima Barang">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>` : ''}
             <button onclick="kirimKeKoperasi(JSON.parse(this.dataset.po))" data-po='${JSON.stringify(r).replace(/'/g, "&#39;")}' class="text-emerald-600 hover:text-emerald-800 p-1.5 inline-flex items-center" title="Kirim ke Koperasi">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
             </button>
@@ -474,6 +477,28 @@ async function deletePr(id) {
     await api.del('/purchase_order/' + id);
     showToast('PR berhasil dihapus');
     switchPrPoTab('pr');
+  } catch (e) {
+    showAlert('Gagal: ' + (e.message || 'Error'), 'error');
+  }
+}
+
+async function terimaPo(poId) {
+  if (!await showConfirm('Tandai PO sebagai Diterima dan update stok bahan baku?')) return;
+  try {
+    const result = await api.post('/purchase_order/' + poId + '/terima', {});
+    const msg = result.message || 'Stok berhasil diupdate';
+    const detail = result.detail || [];
+    const sukses = detail.filter(d => d.status === 'ok').length;
+    const gagal = detail.filter(d => d.status === 'skip').length;
+    
+    var info = '';
+    if (gagal > 0) {
+      info = detail.filter(d => d.status === 'skip').map(function(d) { return '• ' + d.nama + ': ' + d.alasan; }).join('<br>');
+    }
+    
+    showToast('✅ ' + sukses + ' bahan diterima' + (gagal ? ', ' + gagal + ' gagal' : ''), sukses > gagal ? 'success' : 'warning');
+    if (info) showAlert('Bahan yang gagal:<br>' + info, 'warning');
+    renderPembelianPage('po');
   } catch (e) {
     showAlert('Gagal: ' + (e.message || 'Error'), 'error');
   }
