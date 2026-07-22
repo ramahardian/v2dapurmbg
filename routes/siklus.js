@@ -3082,10 +3082,9 @@ router.post('/siklus/buat-pr', async (req, res) => {
          if (gridBahanRaw.length) {
            hasItems = true;
 
-           // Gunakan displayJenjang untuk query SP, bukan raw kategori_penerima
            const [spRows] = await db.query(
              'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
-             [displayJenjang]
+             [kategoriPenerima]
            );
           const spMap = {};
           for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
@@ -3142,43 +3141,30 @@ router.post('/siklus/buat-pr', async (req, res) => {
        let qty = b.total_qty;
        let satuan = b.satuan;
        let harga = b.harga_satuan;
-       const satuanAsli = (b.satuan || '').toLowerCase();
-       const isGramSatuan = ['gram', 'g', 'gr', 'kg'].includes(satuanAsli);        const isPcsCategory = ['Buah', 'Susu'].includes(b.kategori_sp);
+       const satuanAsli = (b.satuan || '').toLowerCase();        const isGramSatuan = ['gram', 'g', 'gr', 'kg'].includes(satuanAsli);
 
-        if (isPcsCategory) {
-          // Buah/Susu → konversi ke pcs
-          const perUnitBerat = Number(b.berat_per_satuan) > 0
-            ? Number(b.berat_per_satuan)
-            : (Number(b.berat_1_sp) || 0);
-          if (perUnitBerat > 0) {
-            qty = Math.round(qty / perUnitBerat);
-            satuan = 'pcs';
-          } else {
-            qty = Math.round(qty / 1000 * 100) / 100;
-            satuan = 'kg';
-          }
-        } else if (isGramSatuan) {
-          // Satuan gram/kg → konversi ke kg
-          qty = qty / 1000;
-          satuan = 'kg';
-        } else {
-          // Non-gram, non-Buah (Botol, Karton, pack, dll) → pertahankan satuan asli
-          const perUnitBerat = Number(b.berat_per_satuan) > 0
-            ? Number(b.berat_per_satuan)
-            : (Number(b.berat_1_sp) || 0);
-          if (perUnitBerat > 0) {
-            qty = Math.round(qty / perUnitBerat);
-            // satuan tetap asli
-          } else {
-            qty = Math.round(qty / 1000 * 100) / 100;
-            satuan = 'kg';
-          }
+         if (isGramSatuan) {
+           // Satuan gram/kg → konversi ke kg
+           qty = qty / 1000;
+           satuan = 'kg';
+         } else {
+           // Non-gram (Pcs, Karton, Botol, pack, dll) → hitung qty, pertahankan satuan asli
+           const perUnitBerat = Number(b.berat_per_satuan) > 0
+             ? Number(b.berat_per_satuan)
+             : (Number(b.berat_1_sp) || 0);
+           if (perUnitBerat > 0) {
+             qty = Math.round(qty / perUnitBerat);
+             // satuan tetap asli (Pcs, Karton, Botol, dll)
+           } else {
+             qty = Math.round(qty / 1000 * 100) / 100;
+             satuan = 'kg';
+           }
+         }
+
+        // Jika satuan display berubah ke kg (non-gram → kg), konversi harga
+        if (satuan === 'kg' && b.berat_per_satuan > 0 && !['gram', 'g', 'gr', 'kg'].includes(satuanAsli)) {
+          harga = b.harga_satuan / (b.berat_per_satuan / 1000);
         }
-
-       // Jika satuan display berubah dari satuan asli, konversi harga
-       if (satuan !== b.satuan && b.berat_per_satuan > 0 && !['gram', 'g', 'gr', 'kg'].includes(satuanAsli) && isPcsCategory) {
-         harga = b.harga_satuan / (b.berat_per_satuan / 1000);
-       }
       const bp = bufferPersenMap[b.bahan_baku_id] || 10;
       const buffer = Math.round(qty * (1 + bp / 100) * 100) / 100;
       return {

@@ -246,31 +246,18 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
       let satuan = b.satuan;
 
       const isGramSatuan = ['gram', 'g', 'gr', 'kg'].includes((b.satuan || '').toLowerCase());
-      const isPcsCategory = ['Buah', 'Susu'].includes(b.kategori_sp);
 
-      if (isPcsCategory) {
-        // Buah/Susu → konversi ke pcs
-        const perUnitBerat = Number(b.berat_per_satuan) > 0
-          ? Number(b.berat_per_satuan)
-          : (Number(b.berat_1_sp) || 0);
-        if (perUnitBerat > 0) {
-          qty = Math.round(qty / perUnitBerat);
-          satuan = 'pcs';
-        } else {
-          qty = Math.round(qty / 1000 * 100) / 100;
-          satuan = 'kg';
-        }
-      } else if (isGramSatuan) {
+      if (isGramSatuan) {
         qty = qty / 1000;
         satuan = 'kg';
       } else {
-        // Non-gram, non-Buah (Botol, Karton, pack, dll) → pertahankan satuan asli
+        // Non-gram (Pcs, Karton, Botol, pack, dll) → hitung qty, pertahankan satuan asli
         const perUnitBerat = Number(b.berat_per_satuan) > 0
           ? Number(b.berat_per_satuan)
           : (Number(b.berat_1_sp) || 0);
         if (perUnitBerat > 0) {
           qty = Math.round(qty / perUnitBerat);
-          // satuan tetap asli
+          // satuan tetap asli (Pcs, Karton, Botol, dll)
         } else {
           qty = Math.round(qty / 1000 * 100) / 100;
           satuan = 'kg';
@@ -483,39 +470,21 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
       let satuan = b.satuan || 'g';
 
       const isGramSatuan = ['gram', 'g', 'gr', 'kg'].includes(satuan.toLowerCase());
-      const isPcsCategory = ['Buah', 'Susu'].includes(b.kategori_sp);
 
-      let harga = b.harga_satuan;
-
-      if (isPcsCategory) {
-        // Buah/Susu → konversi ke pcs
-        const perUnitBerat = Number(b.berat_per_satuan) > 0
-          ? Number(b.berat_per_satuan)
-          : (Number(b.berat_1_sp) || 0);
-        if (perUnitBerat > 0) {
-          qty = Math.round(qty / perUnitBerat);
-          satuan = 'pcs';
-          // Konversi harga jika satuan berubah (misal Karton→pcs)
-          if (!['gram', 'g', 'gr', 'kg', 'pcs'].includes((b.satuan || '').toLowerCase()) && Number(b.berat_per_satuan) > 0) {
-            harga = b.harga_satuan / Number(b.berat_per_satuan);
-          }
-        } else {
-          qty = Math.round(qty / 1000 * 100) / 100;
-          satuan = 'kg';
-        }
-      } else if (isGramSatuan) {
+      if (isGramSatuan) {
         // Satuan gram/kg → konversi ke kg
         qty = Math.round(qty / 1000 * 100) / 100;
         satuan = 'kg';
       } else {
-        // Non-gram, non-Buah (Botol, Karton, pack, dll) → pertahankan satuan asli
+        // Non-gram (Pcs, Karton, Botol, pack, dll) → hitung qty, pertahankan satuan asli
         const perUnitBerat = Number(b.berat_per_satuan) > 0
           ? Number(b.berat_per_satuan)
           : (Number(b.berat_1_sp) || 0);
         if (perUnitBerat > 0) {
           qty = Math.round(qty / perUnitBerat);
-          // satuan tetap asli
+          // satuan tetap asli (Pcs, Karton, Botol, dll)
         } else {
+          // Fallback ke kg jika tidak ada info berat per unit
           qty = Math.round(qty / 1000 * 100) / 100;
           satuan = 'kg';
         }
@@ -529,8 +498,8 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
         satuan,
         qty,
         qty_buffer: buffer,
-        harga_satuan: Math.round(harga * 100) / 100,
-        subtotal: Math.round(buffer * harga),
+        harga_satuan: b.harga_satuan,
+        subtotal: Math.round(buffer * b.harga_satuan),
       };
     }).filter(i => i.qty > 0);
 
