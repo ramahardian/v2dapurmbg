@@ -58,43 +58,6 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
       return [kp];
     }
 
-    const siklusPmMap = {};
-    for (const s of siklusList) {
-      const jenjangList = getJenjangList(s.kategori_penerima);
-      const pmRealtime = jenjangList.reduce((sum, k) => {
-        const display = dbToDisplay[k] || k;
-        return sum + (pmMap[display]?.total_penerima || 0);
-      }, 0);
-      siklusPmMap[s.id] = pmRealtime || Number(s.jumlah_porsi) || 0;
-    }
-
-    // ====================================================================
-    // 1. KUMPULKAN DATA DARI SIKLUS MENU ITEM (menu composition)
-    // ====================================================================
-    const dayRows = [];
-    const siklusJenjangMap = {};
-    for (const s of siklusList) {
-      const jenjangList = getJenjangList(s.kategori_penerima);
-      siklusJenjangMap[s.id] = jenjangList[0] || '';
-      const [items] = await db.query(
-        `SELECT si.*, m.gramasi_total FROM siklus_menu_item si
-         LEFT JOIN menu m ON m.id = si.menu_id
-         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL`,
-        [s.id]
-      );
-      for (const it of items) {
-        dayRows.push({
-          siklus_id: s.id,
-          siklus_nama: s.nama,
-          menu_id: it.menu_id,
-          hari_ke: it.hari_ke,
-          jumlah_porsi: Number(it.jumlah_porsi) || 0,
-        });
-      }
-    }
-
-    const menuIds = [...new Set(dayRows.map(r => r.menu_id))];
-
     const agg = {};
 
     // Helper: expand jenjang display labels to DB variants
@@ -107,159 +70,85 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
       return [...new Set(result)];
     }
 
-    // Load SP values for all siklus' jenjang
-    const allJenjang = [...new Set(siklusList.flatMap(s => expandJenjang(getJenjangList(s.kategori_penerima))))];
-    let spMapGlobal = {};
-    if (allJenjang.length) {
-      const spSql = allJenjang.length === 1
-        ? 'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?'
-        : `SELECT kategori_sp, MAX(sp_value) AS sp_value FROM standar_sp WHERE jenjang IN (${allJenjang.map(() => '?').join(',')}) GROUP BY kategori_sp`;
-      const [spRows] = await db.query(spSql, allJenjang.length === 1 ? [allJenjang[0]] : allJenjang);
-      for (const sr of spRows) spMapGlobal[sr.kategori_sp] = Number(sr.sp_value);
-    }
+    for (const s of siklusList) {
+      const siklusId = s.id;
+      const jenjangList = getJenjangList(s.kategori_penerima);
+      if (!jenjangList.length) continue;
 
-    // ====================================================================
-    // 2. BAHAN DARI MENU COMPOSITION (menu_bahan)
-    // ====================================================================
-    if (menuIds.length) {
-      const mph = menuIds.map(() => '?').join(',');
-      const [bahanRows] = await db.query(
-        `SELECT mb.bahan_baku_id, b.nama as bahan_nama, b.satuan, b.harga_satuan,
-                b.persen_bdd, b.kode as kode, mb.jumlah, mb.menu_id,
-                b.kategori_sp, b.berat_per_satuan, b.berat_1_sp
-         FROM menu_bahan mb
-         JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-         WHERE mb.menu_id IN (${mph})`,
-        menuIds
+      // Daftar display jenjang yang match dengan PM
+      const matchingDisplay = [];
+      for (const k of jenjangList) {
+        const display = dbToDisplay[k] || k;
+        if (pmMap[display]?.total_penerima > 0) matchingDisplay.push(display);
+      }
+      if (!matchingDisplay.length) continue;
+
+      // --- Load data siklus (sekali, di luar loop jenjang) ---
+      const [items] = await db.query(
+        `SELECT si.*, m.gramasi_total FROM siklus_menu_item si
+         LEFT JOIN menu m ON m.id = si.menu_id
+         WHERE si.siklus_id=? AND si.menu_id IS NOT NULL`,
+        [siklusId]
       );
+      if (!items.length) continue;
 
-      const menuPorsiMap = {};
-      for (const r of dayRows) {
-        if (!menuPorsiMap[r.menu_id]) menuPorsiMap[r.menu_id] = { total_porsi: 0 };
-        const porsiItem = r.jumlah_porsi || siklusPmMap[r.siklus_id] || 0;
-        menuPorsiMap[r.menu_id].total_porsi += porsiItem;
+      // Load menu_bahan per menu_id
+      const menuBahanById = {};
+      const menuIds = [...new Set(items.map(it => it.menu_id).filter(Boolean))];
+      if (menuIds.length) {
+        const mph = menuIds.map(() => '?').join(',');
+        const [bahanRows] = await db.query(
+          `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah,
+                  b.nama as bahan_nama, b.satuan, b.harga_satuan,
+                  b.persen_bdd, b.kode, b.kategori_sp, b.berat_per_satuan, b.berat_1_sp
+           FROM menu_bahan mb
+           JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+           WHERE mb.menu_id IN (${mph})`,
+          menuIds
+        );
+        for (const br of bahanRows) {
+          if (!menuBahanById[br.menu_id]) menuBahanById[br.menu_id] = [];
+          menuBahanById[br.menu_id].push(br);
+        }
       }
 
-      for (const br of bahanRows) {
-        const porsi = menuPorsiMap[br.menu_id]?.total_porsi || 0;
-        if (!porsi) continue;
-        const key = br.bahan_baku_id;
-        if (!agg[key]) {
-          agg[key] = { bahan_baku_id: br.bahan_baku_id, bahan_nama: br.bahan_nama, kode: br.kode || '', satuan: br.satuan, persen_bdd: Number(br.persen_bdd) || 100, harga_satuan: Number(br.harga_satuan) || 0, kategori_sp: br.kategori_sp, berat_per_satuan: Number(br.berat_per_satuan) || 0, berat_1_sp: Number(br.berat_1_sp) || 0, total_qty: 0, total_porsi: 0, non_gram: false };
-        }
-        const spVal = br.kategori_sp ? (spMapGlobal[br.kategori_sp] || 0) : 0;
-        const actualSp = spVal || 1;
-        const beratBersih = Number(br.jumlah) * actualSp * porsi;
-        const bdd = Number(br.persen_bdd) || 100;
-        const beratKotor = bdd > 0 ? Math.round(beratBersih / (bdd / 100)) : beratBersih;
-        agg[key].total_qty += beratKotor;
-        if (!['gram','g','gr','kg'].includes((br.satuan || 'g').toLowerCase())) {
-          agg[key].total_porsi += porsi;
-          agg[key].non_gram = true;
-        }
-      }
-    }
+      // ===================================================================
+      // LOOP PER JENJANG — hitung kebutuhan dengan SP spesifik masing-masing
+      // ===================================================================
+      for (const jDisplay of matchingDisplay) {
+        const porsiCount = pmMap[jDisplay].total_penerima;
+        if (!porsiCount) continue;
 
-    // ====================================================================
-    // 3. BAHAN DARI GRID LANGSUNG (siklus_menu_item_bahan)
-    //    Hitung qty berdasarkan SP: sp_value × berat_1_sp × jumlah_porsi
-    //    Jika satu cell (hari_ke+kategori_sp) punya >1 bahan, SP dibagi rata
-    // ====================================================================
-    if (siklus_ids.length) {
-      // Hanya untuk hari_ke yang sudah punya menu/resep
-      const hariDenganMenu = new Set(dayRows.map(r => r.siklus_id + '-' + r.hari_ke));
-      // Ambil semua grid item untuk siklus yang dipilih
-      const [gridBahanRaw] = await db.query(
-        `SELECT smib.siklus_id, smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
-                 bb.nama as bahan_nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp,
-                 bb.berat_per_satuan, bb.kategori_sp as bb_kategori_sp,
-                 sm.kategori_penerima
-         FROM siklus_menu_item_bahan smib
-         JOIN siklus_menu sm ON sm.id=smib.siklus_id
-         JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
-         WHERE smib.siklus_id IN (${ph})
-         AND sm.tenant_id=?`,
-        [...siklus_ids, req.user.tenant_id]
-      );
-      const gridBahan = hariDenganMenu.size > 0
-        ? gridBahanRaw.filter(gb => hariDenganMenu.has(gb.siklus_id + '-' + gb.hari_ke))
-        : gridBahanRaw;
-
-      if (gridBahan.length) {
-        // Kumpulkan jenjang unik untuk ambil standar SP (gunakan expansion)
-        const jenjangSet = new Set();
-        for (const gb of gridBahan) {
-          const raw = (gb.kategori_penerima || '').trim();
-          const parsed = getJenjangList(raw);
-          for (const j of parsed) {
-            const expanded = expandJenjang([j]);
-            for (const ej of expanded) if (ej) jenjangSet.add(ej);
-          }
-        }
-
-        // Ambil standar SP untuk semua jenjang terkait (MAX per kategori)
+        // Load SP spesifik untuk jenjang ini
+        const dbVariants = expandJenjang([jDisplay]);
         const spMap = {};
-        if (jenjangSet.size) {
-          const spSql = jenjangSet.size === 1
+        if (dbVariants.length) {
+          const spSql = dbVariants.length === 1
             ? 'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?'
-            : `SELECT kategori_sp, MAX(sp_value) AS sp_value FROM standar_sp WHERE jenjang IN (${[...jenjangSet].map(() => '?').join(',')}) GROUP BY kategori_sp`;
-          const [spRows] = await db.query(spSql, jenjangSet.size === 1 ? [...jenjangSet][0] : [...jenjangSet]);
+            : `SELECT kategori_sp, MAX(sp_value) AS sp_value FROM standar_sp WHERE jenjang IN (${dbVariants.map(() => '?').join(',')}) GROUP BY kategori_sp`;
+          const [spRows] = await db.query(spSql, dbVariants.length === 1 ? [dbVariants[0]] : dbVariants);
           for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
         }
 
-        // Hitung jumlah bahan per cell untuk bagi rata SP
-        const cellCount = {};
-        for (const gb of gridBahan) {
-          const cellKey = gb.siklus_id + '-' + gb.hari_ke + '-' + gb.kategori_sp;
-          if (!cellCount[cellKey]) cellCount[cellKey] = 0;
-          cellCount[cellKey]++;
-        }
+        // --- A. Menu-based ---
+        for (const it of items) {
+          const brList = menuBahanById[it.menu_id] || [];
+          for (const br of brList) {
+            const spVal = br.kategori_sp ? (spMap[br.kategori_sp] || 0) : 0;
+            const actualSp = spVal || 1;
+            const beratBersih = Number(br.jumlah) * actualSp * porsiCount;
+            const bdd = Number(br.persen_bdd) || 100;
+            const beratKotor = bdd > 0 ? Math.round(beratBersih / (bdd / 100)) : beratBersih;
 
-        // Hitung qty per bahan grid
-        for (const gb of gridBahan) {
-          const rawJenjang = (gb.kategori_penerima || '').trim();
-          const jenjangList = getJenjangList(rawJenjang);
-          // Gunakan MAX SP dari semua jenjang
-          let spVal = 0;
-          for (const j of jenjangList) {
-            const expanded = expandJenjang([j]);
-            for (const ej of expanded) {
-              const sv = spMap[ej] || 0;
-              if (sv > 0) spVal = Math.max(spVal, sv);
+            const key = br.bahan_baku_id;
+            if (!agg[key]) {
+              agg[key] = { bahan_baku_id: br.bahan_baku_id, bahan_nama: br.bahan_nama, kode: br.kode || '', satuan: br.satuan, persen_bdd: bdd, harga_satuan: Number(br.harga_satuan) || 0, kategori_sp: br.kategori_sp, berat_per_satuan: Number(br.berat_per_satuan) || 0, berat_1_sp: Number(br.berat_1_sp) || 0, total_qty: 0, total_porsi: 0, non_gram: false };
             }
-          }
-          const berat1Sp = Number(gb.berat_1_sp || 0);
-          const jumlahPorsi = siklusPmMap[gb.siklus_id] || 0;
-          if (spVal <= 0 || berat1Sp <= 0 || jumlahPorsi <= 0) continue;
-
-          const cellKey = gb.siklus_id + '-' + gb.hari_ke + '-' + gb.kategori_sp;
-          const bagi = cellCount[cellKey] || 1;
-
-          // SP dibagi rata antar bahan dalam cell yang sama
-          const spPerBahan = spVal / bagi;
-          const beratBersih = berat1Sp * spPerBahan * jumlahPorsi;
-          const bdd = Number(gb.persen_bdd || 100);
-          const beratKotor = bdd > 0 ? Math.round(beratBersih / (bdd / 100)) : Math.round(beratBersih);
-
-          const key = gb.bahan_baku_id;
-          if (!agg[key]) {
-            agg[key] = {
-              bahan_baku_id: gb.bahan_baku_id,
-              bahan_nama: gb.bahan_nama,
-              kode: gb.kode || '',
-              satuan: gb.satuan,
-              persen_bdd: bdd,
-              harga_satuan: Number(gb.harga_satuan) || 0,
-              kategori_sp: gb.bb_kategori_sp,
-              berat_per_satuan: Number(gb.berat_per_satuan) || 0,
-              berat_1_sp: Number(gb.berat_1_sp) || 0,
-              total_qty: 0, total_porsi: 0, non_gram: false,
-            };
-          }
-          agg[key].total_qty += beratKotor;
-          if (!['gram','g','gr','kg'].includes((gb.satuan || 'g').toLowerCase())) {
-            agg[key].total_porsi += jumlahPorsi;
-            agg[key].non_gram = true;
+            agg[key].total_qty += beratKotor;
+            if (!['gram','g','gr','kg'].includes((br.satuan || 'g').toLowerCase())) {
+              agg[key].total_porsi += porsiCount;
+              agg[key].non_gram = true;
+            }
           }
         }
       }
@@ -413,22 +302,17 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
 
     for (const s of siklusList) {
       const jenjangList = getJenjangList(s.kategori_penerima);
-      const expandedJenjang = expandJenjang(jenjangList);
-      const penerimaCount = jenjangList.reduce((sum, k) => {
-        const jenjang = dbToDisplay[k] || k;
-        return sum + (pmMap[jenjang]?.total_penerima || 0);
-      }, 0) || Number(s.jumlah_porsi) || 0;
-      if (!penerimaCount) continue;
+      if (!jenjangList.length) continue;
 
-      // Load SP values for all expanded jenjang (MAX across combined)
-      const spSql = expandedJenjang.length === 1
-        ? 'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?'
-        : `SELECT kategori_sp, MAX(sp_value) AS sp_value FROM standar_sp WHERE jenjang IN (${expandedJenjang.map(() => '?').join(',')}) GROUP BY kategori_sp`;
-      const [spRows] = await db.query(spSql, expandedJenjang.length === 1 ? [expandedJenjang[0]] : expandedJenjang);
-      const spMap = {};
-      for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
+      // Daftar display jenjang yang match dengan PM
+      const matchingDisplay = [];
+      for (const k of jenjangList) {
+        const display = dbToDisplay[k] || k;
+        if (pmMap[display]?.total_penerima > 0) matchingDisplay.push(display);
+      }
+      if (!matchingDisplay.length) continue;
 
-      // --- A. Menu-based ingredients ---
+      // --- Load data siklus (sekali, di luar loop jenjang) ---
       const [items] = await db.query(
         `SELECT si.* FROM siklus_menu_item si
          WHERE si.siklus_id=? AND si.menu_id IS NOT NULL`,
@@ -436,86 +320,103 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
       );
       if (items.length) hasItems = true;
 
-      const menuPorsiMap = {};
-      for (const it of items) {
-        if (!menuPorsiMap[it.menu_id]) menuPorsiMap[it.menu_id] = 0;
-        menuPorsiMap[it.menu_id] += penerimaCount;
-      }
-
-      const menuIds = Object.keys(menuPorsiMap);
+      // Load menu_bahan per menu_id
+      const menuBahanById = {};
+      const menuIds = [...new Set(items.map(it => it.menu_id).filter(Boolean))];
       if (menuIds.length) {
         const mph = menuIds.map(() => '?').join(',');
-        const [bahanRows] = await db.query(        `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah, b.nama, b.satuan, b.harga_satuan,
-          b.persen_bdd, b.kategori_sp, b.berat_per_satuan, b.berat_1_sp,
-          COALESCE(b.buffer_persen, 10) AS buffer_persen
-         FROM menu_bahan mb
-         JOIN bahan_baku b ON b.id = mb.bahan_baku_id
-         WHERE mb.menu_id IN (${mph})`,
+        const [bahanRows] = await db.query(
+          `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah,
+                  b.nama, b.satuan, b.harga_satuan,
+                  b.persen_bdd, b.kategori_sp, b.berat_per_satuan, b.berat_1_sp,
+                  COALESCE(b.buffer_persen, 10) AS buffer_persen
+           FROM menu_bahan mb
+           JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+           WHERE mb.menu_id IN (${mph})`,
           menuIds
         );
-
         for (const br of bahanRows) {
-          const porsi = menuPorsiMap[br.menu_id] || 0;
-          if (!porsi) continue;
-          const spVal = br.kategori_sp ? (spMap[br.kategori_sp] || 0) : 0;
-          const actualSp = spVal || 1;
-          const beratBersih = Number(br.jumlah) * actualSp * porsi;
-          const nonGramSatuan = !['gram','g','gr','kg'].includes((br.satuan || 'g').toLowerCase());
-          const spRefBdd = spRefByName[(br.nama || '').trim().toLowerCase()];
-          const bdd = spRefBdd || Number(br.persen_bdd) || 100;
-          const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
-
-          const key = br.bahan_baku_id;
-          if (!agg[key]) {
-            agg[key] = { bahan_baku_id: br.bahan_baku_id, nama: br.nama, satuan: br.satuan || 'g', harga_satuan: Number(br.harga_satuan) || 0, berat_per_satuan: Number(br.berat_per_satuan) || 0, berat_1_sp: Number(br.berat_1_sp) || 0, kategori_sp: br.kategori_sp, buffer_persen: Number(br.buffer_persen) || 10, total_berat_kotor: 0, total_porsi: 0, non_gram: false };
-          }
-          agg[key].total_berat_kotor += beratKotor;
-          if (nonGramSatuan) {
-            agg[key].total_porsi += porsi;
-            agg[key].non_gram = true;
-          }
+          if (!menuBahanById[br.menu_id]) menuBahanById[br.menu_id] = [];
+          menuBahanById[br.menu_id].push(br);
         }
       }
 
-      // --- B. Grid-based ingredients ---
-      // Hanya dipakai jika siklus ini TIDAK punya menu (resep)
-      if (items.length === 0) {          const [gridBahanRaw] = await db.query(
-          `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
-                  bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp, bb.berat_per_satuan,
-                  bb.kategori_sp AS bb_kategori_sp,
-                  COALESCE(bb.buffer_persen, 10) AS buffer_persen
-           FROM siklus_menu_item_bahan smib
-           JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
-           WHERE smib.siklus_id=?`,
-          [s.id]
-        );
+      // Load grid items (cache untuk semua jenjang)
+      const [gridBahanRaw] = items.length === 0 ? await db.query(
+        `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
+                bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp, bb.berat_per_satuan,
+                bb.kategori_sp AS bb_kategori_sp,
+                COALESCE(bb.buffer_persen, 10) AS buffer_persen
+         FROM siklus_menu_item_bahan smib
+         JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
+         WHERE smib.siklus_id=?`,
+        [s.id]
+      ) : [[]];
+      const useGrid = gridBahanRaw.length > 0;
+      if (useGrid) hasItems = true;
 
-        if (gridBahanRaw.length) {
-          hasItems = true;
+      const gridCellCount = {};
+      if (useGrid) {
+        for (const gb of gridBahanRaw) {
+          const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
+          if (!gridCellCount[cellKey]) gridCellCount[cellKey] = 0;
+          gridCellCount[cellKey]++;
+        }
+      }
 
-          const spSql = expandedJenjang.length === 1
+      // ===================================================================
+      // LOOP PER JENJANG — hitung kebutuhan dengan SP spesifik masing-masing
+      // ===================================================================
+      for (const jDisplay of matchingDisplay) {
+        const porsiCount = pmMap[jDisplay].total_penerima;
+        if (!porsiCount) continue;
+
+        // Load SP spesifik untuk jenjang ini
+        const dbVariants = expandJenjang([jDisplay]);
+        const spMap = {};
+        if (dbVariants.length) {
+          const spSql = dbVariants.length === 1
             ? 'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?'
-            : `SELECT kategori_sp, MAX(sp_value) AS sp_value FROM standar_sp WHERE jenjang IN (${expandedJenjang.map(() => '?').join(',')}) GROUP BY kategori_sp`;
-          const [spRows] = await db.query(spSql, expandedJenjang.length === 1 ? [expandedJenjang[0]] : expandedJenjang);
-          const spMap = {};
+            : `SELECT kategori_sp, MAX(sp_value) AS sp_value FROM standar_sp WHERE jenjang IN (${dbVariants.map(() => '?').join(',')}) GROUP BY kategori_sp`;
+          const [spRows] = await db.query(spSql, dbVariants.length === 1 ? [dbVariants[0]] : dbVariants);
           for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
+        }
 
-          const cellCount = {};
-          for (const gb of gridBahanRaw) {
-            const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
-            if (!cellCount[cellKey]) cellCount[cellKey] = 0;
-            cellCount[cellKey]++;
+        // --- A. Menu-based ---
+        for (const it of items) {
+          const brList = menuBahanById[it.menu_id] || [];
+          for (const br of brList) {
+            const spVal = br.kategori_sp ? (spMap[br.kategori_sp] || 0) : 0;
+            const actualSp = spVal || 1;
+            const beratBersih = Number(br.jumlah) * actualSp * porsiCount;
+            const nonGramSatuan = !['gram','g','gr','kg'].includes((br.satuan || 'g').toLowerCase());
+            const spRefBdd = spRefByName[(br.nama || '').trim().toLowerCase()];
+            const bdd = spRefBdd || Number(br.persen_bdd) || 100;
+            const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
+
+            const key = br.bahan_baku_id;
+            if (!agg[key]) {
+              agg[key] = { bahan_baku_id: br.bahan_baku_id, nama: br.nama, satuan: br.satuan || 'g', harga_satuan: Number(br.harga_satuan) || 0, berat_per_satuan: Number(br.berat_per_satuan) || 0, berat_1_sp: Number(br.berat_1_sp) || 0, kategori_sp: br.kategori_sp, buffer_persen: Number(br.buffer_persen) || 10, total_berat_kotor: 0, total_porsi: 0, non_gram: false };
+            }
+            agg[key].total_berat_kotor += beratKotor;
+            if (nonGramSatuan) {
+              agg[key].total_porsi += porsiCount;
+              agg[key].non_gram = true;
+            }
           }
+        }
 
+        // --- B. Grid-based ---
+        if (useGrid) {
           for (const gb of gridBahanRaw) {
             const spVal = spMap[gb.kategori_sp] || 0;
             const berat1Sp = Number(gb.berat_1_sp || 0);
             if (spVal <= 0 || berat1Sp <= 0) continue;
 
             const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
-            const bagi = cellCount[cellKey] || 1;
+            const bagi = gridCellCount[cellKey] || 1;
             const spPerBahan = spVal / bagi;
-            const beratBersih = berat1Sp * spPerBahan * penerimaCount;
+            const beratBersih = berat1Sp * spPerBahan * porsiCount;
             const spRefBdd = spRefByName[(gb.nama || '').trim().toLowerCase()];
             const bdd = spRefBdd || Number(gb.persen_bdd || 100);
             const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
@@ -526,7 +427,7 @@ router.post('/purchase_order/create-pr-from-siklus', async (req, res) => {
             }
             agg[key].total_berat_kotor += beratKotor;
             if (!['gram','g','gr','kg'].includes((gb.satuan || 'g').toLowerCase())) {
-              agg[key].total_porsi += penerimaCount;
+              agg[key].total_porsi += porsiCount;
               agg[key].non_gram = true;
             }
           }
