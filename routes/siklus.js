@@ -138,6 +138,7 @@ router.get('/siklus', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -396,6 +397,7 @@ router.get('/siklus/laporan/bahan-per-jenjang', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -881,6 +883,7 @@ router.post('/siklus', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -956,6 +959,7 @@ router.put('/siklus/:id', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -1358,6 +1362,7 @@ router.get('/siklus/:id/laporan/produksi-harian', async (req, res) => {
     const JENJANG_DB_MAP = {
       'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
       'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
       'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
       'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
       'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -1562,6 +1567,7 @@ router.get('/siklus/laporan/siklus-menu', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -1986,6 +1992,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -2215,6 +2222,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -3025,6 +3033,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
     const JENJANG_DB_MAP = {
       'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
       'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
       'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
       'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
       'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
