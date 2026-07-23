@@ -999,10 +999,85 @@ async function openSiklusForm(editing) {
       if (isEdit) await api.put('/siklus/' + savedId, payload);
       else { var res = await api.post('/siklus', payload); savedId = res.id; }
       if (savedId) await api.post('/siklus/' + savedId + '/bahan-grid', { grid: gridPayload, resepMap });
-      showToast('Siklus menu berhasil ' + (isEdit ? 'diperbarui' : 'disimpan'), 'success');
+      if (!isEdit && savedId) {
+        showPanduanAhliGizi(savedId);
+      } else {
+        showToast('Siklus menu berhasil ' + (isEdit ? 'diperbarui' : 'disimpan'), 'success');
+      }
       renderSiklus();
     } catch (e) { showToast('Gagal: ' + (e.message || 'Unknown error'), 'error'); }
   };
+}
+
+/**
+ * Menampilkan dialog panduan langkah selanjutnya untuk Ahli Gizi
+ * setelah berhasil membuat siklus baru.
+ */
+function showPanduanAhliGizi(siklusId) {
+  var existing = document.getElementById('siklus-panduan-modal');
+  if (existing) existing.remove();
+
+  var m = document.createElement('div');
+  m.id = 'siklus-panduan-modal';
+  m.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm';
+
+  m.innerHTML = '<div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden transform transition-all duration-300 scale-100">' +
+    '<div class="bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-5 text-white">' +
+      '<div class="flex items-center gap-3">' +
+        '<div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">' +
+          '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+        '</div>' +
+        '<div>' +
+          '<h3 class="font-bold text-lg">✅ Siklus Menu Berhasil Dibuat!</h3>' +
+          '<p class="text-emerald-100 text-sm mt-0.5">Berikut langkah-langkah selanjutnya untuk Ahli Gizi:</p>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="px-6 py-5 space-y-4">' +
+      '<div class="flex items-start gap-3">' +
+        '<div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 text-sm font-bold">1</div>' +
+        '<div>' +
+          '<div class="font-semibold text-stone-800 text-sm">Isi Menu Setiap Hari</div>' +
+          '<div class="text-xs text-stone-500 mt-0.5">Klik pada siklus untuk mengisi menu masing-masing hari — pilih dari menu yang sudah tersedia atau buat bahan secara manual melalui grid picker.</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="flex items-start gap-3">' +
+        '<div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 text-sm font-bold">2</div>' +
+        '<div>' +
+          '<div class="font-semibold text-stone-800 text-sm">Periksa Kandungan Gizi</div>' +
+          '<div class="text-xs text-stone-500 mt-0.5">Gunakan fitur <b>Laporan + Banding SP</b> untuk memastikan setiap hari memenuhi target gizi (kalori, protein, karbohidrat, lemak, serat).</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="flex items-start gap-3">' +
+        '<div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 text-sm font-bold">3</div>' +
+        '<div>' +
+          '<div class="font-semibold text-stone-800 text-sm">Hitung Kebutuhan Bahan (SP)</div>' +
+          '<div class="text-xs text-stone-500 mt-0.5">Gunakan tombol <b>Hitung SP</b> untuk menghitung total kebutuhan bahan baku berdasarkan standar porsi (SP) dan BDD.</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="flex items-start gap-3">' +
+        '<div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 text-sm font-bold">4</div>' +
+        '<div>' +
+          '<div class="font-semibold text-stone-800 text-sm">Buat Produksi &amp; Budget</div>' +
+          '<div class="text-xs text-stone-500 mt-0.5">Setelah menu dan bahan terisi, buat produksi harian dan hitung budget untuk periode tertentu.</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-2">' +
+        '<div class="flex items-start gap-2 text-xs text-amber-800">' +
+          '<svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+          '<span>Semua fitur ini bisa diakses dari tombol aksi pada detail siklus. Klik siklus untuk memulai!</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="px-6 py-4 bg-stone-50 border-t border-stone-100 flex justify-end gap-2">' +
+      '<button onclick="document.getElementById(\'siklus-panduan-modal\').remove()" class="px-5 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm">' +
+        'Mengerti, Lanjutkan' +
+      '</button>' +
+    '</div>' +
+  '</div>';
+
+  document.body.appendChild(m);
+  m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
 }
 
 // Modal helper for grid picker
