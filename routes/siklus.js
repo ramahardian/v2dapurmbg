@@ -138,7 +138,6 @@ router.get('/siklus', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
-    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -150,7 +149,7 @@ router.get('/siklus', async (req, res) => {
   }
   const allJenjang = [...new Set(rows.flatMap(s => parseKategoriPenerima(s.kategori_penerima)).filter(Boolean))];
   // Expand display labels to DB variants
-  const allDbVals = [...new Set(allJenjang.flatMap(j => JENJANG_DB_MAP[j] || [j]))];
+  const allDbVals = [...new Set(allJenjang.flatMap(j => JENJANG_DB_MAP[j] || Object.entries(JENJANG_DB_MAP).find(([,v]) => v.includes(j))?.[1] || [j]))];
   const pmTotalMap = {};
   if (allDbVals.length) {
     const ph = allDbVals.map(() => '?').join(',');
@@ -397,7 +396,6 @@ router.get('/siklus/laporan/bahan-per-jenjang', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
-    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -883,14 +881,13 @@ router.post('/siklus', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
-    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
     'Balita': ['Balita'],
   };
   const jenjangList = parseKategoriPenerima(kategori_penerima);
-  const allDbVals = [...new Set(jenjangList.flatMap(j => JENJANG_DB_MAP[j] || [j]))];
+  const allDbVals = [...new Set(jenjangList.flatMap(j => JENJANG_DB_MAP[j] || Object.entries(JENJANG_DB_MAP).find(([,v]) => v.includes(j))?.[1] || [j]))];
   const porsiFromPm = allDbVals.length ? await (async () => {
     const ph = allDbVals.map(() => '?').join(',');
     const [[{total}]] = await db.query(
@@ -959,14 +956,13 @@ router.put('/siklus/:id', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
-    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
     'Balita': ['Balita'],
   };
   const jenjangList = parseKategoriPenerima(kategori_penerima);
-  const allDbVals = [...new Set(jenjangList.flatMap(j => JENJANG_DB_MAP[j] || [j]))];
+  const allDbVals = [...new Set(jenjangList.flatMap(j => JENJANG_DB_MAP[j] || Object.entries(JENJANG_DB_MAP).find(([,v]) => v.includes(j))?.[1] || [j]))];
   const porsiFromPm = allDbVals.length ? await (async () => {
     const ph = allDbVals.map(() => '?').join(',');
     const [[{total}]] = await db.query(
@@ -1362,14 +1358,13 @@ router.get('/siklus/:id/laporan/produksi-harian', async (req, res) => {
     const JENJANG_DB_MAP = {
       'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
       'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
-    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
       'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
       'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
       'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
       'Balita': ['Balita'],
     };
     const pmJenjangList = parseKategoriPenerima(siklus.kategori_penerima);
-    const allDbVals = [...new Set(pmJenjangList.flatMap(j => JENJANG_DB_MAP[j] || [j]))];
+    const allDbVals = [...new Set(pmJenjangList.flatMap(j => JENJANG_DB_MAP[j] || Object.entries(JENJANG_DB_MAP).find(([,v]) => v.includes(j))?.[1] || [j]))];
     if (allDbVals.length) {
       const ph = allDbVals.map(() => '?').join(',');
       const [[pmRow]] = await db.query(
@@ -1567,7 +1562,6 @@ router.get('/siklus/laporan/siklus-menu', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
-    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -1992,7 +1986,6 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
-    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -2222,7 +2215,6 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
   const JENJANG_DB_MAP = {
     'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
     'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
-    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
     'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
     'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
     'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
@@ -3033,7 +3025,6 @@ router.post('/siklus/buat-pr', async (req, res) => {
     const JENJANG_DB_MAP = {
       'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
       'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
-    'SD 1-3': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
       'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
       'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
       'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
