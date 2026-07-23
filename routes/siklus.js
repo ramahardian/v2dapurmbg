@@ -2132,10 +2132,11 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
           const namaLower = b.nama.trim().toLowerCase();
           const spRef = spRefByName[namaLower];
           const persenBdd = spRef ? spRef.bdd_persen : Number(b.persen_bdd || 100);
-          const beratBersih = Number(b.jumlah || 0);
+          const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || null) : null;
+          const actualSp = spValue !== null ? spValue : 1;
+          const beratBersih = Number(b.jumlah || 0) * actualSp;
           const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
           const kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
-          const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || null) : null;
 
           let namaDisplay = b.nama;
           if (spValue !== null) {
