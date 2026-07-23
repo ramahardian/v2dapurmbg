@@ -878,12 +878,21 @@ router.post('/siklus', async (req, res) => {
   if (existing.length) return res.status(409).json({ error: 'Siklus dengan nama "' + nama.trim() + '" sudah ada' });
   
   // Auto-hitung jumlah_porsi dari PM berdasarkan jenjang
+  const JENJANG_DB_MAP = {
+    'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
+    'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
+    'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
+    'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
+    'Balita': ['Balita'],
+  };
   const jenjangList = parseKategoriPenerima(kategori_penerima);
-  const porsiFromPm = jenjangList.length ? await (async () => {
-    const ph = jenjangList.map(() => '?').join(',');
+  const allDbVals = [...new Set(jenjangList.flatMap(j => JENJANG_DB_MAP[j] || [j]))];
+  const porsiFromPm = allDbVals.length ? await (async () => {
+    const ph = allDbVals.map(() => '?').join(',');
     const [[{total}]] = await db.query(
       `SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})`,
-      [req.user.tenant_id, ...jenjangList]
+      [req.user.tenant_id, ...allDbVals]
     );
     return Number(total) || 0;
   })() : 0;
@@ -944,12 +953,21 @@ router.put('/siklus/:id', async (req, res) => {
   }
   
   // Auto-hitung jumlah_porsi dari PM berdasarkan jenjang
+  const JENJANG_DB_MAP = {
+    'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
+    'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
+    'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
+    'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
+    'Balita': ['Balita'],
+  };
   const jenjangList = parseKategoriPenerima(kategori_penerima);
-  const porsiFromPm = jenjangList.length ? await (async () => {
-    const ph = jenjangList.map(() => '?').join(',');
+  const allDbVals = [...new Set(jenjangList.flatMap(j => JENJANG_DB_MAP[j] || [j]))];
+  const porsiFromPm = allDbVals.length ? await (async () => {
+    const ph = allDbVals.map(() => '?').join(',');
     const [[{total}]] = await db.query(
       `SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})`,
-      [req.user.tenant_id, ...jenjangList]
+      [req.user.tenant_id, ...allDbVals]
     );
     return Number(total) || 0;
   })() : 0;
