@@ -135,17 +135,31 @@ router.get('/siklus', async (req, res) => {
   for (const r of itemCounts) countMap[r.siklus_id] = r;
 
   // Batch-load PM totals for all distinct jenjang
+  const JENJANG_DB_MAP = {
+    'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
+    'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+    'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
+    'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
+    'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
+    'Balita': ['Balita'],
+  };
+  const dbToDisplay = {};
+  for (const [display, dbVals] of Object.entries(JENJANG_DB_MAP)) {
+    for (const dv of dbVals) dbToDisplay[dv] = display;
+  }
   const allJenjang = [...new Set(rows.flatMap(s => parseKategoriPenerima(s.kategori_penerima)).filter(Boolean))];
+  // Expand display labels to DB variants
+  const allDbVals = [...new Set(allJenjang.flatMap(j => JENJANG_DB_MAP[j] || [j]))];
   const pmTotalMap = {};
-  if (allJenjang.length) {
-    const ph = allJenjang.map(() => '?').join(',');
+  if (allDbVals.length) {
+    const ph = allDbVals.map(() => '?').join(',');
     const [pmRows] = await db.query(
       `SELECT kategori_penerima, COALESCE(SUM(paket_besar + paket_kecil),0) AS total
        FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})
        GROUP BY kategori_penerima`,
-      [req.user.tenant_id, ...allJenjang]
+      [req.user.tenant_id, ...allDbVals]
     );
-    for (const p of pmRows) pmTotalMap[p.kategori_penerima] = Number(p.total);
+    for (const p of pmRows) pmTotalMap[dbToDisplay[p.kategori_penerima] || p.kategori_penerima] = Number(p.total);
   }
 
   for (const s of rows) {
