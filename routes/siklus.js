@@ -2365,10 +2365,10 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
   }
 
   // 6. Tentukan filterStart — jika tidak ada tanggal_mulai dari user, pakai min(siklus.tanggal_mulai)
-  //    atau today sebagai fallback
+  //    atau created_at siklus sebagai fallback
   if (!tanggalMulai) {
     const tanggalList = activeSiklus
-      .map(s => s.tanggal_mulai)
+      .map(s => s.tanggal_mulai || (s.created_at ? new Date(s.created_at).toISOString().slice(0, 10) : null))
       .filter(Boolean)
       .sort();
     tanggalMulai = tanggalList.length > 0 ? tanggalList[0] : new Date().toISOString().slice(0, 10);
