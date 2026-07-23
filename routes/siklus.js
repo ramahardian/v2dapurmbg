@@ -1355,12 +1355,21 @@ router.get('/siklus/:id/laporan/produksi-harian', async (req, res) => {
 
     // 5. Penerima Manfaat — total untuk semua jenjang siklus
     let jumlahPorsi = 0;
+    const JENJANG_DB_MAP = {
+      'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
+      'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
+      'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
+      'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
+      'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
+      'Balita': ['Balita'],
+    };
     const pmJenjangList = parseKategoriPenerima(siklus.kategori_penerima);
-    if (pmJenjangList.length) {
-      const ph = pmJenjangList.map(() => '?').join(',');
+    const allDbVals = [...new Set(pmJenjangList.flatMap(j => JENJANG_DB_MAP[j] || [j]))];
+    if (allDbVals.length) {
+      const ph = allDbVals.map(() => '?').join(',');
       const [[pmRow]] = await db.query(
         `SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})`,
-        [req.user.tenant_id, ...pmJenjangList]
+        [req.user.tenant_id, ...allDbVals]
       );
       jumlahPorsi = Number(pmRow.total) || 0;
     }
