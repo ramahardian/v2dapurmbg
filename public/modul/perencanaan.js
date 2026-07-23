@@ -293,10 +293,10 @@ function exportPncExcel(jenjang) {
         if (!day.bahan || !day.bahan.length) {
           rows.push([menuLabel, '', '', '', '', '', '']);
         } else {
-          rows.push([menuLabel, day.bahan[0].nama_display, day.bahan[0].berat_bersih, day.bahan[0].persen_bdd + '%', day.bahan[0].berat_kotor, jd.jumlah_siswa, day.bahan[0].kebutuhan_kg]);
+          rows.push([menuLabel, day.bahan[0].nama_display, fmtPncNum(day.bahan[0].berat_bersih), day.bahan[0].persen_bdd + '%', fmtPncNum(day.bahan[0].berat_kotor), fmtPncNum(jd.jumlah_siswa), fmtPncNum(day.bahan[0].kebutuhan_kg)]);
           for (var i = 1; i < day.bahan.length; i++) {
             var b = day.bahan[i];
-            rows.push(['', b.nama_display, b.berat_bersih, b.persen_bdd + '%', b.berat_kotor, jd.jumlah_siswa, b.kebutuhan_kg]);
+            rows.push(['', b.nama_display, fmtPncNum(b.berat_bersih), b.persen_bdd + '%', fmtPncNum(b.berat_kotor), fmtPncNum(jd.jumlah_siswa), fmtPncNum(b.kebutuhan_kg)]);
           }
         }
       }
@@ -331,7 +331,7 @@ function exportPncPdf(jenjang) {
         if (day.bahan && day.bahan.length) {
           for (var i = 0; i < day.bahan.length; i++) {
             var b = day.bahan[i];
-            tableHtml += '<tr><td style="padding:4px 10px">' + b.nama_display + '</td><td style="padding:4px 10px;text-align:right">' + b.berat_bersih + '</td><td style="padding:4px 10px;text-align:right">' + b.persen_bdd + '%</td><td style="padding:4px 10px;text-align:right">' + b.berat_kotor + '</td><td style="padding:4px 10px;text-align:right">' + jd.jumlah_siswa + '</td><td style="padding:4px 10px;text-align:right">' + b.kebutuhan_kg + '</td></tr>';
+            tableHtml += '<tr><td style="padding:4px 10px">' + b.nama_display + '</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(b.berat_bersih) + '</td><td style="padding:4px 10px;text-align:right">' + b.persen_bdd + '%</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(b.berat_kotor) + '</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(jd.jumlah_siswa) + '</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(b.kebutuhan_kg) + '</td></tr>';
           }
         }
       }

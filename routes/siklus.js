@@ -2093,6 +2093,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
             const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || null) : null;
             var beratBersih = spValue !== null ? (Number(b.berat_1_sp || 0) * spValue) : 0;
             if (beratBersih === 0 && spRef && spRef.berat_bersih > 0) beratBersih = spRef.berat_bersih;
+            beratBersih = Math.round(beratBersih * 100) / 100;
             const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
             const kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
 
@@ -2138,6 +2139,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
           const rawJumlah = Number(b.jumlah || 0);
           var beratBersih = rawJumlah > 0 ? rawJumlah * actualSp : (spValue !== null ? Number(b.berat_1_sp || 0) * spValue : 0);
           if (beratBersih === 0 && spRef && spRef.berat_bersih > 0) beratBersih = spRef.berat_bersih;
+          beratBersih = Math.round(beratBersih * 100) / 100;
           const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
           const kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
 
