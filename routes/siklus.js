@@ -3075,11 +3075,20 @@ router.post('/siklus/buat-pr', async (req, res) => {
     const agg = {};
     let hasItems = false;
 
+    function parseJenjang(kp) {
+      if (!kp) return [];
+      try { const p = JSON.parse(kp); if (Array.isArray(p)) return p; } catch {}
+      return [kp];
+    }
+
     for (const s of siklusList) {
       const siklusId = s.id;
-      const kategoriPenerima = s.kategori_penerima || '';
-      const displayJenjang = dbToDisplay[kategoriPenerima] || kategoriPenerima;
-      const penerimaCount = Number(s.jumlah_porsi) || pmMap[displayJenjang]?.total_penerima || 0;
+      const jenjangList = parseJenjang(s.kategori_penerima);
+      const pmRealtime = jenjangList.reduce((sum, k) => {
+        const display = dbToDisplay[k] || k;
+        return sum + (pmMap[display]?.total_penerima || 0);
+      }, 0);
+      const penerimaCount = pmRealtime || Number(s.jumlah_porsi) || 0;
       if (!penerimaCount) continue;
 
       // PR mengikuti durasi siklus (tanpa ekstrapolasi bulanan)
@@ -3097,7 +3106,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const menuPorsiMap = {};
       for (const it of items) {
         if (!menuPorsiMap[it.menu_id]) menuPorsiMap[it.menu_id] = 0;
-        menuPorsiMap[it.menu_id] += penerimaCount;
+        menuPorsiMap[it.menu_id] += Number(it.jumlah_porsi) || penerimaCount;
       }
 
       // Hitung jumlah hari unik yang di-filter
@@ -3151,12 +3160,16 @@ router.post('/siklus/buat-pr', async (req, res) => {
          if (gridBahanRaw.length) {
            hasItems = true;
 
+           // Ambil SP untuk semua jenjang dalam siklus
            const [spRows] = await db.query(
-             'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
-             [kategoriPenerima]
+             `SELECT jenjang, kategori_sp, sp_value FROM standar_sp WHERE jenjang IN (${jenjangList.map(() => '?').join(',')})`,
+             jenjangList
            );
-          const spMap = {};
-          for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
+          const spByJenjang = {};
+          for (const sr of spRows) {
+            if (!spByJenjang[sr.jenjang]) spByJenjang[sr.jenjang] = {};
+            spByJenjang[sr.jenjang][sr.kategori_sp] = Number(sr.sp_value);
+          }
 
           const cellCount = {};
           for (const gb of gridBahanRaw) {
@@ -3166,7 +3179,19 @@ router.post('/siklus/buat-pr', async (req, res) => {
           }
 
           for (const gb of gridBahanRaw) {
-            const spVal = spMap[gb.kategori_sp] || 0;
+            // Weighted SP dari semua jenjang
+            let spVal = 0;
+            let totalPm = 0;
+            for (const j of jenjangList) {
+              const sv = spByJenjang[j]?.[gb.kategori_sp] || 0;
+              const display = dbToDisplay[j] || j;
+              const pmCount = pmMap[display]?.total_penerima || 0;
+              if (sv > 0 && pmCount > 0) {
+                spVal += sv * pmCount;
+                totalPm += pmCount;
+              }
+            }
+            if (totalPm > 0) spVal = spVal / totalPm;
             const berat1Sp = Number(gb.berat_1_sp || 0);
             const jumlahPorsi = penerimaCount;
             if (spVal <= 0 || berat1Sp <= 0 || jumlahPorsi <= 0) continue;

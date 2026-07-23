@@ -61,10 +61,11 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
     const siklusPmMap = {};
     for (const s of siklusList) {
       const jenjangList = getJenjangList(s.kategori_penerima);
-      siklusPmMap[s.id] = Number(s.jumlah_porsi) || jenjangList.reduce((sum, k) => {
+      const pmRealtime = jenjangList.reduce((sum, k) => {
         const display = dbToDisplay[k] || k;
         return sum + (pmMap[display]?.total_penerima || 0);
       }, 0);
+      siklusPmMap[s.id] = pmRealtime || Number(s.jumlah_porsi) || 0;
     }
 
     // ====================================================================
@@ -114,7 +115,8 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
       const menuPorsiMap = {};
       for (const r of dayRows) {
         if (!menuPorsiMap[r.menu_id]) menuPorsiMap[r.menu_id] = { total_porsi: 0 };
-        menuPorsiMap[r.menu_id].total_porsi += r.jumlah_porsi;
+        const porsiItem = r.jumlah_porsi || siklusPmMap[r.siklus_id] || 0;
+        menuPorsiMap[r.menu_id].total_porsi += porsiItem;
       }
 
       for (const br of bahanRows) {
@@ -160,8 +162,9 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
         // Kumpulkan jenjang unik untuk ambil standar SP
         const jenjangSet = new Set();
         for (const gb of gridBahan) {
-          const j = (gb.kategori_penerima || '').trim();
-          if (j) jenjangSet.add(j);
+          const raw = (gb.kategori_penerima || '').trim();
+          const parsed = getJenjangList(raw);
+          for (const j of parsed) if (j) jenjangSet.add(j);
         }
 
         // Ambil standar SP untuk semua jenjang terkait
@@ -187,9 +190,20 @@ router.post('/purchase_order/generate-from-siklus', async (req, res) => {
 
         // Hitung qty per bahan grid
         for (const gb of gridBahan) {
-          const jenjang = (gb.kategori_penerima || '').trim();
-          const spValues = spMap[jenjang] || {};
-          const spVal = spValues[gb.kategori_sp] || 0;
+          const rawJenjang = (gb.kategori_penerima || '').trim();
+          const jenjangList = getJenjangList(rawJenjang);
+          // Weighted SP — rata-rata tertimbang dari semua jenjang siklus
+          let spVal = 0;
+          let totalPm = 0;
+          for (const j of jenjangList) {
+            const sv = spMap[j]?.[gb.kategori_sp] || 0;
+            const pmCount = pmMap[dbToDisplay[j] || j]?.total_penerima || 0;
+            if (sv > 0 && pmCount > 0) {
+              spVal += sv * pmCount;
+              totalPm += pmCount;
+            }
+          }
+          if (totalPm > 0) spVal = spVal / totalPm;
           const berat1Sp = Number(gb.berat_1_sp || 0);
           const jumlahPorsi = siklusPmMap[gb.siklus_id] || 0;
           if (spVal <= 0 || berat1Sp <= 0 || jumlahPorsi <= 0) continue;
