@@ -73,8 +73,7 @@ async function loadPerencanaanData(siklusId) {
     }
     html += '</div>';
 
-    html += '<button onclick="exportPncExcel()" class="px-2.5 py-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1 text-xs" title="Export Excel"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> XLSX</button>';
-    html += '<button onclick="exportPncPdf()" class="px-2.5 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-1 text-xs" title="Export PDF"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> PDF</button>';
+    html += '<button onclick="exportPncExcel()" class="px-2.5 py-1.5 rounded bg-stone-600 text-white hover:bg-stone-700 transition-colors flex items-center gap-1 text-xs" title="Export All Excel"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export All XLSX</button>';
     html += '<div class="text-xs text-stone-400">' + data.length + ' jenjang</div>';
     html += '</div>';
 
@@ -145,6 +144,8 @@ function renderPncJenjangSection(jd, idx) {
   html += '<span class="ml-3 text-sm font-normal">Jumlah Siswa: <strong>' + fmtPncNum(jd.jumlah_siswa) + '</strong> orang</span></div>';
   html += '<div class="flex items-center gap-2 text-xs">';
   html += '<span>' + jd.siklus.length + ' siklus</span>';
+  html += '<button onclick="exportPncExcel(\'' + jd.jenjang.replace(/'/g, "\\'") + '\')" class="px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1 text-xs" title="Export Excel"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> XLSX</button>';
+  html += '<button onclick="exportPncPdf(\'' + jd.jenjang.replace(/'/g, "\\'") + '\')" class="px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-1 text-xs" title="Export PDF"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> PDF</button>';
   html += '</div>';
   html += '</div>';
 
@@ -258,19 +259,23 @@ function fmtPncNum(v) {
 
 // ===== Export Functions =====
 
-function collectPncExportData() {
+function collectPncExportData(jenjangFilter) {
   if (!_pncAllJenjangData || !_pncAllJenjangData.length) return [];
   var result = [];
   for (var j = 0; j < _pncAllJenjangData.length; j++) {
     var jd = _pncAllJenjangData[j];
-    if (_pncSelectedJenjang !== 'SEMUA' && jd.jenjang !== _pncSelectedJenjang) continue;
-    result.push(jd);
+    if (jenjangFilter) {
+      if (jd.jenjang === jenjangFilter) result.push(jd);
+    } else {
+      if (_pncSelectedJenjang !== 'SEMUA' && jd.jenjang !== _pncSelectedJenjang) continue;
+      result.push(jd);
+    }
   }
   return result;
 }
 
-function exportPncExcel() {
-  var exportData = collectPncExportData();
+function exportPncExcel(jenjang) {
+  var exportData = collectPncExportData(jenjang || undefined);
   if (!exportData.length) { showAlert('Tidak ada data', 'error'); return; }
 
   var rows = [];
@@ -310,8 +315,8 @@ function exportPncExcel() {
   XLSX.writeFile(wb, 'Perencanaan Kebutuhan Pangan.xlsx');
 }
 
-function exportPncPdf() {
-  var exportData = collectPncExportData();
+function exportPncPdf(jenjang) {
+  var exportData = collectPncExportData(jenjang || undefined);
   if (!exportData.length) { showAlert('Tidak ada data', 'error'); return; }
 
   var tableHtml = '';
