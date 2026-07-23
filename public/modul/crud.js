@@ -186,16 +186,16 @@ function openForm(cfg, editing) {
     body.innerHTML = cfg.fields.map(f => renderField(f, editing)).join('');
   }
 
-  // AI button for nutrition fields (sp-referensi)
-  var aiFields = cfg.fields.filter(function(f) { return f.ai; });
-  if (aiFields.length) {
-    var aiBtn = document.createElement('div');
-    aiBtn.className = 'flex items-center justify-between pt-2';
-    aiBtn.innerHTML = '<div class="text-xs text-stone-400">Isi gizi dengan AI berdasarkan nama bahan</div>' +
-      '<button type="button" onclick="fillAiNutrisiSp()" class="px-4 py-2 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100">Isi AI</button>';
-    body.appendChild(aiBtn);
-    window._aiFields = aiFields;
-  }
+  // AI button for nutrition fields (sp-referensi) — disabled temporarily
+  // var aiFields = cfg.fields.filter(function(f) { return f.ai; });
+  // if (aiFields.length) {
+  //   var aiBtn = document.createElement('div');
+  //   aiBtn.className = 'flex items-center justify-between pt-2';
+  //   aiBtn.innerHTML = '<div class="text-xs text-stone-400">Isi gizi dengan AI berdasarkan nama bahan</div>' +
+  //     '<button type="button" onclick="fillAiNutrisiSp()" class="px-4 py-2 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100">Isi AI</button>';
+  //   body.appendChild(aiBtn);
+  //   window._aiFields = aiFields;
+  // }
 
   apiSelects.forEach(f => {
     const sel = document.getElementById('f-' + f.k);

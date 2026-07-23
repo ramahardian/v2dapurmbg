@@ -136,7 +136,7 @@ distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', ic
   divisi: { title: 'Divisi', sub: 'Master data divisi/departemen', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
     crud: { endpoint: '/jabatan', fields: [
       { k: 'name', l: 'Nama Divisi', req: true },
-      { k: 'description', l: 'Deskripsi', type: 'textarea', action: { label: 'Tanya AI', onclick: 'tanyaAi("description","name")' } },
+      { k: 'description', l: 'Deskripsi', type: 'textarea' },
       { k: 'shift_id', l: 'Shift Default', type: 'select-api', source: '/shift', valueField: 'id', labelFormat: '{nama} ({jam_masuk} - {jam_keluar})' },
     ], cols: ['name', 'description'] }
   },

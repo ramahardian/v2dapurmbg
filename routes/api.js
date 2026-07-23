@@ -24,7 +24,7 @@ const stockRoutes = require('./stock');
 const dashboardRoutes = require('./dashboard');
 
 // Mengimpor router fitur integrasi AI (saran menu, nutrisi, dll.)
-const aiRoutes = require('./aiRoutes');
+// const aiRoutes = require('./aiRoutes'); // AI disabled temporarily
 
 // Mengimpor router laporan operasional
 const laporanRoutes = require('./laporan');
@@ -84,7 +84,7 @@ router.use(stockRoutes);
 router.use(dashboardRoutes);
 
 // Mendaftarkan router fitur AI (URL root /)
-router.use(aiRoutes);
+// router.use(aiRoutes); // AI disabled temporarily
 
 // Mendaftarkan router laporan (URL root /)
 router.use(laporanRoutes);

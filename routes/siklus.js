@@ -2404,9 +2404,12 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       if (!siklusData) continue;
 
       // Tentukan hari_ke (hk) berdasarkan tanggal aktual siklus.
-      // Kalau siklus tidak punya tanggal_mulai, fallback ke filterStart
+      // Kalau siklus tidak punya tanggal_mulai, fallback ke created_at
       // supaya pemfilteran tanggal tetap bermakna.
-      const siklusStart = s.tanggal_mulai ? new Date(s.tanggal_mulai) : new Date(filterStart);
+      const startDateStr = s.tanggal_mulai
+        || (s.created_at ? s.created_at.slice(0, 10) : null)
+        || filterStart.toISOString().slice(0, 10);
+      const siklusStart = new Date(startDateStr);
       const diffTime = currentDate.getTime() - siklusStart.getTime();
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       const hk = diffDays + 1;
