@@ -2407,7 +2407,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       // Kalau siklus tidak punya tanggal_mulai, fallback ke created_at
       // supaya pemfilteran tanggal tetap bermakna.
       const startDateStr = s.tanggal_mulai
-        || (s.created_at ? s.created_at.slice(0, 10) : null)
+        || (s.created_at ? new Date(s.created_at).toISOString().slice(0, 10) : null)
         || filterStart.toISOString().slice(0, 10);
       const siklusStart = new Date(startDateStr);
       const diffTime = currentDate.getTime() - siklusStart.getTime();
