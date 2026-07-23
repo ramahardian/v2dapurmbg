@@ -2091,7 +2091,8 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
             const spRef = spRefByName[namaLower];
             const persenBdd = spRef ? spRef.bdd_persen : Number(b.persen_bdd || 100);
             const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || null) : null;
-            const beratBersih = spValue !== null ? (Number(b.berat_1_sp || 0) * spValue) : 0;
+            var beratBersih = spValue !== null ? (Number(b.berat_1_sp || 0) * spValue) : 0;
+            if (beratBersih === 0 && spRef && spRef.berat_bersih > 0) beratBersih = spRef.berat_bersih;
             const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
             const kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
 
@@ -2135,7 +2136,8 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
           const spValue = b.kategori_sp ? (jenjangSp[b.kategori_sp] || null) : null;
           const actualSp = spValue !== null ? spValue : 1;
           const rawJumlah = Number(b.jumlah || 0);
-          const beratBersih = rawJumlah > 0 ? rawJumlah * actualSp : (spValue !== null ? Number(b.berat_1_sp || 0) * spValue : 0);
+          var beratBersih = rawJumlah > 0 ? rawJumlah * actualSp : (spValue !== null ? Number(b.berat_1_sp || 0) * spValue : 0);
+          if (beratBersih === 0 && spRef && spRef.berat_bersih > 0) beratBersih = spRef.berat_bersih;
           const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100) * 100) / 100 : beratBersih;
           const kebutuhanKg = penerimaCount > 0 ? Math.round((beratKotor * penerimaCount / 1000) * 100) / 100 : 0;
 
