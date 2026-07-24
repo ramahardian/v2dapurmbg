@@ -24,7 +24,7 @@ router.get('/siklus/:id/bahan-grid', async (req, res) => {
     if (!byDay[r.hari_ke]) byDay[r.hari_ke] = {};
     if (!byDay[r.hari_ke][r.kategori_sp]) byDay[r.hari_ke][r.kategori_sp] = [];
     byDay[r.hari_ke][r.kategori_sp].push({
-      id: r.id,
+      id: r.bahan_baku_id,
       bahan_baku_id: r.bahan_baku_id,
       nama: r.bahan_nama,
       kategori_sp: r.kategori_sp,
