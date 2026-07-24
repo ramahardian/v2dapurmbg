@@ -10,6 +10,7 @@ const BAHAN_BAKU_CRUD_BASE = {
     { k: 'kode', l: 'Kode SKU', group: 'info' },
     { k: 'nama', l: 'Nama Bahan', req: true, group: 'info' },
     { k: 'kategori', l: 'Kategori', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Bumbu','Lainnya'], group: 'info' },
+    { k: 'kategori_sp', l: 'Kategori SP', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'], desc: 'Kategori untuk perhitungan Standar Porsi (SP)', group: 'info' },
     { k: 'satuan', l: 'Satuan (kg/gr/liter)', req: true, group: 'info' },
     { k: 'harga_satuan', l: 'Harga Satuan (IDR)', type: 'number', fmt: 'idr', group: 'harga_stok' },
     { k: 'stok_saat_ini', l: 'Stok Saat Ini', type: 'number', fmt: 'num', group: 'harga_stok' },

@@ -337,7 +337,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
 
   if (!selesai) {
     const d = new Date(mulai);
-    d.setDate(d.getDate() + 6); // default 1 minggu (7 hari)
+    d.setDate(d.getDate() + 29); // default 1 bulan (30 hari)
     selesai = d.toISOString().split('T')[0];
   }
 
@@ -363,7 +363,8 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
         siklusStart = startDate;
       }
       const diffDays = Math.floor((curDate - siklusStart) / (1000 * 60 * 60 * 24));
-      const hariKe = (diffDays % (s.total_hari || 7)) + 1;
+      const totalHari = s.total_hari || 7;
+      const hariKe = ((diffDays % totalHari) + totalHari) % totalHari + 1;
 
       const items = (itemsBySiklus[s.id] || []).filter(it => it.hari_ke === hariKe);
       if (!items.length) continue;
