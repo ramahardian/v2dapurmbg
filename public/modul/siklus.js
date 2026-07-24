@@ -53,9 +53,7 @@ function renderKategoriBreakdown(groups) {
   }
   html += '</div>';
   return html;
-}
-
-// Convert grid bahan data { Karbohidrat: [{id, nama}], ... } to format renderKategoriBreakdown expects
+}  // Convert grid bahan data { Karbohidrat: [{id, nama}], ... } to format renderKategoriBreakdown expects
 function gridBahanToGroups(gridBahan) {
   if (!gridBahan) return null;
   const groups = {};
@@ -68,6 +66,25 @@ function gridBahanToGroups(gridBahan) {
   }
   if (!total) return null;
   return groups;
+}
+
+// ===== Preload bahan by SP for grid picker =====
+var _bahanBySpCache = null;
+
+async function preloadBahanBySp() {
+  if (_bahanBySpCache) return _bahanBySpCache;
+  try {
+    const res = await api.get('/bahan/by-sp');
+    _bahanBySpCache = res;
+    return res;
+  } catch (e) {
+    console.error('Gagal preload bahan by SP:', e);
+    return { byKat: {}, kategori_order: KAT_SP_ORDER };
+  }
+}
+
+function getCachedBahanBySp() {
+  return _bahanBySpCache || { byKat: {}, kategori_order: KAT_SP_ORDER };
 }
 
 async function renderSiklus() {
@@ -223,10 +240,12 @@ async function loadSiklusDetail(id) {
   if (needsGrid) {
     try {
       const gridRes = await api.get('/siklus/' + id + '/bahan-grid');
-      const gridDays = gridRes && gridRes.days;
-      if (gridDays) {
+      const byDay = gridRes && gridRes.byDay;
+      if (byDay) {
         bahanGrid = {};
-        for (const d of gridDays) bahanGrid[d.hari_ke] = d.bahan;
+        for (const [hariKe, categories] of Object.entries(byDay)) {
+          bahanGrid[Number(hariKe)] = categories;
+        }
       }
     } catch (e) { /* ignore */ }
   }
@@ -408,10 +427,12 @@ async function renderSiklusLaporan(id) {
   if (needsGrid) {
     try {
       const gridRes = await api.get('/siklus/' + id + '/bahan-grid');
-      const gridDays = gridRes && gridRes.days;
-      if (gridDays) {
+      const byDay = gridRes && gridRes.byDay;
+      if (byDay) {
         bahanGrid = {};
-        for (const d of gridDays) bahanGrid[d.hari_ke] = d.bahan;
+        for (const [hariKe, categories] of Object.entries(byDay)) {
+          bahanGrid[Number(hariKe)] = categories;
+        }
       }
     } catch (e) { /* ignore */ }
   }
@@ -819,7 +840,12 @@ async function openSiklusForm(editing) {
   if (isEdit && s.id) {
     try {
       const gridRes = await api.get('/siklus/' + s.id + '/bahan-grid');
-      for (const d of (gridRes.days || [])) existingGrid[d.hari_ke] = d;
+      const byDay = gridRes && gridRes.byDay;
+      if (byDay) {
+        for (const [hariKe, categories] of Object.entries(byDay)) {
+          existingGrid[Number(hariKe)] = { hari_ke: Number(hariKe), bahan: categories };
+        }
+      }
     } catch {}
   }
 
