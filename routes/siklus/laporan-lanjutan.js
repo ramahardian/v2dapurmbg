@@ -301,6 +301,22 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
   const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
   const gridBahanBySiklus = await batchLoadGridBahanBySiklus(siklusIds);
 
+  // ── Load overrides for perencanaan ──
+  let ovIndex = {};
+  try {
+    const [overrides] = await db.query(
+      `SELECT ov.*, b.nama as new_nama
+       FROM perencanaan_override ov
+       LEFT JOIN bahan_baku b ON b.id = ov.new_bahan_baku_id
+       WHERE ov.tenant_id=?`,
+      [req.user.tenant_id]
+    );
+    for (const ov of overrides) {
+      const key = ov.siklus_id + '::' + ov.hari_ke + '::' + ov.jenjang + '::' + (ov.original_bahan_baku_id || '');
+      ovIndex[key] = ov;
+    }
+  } catch (e) { /* table might not exist */ }
+
   // Determine date range
   let mulai = tanggal_mulai || null;
   let selesai = tanggal_selesai || null;
@@ -359,16 +375,33 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
             for (const b of activeJenjang) {
               const jmlPm = pmByDisplay[b] || Number(s.jumlah_porsi) || 0;
               if (!jmlPm) continue;
-              const ref = spRefMap[br.nama] || {};
-              const persenBdd = ref.bdd_persen || Number(br.persen_bdd) || 100;
-              const beratPerSiswa = Number(br.jumlah);
+
+              // Check override
+              const ovKey = s.id + '::' + hariKe + '::' + b + '::' + (br.bahan_baku_id || '');
+              const ov = ovIndex[ovKey];
+
+              let persenBdd, beratPerSiswa, namaDisplay;
+              if (ov) {
+                persenBdd = Number(ov.persen_bdd);
+                beratPerSiswa = Number(ov.jumlah);
+                namaDisplay = ov.new_nama || br.nama;
+              } else {
+                const ref = spRefMap[br.nama] || {};
+                persenBdd = ref.bdd_persen || Number(br.persen_bdd) || 100;
+                beratPerSiswa = Number(br.jumlah);
+                namaDisplay = br.nama;
+              }
+
               const beratKotorPerSiswa = hitungBDD(beratPerSiswa, persenBdd);
               const kebutuhanKg = Math.round((beratKotorPerSiswa * jmlPm / 1000) * 100) / 100;
-              if (!bahanMap[br.nama]) bahanMap[br.nama] = { nama: br.nama, nama_display: br.nama, per_jenjang: {} };
-              if (!bahanMap[br.nama].per_jenjang[b]) {
-                bahanMap[br.nama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100 };
+
+              // Use namaDisplay as key so overridden items don't mix with originals in the same day
+              const keyNama = ov ? (namaDisplay + '__ov') : br.nama;
+              if (!bahanMap[keyNama]) bahanMap[keyNama] = { nama: namaDisplay, nama_display: namaDisplay, per_jenjang: {} };
+              if (!bahanMap[keyNama].per_jenjang[b]) {
+                bahanMap[keyNama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100 };
               }
-              bahanMap[br.nama].per_jenjang[b].kebutuhan_kg += kebutuhanKg;
+              bahanMap[keyNama].per_jenjang[b].kebutuhan_kg += kebutuhanKg;
             }
           }
         }
@@ -385,15 +418,31 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
         for (const b of activeJenjang) {
           const jmlPm = pmByDisplay[b] || Number(s.jumlah_porsi) || 0;
           if (!jmlPm) continue;
-          const persenBdd = Number(g.persen_bdd || 100);
-          const beratPerSiswa = Number(g.berat_1_sp || 0);
+
+          // Check override
+          const ovKey = s.id + '::' + hariKe + '::' + b + '::' + (g.bahan_baku_id || '');
+          const ov = ovIndex[ovKey];
+
+          let persenBdd, beratPerSiswa, namaDisplay;
+          if (ov) {
+            persenBdd = Number(ov.persen_bdd);
+            beratPerSiswa = Number(ov.jumlah);
+            namaDisplay = ov.new_nama || g.nama;
+          } else {
+            persenBdd = Number(g.persen_bdd || 100);
+            beratPerSiswa = Number(g.berat_1_sp || 0);
+            namaDisplay = g.nama;
+          }
+
           const beratKotorPerSiswa = hitungBDD(beratPerSiswa, persenBdd);
           const kebutuhanKg = Math.round((beratKotorPerSiswa * jmlPm / 1000) * 100) / 100;
-          if (!bahanMap[g.nama]) bahanMap[g.nama] = { nama: g.nama, nama_display: g.nama, per_jenjang: {} };
-          if (!bahanMap[g.nama].per_jenjang[b]) {
-            bahanMap[g.nama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100 };
+
+          const keyNama = ov ? (namaDisplay + '__ov') : g.nama;
+          if (!bahanMap[keyNama]) bahanMap[keyNama] = { nama: namaDisplay, nama_display: namaDisplay, per_jenjang: {} };
+          if (!bahanMap[keyNama].per_jenjang[b]) {
+            bahanMap[keyNama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100 };
           }
-          bahanMap[g.nama].per_jenjang[b].kebutuhan_kg += kebutuhanKg;
+          bahanMap[keyNama].per_jenjang[b].kebutuhan_kg += kebutuhanKg;
         }
       }
     }
