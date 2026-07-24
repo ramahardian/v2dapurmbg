@@ -25,7 +25,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   if (!siklusList.length) {
     return res.json({
       siklus_list: [], jenjang_list: [], data: [],
-      _validation: { level: 'no_siklus', message: 'Belum ada siklus aktif. Buat siklus terlebih dahulu di menu Siklus.', detail: 'Siklus dengan status Aktif diperlukan untuk menampilkan perencanaan kebutuhan pangan.' }
+      _validation: { level: 'no_siklus', message: 'Belum ada siklus aktif', detail: 'Buat siklus baru dengan status Aktif untuk menampilkan perencanaan kebutuhan pangan.' }
     });
   }
 
