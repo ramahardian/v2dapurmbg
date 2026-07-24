@@ -72,13 +72,18 @@ function gridBahanToGroups(gridBahan) {
 var _bahanBySpCache = null;
 
 async function preloadBahanBySp() {
-  if (_bahanBySpCache) return _bahanBySpCache;
+  if (_bahanBySpCache) {
+    window._bahanBySp = _bahanBySpCache.byKat || {};
+    return _bahanBySpCache;
+  }
   try {
     const res = await api.get('/bahan/by-sp');
     _bahanBySpCache = res;
+    window._bahanBySp = (res && res.byKat) || {};
     return res;
   } catch (e) {
     console.error('Gagal preload bahan by SP:', e);
+    window._bahanBySp = {};
     return { byKat: {}, kategori_order: KAT_SP_ORDER };
   }
 }
@@ -92,6 +97,7 @@ async function renderSiklus() {
   c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
     await preloadMenus();
+    await preloadBahanBySp();
     const r = await fetch('/api/template/siklus', { credentials: 'include' });
     if (!r.ok) {
       const err = await r.json();
@@ -834,7 +840,7 @@ async function openSiklusForm(editing) {
 
   let bahanBySp = {};
   try { bahanBySp = await api.get('/bahan/by-sp'); } catch { bahanBySp = {}; }
-  window._bahanBySp = bahanBySp;
+  window._bahanBySp = (bahanBySp && bahanBySp.byKat) || {};
 
   let existingGrid = {};
   if (isEdit && s.id) {
@@ -1165,7 +1171,7 @@ async function tambahBahanGrid(rk, hk) {
     }
     // Refresh bahanBySp and re-open picker
     var bahanBySp = await api.get('/bahan/by-sp');
-    window._bahanBySp = bahanBySp;
+    window._bahanBySp = (bahanBySp && bahanBySp.byKat) || {};
     closeGridPicker();
     openGridPicker(hk, rk);
   } catch (e) {
