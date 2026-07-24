@@ -817,7 +817,7 @@ function toggleJenjangCb(el) {
 
 async function openSiklusForm(editing) {
   const isEdit = !!(editing && editing.id);
-  const s = editing || { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 7, status: 'Draft', catatan: '', tanggal_mulai: '', items: HARI_OPTIONS.slice(0,7).map((h,i) => ({ hari_ke: i+1, hari_nama: h, menu_nama: '', jumlah_porsi: 0 })) };
+  const s = editing || { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 30, status: 'Draft', catatan: '', tanggal_mulai: '', items: HARI_OPTIONS.slice(0,7).map((h,i) => ({ hari_ke: i+1, hari_nama: h, menu_nama: '', jumlah_porsi: 0 })) };
   // Preserve existing metadata when re-rendering (e.g. from saveGridPicker / hariChange)
   const prevMeta = window._siklusMeta;
   if (prevMeta) {
@@ -828,7 +828,7 @@ async function openSiklusForm(editing) {
   }
   const formData = JSON.parse(JSON.stringify(s));
 
-  const totalHari = s.total_hari || 7;
+  const totalHari = s.total_hari || 30;
   if (!formData.items || !formData.items.length) {
     formData.items = HARI_OPTIONS.slice(0, Math.min(14, Math.max(1, totalHari))).map((h, i) => ({
       hari_ke: i + 1, hari_nama: h, menu_nama: '', jumlah_porsi: formData.jumlah_porsi || 0
@@ -904,7 +904,7 @@ async function openSiklusForm(editing) {
         <div class="flex flex-wrap gap-x-6 gap-y-4 items-end">
           <div class="min-w-[250px] flex-1"><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Nama Siklus</label><input id="sk-nama" value="${s.nama}" placeholder="cth: Siklus Menu SD" class="mt-1.5 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 text-sm font-medium transition-all" /></div>
 
-          <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Hari</label><input id="sk-hari" type="number" min="1" max="14" value="${s.total_hari||7}" onchange="openSiklusFormHariChange(this)" class="mt-1.5 w-20 h-11 px-3 border border-stone-200 rounded-xl text-sm text-center" /></div>
+          <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Hari</label><input id="sk-hari" type="number" min="1" max="31" value="${s.total_hari||30}" onchange="openSiklusFormHariChange(this)" class="mt-1.5 w-20 h-11 px-3 border border-stone-200 rounded-xl text-sm text-center" /></div>
 
           <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Tgl Mulai</label><input id="sk-tanggal-mulai" type="date" value="${s.tanggal_mulai || ''}" class="mt-1.5 h-11 px-3 border border-stone-200 rounded-xl text-sm" /></div>
 

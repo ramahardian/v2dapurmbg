@@ -24,7 +24,7 @@ router.post('/siklus/generate-produksi', async (req, res) => {
   const startDate = new Date(siklus.tanggal_mulai);
   const prodDate = new Date(tanggal_produksi);
   const diffDays = Math.floor((prodDate - startDate) / (1000 * 60 * 60 * 24));
-  const totalHari = siklus.total_hari || 7;
+  const totalHari = siklus.total_hari || 30;
   const hariKe = ((diffDays % totalHari) + totalHari) % totalHari + 1;
 
   const dayItems = items.filter(it => it.hari_ke === hariKe);
@@ -74,7 +74,7 @@ router.post('/siklus/generate-produksi-batch', async (req, res) => {
     if (!siklus.tanggal_mulai) { cur.setDate(cur.getDate() + 1); continue; }
     const siklusStart = new Date(siklus.tanggal_mulai);
     const diffDays = Math.floor((cur - siklusStart) / (1000 * 60 * 60 * 24));
-    const totalHari = siklus.total_hari || 7;
+    const totalHari = siklus.total_hari || 30;
     const hariKe = ((diffDays % totalHari) + totalHari) % totalHari + 1;
 
     const dayItems = items.filter(it => it.hari_ke === hariKe);

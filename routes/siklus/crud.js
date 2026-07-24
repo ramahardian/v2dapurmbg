@@ -147,7 +147,7 @@ router.post('/siklus', async (req, res) => {
     const [r] = await conn.query(
       `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai)
        VALUES (?,?,?,?,?,?,?,?)`,
-      [req.user.tenant_id, nama, kategori_penerima || null, finalPorsi, total_hari || 7, status || 'Draft', catatan || null, tanggal_mulai || null]
+      [req.user.tenant_id, nama, kategori_penerima || null, finalPorsi, total_hari || 30, status || 'Draft', catatan || null, tanggal_mulai || null]
     );
     if (Array.isArray(items) && items.length) {
       for (const it of items) {
@@ -193,7 +193,7 @@ router.put('/siklus/:id', async (req, res) => {
     await conn.beginTransaction();
     await conn.query(
       `UPDATE siklus_menu SET nama=?, kategori_penerima=?, jumlah_porsi=?, total_hari=?, status=?, catatan=?, tanggal_mulai=? WHERE id=? AND tenant_id=?`,
-      [nama, kategori_penerima || null, finalPorsi, total_hari || 7, status || 'Draft', catatan || null, tanggal_mulai || null, id, req.user.tenant_id]
+      [nama, kategori_penerima || null, finalPorsi, total_hari || 30, status || 'Draft', catatan || null, tanggal_mulai || null, id, req.user.tenant_id]
     );
     await conn.query('DELETE FROM siklus_menu_item WHERE siklus_id=?', [id]);
     if (Array.isArray(items) && items.length) {
