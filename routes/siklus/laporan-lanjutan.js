@@ -164,7 +164,12 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     [req.user.tenant_id]
   );
 
-  if (!siklusList.length) return res.json({ jenjang_list: [], hari: [], pm_map: {} });
+  if (!siklusList.length) {
+    return res.json({
+      jenjang_list: [], hari: [], pm_map: {},
+      _validation: { level: 'no_siklus', message: 'Belum ada siklus aktif', detail: 'Buat siklus baru dengan status Aktif untuk menampilkan total kebutuhan pangan.' }
+    });
+  }
 
   // PM totals
   const [pmRows] = await db.query(

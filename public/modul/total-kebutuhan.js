@@ -2,6 +2,10 @@
 // Menampilkan kebutuhan bahan per hari dengan format BDD
 // Satu tabel per hari — total semua jenjang digabung
 
+function escHtmlTk(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 async function renderTotalKebutuhan() {
   const c = document.getElementById('content');
   c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
@@ -31,7 +35,7 @@ async function loadTotalKebutuhan() {
     if (tglSelesai) params.set('tanggal_selesai', tglSelesai);
     const qs = params.toString() ? '?' + params.toString() : '';
     const res = await api.get('/siklus/laporan/perencanaan' + qs);
-    const { jenjang_list, hari, pm_map, tanggal_mulai, tanggal_selesai } = res;
+    const { jenjang_list, hari, pm_map, tanggal_mulai, tanggal_selesai, _validation } = res;
 
     // Hitung total jumlah_siswa semua jenjang
     var totalSiswaSemuaJenjang = 0;
@@ -53,6 +57,30 @@ async function loadTotalKebutuhan() {
     html += '</button>';
     html += '<div class="text-xs text-stone-400">' + (hari ? hari.length + ' hari' : '0 hari') + ' | Total ' + totalSiswaSemuaJenjang + ' siswa</div>';
     html += '</div>';
+
+    // ── Tampilkan validasi jika ada ──
+    if (_validation) {
+      var vl = _validation;
+      var colors = { 'no_siklus': 'amber', 'no_target': 'orange', 'no_pm_match': 'amber' };
+      var c = colors[vl.level] || 'stone';
+      html += '<div class="rounded-xl border border-' + c + '-200 bg-' + c + '-50 p-5 mb-4">';
+      html += '<div class="flex items-start gap-3">';
+      html += '<svg class="w-6 h-6 shrink-0 mt-0.5 text-' + c + '-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
+      html += '<div>';
+      html += '<div class="font-semibold text-sm text-' + c + '-800">' + escHtmlTk(vl.message) + '</div>';
+      html += '<div class="text-xs text-' + c + '-600 mt-1">' + escHtmlTk(vl.detail || '') + '</div>';
+      // Link ke halaman siklus jika tidak ada siklus
+      if (vl.level === 'no_siklus') {
+        html += '<a href="/siklus" onclick="return loadPage(\'siklus\')" class="inline-flex items-center gap-1.5 mt-3 px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm">';
+        html += '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>';
+        html += 'Buat Siklus Baru';
+        html += '</a>';
+      }
+      html += '</div></div></div>';
+
+      wrap.innerHTML = html;
+      return;
+    }
 
     if (!hari || !hari.length) {
       html += '<div class="text-center py-16 text-stone-400 bg-white border border-stone-200 rounded-lg"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Tidak ada data</div></div>';
