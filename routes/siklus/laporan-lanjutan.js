@@ -113,11 +113,20 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
 
     const siklusData = [];
     for (const s of siklusList) {
-      const items = (itemsBySiklus[s.id] || []).filter(it => it.menu_id);
-      if (!items.length) continue;
+      const allItems = itemsBySiklus[s.id] || [];
+      const menuItems = allItems.filter(it => it.menu_id);
+      const gridItems = allItems.filter(it => !it.menu_id);
+      const gridBahan = gridBahanBySiklus[s.id] || [];
+      const hasMenuItems = menuItems.length > 0;
+      const hasGridItems = gridBahan.length > 0;
+      if (!hasMenuItems && !hasGridItems) continue;
 
       const dayData = [];
-      for (const it of items) {
+      const processedDays = new Set();
+
+      // Process menu-linked items
+      for (const it of menuItems) {
+        processedDays.add(it.hari_ke);
         const bahanRows = menuBahanMap[it.menu_id] || [];
         const bahanItems = bahanRows.map(br => {
           const ref = spRefMap[br.nama] || {};
@@ -129,15 +138,28 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
         dayData.push({ hari_ke: it.hari_ke, hari_nama: it.hari_nama, menu_nama: it.menu_nama || '-', menu_label: 'Menu', bahan: bahanItems });
       }
 
-      // Add grid-based items
-      const gridBahan = gridBahanBySiklus[s.id] || [];
-      const gridByDay = {};
+      // Add grid-based items (bahan picked directly without menu)
       for (const g of gridBahan) {
-        if (!gridByDay[g.hari_ke]) gridByDay[g.hari_ke] = [];
-        gridByDay[g.hari_ke].push(g);
+        const hk = g.hari_ke;
+        const gridItem = gridItems.find(it => it.hari_ke === hk);
+        const hariNama = gridItem ? gridItem.hari_nama : 'Hari ' + hk;
+        const menuNama = gridItem ? (gridItem.menu_nama || '-') : '-';
+        const persenBdd = Number(g.persen_bdd || 100);
+        const beratBersih = Number(g.berat_1_sp || 0) * jmlPm;
+        const beratKotor = hitungBDD(beratBersih, persenBdd);
+        const label = processedDays.has(hk) ? 'Bahan Tambahan' : 'Menu';
+
+        if (!processedDays.has(hk)) {
+          dayData.push({ hari_ke: hk, hari_nama: hariNama, menu_nama: menuNama, menu_label: label, bahan: [] });
+          processedDays.add(hk);
+        }
+        const dayEntry = dayData.find(d => d.hari_ke === hk);
+        if (dayEntry) {
+          dayEntry.bahan.push({ nama: g.nama, nama_display: g.nama, satuan: g.satuan || 'g', kategori_sp: g.kategori_sp, persen_bdd: persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 });
+        }
       }
 
-      siklusData.push({ siklus_id: s.id, siklus_nama: s.nama, hari: dayData, grid_days: Object.entries(gridByDay).map(([hk, items]) => ({ hari_ke: Number(hk), bahan: items.map(g => ({ nama: g.nama, kategori_sp: g.kategori_sp, kebutuhan_kg: Math.round(((Number(g.berat_1_sp || 0) * jmlPm * (100 / (Number(g.persen_bdd) || 100))) / 1000) * 100) / 100 })) })) });
+      siklusData.push({ siklus_id: s.id, siklus_nama: s.nama, hari: dayData });
     }
 
     dataByJenjang[j] = { jumlah_siswa: jmlPm, sp_target: spTarget, siklus: siklusData };
