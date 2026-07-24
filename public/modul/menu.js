@@ -510,20 +510,9 @@ function hitungNutrisi() {
 }
 
 function updateBahan(i, k, v) {
+  window._menuBahan[i][k] = k === 'jumlah' ? +v : v;
   if (k === 'jumlah') {
-    var b = window._menuBahan[i];
-    var perSatuan = Number(b.berat_per_satuan) || 0;
-    var satuan = b.satuan || 'g';
-    var isNonGram = ['g','gr','gram','kg','kilogram'].indexOf(satuan.toLowerCase()) === -1;
-    if (isNonGram && perSatuan > 0) {
-      // User input dalam pcs → konversi ke gram untuk penyimpanan
-      window._menuBahan[i].jumlah = (+v) * perSatuan;
-    } else {
-      window._menuBahan[i].jumlah = +v;
-    }
     delete window._menuBahan[i]._autoJumlah;
-  } else {
-    window._menuBahan[i][k] = v;
   }
   hitungNutrisi();
 }
@@ -534,9 +523,6 @@ function renderBahanList() {
     var perSatuan = Number(b.berat_per_satuan) || 0;
     var _stdUnits = ['g','gr','gram','kg','kilogram'];
     var isNonGram = _stdUnits.indexOf(displaySatuan.toLowerCase()) === -1 && perSatuan > 0;
-    // Display: untuk non-gram, konversi gram ke satuan asli (misal gram→pcs)
-    var gramJml = Number(b.jumlah || 0);
-    var displayJml = isNonGram ? Math.round(gramJml / perSatuan * 100) / 100 : gramJml;
     var satuanNote = isNonGram ? '<div class="col-span-12 flex items-center gap-1 text-[10px] text-amber-600 -mt-1 mb-1">' +
       '<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>' +
       'Input dalam <span class="font-medium">' + displaySatuan + '</span> · 1 ' + displaySatuan + ' = <span class="font-medium">' + perSatuan + ' gram</span> (dikonversi ke gram untuk kalkulasi nutrisi)' +
@@ -547,7 +533,7 @@ function renderBahanList() {
         '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
       '</div>' +
       '<div class="col-span-3 flex">' +
-        '<input type="number" step="0.01" value="' + displayJml + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="Jumlah per porsi dalam ' + displaySatuan + '" />' +
+        '<input type="number" step="0.01" value="' + (b.jumlah || '0') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="Gram per porsi" />' +
         '<span class="inline-flex items-center px-2 h-9 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-md whitespace-nowrap">' + displaySatuan + '</span>' +
       '</div>' +
       '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="col-span-4 h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
