@@ -22,7 +22,17 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
     [siklusList] = await db.query('SELECT * FROM siklus_menu WHERE tenant_id=? AND status="Aktif" ORDER BY id', [req.user.tenant_id]);
   }
 
-  if (!siklusList.length) return res.json({ siklus_list: [], jenjang_list: [], data: {} });
+  if (!siklusList.length) return res.json({ siklus_list: [], jenjang_list: [], data: [] });
+
+  // Collect target jenjang from siklus (hanya yang dipilih di data siklus)
+  const siklusTargetJenjang = new Set();
+  for (const s of siklusList) {
+    const parsed = parseKategoriPenerima(s.kategori_penerima);
+    for (const p of parsed) {
+      const display = dbToDisplay[p] || p;
+      siklusTargetJenjang.add(display);
+    }
+  }
 
   // PM totals
   const [pmRows] = await db.query(
@@ -36,7 +46,11 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
     const display = dbToDisplay[dbJenjang] || dbJenjang;
     pmByDisplay[display] = (pmByDisplay[display] || 0) + total;
   }
-  const activeJenjang = JENJANG_DISPLAY_ORDER.filter(j => pmByDisplay[j] && pmByDisplay[j] > 0);
+
+  // Hanya tampilkan jenjang yang: ada di siklus target DAN punya penerima manfaat
+  const activeJenjang = JENJANG_DISPLAY_ORDER.filter(j =>
+    siklusTargetJenjang.has(j) && pmByDisplay[j] && pmByDisplay[j] > 0
+  );
 
   // SP referensi
   let spRefMap = {};
