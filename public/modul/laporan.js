@@ -384,16 +384,25 @@ const tabColors = {
       detailHtml +
       multiPeriodeTabel;
     } else if (tab === 'siklus') {
+      const filterSiklusId = lapState.siklus_id || '';
       const [siklusList, lapRes, menuHarianRes] = await Promise.all([
         api.get('/siklus'),
-        api.get('/siklus/laporan'),
-        api.get('/siklus/laporan/menu-harian').catch(() => null),
+        api.get('/siklus/laporan' + (filterSiklusId ? '?siklus_id=' + filterSiklusId : '')),
+        api.get('/siklus/laporan/menu-harian' + (filterSiklusId ? '?siklus_id=' + filterSiklusId : '')).catch(() => null),
       ]);
       const { ringkasan } = lapRes;
       window._lapData = null;
 
       const menuHarian = menuHarianRes || [];
       const kategori_order = ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
+
+      // Filter bar
+      var filterBar = '<div class="mb-4 flex flex-wrap items-center gap-3">' +
+        '<label class="text-xs font-medium text-stone-500">Siklus:</label>' +
+        '<select onchange="gantiFilterSiklus()" id="siklus-lap-filter" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        '<option value="">Semua Siklus</option>' +
+        siklusList.map(function(s) { return '<option value="' + s.id + '" ' + (String(s.id) === filterSiklusId ? 'selected' : '') + '>' + escHtml(s.nama) + '</option>'; }).join('') +
+        '</select></div>';
 
       // Build Laporan 1: Siklus Menu 10 Hari
       let lap1Html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6">';
@@ -407,15 +416,16 @@ const tabColors = {
       lap2Html += renderResepTable(menuHarian, kategori_order);
       lap2Html += '</div>';
 
-      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
-        ${statCard('Total Siklus', fmtNum(ringkasan.totalSiklus), 'siklus', 'bg-rose-50')}
-        ${statCard('Total Hari', fmtNum(ringkasan.totalHari), 'hari siklus', 'bg-blue-50')}
-        ${statCard('Hari Terisi', fmtNum(ringkasan.totalFilled), ringkasan.rataCoverage + '% coverage', 'bg-emerald-50')}
-        ${statCard('Hari Kosong', fmtNum(ringkasan.totalKosong), 'belum terisi', 'bg-orange-50')}
-        ${statCard('Menu Unik', fmtNum(ringkasan.totalMenuUnik), 'menu digunakan', 'bg-violet-50')}
-      </div>
-      ${lap1Html}
-      ${lap2Html}`;
+      window._lapStatCards = filterBar +
+        '<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">' +
+        statCard('Total Siklus', fmtNum(ringkasan.totalSiklus), 'siklus', 'bg-rose-50') +
+        statCard('Total Hari', fmtNum(ringkasan.totalHari), 'hari siklus', 'bg-blue-50') +
+        statCard('Hari Terisi', fmtNum(ringkasan.totalFilled), ringkasan.rataCoverage + '% coverage', 'bg-emerald-50') +
+        statCard('Hari Kosong', fmtNum(ringkasan.totalKosong), 'belum terisi', 'bg-orange-50') +
+        statCard('Menu Unik', fmtNum(ringkasan.totalMenuUnik), 'menu digunakan', 'bg-violet-50') +
+        '</div>' +
+        lap1Html +
+        lap2Html;
     } else if (tab === 'pembelian') {
       const r = await api.get('/laporan/pembelian');
       const rows = r.rows || [];
@@ -1854,6 +1864,11 @@ function renderResepTable(siklusList, kategori_order) {
   return allHtml;
 }
 
+function gantiFilterSiklus() {
+  lapState.siklus_id = document.getElementById('siklus-lap-filter')?.value || '';
+  lapState.page = 1;
+  showLap('siklus');
+}
 function gantiPeriodeLR() {
   lapState.lr_bulan = document.getElementById('lr-bulan')?.value;
   lapState.lr_tahun = document.getElementById('lr-tahun')?.value;

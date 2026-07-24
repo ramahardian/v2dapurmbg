@@ -10,10 +10,18 @@ const router = express.Router();
  * Mengambil semua siklus dengan laporan agregat (coverage, rata-rata gizi, dll).
  */
 router.get('/siklus/laporan', async (req, res) => {
-  const [siklusList] = await db.query(
-    'SELECT * FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
-    [req.user.tenant_id]
-  );
+  let siklusList;
+  if (req.query.siklus_id) {
+    [siklusList] = await db.query(
+      'SELECT * FROM siklus_menu WHERE id=? AND tenant_id=?',
+      [req.query.siklus_id, req.user.tenant_id]
+    );
+  } else {
+    [siklusList] = await db.query(
+      'SELECT * FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
+      [req.user.tenant_id]
+    );
+  }
 
   const siklusIds = siklusList.map(s => s.id);
   const itemsBySiklus = await batchLoadItems(siklusIds);
@@ -426,10 +434,18 @@ router.get('/siklus/laporan/siklus-menu', async (req, res) => {
  * Daily breakdown of ingredients within each menu cycle.
  */
 router.get('/siklus/laporan/menu-harian', async (req, res) => {
-  const [siklusList] = await db.query(
-    'SELECT * FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
-    [req.user.tenant_id]
-  );
+  let siklusList;
+  if (req.query.siklus_id) {
+    [siklusList] = await db.query(
+      'SELECT * FROM siklus_menu WHERE id=? AND tenant_id=?',
+      [req.query.siklus_id, req.user.tenant_id]
+    );
+  } else {
+    [siklusList] = await db.query(
+      'SELECT * FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
+      [req.user.tenant_id]
+    );
+  }
 
   const siklusIds = siklusList.map(s => s.id);
   const itemsBySiklus = await batchLoadItems(siklusIds);
