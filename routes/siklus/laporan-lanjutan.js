@@ -22,7 +22,12 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
     [siklusList] = await db.query('SELECT * FROM siklus_menu WHERE tenant_id=? AND status="Aktif" ORDER BY id', [req.user.tenant_id]);
   }
 
-  if (!siklusList.length) return res.json({ siklus_list: [], jenjang_list: [], data: [] });
+  if (!siklusList.length) {
+    return res.json({
+      siklus_list: [], jenjang_list: [], data: [],
+      _validation: { level: 'no_siklus', message: 'Belum ada siklus aktif. Buat siklus terlebih dahulu di menu Siklus.', detail: 'Siklus dengan status Aktif diperlukan untuk menampilkan perencanaan kebutuhan pangan.' }
+    });
+  }
 
   // Collect target jenjang from siklus (hanya yang dipilih di data siklus)
   const siklusTargetJenjang = new Set();
@@ -32,6 +37,15 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
       const display = dbToDisplay[p] || p;
       siklusTargetJenjang.add(display);
     }
+  }
+
+  // Validasi: siklus belum punya target penerima
+  if (!siklusTargetJenjang.size) {
+    const siklusNames = siklusList.map(s => s.nama).join(', ');
+    return res.json({
+      siklus_list: siklusList, jenjang_list: [], data: [],
+      _validation: { level: 'no_target', message: 'Siklus belum memiliki target penerima manfaat', detail: 'Edit siklus "' + siklusNames + '" untuk memilih kategori penerima (TK/PAUD, SD, SMP, dll).' }
+    });
   }
 
   // PM totals
@@ -51,6 +65,19 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   const activeJenjang = JENJANG_DISPLAY_ORDER.filter(j =>
     siklusTargetJenjang.has(j) && pmByDisplay[j] && pmByDisplay[j] > 0
   );
+
+  // Validasi: target siklus tidak cocok dengan penerima manfaat
+  if (!activeJenjang.length) {
+    const targetList = [...siklusTargetJenjang].join(', ');
+    return res.json({
+      siklus_list: siklusList, jenjang_list: [], data: [],
+      _validation: {
+        level: 'no_pm_match',
+        message: 'Target penerima di siklus tidak memiliki data penerima manfaat',
+        detail: 'Siklus menargetkan: ' + targetList + '. Pastikan data penerima manfaat untuk jenjang tersebut sudah diisi di menu Master Data → Penerima Manfaat.'
+      }
+    });
+  }
 
   // SP referensi
   let spRefMap = {};
