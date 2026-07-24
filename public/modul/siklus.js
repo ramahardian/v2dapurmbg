@@ -361,21 +361,25 @@ async function renderSiklusLaporan(id) {
             </thead>
             <tbody>
               ${data.spComparison.map(sp => {
-                const selisihClass = sp.selisih >= 0 ? 'text-emerald-600' : 'text-red-600';
-                const statusClass = sp.status === 'terpenuhi' ? 'bg-emerald-100 text-emerald-700' : sp.status === 'no_target' ? 'bg-stone-100 text-stone-500' : 'bg-red-100 text-red-700';
-                const statusLabel = sp.status === 'terpenuhi' ? '✓ Terpenuhi' : sp.status === 'no_target' ? '—' : '✗ Kurang';
-                const barWidth = Math.min(100, sp.persen);
-                const barColor = sp.persen >= 100 ? 'bg-emerald-500' : sp.persen >= 75 ? 'bg-amber-500' : 'bg-red-500';
+                const realVal = Number(sp.realized) || 0;
+                const targetVal = Number(sp.target) || 0;
+                const selisih = Math.round((realVal - targetVal) * 100) / 100;
+                const persen = targetVal > 0 ? Math.round((realVal / targetVal) * 100) : (realVal > 0 ? 999 : 0);
+                const selisihClass = selisih >= 0 ? 'text-emerald-600' : 'text-red-600';
+                const statusClass = persen >= 100 ? 'bg-emerald-100 text-emerald-700' : targetVal === 0 && realVal === 0 ? 'bg-stone-100 text-stone-500' : 'bg-red-100 text-red-700';
+                const statusLabel = persen >= 100 ? '✓ Terpenuhi' : targetVal === 0 && realVal === 0 ? '—' : '✗ Kurang';
+                const barWidth = Math.min(100, persen);
+                const barColor = persen >= 100 ? 'bg-emerald-500' : persen >= 75 ? 'bg-amber-500' : 'bg-red-500';
                 return `<tr class="border-t border-stone-100 hover:bg-stone-50/50">
                   <td class="px-4 py-2.5 font-medium whitespace-nowrap">${sp.kategori}</td>
-                  <td class="px-3 py-2.5 text-center mono font-semibold">${sp.target}</td>
-                  <td class="px-3 py-2.5 text-center mono font-semibold">${sp.realisasi}</td>
-                  <td class="px-3 py-2.5 text-center mono font-semibold ${selisihClass}">${sp.selisih > 0 ? '+' : ''}${sp.selisih}</td>
+                  <td class="px-3 py-2.5 text-center mono font-semibold">${targetVal}</td>
+                  <td class="px-3 py-2.5 text-center mono font-semibold">${realVal}</td>
+                  <td class="px-3 py-2.5 text-center mono font-semibold ${selisihClass}">${selisih > 0 ? '+' : ''}${selisih}</td>
                   <td class="px-3 py-2.5">
                     <div class="w-full bg-stone-200 rounded-full h-2.5">
                       <div class="${barColor} h-2.5 rounded-full transition-all duration-500" style="width:${barWidth}%"></div>
                     </div>
-                    <div class="text-[10px] text-stone-400 text-center mt-0.5">${sp.persen}%</div>
+                    <div class="text-[10px] text-stone-400 text-center mt-0.5">${persen}%</div>
                   </td>
                   <td class="px-3 py-2.5 text-center">
                     <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${statusClass}">${statusLabel}</span>
