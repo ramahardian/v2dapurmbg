@@ -295,9 +295,8 @@ async function pncPilihBahan(siklusId, hariKe, jenjang, origBahanId, newBahanId)
       new_bahan_baku_id: newBahanId
     });
     if (res.ok) {
-      showAlert('✅ Berhasil mengganti bahan. Refresh halaman...', 'success');
-      // Reload section
-      setTimeout(function() { loadPerencanaanData(_pncSiklusId || undefined); }, 500);
+      showAlert('✅ Berhasil mengganti bahan. Memuat ulang...', 'success');
+      setTimeout(function() { window.location.reload(); }, 800);
     } else {
       showAlert('Gagal: ' + (res.error || 'Unknown'), 'error');
     }
@@ -311,8 +310,8 @@ async function pncHapusOverride(overrideId) {
   if (!confirm('Hapus override ini? Bahan akan kembali ke asal.')) return;
   try {
     await api.del('/siklus/laporan/override/' + overrideId);
-    showAlert('✅ Override dihapus. Refresh...', 'success');
-    setTimeout(function() { loadPerencanaanData(_pncSiklusId || undefined); }, 500);
+    showAlert('✅ Override dihapus. Memuat ulang...', 'success');
+    setTimeout(function() { window.location.reload(); }, 800);
   } catch (err) {
     showAlert('Gagal: ' + err.message, 'error');
   }
