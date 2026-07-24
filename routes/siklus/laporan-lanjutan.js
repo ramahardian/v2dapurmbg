@@ -205,12 +205,26 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     const display = dbToDisplay[dbJenjang] || dbJenjang;
     pmByDisplay[display] = (pmByDisplay[display] || 0) + total;
   }
-  let activeJenjang = JENJANG_DISPLAY_ORDER.filter(j => pmByDisplay[j] && pmByDisplay[j] > 0);
+  // Filter by siklus target jenjang
+  const siklusTargetJenjang = new Set();
+  for (const s of siklusList) {
+    const parsed = parseKategoriPenerima(s.kategori_penerima);
+    for (const p of parsed) {
+      const display = dbToDisplay[p] || p;
+      siklusTargetJenjang.add(display);
+    }
+  }
+  let activeJenjang = JENJANG_DISPLAY_ORDER.filter(j =>
+    siklusTargetJenjang.has(j) && pmByDisplay[j] && pmByDisplay[j] > 0
+  );
 
-  // Fallback: if no PM data, still show data with a default jenjang
-  if (!activeJenjang.length) {
-    pmByDisplay['Semua Jenjang'] = 1;
-    activeJenjang = ['Semua Jenjang'];
+  // Fallback: if no PM match, use siklus target jenjang with default count
+  if (!activeJenjang.length && siklusTargetJenjang.size) {
+    const targetArr = [...siklusTargetJenjang];
+    for (const j of targetArr) {
+      pmByDisplay[j] = pmByDisplay[j] || 1;
+    }
+    activeJenjang = targetArr;
   }
 
   // SP referensi
