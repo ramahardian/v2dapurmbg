@@ -77,7 +77,12 @@ distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', ic
     extraButtons: [
       { label: 'Hitung Ulang Realisasi', onclick: 'recalculateRealisasi()', cls: 'border border-blue-400 text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-md text-sm font-medium' },
       { label: 'Backfill Jurnal', onclick: 'backfillJournal()', cls: 'border border-amber-400 text-amber-700 hover:bg-amber-50 px-4 py-2 rounded-md text-sm font-medium' },
-    ] }
+    ],
+    helpContent: [
+      { title: 'Apa itu Budgeting?', text: 'Budgeting (Anggaran) adalah rencana keuangan per periode untuk biaya program MBG. Mencakup biaya bahan pangan (dari harga per porsi x jumlah penerima) dan biaya operasional dapur.' },
+      { title: 'Cara Mengisi', text: 'Klik <strong>Tambah</strong> untuk membuat entri baru per periode. Isi periode (YYYY-MM), kategori penerima, jumlah penerima, harga per porsi, dan biaya operasional. Total budget akan terhitung otomatis.' },
+      { title: 'Realisasi & Laporan', text: 'Gunakan tombol <strong>Hitung Ulang Realisasi</strong> untuk update realisasi dari transaksi kas bank yang sudah tercatat. Cek laporan <strong>RAB</strong> untuk perbandingan budget vs realisasi per periode.' },
+    ],
   },
   'daftar-akun': { title: 'Daftar Akun', sub: 'Kode Akun & Buku Pembantu (COA)', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
     crud: { endpoint: '/akun', fields: [

@@ -9,6 +9,9 @@ async function renderCrud(cfg) {
   c.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-2 mb-4">
     <div class="flex items-center gap-2">
       <button id="add-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah</button>
+      ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-200 text-stone-400 hover:text-stone-600 hover:bg-stone-50 transition-colors" title="Info halaman ini">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </button>` : ''}
     </div>
     <div class="flex items-center gap-2">
       <input id="crud-search" placeholder="Cari..." class="h-10 px-3 border border-stone-200 rounded-md text-sm w-48">
@@ -19,6 +22,7 @@ async function renderCrud(cfg) {
   </div>
   <div id="table-wrap" class="bg-white border border-stone-200 rounded-lg overflow-hidden"></div>
   <div id="crud-pagination" class="flex items-center justify-between mt-3"></div>`;
+  window._crudInfoCfg = cfg;
   document.getElementById('add-btn').onclick = () => openForm(cfg, null);
 
   const searchInput = document.getElementById('crud-search');
@@ -393,6 +397,39 @@ function showToast(msg, type) {
     el.style.transition = 'opacity 0.3s';
     setTimeout(function() { el.remove(); }, 300);
   }, 3000);
+}
+
+function showCrudInfo() {
+  var cfg = window._crudInfoCfg;
+  if (!cfg || !cfg.helpContent) return;
+  var existing = document.getElementById('crud-info-popup');
+  if (existing) { existing.remove(); return; }
+  var hc = cfg.helpContent;
+  var div = document.createElement('div');
+  div.id = 'crud-info-popup';
+  div.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-black/30';
+  div.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6" onclick="event.stopPropagation()">' +
+    '<div class="flex items-center justify-between mb-4">' +
+      '<div class="flex items-center gap-3">' +
+        '<div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">' + (cfg.icon || '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>') + '</div>' +
+        '<div><h3 class="font-bold text-stone-700">' + (cfg.title || 'Halaman Ini') + '</h3><p class="text-xs text-stone-400">' + (cfg.subtitle || '') + '</p></div>' +
+      '</div>' +
+      '<button onclick="document.getElementById(\'crud-info-popup\').remove()" class="text-stone-400 hover:text-stone-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+    '</div>' +
+    '<div class="space-y-4 text-sm text-stone-600">' +
+      hc.map(function(item, idx) {
+        return '<div class="flex gap-3 items-start">' +
+          '<span class="shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">' + (idx + 1) + '</span>' +
+          '<div><span class="font-semibold text-stone-700">' + item.title + '</span><br>' + item.text + '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+    '<div class="mt-4 pt-3 border-t border-stone-100 flex justify-end">' +
+      '<button onclick="document.getElementById(\'crud-info-popup\').remove()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">Mengerti</button>' +
+    '</div>' +
+  '</div>';
+  div.onclick = function() { div.remove(); };
+  document.body.appendChild(div);
 }
 
 function closeModal(id) {
