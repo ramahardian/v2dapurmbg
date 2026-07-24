@@ -1220,6 +1220,37 @@ function getDaysInMonth(dateStr) {
 function siklusTglMulaiChange(input) {
   var tgl = input.value;
   if (!tgl) return;
+  // Simpan data resep dari DOM ke _gridData sebelum re-render
+  if (window._gridData) {
+    var gd = window._gridData;
+    var rowKeys = window._rowKeys || [];
+    // Reset resep_map untuk semua hari
+    Object.keys(gd).forEach(function(hk) {
+      if (gd[hk]) gd[hk].resep_map = {};
+    });
+    // Baca nilai dari DOM
+    document.querySelectorAll('input[data-field="resep"]').forEach(function(inp) {
+      var hk = Number(inp.getAttribute('data-hk'));
+      var kat = inp.getAttribute('data-kat');
+      var val = inp.value.trim();
+      if (hk && kat && gd[hk]) {
+        gd[hk].resep_map[kat] = val;
+      }
+    });
+    // Bangun menu_nama dari resep_map (sama seperti save handler)
+    Object.keys(gd).forEach(function(hk) {
+      var d = gd[hk];
+      if (!d) return;
+      var rmap = d.resep_map || {};
+      var parts = [];
+      for (var ri = 0; ri < rowKeys.length; ri++) {
+        var v = rmap[rowKeys[ri]];
+        if (v) parts.push(v);
+      }
+      if (parts.length) d.menu_nama = parts.join(' + ');
+    });
+    window._gridData = gd;
+  }
   var totalHari = getDaysInMonth(tgl);
   openSiklusFormHariChange({ value: totalHari });
 }
