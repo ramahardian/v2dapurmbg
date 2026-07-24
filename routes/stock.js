@@ -24,14 +24,14 @@ for (const [endpoint, sign] of [['stok_masuk', 1], ['stok_keluar', -1]]) {
       const limitNum = parseInt(limit);
       const offset = (pageNum - 1) * limitNum;
       const [rows] = await db.query(
-        `SELECT s.*, bb.nama AS nama_bahan, bb.satuan FROM ${endpoint} s
+        `SELECT s.id, s.tanggal, s.bahan_baku_id, s.jumlah, s.${sign > 0 ? 'sumber' : 'tujuan'}, s.catatan, s.created_at, bb.nama AS nama_bahan, bb.satuan FROM ${endpoint} s
          JOIN bahan_baku bb ON bb.id=s.bahan_baku_id ${whereClause} ORDER BY s.id DESC LIMIT ? OFFSET ?`,
         [...params, limitNum, offset]);
       return res.json({ data: rows, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } });
     }
 
     const [rows] = await db.query(
-      `SELECT s.*, bb.nama AS nama_bahan, bb.satuan FROM ${endpoint} s
+      `SELECT s.id, s.tanggal, s.bahan_baku_id, s.jumlah, s.${sign > 0 ? 'sumber' : 'tujuan'}, s.catatan, s.created_at, bb.nama AS nama_bahan, bb.satuan FROM ${endpoint} s
        JOIN bahan_baku bb ON bb.id=s.bahan_baku_id ${whereClause} ORDER BY s.id DESC`, params);
     res.json(rows);
   });

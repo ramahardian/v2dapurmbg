@@ -67,7 +67,7 @@ router.get('/absensi', requireRole('admin', 'keuangan'), async (req, res) => {
 
   // Menjalankan query SQL utama untuk mengambil data absensi lengkap dengan data relasi karyawan & jabatan
   const [rows] = await db.query(
-    `SELECT a.*, k.nama as nama_karyawan, j.name as jabatan, k.departemen FROM absensi a
+    `SELECT a.id, a.karyawan_id, a.tanggal, a.status, a.jam_masuk, a.jam_keluar, a.keterangan, k.nama as nama_karyawan, j.name as jabatan, k.departemen FROM absensi a
      JOIN karyawan k ON k.id=a.karyawan_id
      LEFT JOIN jabatan j ON j.id=k.jabatan_id ${where}
      ORDER BY a.tanggal DESC, k.nama ASC LIMIT ? OFFSET ?`,
@@ -108,7 +108,7 @@ router.post('/absensi', requireRole('admin', 'keuangan'), async (req, res) => {
   );
 
   // Mengambil kembali data absensi yang baru saja dimasukkan beserta nama karyawannya
-  const [rows] = await db.query(`SELECT a.*, k.nama as nama_karyawan FROM absensi a JOIN karyawan k ON k.id=a.karyawan_id WHERE a.id=?`, [r.insertId]);
+  const [rows] = await db.query(`SELECT a.id, a.karyawan_id, a.tanggal, a.status, a.jam_masuk, a.jam_keluar, a.keterangan, k.nama as nama_karyawan FROM absensi a JOIN karyawan k ON k.id=a.karyawan_id WHERE a.id=?`, [r.insertId]);
 
   // Mengirimkan data absensi yang berhasil dibuat sebagai respons JSON
   res.json(rows[0]);
@@ -162,7 +162,7 @@ router.put('/absensi/:id', requireRole('admin', 'keuangan'), async (req, res) =>
   await db.query(`UPDATE absensi SET ${sets.join(',')} WHERE id=? AND tenant_id=?`, vals);
 
   // Mengambil data absensi yang telah diperbarui beserta nama karyawannya
-  const [rows] = await db.query(`SELECT a.*, k.nama as nama_karyawan FROM absensi a JOIN karyawan k ON k.id=a.karyawan_id WHERE a.id=?`, [req.params.id]);
+  const [rows] = await db.query(`SELECT a.id, a.karyawan_id, a.tanggal, a.status, a.jam_masuk, a.jam_keluar, a.keterangan, k.nama as nama_karyawan FROM absensi a JOIN karyawan k ON k.id=a.karyawan_id WHERE a.id=?`, [req.params.id]);
 
   // Mengirimkan hasil data ter-update sebagai respons JSON
   res.json(rows[0]);

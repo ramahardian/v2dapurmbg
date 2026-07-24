@@ -92,6 +92,33 @@ if (cluster.isMaster && WORKERS > 1) {
     next();
   });
 
+  // 8) Rate limiting — proteksi abuse
+  const rateLimit = require('express-rate-limit');
+
+  // Limiter khusus untuk migrate/DML endpoints: 30 request per 15 menit
+  const migrateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    message: { error: 'Terlalu banyak request migrasi. Coba lagi 15 menit.' },
+  });
+
+  // API limiter umum: 200 request per menit per IP
+  // Skip /api/public/* (tidak dilimit agar publik bisa akses) dan /api/migrate/* (punya limiter sendiri)
+  const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.path.startsWith('/api/public') || req.path.startsWith('/api/migrate'),
+    message: { error: 'Terlalu banyak request. Coba lagi nanti.' },
+  });
+
+  // Pasang limiter migrate dulu (lebih spesifik)
+  app.use('/api/migrate', migrateLimiter);
+
+  // Pasang limiter umum untuk /api/* — public & migrate sudah di-skip
+  app.use('/api', apiLimiter);
+
   // ── ROUTES ──────────────────────────────
 
   // Public API
@@ -830,6 +857,31 @@ CREATE TABLE menu_bahan (
       res.status(500).send(`
         <div style="font-family:sans-serif;padding:2rem;text-align:center">
           <h2 style="color:#dc2626">❌ Migrasi Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+          <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a>
+        </div>`);
+    }
+  });
+
+  // Endpoint tambah database indexes untuk optimasi JOIN & filter (admin only)
+  app.get('/api/migrate/add-indexes', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const { addIndexes } = require('./scripts/add-indexes');
+      const logs = await addIndexes();
+      const escapedLogs = logs.map(l => l.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('\n');
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;max-width:800px;margin:auto;background:#f5f5f4">
+          <h2 style="color:#16a34a;margin-bottom:1rem">✅ Database Indexes Selesai</h2>
+          <pre style="background:#1c1917;color:#a3e635;padding:1rem;border-radius:0.5rem;overflow-x:auto;font-size:0.8rem;line-height:1.6">${escapedLogs}</pre>
+          <div style="margin-top:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap">
+            <a href="/api/migrate/cek-tabel" style="padding:0.5rem 1.25rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">📋 Cek Tabel</a>
+            <a href="/" style="padding:0.5rem 1.25rem;background:#6b7280;color:white;text-decoration:none;border-radius:0.5rem">🏠 Dashboard</a>
+          </div>
+        </div>`);
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center">
+          <h2 style="color:#dc2626">❌ Gagal</h2>
           <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
           <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a>
         </div>`);

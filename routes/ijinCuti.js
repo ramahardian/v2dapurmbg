@@ -48,11 +48,10 @@ router.get('/', requireRole('admin', 'keuangan'), async (req, res) => {
   const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM ijin_cuti ic ${where}`, params);
   
   const [rows] = await db.query(
-    `SELECT ic.*, k.nama as nama_karyawan, k.nik, j.name as jabatan_nama
+    `SELECT ic.id, ic.karyawan_id, ic.jenis, ic.tanggal_mulai, ic.tanggal_selesai, ic.alasan, ic.dokumen, ic.status, ic.approved_by, ic.created_at, k.nama as nama_karyawan, k.nik, j.name as jabatan_nama
      FROM ijin_cuti ic
      JOIN karyawan k ON k.id=ic.karyawan_id
      LEFT JOIN jabatan j ON j.id = k.jabatan_id
-     LEFT JOIN users u ON u.id=ic.approved_by
      ${where}
      ORDER BY ic.tanggal_mulai DESC, ic.created_at DESC
      LIMIT ? OFFSET ?`,
@@ -81,7 +80,7 @@ router.post('/', requireRole('admin', 'keuangan'), async (req, res) => {
   );
   
   const [rows] = await db.query(
-    `SELECT ic.*, k.nama as nama_karyawan, k.nik, j.name as jabatan_nama
+    `SELECT ic.id, ic.karyawan_id, ic.jenis, ic.tanggal_mulai, ic.tanggal_selesai, ic.alasan, ic.dokumen, ic.status, ic.approved_by, ic.created_at, k.nama as nama_karyawan, k.nik, j.name as jabatan_nama
      FROM ijin_cuti ic 
      JOIN karyawan k ON k.id=ic.karyawan_id 
      LEFT JOIN jabatan j ON j.id = k.jabatan_id
@@ -113,7 +112,7 @@ router.put('/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   await db.query(`UPDATE ijin_cuti SET ${sets.join(',')} WHERE id=? AND tenant_id=?`, vals);
   
   const [rows] = await db.query(
-    `SELECT ic.*, k.nama as nama_karyawan, k.nik, j.name as jabatan_nama
+    `SELECT ic.id, ic.karyawan_id, ic.jenis, ic.tanggal_mulai, ic.tanggal_selesai, ic.alasan, ic.dokumen, ic.status, ic.approved_by, ic.created_at, k.nama as nama_karyawan, k.nik, j.name as jabatan_nama
      FROM ijin_cuti ic 
      JOIN karyawan k ON k.id=ic.karyawan_id 
      LEFT JOIN jabatan j ON j.id = k.jabatan_id
@@ -126,7 +125,7 @@ router.put('/:id', requireRole('admin', 'keuangan'), async (req, res) => {
 // GET /:id — ambil detail satu record
 router.get('/:id', requireRole('admin', 'keuangan'), async (req, res) => {
   const [rows] = await db.query(
-    `SELECT ic.*, k.nama as nama_karyawan, k.nik, j.name as jabatan_nama
+    `SELECT ic.id, ic.karyawan_id, ic.jenis, ic.tanggal_mulai, ic.tanggal_selesai, ic.alasan, ic.dokumen, ic.status, ic.approved_by, ic.created_at, k.nama as nama_karyawan, k.nik, j.name as jabatan_nama
      FROM ijin_cuti ic 
      JOIN karyawan k ON k.id=ic.karyawan_id 
      LEFT JOIN jabatan j ON j.id = k.jabatan_id

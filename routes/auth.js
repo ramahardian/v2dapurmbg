@@ -21,10 +21,11 @@ function saveBase64Foto(base64Data) {
 
 const router = express.Router();
 
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Terlalu banyak percobaan' } });
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Terlalu banyak percobaan login. Coba lagi 15 menit.' } });
+const signupLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { error: 'Terlalu banyak pendaftaran. Coba lagi 1 jam.' } });
 
 // Register tenant baru (sign up SaaS)
-router.post('/signup', async (req, res) => {
+router.post('/signup', signupLimiter, async (req, res) => {
   const { nama_tenant, alamat, email, password, nama } = req.body;
   if (!nama_tenant || !email || !password || !nama) return res.status(400).json({ error: 'Field wajib tidak lengkap' });
   try {

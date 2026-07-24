@@ -45,9 +45,9 @@ router.get('/menu', async (req, res) => {
 // Gudang template - only admin and gudang
 router.get('/gudang', requireRole('admin', 'gudang'), async (req, res) => {
   try {
-    const [bahan] = await db.query('SELECT * FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
-    const [masuk] = await db.query('SELECT sm.*, bb.nama as nama_bahan, bb.satuan FROM stok_masuk sm JOIN bahan_baku bb ON bb.id=sm.bahan_baku_id WHERE sm.tenant_id=? ORDER BY sm.tanggal DESC', [req.user.tenant_id]);
-    const [keluar] = await db.query('SELECT sk.*, bb.nama as nama_bahan, bb.satuan FROM stok_keluar sk JOIN bahan_baku bb ON bb.id=sk.bahan_baku_id WHERE sk.tenant_id=? ORDER BY sk.tanggal DESC', [req.user.tenant_id]);
+    const [bahan] = await db.query('SELECT id, kode, nama, kategori, kategori_sp, satuan, harga_satuan, stok_saat_ini, stok_minimum, berat_per_satuan, berat_1_sp, persen_bdd FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
+    const [masuk] = await db.query('SELECT sm.id, sm.tanggal, sm.bahan_baku_id, sm.jumlah, sm.sumber, sm.catatan, bb.nama as nama_bahan, bb.satuan FROM stok_masuk sm JOIN bahan_baku bb ON bb.id=sm.bahan_baku_id WHERE sm.tenant_id=? ORDER BY sm.tanggal DESC', [req.user.tenant_id]);
+    const [keluar] = await db.query('SELECT sk.id, sk.tanggal, sk.bahan_baku_id, sk.jumlah, sk.tujuan, sk.catatan, bb.nama as nama_bahan, bb.satuan FROM stok_keluar sk JOIN bahan_baku bb ON bb.id=sk.bahan_baku_id WHERE sk.tenant_id=? ORDER BY sk.tanggal DESC', [req.user.tenant_id]);
     
     res.render('partials/gudang', { bahan, masuk, keluar });
   } catch (err) {
