@@ -392,8 +392,8 @@ const tabColors = {
       const { ringkasan } = lapRes;
       window._lapData = null;
 
-      const menuHarian = menuHarianRes ? menuHarianRes.siklus : [];
-      const kategori_order = menuHarianRes ? menuHarianRes.kategori_order : ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
+      const menuHarian = menuHarianRes || [];
+      const kategori_order = ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
 
       // Build Laporan 1: Siklus Menu 10 Hari
       let lap1Html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6">';
@@ -1769,7 +1769,7 @@ function renderLapNeraca() { renderReportPage('neraca'); }
 function renderLapArusKas() { renderReportPage('arus-kas'); }
 
 function renderResepTable(siklusList, kategori_order) {
-  if (!siklusList.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
+  if (!siklusList || !siklusList.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
 
   const ROW_KEYS = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
 
