@@ -870,7 +870,8 @@ async function openSiklusForm(editing) {
     for (const it of formData.items) {
       const hk = it.hari_ke;
       const existingItem = isEdit && s.items ? s.items.find(i => i.hari_ke === hk) : null;
-      gridData[hk] = { hari_ke: hk, hari_nama: it.hari_nama, menu_id: it.menu_id || '', menu_nama: it.menu_nama || '', bahan: {}, resep_map: (existingGrid[hk] && existingGrid[hk].resep_map) || {} };
+      const resepMapFromItem = existingItem && existingItem.resep_map ? (typeof existingItem.resep_map === 'string' ? JSON.parse(existingItem.resep_map) : existingItem.resep_map) : {};
+      gridData[hk] = { hari_ke: hk, hari_nama: it.hari_nama, menu_id: it.menu_id || '', menu_nama: it.menu_nama || '', bahan: {}, resep_map: resepMapFromItem };
       for (const rk of ROW_KEYS) {
         const existing = existingGrid[hk] && existingGrid[hk].bahan && existingGrid[hk].bahan[rk];
         gridData[hk].bahan[rk] = (existing || []).map(b => ({ ...b }));
