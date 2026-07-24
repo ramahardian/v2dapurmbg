@@ -828,6 +828,15 @@ async function openSiklusForm(editing) {
   }
   const formData = JSON.parse(JSON.stringify(s));
 
+  // Compute month/year for dropdowns
+  var _tglMulai = s.tanggal_mulai || '';
+  var _curMonth = _tglMulai ? parseInt(_tglMulai.slice(5,7)) : (new Date().getMonth() + 1);
+  var _curYear = _tglMulai ? _tglMulai.slice(0,4) : String(new Date().getFullYear());
+  var _monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  var _monthOpts = _monthNames.map(function(m,i){var v=i+1;return '<option value="'+v+'"'+(_curMonth===v?' selected':'')+'>'+m+'</option>';}).join('');
+  var _yearOpts = '';
+  for (var _y = 2020; _y <= 2032; _y++) { _yearOpts += '<option value="'+_y+'"'+(_curYear==_y?' selected':'')+'>'+_y+'</option>'; }
+
   const totalHari = s.total_hari || 30;
   if (!formData.items || !formData.items.length) {
     formData.items = HARI_OPTIONS.slice(0, Math.min(31, Math.max(1, totalHari))).map((h, i) => ({
@@ -902,7 +911,7 @@ async function openSiklusForm(editing) {
 
       <div class="bg-white rounded-2xl border border-stone-200 px-6 py-5 mb-5 shadow-sm">
         <div class="flex flex-wrap gap-x-6 gap-y-4 items-end">
-          <div class="min-w-[250px] flex-1"><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Nama Siklus</label><input id="sk-nama" value="${s.nama}" placeholder="cth: Siklus Menu SD" class="mt-1.5 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 text-sm font-medium transition-all" /></div>          <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Bulan</label><input id="sk-bulan" type="month" value="${s.tanggal_mulai ? s.tanggal_mulai.slice(0,7) : ''}" onchange="siklusBulanChange(this)" class="mt-1.5 h-11 px-3 border border-stone-200 rounded-xl text-sm" /></div>
+          <div class="min-w-[250px] flex-1"><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Nama Siklus</label><input id="sk-nama" value="${s.nama}" placeholder="cth: Siklus Menu SD" class="mt-1.5 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 text-sm font-medium transition-all" /></div>          <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Bulan</label><div class="flex gap-2 mt-1.5"><select id="sk-bulan" onchange="siklusBulanChange(this)" class="h-11 px-3 border border-stone-200 rounded-xl text-sm bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-300">${_monthOpts}</select><select id="sk-tahun" onchange="siklusBulanChange(this)" class="h-11 px-3 border border-stone-200 rounded-xl text-sm bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-300">${_yearOpts}</select></div></div>
 
           <div><label class="block text-xs font-semibold text-stone-400 uppercase tracking-wider">Jenjang</label><div id="sk-jenjang-list" class="mt-1.5 flex flex-wrap gap-2">${['TK/PAUD','SD 1-3','SD 4-6','SMP','SMA','Ibu Hamil','Ibu Menyusui','Balita'].map(k => { var checked = getJenjangChecked(s.kategori_penerima, k); return '<label class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs cursor-pointer transition-all ' + (checked ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-stone-200 hover:border-stone-300 text-stone-500') + '"><input type="checkbox" value="' + k + '" ' + (checked ? 'checked' : '') + ' class="jenjang-cb sr-only" onchange="toggleJenjangCb(this)">' + k + '</label>'; }).join('')}</div></div>
 
@@ -1019,7 +1028,8 @@ async function openSiklusForm(editing) {
 
     }
     var bulanVal = document.getElementById('sk-bulan').value;
-    var tanggalMulai = bulanVal ? bulanVal + '-01' : null;
+    var tahunVal = document.getElementById('sk-tahun').value;
+    var tanggalMulai = (bulanVal && tahunVal) ? tahunVal + '-' + (bulanVal < 10 ? '0' : '') + bulanVal + '-01' : null;
     var jenjangCbs = document.querySelectorAll('.jenjang-cb:checked');
     var jenjangVal = [];
     for (var jci = 0; jci < jenjangCbs.length; jci++) jenjangVal.push(jenjangCbs[jci].value);
@@ -1219,8 +1229,10 @@ function getDaysInMonth(dateStr) {
 }
 
 function siklusBulanChange(input) {
-  var tgl = input.value;
-  if (!tgl) return;
+  var bulanVal = document.getElementById('sk-bulan').value;
+  var tahunVal = document.getElementById('sk-tahun').value;
+  if (!bulanVal || !tahunVal) return;
+  var tgl = tahunVal + '-' + (bulanVal < 10 ? '0' : '') + bulanVal;
   // Simpan data resep dari DOM ke _gridData sebelum re-render
   if (window._gridData) {
     var gd = window._gridData;
@@ -1286,7 +1298,9 @@ async function openSiklusFormHariChange(input) {
   var curNama = document.getElementById('sk-nama').value;
   var curKat = (document.getElementById('sk-kategori')?.value) || '';
   var curStatus = document.getElementById('sk-status').value;
-  var curTglMulai = document.getElementById('sk-bulan').value;
+  var _bV = document.getElementById('sk-bulan').value;
+  var _tV = document.getElementById('sk-tahun').value;
+  var curTglMulai = _bV && _tV ? _tV + '-' + (_bV < 10 ? '0' : '') + _bV : '';
   var curId = window._siklusFormId;
   var items = Object.keys(window._gridData || {}).sort(function(a,b) { return Number(a)-Number(b); }).map(function(hk) {
     var d = window._gridData[hk];
