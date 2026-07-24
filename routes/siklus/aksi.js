@@ -19,13 +19,16 @@ router.post('/siklus/generate-produksi', async (req, res) => {
   // Find items for this siklus to get menu info
   const [items] = await db.query('SELECT * FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke ASC', [siklus_id]);
 
-  // Calculate hari_ke from tanggal_mulai (selalu ke depan dari tanggal_mulai)
+  // Hitung hari_ke berdasarkan offset tanggal (1 bulan kalender, tanpa modulo)
   if (!siklus.tanggal_mulai) return res.status(400).json({ error: 'Siklus belum memiliki tanggal_mulai' });
   const startDate = new Date(siklus.tanggal_mulai);
   const prodDate = new Date(tanggal_produksi);
   const diffDays = Math.floor((prodDate - startDate) / (1000 * 60 * 60 * 24));
   const totalHari = siklus.total_hari || 30;
-  const hariKe = ((diffDays % totalHari) + totalHari) % totalHari + 1;
+  const hariKe = diffDays + 1;
+  if (hariKe < 1 || hariKe > totalHari) {
+    return res.status(404).json({ error: 'Tanggal ' + tanggal_produksi + ' tidak dalam rentang siklus (hari ke-' + hariKe + ')' });
+  }
 
   const dayItems = items.filter(it => it.hari_ke === hariKe);
   if (!dayItems.length) return res.status(404).json({ error: 'Tidak ada menu untuk hari ke-' + hariKe });
@@ -70,12 +73,13 @@ router.post('/siklus/generate-produksi-batch', async (req, res) => {
   while (cur <= end) {
     const dateStr = cur.toISOString().split('T')[0];
 
-    // Calculate hari_ke (selalu ke depan dari tanggal_mulai)
+    // Hitung hari_ke berdasarkan offset tanggal (1 bulan kalender, tanpa modulo)
     if (!siklus.tanggal_mulai) { cur.setDate(cur.getDate() + 1); continue; }
     const siklusStart = new Date(siklus.tanggal_mulai);
     const diffDays = Math.floor((cur - siklusStart) / (1000 * 60 * 60 * 24));
     const totalHari = siklus.total_hari || 30;
-    const hariKe = ((diffDays % totalHari) + totalHari) % totalHari + 1;
+    const hariKe = diffDays + 1;
+    if (hariKe < 1 || hariKe > totalHari) { cur.setDate(cur.getDate() + 1); continue; }
 
     const dayItems = items.filter(it => it.hari_ke === hariKe);
     if (!dayItems.length) { cur.setDate(cur.getDate() + 1); continue; }

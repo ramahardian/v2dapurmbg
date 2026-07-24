@@ -364,7 +364,8 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       }
       const diffDays = Math.floor((curDate - siklusStart) / (1000 * 60 * 60 * 24));
       const totalHari = s.total_hari || 30;
-      const hariKe = ((diffDays % totalHari) + totalHari) % totalHari + 1;
+      const hariKe = diffDays + 1;
+      if (hariKe < 1 || hariKe > totalHari) continue;
 
       const items = (itemsBySiklus[s.id] || []).filter(it => it.hari_ke === hariKe);
       if (!items.length) continue;
