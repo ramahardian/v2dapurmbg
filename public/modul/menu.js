@@ -520,6 +520,12 @@ function renderBahanList() {
   document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
     var displayNama = b.nama || '';
     var displaySatuan = b.satuan || 'g';
+    var perSatuan = Number(b.berat_per_satuan) || 0;
+    var isNonGram = displaySatuan !== 'g' && perSatuan > 0;
+    var satuanNote = isNonGram ? '<div class="col-span-12 flex items-center gap-1 text-[10px] text-amber-600 -mt-1 mb-1">' +
+      '<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>' +
+      'Input dalam <span class="font-medium">' + displaySatuan + '</span> · 1 ' + displaySatuan + ' = <span class="font-medium">' + perSatuan + ' gram</span> (dikonversi ke gram untuk kalkulasi nutrisi)' +
+    '</div>' : '';
     return '<div class="grid grid-cols-12 gap-1.5 items-center">' +
       '<div class="col-span-4 relative">' +
         '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
@@ -531,7 +537,7 @@ function renderBahanList() {
       '</div>' +
       '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="col-span-4 h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
       '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
-    '</div>';
+    '</div>' + satuanNote;
   }).join('');
 }
 
@@ -561,17 +567,28 @@ function onBahanSearch(i, el) {
   var seen = new Set();
   var merged = [];
   for (var r of spMatches) {
-    if (!seen.has(r.nama.toLowerCase())) { seen.add(r.nama.toLowerCase()); merged.push({ sumber: 'sp', nama: r.nama, kategori: r.kategori || '', berat: r.berat_bersih, nutrisi: (r.energi ? r.energi + ' kkal' : '') + (r.protein ? ' · P' + r.protein + 'g' : '') + (r.karbohidrat ? ' · KH' + r.karbohidrat + 'g' : '') }); }
+    if (!seen.has(r.nama.toLowerCase())) {
+      seen.add(r.nama.toLowerCase());
+      var bbSat = (window._bahanBaku || []).find(function(bb) { return bb.nama && bb.nama.toLowerCase() === r.nama.toLowerCase(); });
+      merged.push({ sumber: 'sp', nama: r.nama, kategori: r.kategori || '', berat: r.berat_bersih, satuan: bbSat ? bbSat.satuan : 'g', berat_per_satuan: bbSat ? Number(bbSat.berat_per_satuan) : 0, nutrisi: (r.energi ? r.energi + ' kkal' : '') + (r.protein ? ' · P' + r.protein + 'g' : '') + (r.karbohidrat ? ' · KH' + r.karbohidrat + 'g' : '') });
+    }
   }
   for (var b of bbMatches) {
-    if (!seen.has(b.nama.toLowerCase())) { seen.add(b.nama.toLowerCase()); merged.push({ sumber: 'bb', nama: b.nama, kategori: b.kategori_sp || '', berat: b.berat_1_sp, nutrisi: (b.kalori ? b.kalori + ' kkal' : '') + (b.protein ? ' · P' + b.protein + 'g' : '') + (b.karbohidrat ? ' · KH' + b.karbohidrat + 'g' : '') }); }
+    if (!seen.has(b.nama.toLowerCase())) {
+      seen.add(b.nama.toLowerCase());
+      merged.push({ sumber: 'bb', nama: b.nama, kategori: b.kategori_sp || '', berat: b.berat_1_sp, satuan: b.satuan || 'g', berat_per_satuan: Number(b.berat_per_satuan) || 0, nutrisi: (b.kalori ? b.kalori + ' kkal' : '') + (b.protein ? ' · P' + b.protein + 'g' : '') + (b.karbohidrat ? ' · KH' + b.karbohidrat + 'g' : '') });
+    }
   }
   if (!merged.length) { dropdown.classList.add('hidden'); return; }
   dropdown.innerHTML = merged.map(function(item) {
     var badge = item.sumber === 'sp' ? '<span class="text-[9px] bg-blue-100 text-blue-700 px-1 py-0.5 rounded mr-1">SP</span>' : '<span class="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded mr-1">Baku</span>';
+    var satuanInfo = '';
+    if (item.satuan && item.satuan !== 'g' && item.berat_per_satuan > 0) {
+      satuanInfo = ' · Satuan: <span class="font-medium">' + item.satuan + '</span> (1 ' + item.satuan + ' = ' + item.berat_per_satuan + 'g)';
+    }
     return '<div onclick="selectBahan(' + i + ", '" + item.nama.replace(/'/g, "\\'") + "')\" class=\"px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-stone-100 last:border-0\">" +
       '<div class="font-medium text-stone-800">' + badge + ' ' + item.nama + '</div>' +
-      '<div class="text-[10px] text-stone-400">' + (item.kategori || '') + (item.berat ? ' · 1SP=' + item.berat + 'g' : '') + (item.nutrisi ? ' · ' + item.nutrisi : '') + '</div>' +
+      '<div class="text-[10px] text-stone-400">' + (item.kategori || '') + (item.berat ? ' · 1SP=' + item.berat + 'g' : '') + satuanInfo + (item.nutrisi ? ' · ' + item.nutrisi : '') + '</div>' +
     '</div>';
   }).join('');
   dropdown.classList.remove('hidden');
