@@ -846,13 +846,20 @@ async function openSiklusForm(editing) {
   var _tglSelesaiStr = fmtDateInput(_tglSelesai);
 
   const totalHari = Math.floor((_tglSelesai - _tglMulai) / 86400000) + 1;
-  if (!formData.items || !formData.items.length) {
-    formData.items = [];
-    for (let _i = 1; _i <= totalHari; _i++) {
-      var _dt = new Date(_tglMulai.getTime() + (_i - 1) * 86400000);
-      var _dn = HARI_OPTIONS[_dt.getDay() === 0 ? 6 : _dt.getDay() - 1];
-      formData.items.push({ hari_ke: _i, hari_nama: _dn, menu_nama: '', jumlah_porsi: formData.jumlah_porsi || 0 });
+  var existingItemsByHk = {};
+  if (formData.items) {
+    for (var _ei = 0; _ei < formData.items.length; _ei++) {
+      var _eit = formData.items[_ei];
+      if (_eit && _eit.hari_ke) existingItemsByHk[Number(_eit.hari_ke)] = _eit;
     }
+  }
+  formData.items = [];
+  for (let _i = 1; _i <= totalHari; _i++) {
+    var _dt = new Date(_tglMulai.getTime() + (_i - 1) * 86400000);
+    var _dn = HARI_OPTIONS[_dt.getDay() === 0 ? 6 : _dt.getDay() - 1];
+    var _existing = existingItemsByHk[_i];
+    formData.items.push(_existing || { hari_ke: _i, hari_nama: _dn, menu_nama: '', jumlah_porsi: formData.jumlah_porsi || 0 });
+    if (_existing && !_existing.hari_nama) formData.items[formData.items.length - 1].hari_nama = _dn;
   }
 
   const c = document.getElementById('content');
