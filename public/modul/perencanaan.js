@@ -19,6 +19,8 @@ async function renderPerencanaan() {
     const r = await fetch('/api/template/perencanaan', { credentials: 'include' });
     if (!r.ok) throw new Error((await r.json()).error || 'Gagal memuat');
     c.innerHTML = await r.text();
+    // Preload bahan list untuk edit override
+    await pncPreloadBahan();
     await loadPerencanaanData();
   } catch (err) {
     c.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat: ' + err.message + '</div>';
@@ -213,7 +215,7 @@ function renderPncJenjangSection(jd, idx) {
     for (var h = 0; h < sk.hari.length; h++) {
       var day = sk.hari[h];
       html += '<div class="pnc-day-content' + (h > 0 ? ' hidden' : '') + '" role="tabpanel">';
-      html += renderPncMenuTable(day, jd.jumlah_siswa);
+      html += renderPncMenuTable(day, jd.jumlah_siswa, sk.siklus_id, jd.jenjang);
       html += '</div>';
     }
   }
@@ -222,7 +224,101 @@ function renderPncJenjangSection(jd, idx) {
   return html;
 }
 
-function renderPncMenuTable(day, jumlahSiswa) {
+// ── Override: preload bahan baku ──
+var _pncBahanList = [];
+
+async function pncPreloadBahan() {
+  try {
+    const res = await api.get('/bahan/by-sp');
+    var list = [];
+    if (res && res.byKat) {
+      for (var kat in res.byKat) {
+        var items = res.byKat[kat];
+        for (var i = 0; i < items.length; i++) {
+          list.push({ id: items[i].id, nama: items[i].nama, kategori_sp: kat, satuan: items[i].satuan, berat_1_sp: items[i].berat_1_sp, persen_bdd: items[i].persen_bdd });
+        }
+      }
+    }
+    _pncBahanList = list.sort(function(a, b) { return a.nama.localeCompare(b.nama); });
+  } catch (e) {
+    console.error('Gagal preload bahan:', e);
+    _pncBahanList = [];
+  }
+}
+
+// ── Override: edit bahan ──
+async function pncEditBahan(btn) {
+  var siklusId = parseInt(btn.getAttribute('data-si')) || 0;
+  var hariKe = parseInt(btn.getAttribute('data-hk')) || 0;
+  var jenjang = btn.getAttribute('data-jn') || '';
+  var origBahanId = parseInt(btn.getAttribute('data-bi')) || 0;
+  var origNama = btn.getAttribute('data-bn') || '';
+  var curJenjangSection = btn.closest('[data-pnc-section]');
+
+  // Build dropdown options
+  var optionsHtml = '<div class="mb-4">';
+  optionsHtml += '<label class="block text-sm font-semibold text-stone-700 mb-2">Ganti <strong>' + escHtml(origNama) + '</strong> dengan:</label>';
+  optionsHtml += '<input type="text" id="pnc-cari-bahan" placeholder="Cari bahan..." class="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm mb-2 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400" oninput="pncFilterBahanDropdown(this.value)">';
+  optionsHtml += '<div id="pnc-bahan-dropdown" class="max-h-48 overflow-y-auto border border-stone-200 rounded-lg">';
+  for (var i = 0; i < _pncBahanList.length; i++) {
+    var b = _pncBahanList[i];
+    optionsHtml += '<div class="pnc-bahan-item px-3 py-2 cursor-pointer hover:bg-sky-50 border-b border-stone-100 last:border-0 text-sm" data-id="' + b.id + '" data-berat="' + (b.berat_1_sp || 0) + '" data-bdd="' + (b.persen_bdd || 100) + '" onclick="pncPilihBahan(' + siklusId + ',' + hariKe + ',\'' + jenjang.replace(/'/g, "\\'") + '\',' + origBahanId + ',' + b.id + ')">' + escHtml(b.nama) + ' <span class="text-[10px] text-stone-400">(' + (b.kategori_sp || '-') + ', ' + (b.berat_1_sp || 0) + 'g, BDD ' + (b.persen_bdd || 100) + '%)</span></div>';
+  }
+  optionsHtml += '</div></div>';
+
+  document.getElementById('modal-title').textContent = 'Override Bahan: ' + escHtml(origNama);
+  document.getElementById('modal-body').innerHTML = optionsHtml;
+  document.getElementById('modal-save').textContent = 'Batal';
+  document.getElementById('modal-save').onclick = function() { closeModal(); };
+
+  var modal = document.getElementById('modal');
+  if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+}
+
+function pncFilterBahanDropdown(q) {
+  var items = document.querySelectorAll('.pnc-bahan-item');
+  q = (q || '').toLowerCase();
+  for (var i = 0; i < items.length; i++) {
+    var nama = (items[i].textContent || '').toLowerCase();
+    items[i].style.display = nama.indexOf(q) > -1 ? '' : 'none';
+  }
+}
+
+async function pncPilihBahan(siklusId, hariKe, jenjang, origBahanId, newBahanId) {
+  closeModal();
+  try {
+    var res = await api.post('/siklus/laporan/override', {
+      siklus_id: siklusId,
+      hari_ke: hariKe,
+      jenjang: jenjang,
+      original_bahan_baku_id: origBahanId || null,
+      new_bahan_baku_id: newBahanId
+    });
+    if (res.ok) {
+      showAlert('✅ Berhasil mengganti bahan. Refresh halaman...', 'success');
+      // Reload section
+      setTimeout(function() { loadPerencanaanData(_pncSiklusId || undefined); }, 500);
+    } else {
+      showAlert('Gagal: ' + (res.error || 'Unknown'), 'error');
+    }
+  } catch (err) {
+    showAlert('Gagal: ' + err.message, 'error');
+  }
+}
+
+// ── Override: hapus override ──
+async function pncHapusOverride(overrideId) {
+  if (!confirm('Hapus override ini? Bahan akan kembali ke asal.')) return;
+  try {
+    await api.del('/siklus/laporan/override/' + overrideId);
+    showAlert('✅ Override dihapus. Refresh...', 'success');
+    setTimeout(function() { loadPerencanaanData(_pncSiklusId || undefined); }, 500);
+  } catch (err) {
+    showAlert('Gagal: ' + err.message, 'error');
+  }
+}
+
+function renderPncMenuTable(day, jumlahSiswa, siklusId, jenjang) {
   var html = '<div class="px-5 py-3 border-b border-stone-100 bg-stone-50/30">';
 
   // Menu header
@@ -251,8 +347,22 @@ function renderPncMenuTable(day, jumlahSiswa) {
   for (var i = 0; i < day.bahan.length; i++) {
     var b = day.bahan[i];
     var sumberBdd = b.sumber_bdd === 'sp_referensi';
-    html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
-    html += '<td class="px-2 py-1.5 text-sm font-medium">' + b.nama_display + '</td>';
+    var isOverridden = b.overridden === true;
+    var overClass = isOverridden ? 'bg-amber-50/40' : '';
+    html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50 ' + overClass + '">';
+    // Nama bahan + edit button
+    html += '<td class="px-2 py-1.5 text-sm font-medium flex items-center gap-1.5">';
+    if (isOverridden) {
+      html += '<span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Override"></span>';
+    }
+    html += '<span class="' + (isOverridden ? 'text-amber-800' : '') + '">' + b.nama_display + '</span>';
+    // Edit button
+    html += '<button onclick="pncEditBahan(this)" data-si="' + siklusId + '" data-hk="' + (day.hari_ke || '') + '" data-jn="' + (jenjang || '').replace(/"/g, '&quot;') + '" data-bi="' + (b.bahan_baku_id || 0) + '" data-bn="' + escHtml(b.nama_display || b.nama) + '" class="ml-1 p-0.5 rounded text-stone-300 hover:text-sky-600 hover:bg-sky-50 transition-colors" title="Ganti bahan"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
+    // Delete override button (only for overridden items)
+    if (isOverridden && b.override_id) {
+      html += '<button onclick="pncHapusOverride(' + b.override_id + ')" class="p-0.5 rounded text-stone-300 hover:text-red-600 hover:bg-red-50 transition-colors" title="Kembalikan ke asal"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>';
+    }
+    html += '</td>';
     html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(b.berat_bersih) + '</td>';
     html += '<td class="px-2 py-1.5 text-sm text-right mono ' + (sumberBdd ? 'text-emerald-600 font-semibold' : '') + '">' + b.persen_bdd + '%</td>';
     html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(b.berat_kotor) + '</td>';

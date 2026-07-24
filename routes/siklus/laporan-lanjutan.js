@@ -133,7 +133,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
           const persenBdd = ref.bdd_persen || Number(br.persen_bdd) || 100;
           const beratBersih = Number(br.jumlah) * jmlPm;
           const beratKotor = hitungBDD(beratBersih, persenBdd);
-          return { nama: br.nama, nama_display: br.nama, satuan: br.satuan, kategori_sp: br.kategori_sp, persen_bdd: persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 };
+          return { bahan_baku_id: br.bahan_baku_id, nama: br.nama, nama_display: br.nama, satuan: br.satuan, kategori_sp: br.kategori_sp, persen_bdd: persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 };
         });
         dayData.push({ hari_ke: it.hari_ke, hari_nama: it.hari_nama, menu_nama: it.menu_nama || '-', menu_label: 'Menu', bahan: bahanItems });
       }
@@ -155,7 +155,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
         }
         const dayEntry = dayData.find(d => d.hari_ke === hk);
         if (dayEntry) {
-          dayEntry.bahan.push({ nama: g.nama, nama_display: g.nama, satuan: g.satuan || 'g', kategori_sp: g.kategori_sp, persen_bdd: persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 });
+          dayEntry.bahan.push({ bahan_baku_id: g.bahan_baku_id, nama: g.nama, nama_display: g.nama, satuan: g.satuan || 'g', kategori_sp: g.kategori_sp, persen_bdd: persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 });
         }
       }
 
@@ -164,6 +164,59 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
 
     dataByJenjang[j] = { jumlah_siswa: jmlPm, sp_target: spTarget, siklus: siklusData };
   }
+
+  // ── Apply overrides ──
+  try {
+    const [overrides] = await db.query(
+      `SELECT ov.*, b.nama as new_nama
+       FROM perencanaan_override ov
+       LEFT JOIN bahan_baku b ON b.id = ov.new_bahan_baku_id
+       WHERE ov.tenant_id=?`,
+      [req.user.tenant_id]
+    );
+    if (overrides.length) {
+      const ovMap = {};
+      for (const ov of overrides) {
+        const key = ov.siklus_id + '::' + ov.hari_ke + '::' + ov.jenjang + '::' + (ov.original_bahan_baku_id || '');
+        ovMap[key] = ov;
+      }
+      for (const j of activeJenjang) {
+        const jData = dataByJenjang[j];
+        if (!jData) continue;
+        const jmlPm = pmByDisplay[j] || 0;
+        for (const sData of jData.siklus) {
+          for (const day of sData.hari) {
+            const newBahan = [];
+            for (const b of day.bahan) {
+              const key = sData.siklus_id + '::' + day.hari_ke + '::' + j + '::' + (b.bahan_baku_id || '');
+              const ov = ovMap[key];
+              if (ov) {
+                const beratBersih = Number(ov.jumlah) * jmlPm;
+                const beratKotor = hitungBDD(beratBersih, Number(ov.persen_bdd));
+                newBahan.push({
+                  bahan_baku_id: ov.new_bahan_baku_id,
+                  nama: ov.new_nama || b.nama,
+                  nama_display: ov.new_nama || b.nama,
+                  overridden: true,
+                  override_id: ov.id,
+                  sumber_bdd: 'override',
+                  satuan: b.satuan,
+                  kategori_sp: b.kategori_sp,
+                  persen_bdd: Number(ov.persen_bdd),
+                  berat_bersih: Math.round(beratBersih * 100) / 100,
+                  berat_kotor: Math.round(beratKotor * 100) / 100,
+                  kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100
+                });
+              } else {
+                newBahan.push(b);
+              }
+            }
+            day.bahan = newBahan;
+          }
+        }
+      }
+    }
+  } catch (e) { /* table might not exist yet */ }
 
   // Convert to sorted array for frontend
   const dataArray = JENJANG_DISPLAY_ORDER
@@ -360,6 +413,94 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
   }
 
   res.json({ jenjang_list: activeJenjang, hari, pm_map: filteredPmMap, tanggal_mulai: mulai, tanggal_selesai: selesai });
+});
+
+// ── Override CRUD ──────────────────────────────────────────────────
+
+/**
+ * POST /siklus/laporan/override
+ * Save or update an override for a specific siklus+hari+jenjang+ingredient.
+ * Body: { siklus_id, hari_ke, jenjang, original_bahan_baku_id, new_bahan_baku_id }
+ */
+router.post('/siklus/laporan/override', async (req, res) => {
+  const { siklus_id, hari_ke, jenjang, original_bahan_baku_id, new_bahan_baku_id } = req.body;
+  if (!siklus_id || !hari_ke || !jenjang || !new_bahan_baku_id) {
+    return res.status(400).json({ error: 'siklus_id, hari_ke, jenjang, new_bahan_baku_id wajib diisi' });
+  }
+
+  // Lookup new ingredient data
+  const [[bahan]] = await db.query(
+    'SELECT id, nama, berat_1_sp, persen_bdd FROM bahan_baku WHERE id=? AND tenant_id=?',
+    [new_bahan_baku_id, req.user.tenant_id]
+  );
+  if (!bahan) return res.status(404).json({ error: 'Bahan tidak ditemukan' });
+
+  const jumlah = Number(bahan.berat_1_sp) || 0;
+  const persenBdd = Number(bahan.persen_bdd) || 100;
+
+  // Upsert override
+  const origId = original_bahan_baku_id || null;
+  const [existing] = await db.query(
+    'SELECT id FROM perencanaan_override WHERE tenant_id=? AND siklus_id=? AND hari_ke=? AND jenjang=? AND COALESCE(original_bahan_baku_id,0)=?',
+    [req.user.tenant_id, siklus_id, hari_ke, jenjang, origId || 0]
+  );
+
+  // Get original name if available
+  let originalNama = null;
+  if (original_bahan_baku_id) {
+    const [[orig]] = await db.query('SELECT nama FROM bahan_baku WHERE id=?', [original_bahan_baku_id]);
+    if (orig) originalNama = orig.nama;
+  }
+
+  if (existing.length) {
+    await db.query(
+      'UPDATE perencanaan_override SET new_bahan_baku_id=?, jumlah=?, persen_bdd=?, original_nama=? WHERE id=?',
+      [new_bahan_baku_id, jumlah, persenBdd, originalNama, existing[0].id]
+    );
+  } else {
+    const [r] = await db.query(
+      'INSERT INTO perencanaan_override (tenant_id, siklus_id, hari_ke, jenjang, original_bahan_baku_id, original_nama, new_bahan_baku_id, jumlah, persen_bdd) VALUES (?,?,?,?,?,?,?,?,?)',
+      [req.user.tenant_id, siklus_id, hari_ke, jenjang, origId, originalNama, new_bahan_baku_id, jumlah, persenBdd]
+    );
+    existing[0] = { id: r.insertId };
+  }
+
+  res.json({
+    ok: true,
+    override_id: existing[0].id,
+    new_nama: bahan.nama,
+    jumlah,
+    persen_bdd: persenBdd,
+  });
+});
+
+/**
+ * GET /siklus/laporan/override
+ * Get overrides for a specific siklus+hari+jenjang (all by default).
+ * Query: ?siklus_id=X&hari_ke=Y&jenjang=Z
+ */
+router.get('/siklus/laporan/override', async (req, res) => {
+  let sql = 'SELECT ov.*, b.nama as new_nama FROM perencanaan_override ov LEFT JOIN bahan_baku b ON b.id=ov.new_bahan_baku_id WHERE ov.tenant_id=?';
+  const params = [req.user.tenant_id];
+
+  if (req.query.siklus_id) { sql += ' AND ov.siklus_id=?'; params.push(parseInt(req.query.siklus_id)); }
+  if (req.query.hari_ke) { sql += ' AND ov.hari_ke=?'; params.push(parseInt(req.query.hari_ke)); }
+  if (req.query.jenjang) { sql += ' AND ov.jenjang=?'; params.push(req.query.jenjang); }
+
+  sql += ' ORDER BY ov.siklus_id, ov.hari_ke, ov.jenjang';
+  const [rows] = await db.query(sql, params);
+  res.json(rows);
+});
+
+/**
+ * DELETE /siklus/laporan/override/:id
+ * Remove an override.
+ */
+router.delete('/siklus/laporan/override/:id', async (req, res) => {
+  const [[ov]] = await db.query('SELECT id FROM perencanaan_override WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
+  if (!ov) return res.status(404).json({ error: 'Override tidak ditemukan' });
+  await db.query('DELETE FROM perencanaan_override WHERE id=?', [req.params.id]);
+  res.json({ ok: true });
 });
 
 module.exports = router;

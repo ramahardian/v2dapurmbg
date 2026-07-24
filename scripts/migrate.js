@@ -490,6 +490,30 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi kategori_penerima TEXT): ' + e.message); }
 
+  // Tabel perencanaan_override — override bahan per jenjang
+  try {
+    await q(`CREATE TABLE IF NOT EXISTS perencanaan_override (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id INT NOT NULL,
+      siklus_id INT NOT NULL,
+      hari_ke INT NOT NULL,
+      jenjang VARCHAR(50) NOT NULL,
+      original_bahan_baku_id INT DEFAULT NULL,
+      original_nama VARCHAR(200) DEFAULT NULL,
+      new_bahan_baku_id INT NOT NULL,
+      jumlah DECIMAL(10,2) NOT NULL DEFAULT 0,
+      persen_bdd DECIMAL(5,1) NOT NULL DEFAULT 100,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_override (tenant_id, siklus_id, hari_ke, jenjang, original_bahan_baku_id, original_nama),
+      INDEX idx_override_lookup (tenant_id, siklus_id, hari_ke, jenjang),
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+      FOREIGN KEY (siklus_id) REFERENCES siklus_menu(id) ON DELETE CASCADE,
+      FOREIGN KEY (new_bahan_baku_id) REFERENCES bahan_baku(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB`);
+    log('✓ Migrasi perencanaan_override: tabel dibuat');
+  } catch (e) { log('  (skip perencanaan_override): ' + e.message); }
+
   log('✓ Migrasi selesai!');
   return logs;
 }
