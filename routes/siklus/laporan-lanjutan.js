@@ -83,9 +83,9 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
           const persenBdd = ref.bdd_persen || Number(br.persen_bdd) || 100;
           const beratBersih = Number(br.jumlah) * jmlPm;
           const beratKotor = hitungBDD(beratBersih, persenBdd);
-          return { nama: br.nama, satuan: br.satuan, kategori_sp: br.kategori_sp, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 };
+          return { nama: br.nama, nama_display: br.nama, satuan: br.satuan, kategori_sp: br.kategori_sp, persen_bdd: persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 };
         });
-        dayData.push({ hari_ke: it.hari_ke, hari_nama: it.hari_nama, menu_nama: it.menu_nama || '-', bahan: bahanItems });
+        dayData.push({ hari_ke: it.hari_ke, hari_nama: it.hari_nama, menu_nama: it.menu_nama || '-', menu_label: 'Menu', bahan: bahanItems });
       }
 
       // Add grid-based items
@@ -96,13 +96,18 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
         gridByDay[g.hari_ke].push(g);
       }
 
-      siklusData.push({ siklus_id: s.id, siklus_nama: s.nama, days: dayData, grid_days: Object.entries(gridByDay).map(([hk, items]) => ({ hari_ke: Number(hk), bahan: items.map(g => ({ nama: g.nama, kategori_sp: g.kategori_sp, kebutuhan_kg: Math.round(((Number(g.berat_1_sp || 0) * jmlPm * (100 / (Number(g.persen_bdd) || 100))) / 1000) * 100) / 100 })) })) });
+      siklusData.push({ siklus_id: s.id, siklus_nama: s.nama, hari: dayData, grid_days: Object.entries(gridByDay).map(([hk, items]) => ({ hari_ke: Number(hk), bahan: items.map(g => ({ nama: g.nama, kategori_sp: g.kategori_sp, kebutuhan_kg: Math.round(((Number(g.berat_1_sp || 0) * jmlPm * (100 / (Number(g.persen_bdd) || 100))) / 1000) * 100) / 100 })) })) });
     }
 
-    dataByJenjang[j] = { jumlah_pm: jmlPm, sp_target: spTarget, siklus: siklusData };
+    dataByJenjang[j] = { jumlah_siswa: jmlPm, sp_target: spTarget, siklus: siklusData };
   }
 
-  res.json({ siklus_list: siklusList, selected_siklus_id: siklusIdParam, jenjang_list: activeJenjang, data: dataByJenjang });
+  // Convert to sorted array for frontend
+  const dataArray = JENJANG_DISPLAY_ORDER
+    .filter(j => dataByJenjang[j])
+    .map(j => ({ jenjang: j, ...dataByJenjang[j] }));
+
+  res.json({ siklus_list: siklusList, selected_siklus_id: siklusIdParam, jenjang_list: activeJenjang, data: dataArray });
 });
 
 /**
