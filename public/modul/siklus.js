@@ -1204,14 +1204,18 @@ function saveGridPicker(hk, rk) {
   if (m) m.remove(); _gridPickerOpen = false;
   window._gridDirty = true;
   var curNama = (document.getElementById('sk-nama')?.value) || '';
-  var curKat = (document.getElementById('sk-kategori')?.value) || '';
   var curStatus = (document.getElementById('sk-status')?.value) || 'Draft';
+  var _bV = document.getElementById('sk-bulan').value;
+  var _tV = document.getElementById('sk-tahun').value;
+  var curTglMulai = _bV && _tV ? _tV + '-' + (_bV < 10 ? '0' : '') + _bV : '';
+  var meta = window._siklusMeta || {};
+  var curKat = meta.kategori_penerima || '';
   var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
   var items = hkKeys.map(function(hk) {
     var d = window._gridData[Number(hk)];
     return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
   });
-  openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, items: items });
+  openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, tanggal_mulai: curTglMulai, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, tanggal_mulai: curTglMulai, items: items });
 }
 function closeGridPicker() { var m = document.getElementById('siklus-modal'); if (m) m.remove(); _gridPickerOpen = false; }
 function filterGridPicker() {
@@ -1233,38 +1237,38 @@ function siklusBulanChange(input) {
   var bulanVal = document.getElementById('sk-bulan').value;
   var tahunVal = document.getElementById('sk-tahun').value;
   if (!bulanVal || !tahunVal) return;
+  // Tunggu sampai _gridData siap agar data bahan tidak hilang saat edit
+  if (!window._gridData) return;
   var tgl = tahunVal + '-' + (bulanVal < 10 ? '0' : '') + bulanVal;
   // Simpan data resep dari DOM ke _gridData sebelum re-render
-  if (window._gridData) {
-    var gd = window._gridData;
-    var rowKeys = window._rowKeys || [];
-    // Reset resep_map untuk semua hari
-    Object.keys(gd).forEach(function(hk) {
-      if (gd[hk]) gd[hk].resep_map = {};
-    });
-    // Baca nilai dari DOM
-    document.querySelectorAll('input[data-field="resep"]').forEach(function(inp) {
-      var hk = Number(inp.getAttribute('data-hk'));
-      var kat = inp.getAttribute('data-kat');
-      var val = inp.value.trim();
-      if (hk && kat && gd[hk]) {
-        gd[hk].resep_map[kat] = val;
-      }
-    });
-    // Bangun menu_nama dari resep_map (sama seperti save handler)
-    Object.keys(gd).forEach(function(hk) {
-      var d = gd[hk];
-      if (!d) return;
-      var rmap = d.resep_map || {};
-      var parts = [];
-      for (var ri = 0; ri < rowKeys.length; ri++) {
-        var v = rmap[rowKeys[ri]];
-        if (v) parts.push(v);
-      }
-      if (parts.length) d.menu_nama = parts.join(' + ');
-    });
-    window._gridData = gd;
-  }
+  var gd = window._gridData;
+  var rowKeys = window._rowKeys || [];
+  // Reset resep_map untuk semua hari
+  Object.keys(gd).forEach(function(hk) {
+    if (gd[hk]) gd[hk].resep_map = {};
+  });
+  // Baca nilai dari DOM
+  document.querySelectorAll('input[data-field="resep"]').forEach(function(inp) {
+    var hk = Number(inp.getAttribute('data-hk'));
+    var kat = inp.getAttribute('data-kat');
+    var val = inp.value.trim();
+    if (hk && kat && gd[hk]) {
+      gd[hk].resep_map[kat] = val;
+    }
+  });
+  // Bangun menu_nama dari resep_map (sama seperti save handler)
+  Object.keys(gd).forEach(function(hk) {
+    var d = gd[hk];
+    if (!d) return;
+    var rmap = d.resep_map || {};
+    var parts = [];
+    for (var ri = 0; ri < rowKeys.length; ri++) {
+      var v = rmap[rowKeys[ri]];
+      if (v) parts.push(v);
+    }
+    if (parts.length) d.menu_nama = parts.join(' + ');
+  });
+  window._gridData = gd;
   var totalHari = getDaysInMonth(tgl);
   openSiklusFormHariChange({ value: totalHari });
 }
@@ -1275,12 +1279,20 @@ async function openSiklusFormHariChange(input) {
   if (window._gridData) {
     var gridData = window._gridData;
     var rowKeys = window._rowKeys || [];
+    var _bV = document.getElementById('sk-bulan').value;
+    var _tV = document.getElementById('sk-tahun').value;
     var hkKeys = Object.keys(gridData).sort(function(a,b) { return Number(a)-Number(b); });
     var existingLen = hkKeys.length;
 
+    // Update nama hari untuk semua hari yang ada berdasarkan bulan yang dipilih
+    hkKeys.forEach(function(hk) {
+      var hkNum = Number(hk);
+      if (!gridData[hkNum]) return;
+      var _dt = new Date(Number(_tV), Number(_bV) - 1, hkNum);
+      gridData[hkNum].hari_nama = HARI_OPTIONS[_dt.getDay() === 0 ? 6 : _dt.getDay() - 1];
+    });
+
     if (newTotal > existingLen) {
-      var _bV = document.getElementById('sk-bulan').value;
-      var _tV = document.getElementById('sk-tahun').value;
       for (var i = existingLen + 1; i <= newTotal; i++) {
         var _dt = new Date(Number(_tV), Number(_bV) - 1, i);
         var nama = HARI_OPTIONS[_dt.getDay() === 0 ? 6 : _dt.getDay() - 1];
