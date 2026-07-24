@@ -841,8 +841,9 @@ async function openSiklusForm(editing) {
   var _totalHariFromData = Math.max(1, s.total_hari || 7);
   var _tglSelesai = new Date(_tglMulai);
   _tglSelesai.setDate(_tglSelesai.getDate() + _totalHariFromData - 1);
-  var _tglMulaiStr = _tglMulai.toISOString().slice(0,10);
-  var _tglSelesaiStr = _tglSelesai.toISOString().slice(0,10);
+  function fmtDateInput(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  var _tglMulaiStr = fmtDateInput(_tglMulai);
+  var _tglSelesaiStr = fmtDateInput(_tglSelesai);
 
   const totalHari = Math.floor((_tglSelesai - _tglMulai) / 86400000) + 1;
   if (!formData.items || !formData.items.length) {
