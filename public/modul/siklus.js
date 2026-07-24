@@ -828,9 +828,16 @@ async function openSiklusForm(editing) {
   }
   const formData = JSON.parse(JSON.stringify(s));
 
-  // Compute date range
+  // Compute date range (handle Date object or ISO string from API)
   var _rawTglMulai = s.tanggal_mulai || '';
-  if (_rawTglMulai && _rawTglMulai.length === 7) _rawTglMulai += '-01';
+  if (_rawTglMulai) {
+    if (typeof _rawTglMulai === 'object' && _rawTglMulai instanceof Date) {
+      _rawTglMulai = _rawTglMulai.toISOString().slice(0, 10);
+    } else {
+      _rawTglMulai = String(_rawTglMulai).replace(/T.*$/g, '');
+    }
+    if (_rawTglMulai.length === 7) _rawTglMulai += '-01';
+  }
   var _tglMulai = _rawTglMulai ? new Date(_rawTglMulai + 'T00:00:00') : new Date();
   _tglMulai.setHours(0,0,0,0);
   var _totalHariFromData = Math.max(1, s.total_hari || 7);
@@ -986,7 +993,9 @@ async function openSiklusForm(editing) {
     var _tglMulaiSave = document.getElementById('sk-tgl-mulai').value;
     var _tglSelesaiSave = document.getElementById('sk-tgl-selesai').value;
     if (!_tglMulaiSave || !_tglSelesaiSave) { showAlert('Tanggal mulai dan selesai harus diisi', 'warning'); return; }
-    var totalHari = Math.floor((new Date(_tglSelesaiSave + 'T00:00:00') - new Date(_tglMulaiSave + 'T00:00:00')) / 86400000) + 1;
+    var _d1 = new Date(String(_tglSelesaiSave).replace(/T.*$/g, '') + 'T00:00:00');
+    var _d2 = new Date(String(_tglMulaiSave).replace(/T.*$/g, '') + 'T00:00:00');
+    var totalHari = Math.floor((_d1 - _d2) / 86400000) + 1;
     if (totalHari < 1) totalHari = 1;
     var gd = window._gridData || {};
     var rowKeys = window._rowKeys || [];
@@ -1278,6 +1287,7 @@ function siklusTanggalChange() {
 async function openSiklusFormHariChange(input) {
   var newTotal = Math.min(31, Math.max(1, +input.value || 1));
   var _tglMulaiStr = input.tglMulai || document.getElementById('sk-tgl-mulai').value || '';
+  _tglMulaiStr = String(_tglMulaiStr).replace(/T.*$/g, '');
   var _tglMulaiDt = _tglMulaiStr ? new Date(_tglMulaiStr + 'T00:00:00') : new Date();
   _tglMulaiDt.setHours(0,0,0,0);
 
