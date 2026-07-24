@@ -58,14 +58,27 @@ router.post('/siklus/:id/bahan-grid', async (req, res) => {
     await conn.query('DELETE FROM siklus_menu_item_bahan WHERE siklus_id=?', [req.params.id]);
 
     // 2. Insert grid baru
-    // grid format: { "1": { "Karbohidrat": [{ bahan_baku_id, ... }], ... }, ... }
-    for (const [hariKe, categories] of Object.entries(grid)) {
-      for (const [kategoriSp, items] of Object.entries(categories)) {
-        for (const item of items) {
+    // grid format from frontend: [{ hari_ke, kategori_sp, bahan_baku_ids: [...] }, ...]
+    if (Array.isArray(grid)) {
+      for (const entry of grid) {
+        if (!entry.bahan_baku_ids || !entry.bahan_baku_ids.length) continue;
+        for (const bahanId of entry.bahan_baku_ids) {
           await conn.query(
             'INSERT INTO siklus_menu_item_bahan (siklus_id, hari_ke, kategori_sp, bahan_baku_id) VALUES (?,?,?,?)',
-            [req.params.id, Number(hariKe), kategoriSp, item.bahan_baku_id]
+            [req.params.id, entry.hari_ke, entry.kategori_sp, bahanId]
           );
+        }
+      }
+    } else {
+      // legacy format: { "1": { "Karbohidrat": [{ bahan_baku_id, ... }], ... }, ... }
+      for (const [hariKe, categories] of Object.entries(grid)) {
+        for (const [kategoriSp, items] of Object.entries(categories)) {
+          for (const item of items) {
+            await conn.query(
+              'INSERT INTO siklus_menu_item_bahan (siklus_id, hari_ke, kategori_sp, bahan_baku_id) VALUES (?,?,?,?)',
+              [req.params.id, Number(hariKe), kategoriSp, item.bahan_baku_id]
+            );
+          }
         }
       }
     }
