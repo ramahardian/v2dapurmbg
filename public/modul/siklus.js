@@ -830,9 +830,16 @@ async function openSiklusForm(editing) {
   var _rawTglMulai = s.tanggal_mulai || '';
   if (_rawTglMulai) {
     if (typeof _rawTglMulai === 'object' && _rawTglMulai instanceof Date) {
-      _rawTglMulai = _rawTglMulai.toISOString().slice(0, 10);
+      _rawTglMulai = _rawTglMulai.getFullYear() + '-' + String(_rawTglMulai.getMonth()+1).padStart(2,'0') + '-' + String(_rawTglMulai.getDate()).padStart(2,'0');
     } else {
-      _rawTglMulai = String(_rawTglMulai).replace(/T.*$/g, '');
+      var _tStr = String(_rawTglMulai);
+      // ISO string from JSON serialization (e.g. "2026-07-26T17:00:00.000Z") — parse as UTC moment, convert to local date
+      var _d = new Date(_tStr);
+      if (!isNaN(_d.getTime()) && (_tStr.includes('T') || _tStr.includes('Z'))) {
+        _rawTglMulai = _d.getFullYear() + '-' + String(_d.getMonth()+1).padStart(2,'0') + '-' + String(_d.getDate()).padStart(2,'0');
+      } else {
+        _rawTglMulai = _tStr.replace(/T.*$/g, '');
+      }
     }
     if (_rawTglMulai.length === 7) _rawTglMulai += '-01';
   }
