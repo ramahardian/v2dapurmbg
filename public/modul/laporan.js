@@ -1663,6 +1663,7 @@ function renderDailyMenuTable(menuHarian, kategori_order) {
   const siklus = menuHarian || [];
   if (!siklus.length) return '<div class="p-8 text-center text-stone-400">Belum ada data siklus</div>';
 
+  const SHORT_TO_LONG = { Karbo: 'Karbohidrat', ProHe: 'Protein Hewani', ProNa: 'Protein Nabati', Sayur: 'Sayur', Buah: 'Buah', Susu: 'Susu', Minyak: 'Minyak' };
   const KAT_MAP = { Karbohidrat: 'Makanan Pokok', 'Protein Hewani': 'Lauk Hewani', 'Protein Nabati': 'Lauk Nabati', Sayur: 'Sayur', Buah: 'Buah', Susu: 'Susu', Minyak: 'Minyak' };
   const ROW_KEYS = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
   const ROW_LABELS = ROW_KEYS.map(k => KAT_MAP[k] || k);
@@ -1707,11 +1708,13 @@ function renderDailyMenuTable(menuHarian, kategori_order) {
       for (const k of dayKeys) {
         const names = [];
         for (const d of days) {
-          if (d.hari_ke === k) {
-            const katItems = d.kategori && d.kategori[ROW_KEYS[ri]];
-            if (katItems && katItems.length) {
-              for (const n of katItems) {
-                if (!names.includes(n)) names.push(n);
+          if (d.hari_ke === k && d.bahan_by_kat) {
+            for (const g of d.bahan_by_kat) {
+              const longCat = SHORT_TO_LONG[g.kategori] || g.kategori;
+              if (longCat === ROW_KEYS[ri] && g.items) {
+                for (const n of g.items) {
+                  if (n.nama && !names.includes(n.nama)) names.push(n.nama);
+                }
               }
             }
           }
@@ -1771,6 +1774,7 @@ function renderLapArusKas() { renderReportPage('arus-kas'); }
 function renderResepTable(siklusList, kategori_order) {
   if (!siklusList || !siklusList.length) return '<div class="p-8 text-center text-stone-400">Tidak ada siklus aktif</div>';
 
+  const SHORT_TO_LONG = { Karbo: 'Karbohidrat', ProHe: 'Protein Hewani', ProNa: 'Protein Nabati', Sayur: 'Sayur', Buah: 'Buah', Susu: 'Susu', Minyak: 'Minyak' };
   const ROW_KEYS = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
 
   let allHtml = '';
@@ -1795,7 +1799,13 @@ function renderResepTable(siklusList, kategori_order) {
       const hk = d.hari_ke;
       if (!d.menu_nama) continue;
       const parts = d.menu_nama.split(/[+,]/).map(s => s.trim()).filter(Boolean);
-      const catWithItems = ROW_KEYS.filter(k2 => d.kategori && d.kategori[k2] && d.kategori[k2].length > 0);
+      const catWithItems = [];
+      if (d.bahan_by_kat) {
+        for (const g of d.bahan_by_kat) {
+          const longCat = SHORT_TO_LONG[g.kategori] || g.kategori;
+          if (ROW_KEYS.includes(longCat) && !catWithItems.includes(longCat)) catWithItems.push(longCat);
+        }
+      }
       let pi = 0;
       for (const ck of catWithItems) {
         const name = pi < parts.length ? parts[pi] : d.menu_nama;
