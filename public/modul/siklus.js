@@ -920,7 +920,7 @@ async function openSiklusForm(editing) {
 
   c.innerHTML = `
     <div class="max-w-7xl mx-auto">
-      <div class="flex items-center justify-between mb-4">
+      <div class="sticky top-0 z-10 flex items-center justify-between mb-4 bg-white/95 backdrop-blur-sm px-6 py-3 border-b border-stone-100 shadow-sm">
         <div class="flex items-center gap-3">
           <button onclick="renderSiklus()" class="w-10 h-10 rounded-xl flex items-center justify-center text-stone-500 hover:bg-stone-100 border border-stone-200 transition-all"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
           <h1 class="text-2xl font-bold text-stone-800">${isEdit ? 'Edit' : 'Buat'} Siklus Menu</h1>
