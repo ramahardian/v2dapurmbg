@@ -263,8 +263,8 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     const dayOfWeek = curDate.getDay(); // 0=Sun, 1=Mon, ...
     const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
-    // For each siklus, determine which hari_ke maps to this date
-    const dayPlan = { tanggal: dateStr, hari_nama: dayNames[dayOfWeek], total_porsi: 0, menu: [], bahan_by_jenjang: {} };
+    const dayPlan = { tanggal: dateStr, hari_nama: dayNames[dayOfWeek], header_tanggal: dateStr, total_porsi: 0, menu_names: [], bahan: [] };
+    const bahanMap = {}; // { nama: { per_jenjang: { jenjang: { kebutuhan_kg, jumlah_siswa, berat_bersih, persen_bdd, berat_kotor } } } }
 
     for (const s of siklusList) {
       if (!s.tanggal_mulai) continue;
@@ -272,7 +272,6 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       const diffDays = Math.floor((curDate - siklusStart) / (1000 * 60 * 60 * 24));
       const hariKe = (diffDays % (s.total_hari || 7)) + 1;
 
-      // Find items for this hari_ke
       const items = (itemsBySiklus[s.id] || []).filter(it => it.hari_ke === hariKe);
       if (!items.length) continue;
 
@@ -280,10 +279,6 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
         if (it.menu_id) {
           const bahanRows = menuBahanMap[it.menu_id] || [];
           for (const br of bahanRows) {
-            const katDb = br.kategori_penerima || s.kategori_penerima || '-';
-            const katDisplay = dbToDisplay[katDb] || katDb;
-            if (!dayPlan.bahan_by_jenjang[katDisplay]) dayPlan.bahan_by_jenjang[katDisplay] = {};
-
             for (const b of activeJenjang) {
               const jmlPm = pmByDisplay[b] || 0;
               if (!jmlPm) continue;
@@ -291,17 +286,18 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
               const persenBdd = ref.bdd_persen || Number(br.persen_bdd) || 100;
               const beratBersih = Number(br.jumlah) * jmlPm;
               const beratKotor = hitungBDD(beratBersih, persenBdd);
-
-              if (!dayPlan.bahan_by_jenjang[katDisplay][br.nama]) {
-                dayPlan.bahan_by_jenjang[katDisplay][br.nama] = { satuan: br.satuan, total_kg: 0 };
+              const kebutuhanKg = Math.round((beratKotor / 1000) * 100) / 100;
+              if (!bahanMap[br.nama]) bahanMap[br.nama] = { nama: br.nama, nama_display: br.nama, per_jenjang: {} };
+              if (!bahanMap[br.nama].per_jenjang[b]) {
+                bahanMap[br.nama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratBersih * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotor * 100) / 100 };
               }
-              dayPlan.bahan_by_jenjang[katDisplay][br.nama].total_kg += Math.round((beratKotor / 1000) * 100) / 100;
+              bahanMap[br.nama].per_jenjang[b].kebutuhan_kg += kebutuhanKg;
             }
           }
         }
 
         dayPlan.total_porsi += Number(it.jumlah_porsi || 0);
-        if (it.menu_nama) dayPlan.menu.push(it.menu_nama);
+        if (it.menu_nama) dayPlan.menu_names.push(it.menu_nama);
       }
 
       // Grid items
@@ -312,18 +308,21 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
         for (const b of activeJenjang) {
           const jmlPm = pmByDisplay[b] || 0;
           if (!jmlPm) continue;
-          if (!dayPlan.bahan_by_jenjang[b]) dayPlan.bahan_by_jenjang[b] = {};
           const persenBdd = Number(g.persen_bdd || 100);
-          const beratKotor = hitungBDD(Number(g.berat_1_sp || 0) * jmlPm, persenBdd);
-          if (!dayPlan.bahan_by_jenjang[b][g.nama]) {
-            dayPlan.bahan_by_jenjang[b][g.nama] = { satuan: g.satuan, total_kg: 0 };
+          const beratBersih = Number(g.berat_1_sp || 0) * jmlPm;
+          const beratKotor = hitungBDD(beratBersih, persenBdd);
+          const kebutuhanKg = Math.round((beratKotor / 1000) * 100) / 100;
+          if (!bahanMap[g.nama]) bahanMap[g.nama] = { nama: g.nama, nama_display: g.nama, per_jenjang: {} };
+          if (!bahanMap[g.nama].per_jenjang[b]) {
+            bahanMap[g.nama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratBersih * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotor * 100) / 100 };
           }
-          dayPlan.bahan_by_jenjang[b][g.nama].total_kg += Math.round((beratKotor / 1000) * 100) / 100;
+          bahanMap[g.nama].per_jenjang[b].kebutuhan_kg += kebutuhanKg;
         }
       }
     }
 
-    if (dayPlan.menu.length || Object.keys(dayPlan.bahan_by_jenjang).length) {
+    dayPlan.bahan = Object.values(bahanMap);
+    if (dayPlan.menu_names.length || dayPlan.bahan.length) {
       hari.push(dayPlan);
     }
 
