@@ -1254,12 +1254,13 @@ async function openSiklusFormHariChange(input) {
   var curNama = document.getElementById('sk-nama').value;
   var curKat = (document.getElementById('sk-kategori')?.value) || '';
   var curStatus = document.getElementById('sk-status').value;
+  var curTglMulai = document.getElementById('sk-tanggal-mulai').value;
   var curId = window._siklusFormId;
   var items = Object.keys(window._gridData || {}).sort(function(a,b) { return Number(a)-Number(b); }).map(function(hk) {
     var d = window._gridData[hk];
     return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: 0 };
   });
-  openSiklusForm(curId ? { id: curId, nama: curNama, kategori_penerima: curKat, total_hari: newTotal, status: curStatus, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: newTotal, status: curStatus, items: items });
+  openSiklusForm(curId ? { id: curId, nama: curNama, kategori_penerima: curKat, total_hari: newTotal, status: curStatus, tanggal_mulai: curTglMulai, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: newTotal, status: curStatus, tanggal_mulai: curTglMulai, items: items });
 }
 
 // Preload menu list for siklus form
