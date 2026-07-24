@@ -339,7 +339,13 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     curDate.setDate(curDate.getDate() + 1);
   }
 
-  res.json({ jenjang_list: activeJenjang, hari, pm_map: pmByDisplay, tanggal_mulai: mulai, tanggal_selesai: selesai });
+  // Filter pm_map to only include active jenjang
+  const filteredPmMap = {};
+  for (const j of activeJenjang) {
+    if (pmByDisplay[j]) filteredPmMap[j] = pmByDisplay[j];
+  }
+
+  res.json({ jenjang_list: activeJenjang, hari, pm_map: filteredPmMap, tanggal_mulai: mulai, tanggal_selesai: selesai });
 });
 
 module.exports = router;
