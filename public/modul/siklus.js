@@ -837,11 +837,14 @@ async function openSiklusForm(editing) {
   var _yearOpts = '';
   for (var _y = 2020; _y <= 2032; _y++) { _yearOpts += '<option value="'+_y+'"'+(_curYear==_y?' selected':'')+'>'+_y+'</option>'; }
 
-  const totalHari = s.total_hari || 30;
+  const totalHari = s.total_hari || getDaysInMonth(_curYear + '-' + (_curMonth < 10 ? '0' : '') + _curMonth);
   if (!formData.items || !formData.items.length) {
-    formData.items = HARI_OPTIONS.slice(0, Math.min(31, Math.max(1, totalHari))).map((h, i) => ({
-      hari_ke: i + 1, hari_nama: h, menu_nama: '', jumlah_porsi: formData.jumlah_porsi || 0
-    }));
+    formData.items = [];
+    for (let _i = 1; _i <= totalHari; _i++) {
+      var _dt = new Date(Number(_curYear), Number(_curMonth) - 1, _i);
+      var _dn = HARI_OPTIONS[_dt.getDay() === 0 ? 6 : _dt.getDay() - 1];
+      formData.items.push({ hari_ke: _i, hari_nama: _dn, menu_nama: '', jumlah_porsi: formData.jumlah_porsi || 0 });
+    }
   }
 
   const c = document.getElementById('content');
@@ -890,11 +893,8 @@ async function openSiklusForm(editing) {
   window._gridData = gridData;
   window._rowKeys = ROW_KEYS;
 
-  const today = new Date();
-  const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
   function fmtDate(d) { return d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0'); }
-  function getDate(hk) { const d = new Date(startDate); d.setDate(d.getDate() + hk - 1); return d; }
+  function getDate(hk) { return new Date(Number(_curYear), Number(_curMonth) - 1, hk); }
 
   c.innerHTML = `
     <div class="max-w-7xl mx-auto">
@@ -980,8 +980,9 @@ async function openSiklusForm(editing) {
   document.getElementById('sk-btn-save').onclick = async function() {
     var nama = document.getElementById('sk-nama').value.trim();
     if (!nama) { showAlert('Nama siklus harus diisi', 'warning'); return; }
-    var tglMulai = document.getElementById('sk-bulan').value;
-    var totalHari = tglMulai ? getDaysInMonth(tglMulai) : 30;
+    var _bV_save = document.getElementById('sk-bulan').value;
+    var _tV_save = document.getElementById('sk-tahun').value;
+    var totalHari = (_bV_save && _tV_save) ? getDaysInMonth(_tV_save + '-' + (_bV_save < 10 ? '0' : '') + _bV_save) : 30;
     var gd = window._gridData || {};
     var rowKeys = window._rowKeys || [];
     var items = [], gridPayload = [];
@@ -1278,8 +1279,11 @@ async function openSiklusFormHariChange(input) {
     var existingLen = hkKeys.length;
 
     if (newTotal > existingLen) {
+      var _bV = document.getElementById('sk-bulan').value;
+      var _tV = document.getElementById('sk-tahun').value;
       for (var i = existingLen + 1; i <= newTotal; i++) {
-        var nama = HARI_OPTIONS[i - 1] || 'Hari-' + i;
+        var _dt = new Date(Number(_tV), Number(_bV) - 1, i);
+        var nama = HARI_OPTIONS[_dt.getDay() === 0 ? 6 : _dt.getDay() - 1];
         gridData[i] = { hari_ke: i, hari_nama: nama, menu_nama: '', bahan: {}, resep_map: {} };
         for (var ri = 0; ri < rowKeys.length; ri++) {
           gridData[i].bahan[rowKeys[ri]] = [];
