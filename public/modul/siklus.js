@@ -175,13 +175,11 @@ async function reloadSiklusList() {
     const statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-600';
     const filledCount = s.filled_count || 0;
     return `<div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-lg hover:border-stone-300 transition-all duration-200 group">
-      <div class="flex justify-between items-start mb-3">
-        <div class="flex items-center gap-3 min-w-0">
-          <input type="checkbox" value="${s.id}" onchange="updateSelectedCount()" onclick="event.stopPropagation()" class="siklus-checkbox cb-modern">
-          <div class="font-semibold text-sm text-stone-800 group-hover:text-[#1e40af] transition-colors cursor-pointer" onclick="loadSiklusDetail(${s.id})">${s.nama}</div>
-        </div>
+      <div class="flex items-center justify-between mb-2">
+        <input type="checkbox" value="${s.id}" onchange="updateSelectedCount()" onclick="event.stopPropagation()" class="siklus-checkbox cb-modern">
         <span class="text-[10px] px-2.5 py-1 rounded-full font-medium ${statusColor} capitalize">${s.status}</span>
       </div>
+      <div class="font-semibold text-sm text-stone-800 group-hover:text-[#1e40af] transition-colors cursor-pointer mb-3" onclick="loadSiklusDetail(${s.id})">${s.nama}</div>
       <div class="flex items-center gap-4 text-xs text-stone-500 mb-3 min-w-0">
         <span class="flex items-center gap-1 overflow-hidden min-w-0"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="truncate block">${fmtJenjang(s.kategori_penerima)}</span></span>
         <span class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${s.total_hari} hari</span>
