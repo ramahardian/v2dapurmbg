@@ -66,6 +66,7 @@ async function loadTotalKebutuhan() {
 
       // Kumpulkan data per bahan — gabung PER JENJANG jadi total
       var dayBahan = [];
+      if (!day.bahan || !day.bahan.length) continue;
       for (var i = 0; i < day.bahan.length; i++) {
         var b = day.bahan[i];
         if (!b.per_jenjang) continue;
