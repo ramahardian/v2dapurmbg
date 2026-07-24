@@ -111,7 +111,11 @@ function renderMenuBySiklusHtml(data) {
     siklusHtml = `<div class="col-span-full text-center py-12 text-stone-400">
       <svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <div>Belum ada siklus menu</div>
-      <div class="text-sm mt-1">Buat siklus terlebih dahulu di menu Siklus</div>
+      <div class="text-sm mt-1">Buat siklus terlebih dahulu untuk mengelompokkan menu</div>
+      <a href="/siklus" onclick="return loadPage('siklus')" class="inline-flex items-center gap-1.5 mt-4 px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+        Buat Siklus Baru
+      </a>
     </div>`;
   } else {
     siklusHtml = groups.map(s => {
