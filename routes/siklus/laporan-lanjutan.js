@@ -308,12 +308,12 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
               if (!jmlPm) continue;
               const ref = spRefMap[br.nama] || {};
               const persenBdd = ref.bdd_persen || Number(br.persen_bdd) || 100;
-              const beratBersih = Number(br.jumlah) * jmlPm;
-              const beratKotor = hitungBDD(beratBersih, persenBdd);
-              const kebutuhanKg = Math.round((beratKotor / 1000) * 100) / 100;
+              const beratPerSiswa = Number(br.jumlah);
+              const beratKotorPerSiswa = hitungBDD(beratPerSiswa, persenBdd);
+              const kebutuhanKg = Math.round((beratKotorPerSiswa * jmlPm / 1000) * 100) / 100;
               if (!bahanMap[br.nama]) bahanMap[br.nama] = { nama: br.nama, nama_display: br.nama, per_jenjang: {} };
               if (!bahanMap[br.nama].per_jenjang[b]) {
-                bahanMap[br.nama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratBersih * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotor * 100) / 100 };
+                bahanMap[br.nama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100 };
               }
               bahanMap[br.nama].per_jenjang[b].kebutuhan_kg += kebutuhanKg;
             }
@@ -333,12 +333,12 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
           const jmlPm = pmByDisplay[b] || Number(s.jumlah_porsi) || 0;
           if (!jmlPm) continue;
           const persenBdd = Number(g.persen_bdd || 100);
-          const beratBersih = Number(g.berat_1_sp || 0) * jmlPm;
-          const beratKotor = hitungBDD(beratBersih, persenBdd);
-          const kebutuhanKg = Math.round((beratKotor / 1000) * 100) / 100;
+          const beratPerSiswa = Number(g.berat_1_sp || 0);
+          const beratKotorPerSiswa = hitungBDD(beratPerSiswa, persenBdd);
+          const kebutuhanKg = Math.round((beratKotorPerSiswa * jmlPm / 1000) * 100) / 100;
           if (!bahanMap[g.nama]) bahanMap[g.nama] = { nama: g.nama, nama_display: g.nama, per_jenjang: {} };
           if (!bahanMap[g.nama].per_jenjang[b]) {
-            bahanMap[g.nama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratBersih * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotor * 100) / 100 };
+            bahanMap[g.nama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100 };
           }
           bahanMap[g.nama].per_jenjang[b].kebutuhan_kg += kebutuhanKg;
         }
