@@ -205,7 +205,13 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     const display = dbToDisplay[dbJenjang] || dbJenjang;
     pmByDisplay[display] = (pmByDisplay[display] || 0) + total;
   }
-  const activeJenjang = JENJANG_DISPLAY_ORDER.filter(j => pmByDisplay[j] && pmByDisplay[j] > 0);
+  let activeJenjang = JENJANG_DISPLAY_ORDER.filter(j => pmByDisplay[j] && pmByDisplay[j] > 0);
+
+  // Fallback: if no PM data, still show data with a default jenjang
+  if (!activeJenjang.length) {
+    pmByDisplay['Semua Jenjang'] = 1;
+    activeJenjang = ['Semua Jenjang'];
+  }
 
   // SP referensi
   let spRefMap = {};
@@ -264,11 +270,15 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
     const dayPlan = { tanggal: dateStr, hari_nama: dayNames[dayOfWeek], header_tanggal: dateStr, total_porsi: 0, menu_names: [], bahan: [] };
-    const bahanMap = {}; // { nama: { per_jenjang: { jenjang: { kebutuhan_kg, jumlah_siswa, berat_bersih, persen_bdd, berat_kotor } } } }
+    const bahanMap = {};
 
     for (const s of siklusList) {
-      if (!s.tanggal_mulai) continue;
-      const siklusStart = new Date(s.tanggal_mulai);
+      let siklusStart;
+      if (s.tanggal_mulai) {
+        siklusStart = new Date(s.tanggal_mulai);
+      } else {
+        siklusStart = startDate;
+      }
       const diffDays = Math.floor((curDate - siklusStart) / (1000 * 60 * 60 * 24));
       const hariKe = (diffDays % (s.total_hari || 7)) + 1;
 
@@ -280,7 +290,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
           const bahanRows = menuBahanMap[it.menu_id] || [];
           for (const br of bahanRows) {
             for (const b of activeJenjang) {
-              const jmlPm = pmByDisplay[b] || 0;
+              const jmlPm = pmByDisplay[b] || Number(s.jumlah_porsi) || 0;
               if (!jmlPm) continue;
               const ref = spRefMap[br.nama] || {};
               const persenBdd = ref.bdd_persen || Number(br.persen_bdd) || 100;
@@ -306,7 +316,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
 
       for (const g of gridDay) {
         for (const b of activeJenjang) {
-          const jmlPm = pmByDisplay[b] || 0;
+          const jmlPm = pmByDisplay[b] || Number(s.jumlah_porsi) || 0;
           if (!jmlPm) continue;
           const persenBdd = Number(g.persen_bdd || 100);
           const beratBersih = Number(g.berat_1_sp || 0) * jmlPm;
