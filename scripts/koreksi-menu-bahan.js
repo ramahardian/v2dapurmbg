@@ -82,6 +82,22 @@ async function runKoreksiMenuBahan(tenantId) {
     }
     log(`  PM per kategori (DB): ${JSON.stringify(pmByKategori)}`);
 
+    // ── Perbaiki menu yang kategori_penerima-nya null ──
+    // Cari kategori dari siklus yang menggunakan menu tersebut
+    const [siklusMenuItems] = await db.query(
+      `SELECT DISTINCT smi.menu_id, sm.kategori_penerima
+       FROM siklus_menu_item smi
+       JOIN siklus_menu sm ON sm.id = smi.siklus_id
+       WHERE sm.tenant_id=? AND smi.menu_id IS NOT NULL`,
+      [t.id]
+    );
+    const katFromSiklus = {};
+    for (const r of siklusMenuItems) {
+      if (r.kategori_penerima && !katFromSiklus[r.menu_id]) {
+        katFromSiklus[r.menu_id] = r.kategori_penerima;
+      }
+    }
+
     // Ambil semua menu + menu_bahan
     const [menuBahan] = await db.query(
       `SELECT mb.id AS mb_id, mb.menu_id, mb.jumlah, m.kategori_penerima, m.nama AS menu_nama
@@ -98,10 +114,19 @@ async function runKoreksiMenuBahan(tenantId) {
     let unchanged = 0;
 
     for (const mb of menuBahan) {
-      const jumlahPorsi = cariJumlahPorsi(mb.kategori_penerima, pmByKategori);
+      // Fallback: jika kategori_penerima null, cari dari siklus
+      let kat = mb.kategori_penerima;
+      if (!kat && katFromSiklus[mb.menu_id]) {
+        kat = katFromSiklus[mb.menu_id];
+        // Update menu juga
+        await db.query('UPDATE menu SET kategori_penerima=? WHERE id=?', [kat, mb.menu_id]);
+        log(`  ↪ Kategori "${mb.menu_nama}" diperbaiki: null → ${kat}`);
+      }
+
+      const jumlahPorsi = cariJumlahPorsi(kat, pmByKategori);
 
       if (jumlahPorsi <= 0) {
-        log(`  ⚠ "${mb.menu_nama}" (kat=${mb.kategori_penerima}): tidak ada PM, SKIP`);
+        log(`  ⚠ "${mb.menu_nama}" (kat=${kat}): tidak ada PM, SKIP`);
         unchanged++;
         continue;
       }
