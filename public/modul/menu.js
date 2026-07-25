@@ -510,9 +510,17 @@ function hitungNutrisi() {
 }
 
 function updateBahan(i, k, v) {
-  window._menuBahan[i][k] = k === 'jumlah' ? +v : v;
   if (k === 'jumlah') {
-    delete window._menuBahan[i]._autoJumlah;
+    var b = window._menuBahan[i];
+    var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+    if (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(b.satuan) && perUnit > 0) {
+      b.jumlah = Number(v) * perUnit;
+    } else {
+      b.jumlah = Number(v);
+    }
+    delete b._autoJumlah;
+  } else {
+    window._menuBahan[i][k] = v;
   }
   hitungNutrisi();
 }
@@ -631,7 +639,8 @@ async function selectBahan(i, nama) {
     
     window._menuBahan[i].bahan_baku_id = bb ? bb.id : '';
     window._menuBahan[i].nama = nama;
-    window._menuBahan[i].satuan = 'g'; // paksa gram di form menu
+    window._menuBahan[i].berat_per_satuan = Number(bb ? bb.berat_per_satuan : 0) || berat1Sp;
+    window._menuBahan[i].satuan = bb ? (bb.satuan || 'g') : 'g';
     window._menuBahan[i].kategori_sp = kat;
     window._menuBahan[i].berat_1_sp = berat1Sp;
     window._menuBahan[i].persen_bdd = Math.round(ref.bdd_persen * 100);
@@ -650,7 +659,8 @@ async function selectBahan(i, nama) {
     
     window._menuBahan[i].bahan_baku_id = bb.id || '';
     window._menuBahan[i].nama = nama;
-    window._menuBahan[i].satuan = 'g'; // paksa gram di form menu
+    window._menuBahan[i].berat_per_satuan = Number(bb.berat_per_satuan) || 0;
+    window._menuBahan[i].satuan = bb.satuan || 'g';
     window._menuBahan[i].kategori_sp = kat;
     window._menuBahan[i].berat_1_sp = berat1Sp;
     window._menuBahan[i].persen_bdd = Number(bb.persen_bdd || 100);
