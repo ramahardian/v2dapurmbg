@@ -550,8 +550,7 @@ async function renderProduksiHarian(id) {
         html += '<div class="overflow-x-auto"><table class="w-full text-xs">' +
           '<thead class="bg-stone-50/50"><tr>' +
             '<th class="text-left px-4 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Bahan</th>' +
-            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">SP</th>' +
-            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">1 SP (g)</th>' +
+            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Per Porsi (g)</th>' +
             '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">BDD</th>' +
             '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Kg/pcs/btl</th>' +
             '<th class="text-left px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Ket</th>' +
@@ -559,14 +558,13 @@ async function renderProduksiHarian(id) {
         
         for (var b of d.bahan) {
           var bddLabel = b.persen_bdd < 100 ? b.persen_bdd + '%' : '—';
-          var spLabel = b.sp_value > 0 ? b.sp_value : '—';
+          var perPorsi = (b.sp_value > 0 && b.berat_1_sp) ? Math.round(b.berat_1_sp * b.sp_value) + ' g' : '—';
           var displayQty = b.display_qty;
           var displaySat = b.display_satuan;
           
           html += '<tr class="border-t border-stone-100 hover:bg-stone-50/50 transition-colors">' +
             '<td class="px-4 py-2.5 font-medium text-stone-700">' + b.nama + '</td>' +
-            '<td class="px-3 py-2.5 text-right mono text-stone-600">' + spLabel + '</td>' +
-            '<td class="px-3 py-2.5 text-right mono text-stone-600">' + (b.berat_1_sp || '—') + '</td>' +
+            '<td class="px-3 py-2.5 text-right mono text-stone-600">' + perPorsi + '</td>' +
             '<td class="px-3 py-2.5 text-right mono text-stone-600">' + bddLabel + '</td>' +
             '<td class="px-3 py-2.5 text-right mono font-bold text-stone-800">' + (typeof displayQty === 'number' ? fmtNum(displayQty) : displayQty) + ' ' + displaySat + '</td>' +
             '<td class="px-3 py-2.5 text-xs text-stone-400">' +
@@ -619,8 +617,7 @@ async function hitungSpSiklus(id) {
       '<thead class="bg-stone-50"><tr>' +
         '<th class="text-left px-4 py-3 text-xs font-semibold uppercase">Bahan</th>' +
         '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kat. SP</th>' +
-        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">SP</th>' +
-        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">1 SP (g)</th>' +
+        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Per Porsi (g)</th>' +
         '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Berat Bersih (g)</th>' +
         '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">BDD</th>' +
         '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Berat Kotor (g)</th>' +
@@ -631,8 +628,7 @@ async function hitungSpSiklus(id) {
         return '<tr class="border-t border-stone-100">' +
           '<td class="px-4 py-3 text-sm font-medium">' + b.nama + '</td>' +
           '<td class="px-4 py-3 text-sm text-right">' + (b.kategori_sp || '-') + '</td>' +
-          '<td class="px-4 py-3 text-sm text-right mono">' + (b.sp_value != null ? b.sp_value : '-') + '</td>' +
-          '<td class="px-4 py-3 text-sm text-right mono">' + b.berat_1_sp + '</td>' +
+          '<td class="px-4 py-3 text-sm text-right mono">' + (b.sp_value != null ? Math.round(b.berat_1_sp * b.sp_value) + ' g' : '-') + '</td>' +
           '<td class="px-4 py-3 text-sm text-right mono">' + b.berat_bersih + '</td>' +
           '<td class="px-4 py-3 text-sm text-right mono">' + b.persen_bdd + '%</td>' +
           '<td class="px-4 py-3 text-sm text-right mono">' + b.berat_kotor + '</td>' +
