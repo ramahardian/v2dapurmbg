@@ -546,10 +546,17 @@ function updateBahan(i, k, v) {
     var defaultGram = (sp ? Number(sp.berat_bersih) : 0) || Number(b.berat_1_sp) || 0;
     if (defaultGram > 0 && newJumlah > defaultGram * 10) {
       var spDisplay = defaultGram / perUnit;
-      if (!confirm('Nilai ' + v + ' ' + b.satuan + ' jauh dari standar SP (' + Math.round(spDisplay * 100) / 100 + ' ' + b.satuan + '). Lanjutkan?')) {
-        renderBahanList();
-        return;
-      }
+      showConfirm('Nilai ' + v + ' ' + b.satuan + ' jauh dari standar SP (' + Math.round(spDisplay * 100) / 100 + ' ' + b.satuan + '). Lanjutkan?', 'Lanjutkan', 'Batalkan', '', 'question').then(function(ok) {
+        if (ok) {
+          b.jumlah = newJumlah;
+          delete b._autoJumlah;
+          hitungNutrisi();
+          renderBahanList();
+        } else {
+          renderBahanList();
+        }
+      });
+      return;
     }
     b.jumlah = newJumlah;
     delete b._autoJumlah;

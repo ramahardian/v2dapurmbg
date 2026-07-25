@@ -301,24 +301,88 @@ window.fillAiNutrisiSp = async function() {
   }
 };
 
-function showConfirm(msg, okLabel) {
+function showConfirm(msg, okLabel, cancelLabel, okStyle, type) {
   return new Promise((resolve) => {
     const modal = document.getElementById('confirm-modal');
+    const content = document.getElementById('confirm-content');
+    const backdrop = modal.querySelector('.modal-backdrop');
+    const iconWrap = document.getElementById('confirm-icon');
+    const iconSvg = document.getElementById('confirm-icon-svg');
+    const titleEl = document.getElementById('confirm-title');
+    const okBtn = document.getElementById('confirm-ok');
+    const cancelBtn = document.getElementById('confirm-cancel');
+
+    const types = {
+      warning: { bg: 'bg-amber-100', text: 'text-amber-600', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', title: 'Perhatian', btn: 'bg-amber-600 hover:bg-amber-700' },
+      danger: { bg: 'bg-red-100', text: 'text-red-600', icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Konfirmasi Hapus', btn: 'bg-red-600 hover:bg-red-700' },
+      info: { bg: 'bg-blue-100', text: 'text-blue-600', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Informasi', btn: 'bg-blue-600 hover:bg-blue-700' },
+      success: { bg: 'bg-emerald-100', text: 'text-emerald-600', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Konfirmasi', btn: 'bg-emerald-600 hover:bg-emerald-700' },
+      question: { bg: 'bg-purple-100', text: 'text-purple-600', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Konfirmasi', btn: 'bg-purple-600 hover:bg-purple-700' },
+    };
+    const t = types[type] || types.question;
+    const isDark = document.documentElement.classList.contains('dark');
+    const darkBg = { 'bg-amber-100': 'bg-[#451a03]', 'bg-red-100': 'bg-[#450a0a]', 'bg-blue-100': 'bg-[#1e3a5f]', 'bg-emerald-100': 'bg-[#064e3b]', 'bg-purple-100': 'bg-[#3b0764]' };
+    const darkText = { 'text-amber-600': 'text-amber-300', 'text-red-600': 'text-red-300', 'text-blue-600': 'text-blue-300', 'text-emerald-600': 'text-emerald-300', 'text-purple-600': 'text-purple-300' };
+
+    const open = () => {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      requestAnimationFrame(() => {
+        backdrop.classList.remove('opacity-0');
+        content.classList.remove('opacity-0', 'scale-95');
+        content.classList.add('opacity-100', 'scale-100');
+      });
+      okBtn.focus();
+      document.body.style.overflow = 'hidden';
+    };
+
+    const close = (result) => {
+      backdrop.classList.add('opacity-0');
+      content.classList.add('opacity-0', 'scale-95');
+      content.classList.remove('opacity-100', 'scale-100');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+        resolve(result);
+      }, 200);
+    };
+
+    const handleKeydown = (e) => {
+      if (e.key === 'Escape') close(false);
+      if (e.key === 'Tab') {
+        const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+
     document.getElementById('confirm-message').textContent = msg;
-    var okBtn = document.getElementById('confirm-ok');
     okBtn.textContent = okLabel || 'Hapus';
-    okBtn.onclick = () => {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-      resolve(true);
-    };
-    document.getElementById('confirm-cancel').onclick = () => {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-      resolve(false);
-    };
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    cancelBtn.textContent = cancelLabel || 'Batal';
+
+    if (okStyle) {
+      okBtn.className = 'px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-150 focus:ring-2 focus:ring-offset-2 ' + okStyle;
+    } else {
+      okBtn.className = 'px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-150 focus:ring-2 focus:ring-offset-2 ' + (isDark ? t.btn.replace('hover:', 'hover:') : t.btn);
+    }
+
+    iconWrap.className = 'w-10 h-10 rounded-full flex items-center justify-center shrink-0 ' + (isDark ? darkBg[t.bg] : t.bg);
+    iconSvg.className = 'w-5 h-5 ' + (isDark ? darkText[t.text] : t.text);
+    iconSvg.querySelector('path').setAttribute('d', t.icon);
+    titleEl.textContent = t.title;
+
+    const cancelHandler = () => { modal.removeEventListener('keydown', handleKeydown); backdrop.removeEventListener('click', cancelHandler); close(false); };
+    const okHandler = () => { modal.removeEventListener('keydown', handleKeydown); backdrop.removeEventListener('click', cancelHandler); close(true); };
+
+    cancelBtn.onclick = cancelHandler;
+    okBtn.onclick = okHandler;
+    backdrop.onclick = cancelHandler;
+    modal.addEventListener('keydown', handleKeydown);
+
+    open();
   });
 }
 
