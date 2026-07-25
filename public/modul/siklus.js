@@ -412,11 +412,11 @@ async function renderSiklusLaporan(id) {
                 <td class="px-4 py-3 text-sm whitespace-nowrap">Hari ${it.hari_ke} · ${it.hari_nama}</td>
                 <td class="px-4 py-3 text-sm">${it.menu_nama || '<span class="text-stone-400">—</span>'}</td>
                 <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.jumlah_porsi)}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.kalori / (it.jumlah_porsi || 1))}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.protein / (it.jumlah_porsi || 1))}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.karbohidrat / (it.jumlah_porsi || 1))}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.lemak / (it.jumlah_porsi || 1))}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.serat / (it.jumlah_porsi || 1))}</td>
+                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(Math.round(it.kalori / (it.jumlah_porsi || 1)))}</td>
+                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(Math.round(it.protein / (it.jumlah_porsi || 1)))}</td>
+                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(Math.round(it.karbohidrat / (it.jumlah_porsi || 1)))}</td>
+                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(Math.round(it.lemak / (it.jumlah_porsi || 1)))}</td>
+                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(Math.round(it.serat / (it.jumlah_porsi || 1)))}</td>
               </tr>
               ${it.menu_id ? `<tr class="bg-stone-50/50">
                 <td colspan="8" class="px-4 py-2">
