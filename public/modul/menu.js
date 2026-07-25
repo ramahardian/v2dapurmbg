@@ -515,6 +515,8 @@ function updateBahan(i, k, v) {
     var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
     if (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(b.satuan) && perUnit > 0) {
       b.jumlah = Number(v) * perUnit;
+    } else if (b.satuan === 'Kg') {
+      b.jumlah = Number(v); // display in g, jumlah stays in g
     } else {
       b.jumlah = Number(v);
     }
@@ -528,20 +530,27 @@ function renderBahanList() {
   document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
     var displayNama = b.nama || '';
     var displaySatuan = b.satuan || 'g';
-    var perSatuan = Number(b.berat_per_satuan) || 0;
-    var satuanNote = '';
+    var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+    // Internal jumlah always in grams; convert display for countable units
+    var displayJumlah = b.jumlah || 0;
+    if (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan) && perUnit > 0) {
+      displayJumlah = displayJumlah / perUnit;
+    } else if (displaySatuan === 'Kg') {
+      displaySatuan = 'g'; // per-serving in grams is clearer than kg
+    }
+    var inputTitle = displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')';
     return '<div class="grid grid-cols-12 gap-1.5 items-center">' +
       '<div class="col-span-4 relative">' +
         '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
         '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
       '</div>' +
       '<div class="col-span-3 flex">' +
-        '<input type="number" step="0.01" value="' + (b.jumlah || '0') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="Gram per porsi" />' +
+        '<input type="number" step="0.01" value="' + (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" />' +
         '<span class="inline-flex items-center px-2 h-9 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-md whitespace-nowrap">' + displaySatuan + '</span>' +
       '</div>' +
       '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="col-span-4 h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
       '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
-    '</div>' + satuanNote;
+    '</div>';
   }).join('');
 }
 
