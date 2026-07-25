@@ -429,12 +429,10 @@ async function openMenuForm(editing) {
         <div class="font-semibold text-sm">Bahan</div>
         <button type="button" onclick="addBahanRow()" class="text-xs border border-stone-300 px-3 py-1 rounded hover:bg-stone-50">+ Tambah Bahan</button>
       </div>
-      <div class="flex items-center gap-2 mb-2">
-        <label class="text-[11px] text-stone-400">Tampilkan total untuk</label>
+      <div class="flex items-center gap-2 mb-2 text-xs text-stone-500">
+        <span>Tampilkan total untuk</span>
         <input type="number" id="m-porsi" value="0" min="0" step="1" onchange="onPorsiChange()" placeholder="0" class="w-20 h-7 px-2 border border-stone-200 rounded text-sm text-center mono" />
-        <span class="text-[11px] text-stone-400">porsi</span>
-        <span class="text-[11px] text-stone-300 mx-1">·</span>
-        <span class="text-[11px] text-stone-400">0 = nilai per porsi</span>
+        <span>porsi</span>
       </div>
       <div id="bahan-list" class="space-y-2"></div>
     </div>
@@ -520,17 +518,21 @@ function hitungNutrisi() {
 function updateBahan(i, k, v) {
   if (k === 'jumlah') {
     var b = window._menuBahan[i];
+    var porsi = Number(window._menuPorsi) || 1;
     var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+    // Input shows total when porsi>0; convert back to grams per-porsi for storage
+    var valPerPorsi = Number(v) / porsi;
     if (perUnit > 0 && (b.satuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(b.satuan))) {
-      b.jumlah = Number(v) * perUnit;
+      b.jumlah = valPerPorsi * perUnit;
     } else {
-      b.jumlah = Number(v);
+      b.jumlah = valPerPorsi;
     }
     delete b._autoJumlah;
   } else {
     window._menuBahan[i][k] = v;
   }
   hitungNutrisi();
+  renderBahanList();
 }
 function renderBahanList() {
   var porsi = Number(window._menuPorsi) || 0;
@@ -544,7 +546,8 @@ function renderBahanList() {
     }
     var totalJumlah = porsi > 0 ? displayJumlah * porsi : 0;
     var inputStep = displaySatuan === 'Kg' ? '0.01' : (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan) ? '1' : '0.01');
-    var inputTitle = displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')';
+    var inputValue = porsi > 0 ? (totalJumlah ? Math.round(totalJumlah * 100) / 100 : '0') : (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0');
+    var inputTitle = porsi > 0 ? 'Total untuk ' + porsi + ' porsi (' + displaySatuan + ')' : (displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')');
     return '<div class="mb-1.5">' +
       '<div class="grid grid-cols-12 gap-1.5 items-center">' +
         '<div class="col-span-4 relative">' +
@@ -552,7 +555,7 @@ function renderBahanList() {
           '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
         '</div>' +
         '<div class="col-span-3 flex">' +
-          '<input type="number" step="' + inputStep + '" value="' + (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" />' +
+          '<input type="number" step="' + inputStep + '" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" />' +
           '<span class="inline-flex items-center px-2 h-9 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-md whitespace-nowrap">' + displaySatuan + '</span>' +
         '</div>' +
         '<div class="col-span-4">' +
@@ -560,7 +563,6 @@ function renderBahanList() {
         '</div>' +
         '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
       '</div>' +
-      (porsi > 0 ? '<div class="text-[11px] text-stone-400 mt-0.5 pl-[calc(4/12*100%+0.375rem)]">= ' + (Math.round(totalJumlah * 100) / 100) + ' ' + displaySatuan + '</div>' : '') +
     '</div>';
   }).join('');
 }
