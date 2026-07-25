@@ -6,7 +6,10 @@ async function renderCrud(cfg) {
   _crudCfg = cfg;
   _crudState = { page: 1, limit: 25, search: '', total: 0, totalPages: 1 };
   const c = document.getElementById('content');
-  c.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+  c.innerHTML = `<div id="crud-stats" class="${cfg.stats ? '' : 'hidden'}">
+    <div id="crud-stats-content" class="flex flex-wrap gap-3 mb-4"></div>
+  </div>
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
     <div class="flex items-center gap-2">
       <button id="add-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah</button>
       ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-200 text-stone-400 hover:text-stone-600 hover:bg-stone-50 transition-colors" title="Info halaman ini">
@@ -46,6 +49,28 @@ async function reloadCrud(cfg) {
   const pagination = res.pagination || { total: rows.length, totalPages: 1, page: 1 };
   _crudState = { ..._crudState, total: pagination.total, totalPages: pagination.totalPages, page: pagination.page };
   window._crudRows = rows;
+
+  // Load stats jika dikonfigurasi
+  if (cfg.stats) {
+    (async () => {
+      try {
+        const statsRes = await api.get(cfg.stats.endpoint);
+        const totalVal = Number(statsRes.total) || 0;
+        const contentEl = document.getElementById('crud-stats-content');
+        if (contentEl) {
+          const fmt = cfg.stats.format === 'num' ? fmtNum(totalVal) : totalVal;
+          contentEl.innerHTML = `
+            <div class="flex-1 min-w-[140px] bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+              <div class="text-xs uppercase tracking-wider text-blue-700 font-medium mb-0.5">${cfg.stats.label || 'Total'}</div>
+              <div class="text-xl font-bold text-blue-900">${fmt}</div>
+            </div>
+          `;
+        }
+      } catch (e) {
+        console.warn('Gagal load stats:', e.message);
+      }
+    })();
+  }
 
   const w = document.getElementById('table-wrap');
   if (!rows.length) {
