@@ -23,7 +23,28 @@
 
 const db = require('../db');
 const { loadSpRefMap, calculateNutrition } = require('../routes/menu/helpers');
+const { JENJANG_DB_MAP } = require('../routes/siklus/helpers');
 require('dotenv').config();
+
+/**
+ * Cari total PM untuk suatu kategori dengan mapping DB
+ * (menggunakan JENJANG_DB_MAP dari routes/siklus/helpers.js)
+ */
+function cariJumlahPorsi(kat, pmByKategori) {
+  if (!kat) return 0;
+  // Exact match first
+  if (pmByKategori[kat]) return pmByKategori[kat];
+  // Coba mapping display → db values (dari helpers.js)
+  const dbVals = JENJANG_DB_MAP[kat];
+  if (dbVals) {
+    let total = 0;
+    for (const dv of dbVals) {
+      total += pmByKategori[dv] || 0;
+    }
+    return total;
+  }
+  return 0;
+}
 
 /**
  * Jalankan koreksi untuk semua tenant atau satu tenant tertentu
@@ -47,7 +68,7 @@ async function runKoreksiMenuBahan(tenantId) {
   for (const t of tenants) {
     log(`── Tenant: ${t.nama} (id=${t.id}) ──`);
 
-    // Load jumlah penerima manfaat per kategori
+    // Load jumlah penerima manfaat per kategori (raw dari DB)
     const [pmRows] = await db.query(
       `SELECT kategori_penerima, COALESCE(SUM(paket_besar + paket_kecil), 0) AS total
        FROM penerima_manfaat
@@ -59,7 +80,7 @@ async function runKoreksiMenuBahan(tenantId) {
     for (const r of pmRows) {
       pmByKategori[r.kategori_penerima] = Number(r.total);
     }
-    log(`  PM per kategori: ${JSON.stringify(pmByKategori)}`);
+    log(`  PM per kategori (DB): ${JSON.stringify(pmByKategori)}`);
 
     // Ambil semua menu + menu_bahan
     const [menuBahan] = await db.query(
@@ -77,10 +98,10 @@ async function runKoreksiMenuBahan(tenantId) {
     let unchanged = 0;
 
     for (const mb of menuBahan) {
-      const kat = mb.kategori_penerima;
-      const jumlahPorsi = kat ? (pmByKategori[kat] || 0) : 0;
+      const jumlahPorsi = cariJumlahPorsi(mb.kategori_penerima, pmByKategori);
 
       if (jumlahPorsi <= 0) {
+        log(`  ⚠ "${mb.menu_nama}" (kat=${mb.kategori_penerima}): tidak ada PM, SKIP`);
         unchanged++;
         continue;
       }
@@ -88,13 +109,14 @@ async function runKoreksiMenuBahan(tenantId) {
       const jumlahLama = Number(mb.jumlah);
       const jumlahBaru = Math.round((jumlahLama / jumlahPorsi) * 100) / 100;
 
-      if (Math.abs(jumlahLama - jumlahBaru) > 0.01 && jumlahBaru > 0) {
-        await db.query('UPDATE menu_bahan SET jumlah=? WHERE id=?', [jumlahBaru, mb.mb_id]);
-        log(`  ✓ "${mb.menu_nama}": ${jumlahLama}g → ${jumlahBaru}g`);
-        corrected++;
-      } else {
+      if (Math.abs(jumlahLama - jumlahBaru) <= 0.01 || jumlahBaru <= 0) {
         unchanged++;
+        continue;
       }
+
+      await db.query('UPDATE menu_bahan SET jumlah=? WHERE id=?', [jumlahBaru, mb.mb_id]);
+      log(`  ✓ "${mb.menu_nama}" (kat=${mb.kategori_penerima}, ${jumlahPorsi} PM): ${jumlahLama}g → ${jumlahBaru}g`);
+      corrected++;
     }
 
     log(`  Hasil: ${corrected} diperbaiki, ${unchanged} tidak berubah`);
