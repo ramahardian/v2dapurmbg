@@ -158,6 +158,89 @@ router.get('/system/seed-sp-referensi', requireRole('admin'), (req, res) => {
 </html>`);
 });
 
+// POST /system/koreksi-menu-bahan — perbaiki data menu_bahan.jumlah (double-counting bug)
+router.post('/system/koreksi-menu-bahan', requireRole('admin'), async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const log = (msg) => { res.write(msg + '\n'); };
+  log('Memulai koreksi data menu_bahan...\n');
+
+  try {
+    const { runKoreksiMenuBahan } = require('../scripts/koreksi-menu-bahan');
+    const result = await runKoreksiMenuBahan(req.user.tenant_id);
+    for (const line of result.logs) {
+      log(line);
+    }
+    log('');
+    log(`✓ ${result.corrected} dari ${result.total} baris menu_bahan diperbaiki`);
+    log('✓ Nutrisi menu telah diperbarui');
+    log('');
+    log('✓ Koreksi selesai!');
+  } catch (err) {
+    log('\n✗ Gagal: ' + err.message);
+  }
+  res.end();
+});
+
+// GET /system/koreksi-menu-bahan — halaman trigger koreksi (web UI)
+router.get('/system/koreksi-menu-bahan', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Koreksi Menu Bahan</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full">
+    <h1 class="text-2xl font-bold text-stone-800 mb-2">Koreksi Data Menu Bahan</h1>
+    <p class="text-sm text-stone-500 mb-6">
+      Memperbaiki data <code class="bg-stone-100 px-1 rounded">menu_bahan.jumlah</code> yang terlanjur tersimpan sebagai total (dikalikan jumlah siswa) akibat bug formula.
+      Data akan dibagi dengan jumlah penerima manfaat per kategori, sehingga menjadi gram per siswa.
+      Nutrisi menu juga akan dihitung ulang.
+    </p>
+
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6 text-sm text-amber-800">
+      <strong>⚠️ Perhatian:</strong> Hanya untuk tenant yang sedang login. Jalankan setelah deploy fix
+      <code class="bg-amber-100 px-1 rounded">processBahanItem</code>.
+    </div>
+
+    <button onclick="runKoreksi()" id="btn" class="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+      Jalankan Koreksi
+    </button>
+    <pre id="output" class="mt-4 bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-96 hidden"></pre>
+  </div>
+  <script>
+    async function runKoreksi() {
+      const btn = document.getElementById('btn');
+      const out = document.getElementById('output');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      out.classList.remove('hidden');
+      out.textContent = '';
+
+      try {
+        const r = await fetch('/api/system/koreksi-menu-bahan', { method: 'POST' });
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          out.textContent += decoder.decode(value);
+          out.scrollTop = out.scrollHeight;
+        }
+      } catch (e) {
+        out.textContent += '\\nGagal: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = 'Jalankan Koreksi';
+    }
+  </script>
+</body>
+</html>`);
+});
+
 // GET /system/cek-budget — debug: lihat data budget
 router.get('/system/cek-budget', requireRole('admin'), async (req, res) => {
   try {
