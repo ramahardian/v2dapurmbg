@@ -591,32 +591,31 @@ function renderBahanList() {
   document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
     var displayNama = b.nama || '';
     var displaySatuan = b.satuan || 'g';
-    var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
-    var displayJumlah = b.jumlah || 0;
-    if (perUnit > 0 && (displaySatuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan))) {
-      displayJumlah = displayJumlah / perUnit;
-    }
-    var totalJumlah = porsi > 0 ? displayJumlah * porsi : 0;
-    var inputStep = displaySatuan === 'Kg' ? '0.01' : (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan) ? '1' : '0.01');
-    var inputValue = porsi > 0 ? (totalJumlah ? Math.round(totalJumlah * 100) / 100 : '0') : (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0');
-    var inputTitle = porsi > 0 ? 'Total untuk ' + porsi + ' porsi (' + displaySatuan + ')' : (displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')');
-    return '<div class="mb-1.5">' +
-      '<div class="grid grid-cols-12 gap-1.5 items-center">' +
-        '<div class="col-span-4 relative">' +
-          '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
-          '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
+      var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+      var displayJumlah = b.jumlah || 0;
+      if (perUnit > 0 && (displaySatuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan))) {
+        displayJumlah = displayJumlah / perUnit;
+      }
+      var totalJumlah = porsi > 0 ? displayJumlah * porsi : 0;
+      var inputStep = displaySatuan === 'Kg' ? '0.01' : (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan) ? '1' : '0.01');
+      var inputValue = porsi > 0 ? (totalJumlah ? Math.round(totalJumlah * 100) / 100 : '0') : (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0');
+      var inputTitle = porsi > 0 ? 'Total untuk ' + porsi + ' porsi (' + displaySatuan + ')' : (displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')');
+      return '<div class="mb-1.5">' +
+        '<div class="grid grid-cols-12 gap-1.5 items-center">' +
+          '<div class="col-span-4 relative">' +
+            '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
+            '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
+          '</div>' +
+          '<div class="col-span-3 flex">' +
+            '<input type="number" step="' + inputStep + '" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" />' +
+            '<span class="inline-flex items-center px-2 h-9 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-md whitespace-nowrap">' + displaySatuan + '</span>' +
+          '</div>' +
+          '<div class="col-span-4">' +
+            '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
+          '</div>' +
+          '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
         '</div>' +
-        '<div class="col-span-3 flex">' +
-          '<input type="number" step="' + inputStep + '" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" />' +
-          '<span class="inline-flex items-center px-2 h-9 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-md whitespace-nowrap">' + displaySatuan + '</span>' +
-          '<button type="button" onclick="resetBahanToSP(' + i + ')" class="px-1 h-9 text-stone-400 hover:text-blue-600 text-sm transition-colors" title="Reset ke SP default">↺</button>' +
-        '</div>' +
-        '<div class="col-span-4">' +
-          '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
-        '</div>' +
-        '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
-      '</div>' +
-    '</div>';
+      '</div>';
   }).join('');
 }
 
