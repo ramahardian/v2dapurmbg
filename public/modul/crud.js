@@ -259,7 +259,12 @@ function openForm(cfg, editing) {
     const payload = {};
     cfg.fields.forEach(f => {
       const v = document.getElementById('f-' + f.k).value;
-      let val = f.type === 'number' ? Number(String(v).replace(/\./g, '').replace(',', '.')) || 0 : v;
+      let val = v;
+      if (f.type === 'number') {
+        var _ns = String(v).trim();
+        val = _ns.includes(',') ? Number(_ns.replace(/\./g, '').replace(',', '.')) : Number(_ns);
+        if (isNaN(val)) val = 0;
+      }
       if (f.fmt === 'pct') val = val / 100;
       payload[f.k] = val;
     });
