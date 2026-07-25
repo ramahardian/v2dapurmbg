@@ -545,20 +545,22 @@ function renderBahanList() {
     var totalJumlah = porsi > 0 ? displayJumlah * porsi : 0;
     var inputStep = displaySatuan === 'Kg' ? '0.01' : (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan) ? '1' : '0.01');
     var inputTitle = displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')';
-    return '<div class="grid grid-cols-12 gap-1.5 items-center">' +
-      '<div class="col-span-4 relative">' +
-        '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
-        '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
+    return '<div class="mb-1.5">' +
+      '<div class="grid grid-cols-12 gap-1.5 items-center">' +
+        '<div class="col-span-4 relative">' +
+          '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
+          '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
+        '</div>' +
+        '<div class="col-span-3 flex">' +
+          '<input type="number" step="' + inputStep + '" value="' + (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" />' +
+          '<span class="inline-flex items-center px-2 h-9 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-md whitespace-nowrap">' + displaySatuan + '</span>' +
+        '</div>' +
+        '<div class="col-span-4">' +
+          '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
+        '</div>' +
+        '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
       '</div>' +
-      '<div class="col-span-3 flex">' +
-        '<input type="number" step="' + inputStep + '" value="' + (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" />' +
-        '<span class="inline-flex items-center px-2 h-9 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-md whitespace-nowrap">' + displaySatuan + '</span>' +
-      '</div>' +
-      '<div class="col-span-4 flex items-center gap-1">' +
-        '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="flex-1 h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
-        (porsi > 0 && totalJumlah > 0 ? '<span class="text-[10px] text-stone-400 whitespace-nowrap">= ' + (Math.round(totalJumlah * 100) / 100) + ' ' + displaySatuan + '</span>' : '') +
-      '</div>' +
-      '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
+      (porsi > 0 ? '<div class="text-[11px] text-stone-400 mt-0.5 pl-[calc(4/12*100%+0.375rem)]">= ' + (Math.round(totalJumlah * 100) / 100) + ' ' + displaySatuan + '</div>' : '') +
     '</div>';
   }).join('');
 }
