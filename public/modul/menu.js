@@ -433,6 +433,8 @@ async function openMenuForm(editing) {
         <span>Tampilkan total untuk</span>
         <input type="number" id="m-porsi" value="0" min="0" step="1" onchange="onPorsiChange()" placeholder="0" class="w-20 h-7 px-2 border border-stone-200 rounded text-sm text-center mono" />
         <span>porsi</span>
+        <span class="flex-1"></span>
+        <button type="button" onclick="resetAllToSP()" class="text-xs border border-stone-300 px-2 py-1 rounded hover:bg-stone-50 text-stone-500">↺ Reset Semua ke SP</button>
       </div>
       <div id="bahan-list" class="space-y-2"></div>
     </div>
@@ -534,11 +536,16 @@ function updateBahan(i, k, v) {
   hitungNutrisi();
   renderBahanList();
 }
+function resetAllToSP() {
+  (window._menuBahan || []).forEach(function(b, i) {
+    resetBahanToSP(i);
+  });
+}
 function resetBahanToSP(i) {
   var b = window._menuBahan[i];
+  if (!b) return;
   var sp = window._spRefMap && window._spRefMap[b.nama];
-  if (!b || !sp) return;
-  var defaultGram = Number(sp.berat_1_sp) || Number(b.berat_1_sp) || 0;
+  var defaultGram = (sp ? Number(sp.berat_bersih) : 0) || Number(b.berat_1_sp) || 0;
   if (!defaultGram) return;
   b.jumlah = defaultGram;
   delete b._autoJumlah;
