@@ -440,16 +440,7 @@ async function openMenuForm(editing) {
     </div>
     `;
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, keterangan: b.keterangan || '' }));
-  // Selalu reset jumlah ke SP standar, bukan pakai nilai tersimpan (cegah korupsi)
-  window._menuBahan.forEach(function(b) {
-    var sp = window._spRefMap && window._spRefMap[b.nama];
-    var ref = sp ? Number(sp.berat_bersih) : 0;
-    if (ref > 0) {
-      b.jumlah = ref;
-    } else if (Number(b.berat_1_sp) > 0) {
-      b.jumlah = Number(b.berat_1_sp);
-    }
-  });
+  // Biarkan nilai tersimpan dari DB — user bisa klik "↺ Reset ke SP" jika ingin reset
   window._menuPorsi = 0;
   renderBahanList();
   hitungNutrisi();
@@ -485,22 +476,27 @@ async function openMenuForm(editing) {
   document.getElementById('m-nama').addEventListener('input', function() { checkDuplicateName(this.value); });
   
   document.getElementById('modal-save').onclick = async function() {
-    if (!validateForm([{ id: 'm-nama', label: 'Nama Menu' }])) return;
-    if (checkDuplicateName()) return showAlert('Nama menu sudah ada. Ganti nama terlebih dahulu.', 'warning');
-    const payload = {
-      nama: document.getElementById('m-nama').value,
-      deskripsi: document.getElementById('m-deskripsi').value,
-      gramasi_total: Math.round((window._menuBahan || []).reduce(function(s,b){ return s + (Number(b.jumlah)||0); }, 0) * 100) / 100,
-      kalori: +document.getElementById('m-kalori').value || 0,
-      protein: +document.getElementById('m-protein').value || 0,
-      karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
-      lemak: +document.getElementById('m-lemak').value || 0,
-      serat: +document.getElementById('m-serat').value || 0,
-      bahan: window._menuBahan.filter(function(b) { return b.bahan_baku_id || b.nama; }),
-    };
-    if (editing) await api.put('/menu/' + editing.id, payload);
-    else await api.post('/menu', payload);
-    closeModal(); renderMenu();
+    try {
+      if (!validateForm([{ id: 'm-nama', label: 'Nama Menu' }])) return;
+      if (checkDuplicateName()) return showAlert('Nama menu sudah ada. Ganti nama terlebih dahulu.', 'warning');
+      const payload = {
+        nama: document.getElementById('m-nama').value,
+        kategori_penerima: editing ? editing.kategori_penerima : null,
+        deskripsi: document.getElementById('m-deskripsi').value,
+        gramasi_total: Math.round((window._menuBahan || []).reduce(function(s,b){ return s + (Number(b.jumlah)||0); }, 0) * 100) / 100,
+        kalori: +document.getElementById('m-kalori').value || 0,
+        protein: +document.getElementById('m-protein').value || 0,
+        karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
+        lemak: +document.getElementById('m-lemak').value || 0,
+        serat: +document.getElementById('m-serat').value || 0,
+        bahan: window._menuBahan.filter(function(b) { return b.bahan_baku_id || b.nama; }),
+      };
+      if (editing) await api.put('/menu/' + editing.id, payload);
+      else await api.post('/menu', payload);
+      closeModal(); renderMenu();
+    } catch (e) {
+      showAlert('Gagal menyimpan: ' + (e.message || 'Unknown error'), 'error');
+    }
   };
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
