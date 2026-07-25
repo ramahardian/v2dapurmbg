@@ -253,6 +253,7 @@ const KATEGORI_COLORS = {
   'Ibu Hamil': { bg: '#be123c' },
   'Ibu Menyusui': { bg: '#6d28d9' },
   'Balita': { bg: '#0d9488' },
+  'Posyandu': { bg: '#a21caf' },
   // backward compat
   'Paket Kecil': { bg: '#0e7490' },
 };
@@ -961,7 +962,7 @@ function openAIDialog() {
   document.getElementById('modal-body').innerHTML = `
     <div><label class="text-sm">Kategori Penerima</label>
       <select id="ai-kat" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
-        ${['TK/PAUD','SD 1-3','SD 4-6','SMP','SMA','Ibu Hamil','Ibu Menyusui','Balita'].map(o => `<option>${o}</option>`).join('')}
+        ${['TK/PAUD','SD 1-3','SD 4-6','SMP','SMA','Ibu Hamil','Ibu Menyusui','Balita','Posyandu'].map(o => `<option>${o}</option>`).join('')}
       </select></div>
     <div class="mt-3"><label class="text-sm">Catatan (opsional)</label>
       <textarea id="ai-note" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md" placeholder="Mis. hindari kacang, bahan lokal Jawa Tengah"></textarea></div>
