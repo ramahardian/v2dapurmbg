@@ -513,10 +513,8 @@ function updateBahan(i, k, v) {
   if (k === 'jumlah') {
     var b = window._menuBahan[i];
     var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
-    if (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(b.satuan) && perUnit > 0) {
+    if (perUnit > 0 && (b.satuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(b.satuan))) {
       b.jumlah = Number(v) * perUnit;
-    } else if (b.satuan === 'Kg') {
-      b.jumlah = Number(v); // display in g, jumlah stays in g
     } else {
       b.jumlah = Number(v);
     }
@@ -531,14 +529,12 @@ function renderBahanList() {
     var displayNama = b.nama || '';
     var displaySatuan = b.satuan || 'g';
     var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
-    // Internal jumlah always in grams; convert display for countable units
+    // Internal jumlah always in grams; convert display to the original unit
     var displayJumlah = b.jumlah || 0;
-    if (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan) && perUnit > 0) {
+    if (perUnit > 0 && (displaySatuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan))) {
       displayJumlah = displayJumlah / perUnit;
-    } else if (displaySatuan === 'Kg') {
-      displaySatuan = 'g'; // per-serving in grams is clearer than kg
     }
-    var inputStep = ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan) ? '1' : '0.01';
+    var inputStep = displaySatuan === 'Kg' ? '0.01' : (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan) ? '1' : '0.01');
     var inputTitle = displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')';
     return '<div class="grid grid-cols-12 gap-1.5 items-center">' +
       '<div class="col-span-4 relative">' +
@@ -597,8 +593,8 @@ function onBahanSearch(i, el) {
   dropdown.innerHTML = merged.map(function(item) {
     var badge = item.sumber === 'sp' ? '<span class="text-[9px] bg-blue-100 text-blue-700 px-1 py-0.5 rounded mr-1">SP</span>' : '<span class="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded mr-1">Baku</span>';
     var satuanInfo = '';
-    if (item.satuan && ['g','gr','gram','kg','kilogram'].indexOf(item.satuan.toLowerCase()) === -1 && item.berat_per_satuan > 0) {
-      satuanInfo = ' · Satuan asli: <span class="font-medium">' + item.satuan + '</span> (1 ' + item.satuan + ' = ' + item.berat_per_satuan + 'g, dikonversi ke gram di form)';
+    if (item.satuan && item.satuan.toLowerCase() !== 'g' && item.satuan.toLowerCase() !== 'gram') {
+      satuanInfo = ' · Satuan: <span class="font-medium">' + item.satuan + '</span>';
     }
     return '<div onclick="selectBahan(' + i + ", '" + item.nama.replace(/'/g, "\\'") + "')\" class=\"px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-stone-100 last:border-0\">" +
       '<div class="font-medium text-stone-800">' + badge + ' ' + item.nama + '</div>' +
