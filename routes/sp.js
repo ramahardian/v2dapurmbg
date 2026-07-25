@@ -117,7 +117,7 @@ router.post('/sp/hitung-kebutuhan', requireRole('admin', 'ahli_gizi', 'keuangan'
   const mph = menuIds.map(() => '?').join(',');
   const [bahanRows] = await db.query(
     `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah as jumlah_existing,
-            b.nama, b.kategori_sp, b.berat_1_sp, b.persen_bdd, b.satuan
+            b.nama, b.kategori_sp, b.berat_1_sp, b.persen_bdd, b.satuan, b.berat_per_satuan
      FROM menu_bahan mb
      JOIN bahan_baku b ON b.id = mb.bahan_baku_id
      WHERE mb.menu_id IN (${mph})`,
@@ -150,6 +150,7 @@ router.post('/sp/hitung-kebutuhan', requireRole('admin', 'ahli_gizi', 'keuangan'
           bahan_baku_id: b.bahan_baku_id,
           nama: b.nama,
           satuan: b.satuan || 'g',
+          berat_per_satuan: Number(b.berat_per_satuan) || 0,
           kategori_sp: b.kategori_sp,
           berat_1_sp: h.berat_1_sp,
           sp_value: h.sp_value,

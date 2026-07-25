@@ -566,19 +566,25 @@ router.get('/siklus/:id/laporan/produksi-harian', async (req, res) => {
       bahanByKat[kat].push({ nama: g.nama, satuan: g.satuan, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100, kategori_sp: kat });
     }
 
+    const dayBahanList = Object.entries(bahanByKat).map(([kat, list]) => ({ kategori: kat, items: list }));
+    const dayTotalKg = dayBahanList.reduce((s, g) => s + g.items.reduce((s2, i) => s2 + Number(i.kebutuhan_kg), 0), 0);
     return {
       hari_ke: it.hari_ke,
       hari_nama: it.hari_nama,
       menu_nama: it.menu_nama || 'Menu Hari ' + it.hari_ke,
       jumlah_porsi: jumlahPorsi,
-      bahan_by_kat: Object.entries(bahanByKat).map(([kat, list]) => ({ kategori: kat, items: list })),
+      total_kebutuhan_kg: Math.round(dayTotalKg * 100) / 100,
+      bahan_by_kat: dayBahanList,
       sp_target: KAT_ORDER.reduce((acc, k) => { acc[k] = spMap[k] || 0; return acc; }, {}),
     };
   });
 
+  const hariTerisi = items.filter(it => it.menu_id).length;
+  const totalKebutuhanKg = days.reduce((s, d) => s + (d.total_kebutuhan_kg || 0), 0);
+
   res.json({
-    siklus: { id: siklus.id, nama: siklus.nama, total_hari: siklus.total_hari, jumlah_porsi: jumlahPorsi, kategori_penerima: siklus.kategori_penerima },
-    ringkasan: { totalDays: siklus.total_hari || items.length, totalPorsi: jumlahPorsi, totalMenu: allMenuIds.length },
+    siklus: { id: siklus.id, nama: siklus.nama, status: siklus.status, total_hari: siklus.total_hari, jumlah_porsi: jumlahPorsi, kategori_penerima: siklus.kategori_penerima },
+    ringkasan: { total_hari: siklus.total_hari, hari_terisi: hariTerisi, total_penerima: jumlahPorsi, total_kebutuhan_kg: Math.round(totalKebutuhanKg * 100) / 100 },
     days,
   });
 });

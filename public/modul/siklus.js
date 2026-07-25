@@ -1,6 +1,28 @@
 // ===== Siklus Menu =====
 const HARI_OPTIONS = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
 
+function formatPerPorsi(b) {
+  if (b.sp_value == null || b.sp_value <= 0) return '—';
+  var gram = Math.round(b.berat_1_sp * b.sp_value);
+  var satuan = b.satuan || 'g';
+  // Use berat_per_satuan if known, else assume 1 satuan unit = berat_1_sp grams
+  var perUnit = b.berat_per_satuan > 0 ? b.berat_per_satuan : (b.berat_1_sp || 1);
+  // Always show Kg items in grams (per-serving in kg is misleading)
+  if (satuan === 'Kg') return gram + ' g';
+  // For non-gram units, try to convert
+  var inSatuan = gram / perUnit;
+  var rounded = Math.round(inSatuan * 100) / 100;
+  // Show in original unit if clean (integer ≥1 or common fraction)
+  if (inSatuan >= 0.9 && Math.abs(inSatuan - Math.round(inSatuan)) < 0.01) {
+    return Math.round(inSatuan) + ' ' + satuan;
+  }
+  if (inSatuan > 0 && inSatuan < 1 && (Math.abs(inSatuan - 0.5) < 0.01 || Math.abs(inSatuan - 0.25) < 0.01 || Math.abs(inSatuan - 0.75) < 0.01)) {
+    return rounded + ' ' + satuan;
+  }
+  // Fallback to grams
+  return gram + ' g';
+}
+
 const KAT_SP_ORDER = ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
 const KAT_SP_LABELS = {
   'Karbohidrat': { label: 'Karbohidrat', color: 'text-amber-700 bg-amber-50' },
@@ -521,6 +543,16 @@ async function renderProduksiHarian(id) {
     } else {
       // Per-day tables
       for (var d of days) {
+        // Flatten bahan_by_kat into bahan array
+        d.bahan = [];
+        if (d.bahan_by_kat) {
+          for (var katGroup of d.bahan_by_kat) {
+            for (var item of katGroup.items) {
+              d.bahan.push(item);
+            }
+          }
+        }
+        
         if (!d.bahan || !d.bahan.length) {
           html += '<div class="bg-stone-50 border border-dashed border-stone-300 rounded-lg p-5 mb-4 text-center text-sm text-stone-400">' +
             '<div class="font-semibold text-stone-600 mb-1">Hari ' + d.hari_ke + ' — ' + d.hari_nama + '</div>' +
@@ -551,27 +583,18 @@ async function renderProduksiHarian(id) {
           '<thead class="bg-stone-50/50"><tr>' +
             '<th class="text-left px-4 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Bahan</th>' +
             '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Per Porsi (g)</th>' +
-            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">BDD</th>' +
-            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Kg/pcs/btl</th>' +
-            '<th class="text-left px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Ket</th>' +
+            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Kategori</th>' +
+            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Total (kg)</th>' +
           '</tr></thead><tbody>';
         
         for (var b of d.bahan) {
-          var bddLabel = b.persen_bdd < 100 ? b.persen_bdd + '%' : '—';
-          var perPorsi = (b.sp_value > 0 && b.berat_1_sp) ? Math.round(b.berat_1_sp * b.sp_value) + ' g' : '—';
-          var displayQty = b.display_qty;
-          var displaySat = b.display_satuan;
+          var perPorsiGram = d.jumlah_porsi > 0 ? Math.round(b.berat_kotor / d.jumlah_porsi) : 0;
           
           html += '<tr class="border-t border-stone-100 hover:bg-stone-50/50 transition-colors">' +
             '<td class="px-4 py-2.5 font-medium text-stone-700">' + b.nama + '</td>' +
-            '<td class="px-3 py-2.5 text-right mono text-stone-600">' + perPorsi + '</td>' +
-            '<td class="px-3 py-2.5 text-right mono text-stone-600">' + bddLabel + '</td>' +
-            '<td class="px-3 py-2.5 text-right mono font-bold text-stone-800">' + (typeof displayQty === 'number' ? fmtNum(displayQty) : displayQty) + ' ' + displaySat + '</td>' +
-            '<td class="px-3 py-2.5 text-xs text-stone-400">' +
-              (b.buffer_persen > 0 ? 'Buffer ' + b.buffer_persen + '%' : '') +
-              (b.persen_bdd < 100 && b.buffer_persen > 0 ? ' • ' : '') +
-              (b.persen_bdd < 100 && !b.buffer_persen ? 'BDD ' + b.persen_bdd + '%' : '') +
-            '</td>' +
+            '<td class="px-3 py-2.5 text-right mono text-stone-600">' + perPorsiGram + ' g</td>' +
+            '<td class="px-3 py-2.5 text-right text-stone-600">' + (b.kategori_sp || '-') + '</td>' +
+            '<td class="px-3 py-2.5 text-right mono font-bold text-stone-800">' + fmtNum(b.kebutuhan_kg) + ' kg</td>' +
           '</tr>';
         }
         
@@ -617,7 +640,7 @@ async function hitungSpSiklus(id) {
       '<thead class="bg-stone-50"><tr>' +
         '<th class="text-left px-4 py-3 text-xs font-semibold uppercase">Bahan</th>' +
         '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kat. SP</th>' +
-        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Per Porsi (g)</th>' +
+        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Per Porsi</th>' +
         '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Berat Bersih (g)</th>' +
         '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">BDD</th>' +
         '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Berat Kotor (g)</th>' +
@@ -628,7 +651,7 @@ async function hitungSpSiklus(id) {
         return '<tr class="border-t border-stone-100">' +
           '<td class="px-4 py-3 text-sm font-medium">' + b.nama + '</td>' +
           '<td class="px-4 py-3 text-sm text-right">' + (b.kategori_sp || '-') + '</td>' +
-          '<td class="px-4 py-3 text-sm text-right mono">' + (b.sp_value != null ? Math.round(b.berat_1_sp * b.sp_value) + ' g' : '-') + '</td>' +
+          '<td class="px-4 py-3 text-sm text-right mono">' + formatPerPorsi(b) + '</td>' +
           '<td class="px-4 py-3 text-sm text-right mono">' + b.berat_bersih + '</td>' +
           '<td class="px-4 py-3 text-sm text-right mono">' + b.persen_bdd + '%</td>' +
           '<td class="px-4 py-3 text-sm text-right mono">' + b.berat_kotor + '</td>' +
