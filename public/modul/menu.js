@@ -425,9 +425,16 @@ async function openMenuForm(editing) {
     <input id="m-serat" type="hidden" value="${m.serat || 0}" />
 
     <div class="border-t border-stone-200 mt-4 pt-3">
-      <div class="flex justify-between items-center mb-2">
+      <div class="flex items-center gap-3 mb-2">
         <div class="font-semibold text-sm">Bahan</div>
         <button type="button" onclick="addBahanRow()" class="text-xs border border-stone-300 px-3 py-1 rounded hover:bg-stone-50">+ Tambah Bahan</button>
+      </div>
+      <div class="flex items-center gap-2 mb-2 text-[11px] text-stone-400 bg-stone-50 px-3 py-1.5 rounded">
+        <span>Nilai per porsi (1 orang).</span>
+        <span>Untuk melihat total × penerima, buka</span>
+        <span class="font-medium text-stone-500">Siklus → Hitung SP</span>
+        <span>atau</span>
+        <span class="font-medium text-stone-500">Produksi Harian</span>
       </div>
       <div id="bahan-list" class="space-y-2"></div>
     </div>

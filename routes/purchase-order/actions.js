@@ -53,7 +53,7 @@ function registerActionRoutes(router) {
 
         const biayaPerHari = [];
         for (const it of items) {
-          const porsi = Number(it.jumlah_porsi) || 0;
+          const porsi = Number(it.jumlah_porsi) || Number(s.jumlah_porsi) || 0;
           if (!porsi || !it.menu_id) continue;
           const bahanList = menuBahanMap[it.menu_id] || [];
           let biayaHari = 0;
@@ -64,7 +64,8 @@ function registerActionRoutes(router) {
           totalBiaya += biayaHari;
         }
 
-        const totalPorsi = items.reduce((s, it) => s + (Number(it.jumlah_porsi) || 0), 0);
+        const siklusPorsi = Number(s.jumlah_porsi) || 0;
+        const totalPorsi = items.reduce((acc, it) => acc + (Number(it.jumlah_porsi) || siklusPorsi || 0), 0);
         grandTotal += totalBiaya;
         grandTotalPorsi += totalPorsi;
 

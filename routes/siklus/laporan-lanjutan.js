@@ -408,7 +408,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
           }
         }
 
-        dayPlan.total_porsi += Number(it.jumlah_porsi || 0);
+        dayPlan.total_porsi += Number(it.jumlah_porsi || s.jumlah_porsi || 0);
         if (it.menu_nama) dayPlan.menu_names.push(it.menu_nama);
       }
 
