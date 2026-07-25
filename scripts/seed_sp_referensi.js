@@ -216,69 +216,54 @@ async function fetchWithTimeout(url, ms = 30000) {
 }
 
 /**
- * Load data dari berbagai sumber, urutan prioritas:
- *   1. --url (JSON / CSV / XLSX via HTTP)
- *   2. --file (JSON / CSV / XLSX lokal)
- *   3. Data hardcoded default
+ * Seed SP referensi untuk tenant tertentu
+ * @param {number} tenantId - ID tenant
+ * @param {string|null} url - URL sumber data (optional, fallback ke default)
+ * @returns {Promise<{inserted: number, total: number, source: string}>}
  */
-async function loadData() {
-  // Priority 1: --url parameter
-  if (URL_SOURCE) {
-    console.log(`  ↻ Mengunduh data dari: ${URL_SOURCE}`);
-    const ext = URL_SOURCE.split('?')[0].split('.').pop().toLowerCase();
-    try {
-      const res = await fetchWithTimeout(URL_SOURCE);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+async function runSeedSpReferensi(tenantId, url) {
+  const data = await loadData(url || undefined);
+  if (!data.length) return { inserted: 0, total: 0, source: 'none' };
 
-      if (ext === 'xlsx' || ext === 'xls') {
-        const XLSX = require('xlsx');
-        const buf = await res.arrayBuffer();
-        const wb = XLSX.read(buf, { type: 'array' });
-        const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-        console.log(`  ✓ ${raw.length} baris dari Excel`);
-        return raw.map(normalizeRow).filter(Boolean);
-      } else if (ext === 'csv') {
-        const rows = parseCSV(await res.text());
-        console.log(`  ✓ ${rows.length} baris dari CSV`);
-        return rows.map(normalizeRow).filter(Boolean);
-      } else {
-        // Default: JSON
-        const rows = await res.json();
-        if (!Array.isArray(rows)) throw new Error('Response harus array of objects');
-        console.log(`  ✓ ${rows.length} baris dari JSON`);
-        return rows.map(normalizeRow).filter(Boolean);
-      }
-    } catch (e) {
-      console.error(`  ✗ Gagal fetch URL: ${e.message}`);
-      console.log('  ↻ Fallback ke data default...');
-    }
+  await db.query('DELETE FROM sp_referensi_bahan WHERE tenant_id = ?', [tenantId]);
+  let inserted = 0;
+  for (const d of data) {
+    const bdd = d.persen_bdd > 0 ? Math.round((d.persen_bdd / 100) * 10000) / 10000 : 0;
+    const beratKotor = bdd > 0 ? Math.round((d.berat_bersih / bdd) * 100) / 100 : 0;
+    await db.query(
+      `INSERT IGNORE INTO sp_referensi_bahan (tenant_id, nama, kategori, berat_bersih, bdd_persen, berat_kotor, energi, protein, lemak, karbohidrat, serat)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [tenantId, d.nama_bahan, inferKategori(d.nama_bahan), d.berat_bersih, bdd, beratKotor, d.energi, d.protein, d.lemak, d.karbohidrat, d.serat]
+    );
+    inserted++;
+  }
+  return { inserted, total: data.length, source: url ? 'URL' : 'default' };
+}
+
+module.exports = { runSeedSpReferensi, loadData };
+
+/**
+ * Load data dari berbagai sumber, urutan prioritas:
+ *   1. URL parameter (jika diberikan)
+ *   2. --url (JSON / CSV / XLSX via HTTP)
+ *   3. --file (JSON / CSV / XLSX lokal)
+ *   4. Data hardcoded default
+ */
+async function loadData(url) {
+  // Priority 0: explicit url argument (from runSeedSpReferensi call)
+  if (url) {
+    console.log(`  ↻ Mengunduh data dari: ${url}`);
+    return fetchAndParse(url);
   }
 
-  // Priority 2: --file parameter
+  // Priority 1: --url CLI parameter
+  if (URL_SOURCE) {
+    return fetchAndParse(URL_SOURCE);
+  }
+
+  // Priority 2: --file CLI parameter
   if (FILE_SOURCE) {
-    console.log(`  ↻ Membaca file: ${FILE_SOURCE}`);
-    const ext = FILE_SOURCE.split('.').pop().toLowerCase();
-    try {
-      if (ext === 'xlsx' || ext === 'xls') {
-        const XLSX = require('xlsx');
-        const wb = XLSX.readFile(FILE_SOURCE);
-        const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-        console.log(`  ✓ ${raw.length} baris dari Excel`);
-        return raw.map(normalizeRow).filter(Boolean);
-      } else if (ext === 'json') {
-        const raw = JSON.parse(fs.readFileSync(FILE_SOURCE, 'utf8'));
-        const rows = Array.isArray(raw) ? raw : [raw];
-        console.log(`  ✓ ${rows.length} baris dari JSON`);
-        return rows.map(normalizeRow).filter(Boolean);
-      } else if (ext === 'csv') {
-        const rows = parseCSV(fs.readFileSync(FILE_SOURCE, 'utf8'));
-        console.log(`  ✓ ${rows.length} baris dari CSV`);
-        return rows.map(normalizeRow).filter(Boolean);
-      }
-    } catch (e) {
-      console.error(`  ✗ Gagal baca file: ${e.message}`);
-      console.log('  ↻ Fallback ke data default...');
-    }
+    return readAndParse(FILE_SOURCE);
   }
 
   // Default: hardcoded data
@@ -287,37 +272,76 @@ async function loadData() {
   return data;
 }
 
-(async () => {
+/** Fetch & parse data dari URL */
+async function fetchAndParse(url) {
+  console.log(`  ↻ Mengunduh data dari: ${url}`);
+  const ext = url.split('?')[0].split('.').pop().toLowerCase();
   try {
-    const data = await loadData();
-    console.log(`  Memproses ${data.length} baris data...`);
+    const res = await fetchWithTimeout(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    if (!data.length) {
-      console.log('  ⚠ Tidak ada data, skip seed');
-      process.exit(0);
+    if (ext === 'xlsx' || ext === 'xls') {
+      const XLSX = require('xlsx');
+      const buf = await res.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      console.log(`  ✓ ${raw.length} baris dari Excel`);
+      return raw.map(normalizeRow).filter(Boolean);
+    } else if (ext === 'csv') {
+      const rows = parseCSV(await res.text());
+      console.log(`  ✓ ${rows.length} baris dari CSV`);
+      return rows.map(normalizeRow).filter(Boolean);
+    } else {
+      const rows = await res.json();
+      if (!Array.isArray(rows)) throw new Error('Response harus array of objects');
+      console.log(`  ✓ ${rows.length} baris dari JSON`);
+      return rows.map(normalizeRow).filter(Boolean);
     }
-
-    const [tenants] = await db.query('SELECT id FROM tenants');
-    for (const t of tenants) {
-      await db.query('DELETE FROM sp_referensi_bahan WHERE tenant_id = ?', [t.id]);
-      let inserted = 0;
-      for (const d of data) {
-        const bdd = d.persen_bdd > 0 ? Math.round((d.persen_bdd / 100) * 10000) / 10000 : 0;
-        const beratKotor = bdd > 0 ? Math.round((d.berat_bersih / bdd) * 100) / 100 : 0;
-        await db.query(
-          `INSERT IGNORE INTO sp_referensi_bahan (tenant_id, nama, kategori, berat_bersih, bdd_persen, berat_kotor, energi, protein, lemak, karbohidrat, serat)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [t.id, d.nama_bahan, inferKategori(d.nama_bahan), d.berat_bersih, bdd, beratKotor, d.energi, d.protein, d.lemak, d.karbohidrat, d.serat]
-        );
-        inserted++;
-      }
-      console.log(`  ✓ ${inserted} baris untuk tenant id=${t.id}`);
-    }
-    console.log('✓ Seed sp_referensi_bahan selesai');
-    process.exit(0);
   } catch (e) {
-    console.error('✗ Gagal:', e.message);
-    console.error(e.stack);
-    process.exit(1);
+    console.error(`  ✗ Gagal fetch URL: ${e.message}`);
+    throw e; // Biarkan caller handle fallback
   }
-})();
+}
+
+/** Baca & parse file lokal */
+function readAndParse(filepath) {
+  console.log(`  ↻ Membaca file: ${filepath}`);
+  const ext = filepath.split('.').pop().toLowerCase();
+  if (ext === 'xlsx' || ext === 'xls') {
+    const XLSX = require('xlsx');
+    const wb = XLSX.readFile(filepath);
+    const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+    console.log(`  ✓ ${raw.length} baris dari Excel`);
+    return raw.map(normalizeRow).filter(Boolean);
+  } else if (ext === 'json') {
+    const raw = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+    const rows = Array.isArray(raw) ? raw : [raw];
+    console.log(`  ✓ ${rows.length} baris dari JSON`);
+    return rows.map(normalizeRow).filter(Boolean);
+  } else if (ext === 'csv') {
+    const rows = parseCSV(fs.readFileSync(filepath, 'utf8'));
+    console.log(`  ✓ ${rows.length} baris dari CSV`);
+    return rows.map(normalizeRow).filter(Boolean);
+  }
+  throw new Error('Format tidak dikenal: ' + ext);
+}
+
+// ===== CLI mode: jalankan langsung jika file dipanggil via CLI =====
+if (require.main === module) {
+  (async () => {
+    try {
+      const sourceUrl = URL_SOURCE || null;
+      const [tenants] = await db.query('SELECT id FROM tenants');
+      for (const t of tenants) {
+        const result = await runSeedSpReferensi(t.id, sourceUrl);
+        console.log(`  ✓ ${result.inserted} baris (dari ${result.total}) untuk tenant id=${t.id} [sumber: ${result.source}]`);
+      }
+      console.log('✓ Seed sp_referensi_bahan selesai');
+      process.exit(0);
+    } catch (e) {
+      console.error('✗ Gagal:', e.message);
+      console.error(e.stack);
+      process.exit(1);
+    }
+  })();
+}
