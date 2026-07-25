@@ -219,6 +219,20 @@ function registerDynamicRoutes(router) {
       await db.query(`DELETE FROM ${table} WHERE id=? AND tenant_id=?`, [req.params.id, req.user.tenant_id]);
       res.json({ ok: true });
     });
+
+    // 5. BULK DELETE (POST /nama_tabel/bulk-delete)
+    router.post(`/${table}/bulk-delete`, roleMiddleware, async (req, res) => {
+      try {
+        const { ids } = req.body;
+        if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'IDs wajib diisi' });
+        const placeholders = ids.map(() => '?').join(',');
+        await db.query(`DELETE FROM ${table} WHERE id IN (${placeholders}) AND tenant_id=?`, [...ids, req.user.tenant_id]);
+        res.json({ ok: true, deleted: ids.length });
+      } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Gagal menghapus' });
+      }
+    });
   }
 
   // ─── EXTRA: Sync nutrisi sp_referensi_bahan → bahan_baku ──────

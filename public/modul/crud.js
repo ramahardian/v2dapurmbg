@@ -12,6 +12,9 @@ async function renderCrud(cfg) {
   <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
     <div class="flex items-center gap-2">
       <button id="add-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah</button>
+      <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md items-center gap-1.5">
+        Hapus Terpilih <span id="crud-selected-count" class="font-bold">0</span>
+      </button>
       ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-200 text-stone-400 hover:text-stone-600 hover:bg-stone-50 transition-colors" title="Info halaman ini">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       </button>` : ''}
@@ -81,6 +84,9 @@ async function reloadCrud(cfg) {
 
   const headers = cfg.cols.map(k => `<th class="text-left px-4 py-3 text-xs font-semibold text-stone-600 uppercase">${cfg.fields.find(f => f.k === k)?.l || k}</th>`).join('');
   const body = rows.map(r => `<tr class="border-t border-stone-100">
+    <td class="px-4 py-3 text-sm">
+      <input type="checkbox" value="${r.id}" onchange="updateSelectedCrudCount()" class="crud-checkbox cb-modern">
+    </td>
     ${cfg.cols.map(k => {
       const f = cfg.fields.find(x => x.k === k);
       const v = r[k];
@@ -95,7 +101,11 @@ async function reloadCrud(cfg) {
       <button onclick='editRow(${JSON.stringify(cfg).replace(/'/g, "&#39;")}, ${JSON.stringify(r).replace(/'/g, "&#39;")})' class="text-stone-500 hover:text-stone-900 p-1.5 inline-flex items-center" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "&#39;")})' class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
     </td></tr>`).join('');
-  w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead class="bg-stone-50"><tr>${headers}<th class="px-4 py-3 text-right text-xs font-semibold text-stone-600 uppercase">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead class="bg-stone-50"><tr>
+    <th class="text-left px-4 py-3 text-xs font-semibold uppercase w-10">
+      <input type="checkbox" id="crud-select-all" onchange="toggleSelectAllCrud(this)" class="cb-modern">
+    </th>
+    ${headers}<th class="px-4 py-3 text-right text-xs font-semibold text-stone-600 uppercase">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
 
   renderCrudPagination();
 }
@@ -118,6 +128,40 @@ function editRow(cfg, row) { openForm(cfg, row); }
 async function deleteRow(endpoint, id, cfg) {
   if (!await showConfirm('Hapus data ini?')) return;
   await api.del(endpoint + '/' + id); reloadCrud(cfg);
+}
+
+function toggleSelectAllCrud(master) {
+  document.querySelectorAll('.crud-checkbox').forEach(cb => cb.checked = master.checked);
+  updateSelectedCrudCount();
+}
+function updateSelectedCrudCount() {
+  var checked = document.querySelectorAll('.crud-checkbox:checked').length;
+  var btn = document.getElementById('crud-delete-selected');
+  var countEl = document.getElementById('crud-selected-count');
+  if (!btn || !countEl) return;
+  if (checked > 0) {
+    btn.classList.remove('hidden');
+    btn.classList.add('inline-flex');
+    countEl.textContent = checked;
+  } else {
+    btn.classList.add('hidden');
+    btn.classList.remove('inline-flex');
+  }
+}
+async function deleteSelectedCrud() {
+  var cfg = _crudCfg;
+  if (!cfg) return;
+  var checked = document.querySelectorAll('.crud-checkbox:checked');
+  var ids = Array.from(checked).map(cb => parseInt(cb.value)).filter(id => !isNaN(id));
+  if (!ids.length) return showAlert('Pilih data yang akan dihapus', 'warning');
+  if (!await showConfirm('Hapus ' + ids.length + ' data terpilih?')) return;
+  try {
+    await api.post(cfg.endpoint + '/bulk-delete', { ids });
+    showToast(ids.length + ' data berhasil dihapus', 'success');
+    reloadCrud(cfg);
+  } catch (e) {
+    showToast('Gagal menghapus: ' + (e.message || 'Unknown error'), 'error');
+  }
 }
 
 async function syncCrudData() {
