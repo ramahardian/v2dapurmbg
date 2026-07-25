@@ -138,6 +138,9 @@ async function loadPerencanaanData(siklusId) {
       return;
     }
 
+    // ── Rekap Porsi Besar & Kecil (aggregate across all jenjang) ──
+    html += renderPncRekapPorsi(data);
+
     // Content: per jenjang sections
     html += '<div id="pnc-view-container">';
     for (var j = 0; j < data.length; j++) {
@@ -214,6 +217,134 @@ function applyPncSectionVisibility() {
     var show = _pncSelectedJenjang === 'SEMUA' || jn === _pncSelectedJenjang;
     section.style.display = show ? '' : 'none';
   }
+}
+
+// ── Rekap Porsi Besar & Kecil (aggregate across all jenjang) ──
+function renderPncRekapPorsi(allData) {
+  if (!allData || !allData.length) return '';
+
+  // 1. Hitung total besar & kecil dari semua jenjang
+  var totalBesar = 0, totalKecil = 0;
+  for (var di = 0; di < allData.length; di++) {
+    totalBesar += allData[di].jumlah_besar || 0;
+    totalKecil += allData[di].jumlah_kecil || 0;
+  }
+  if (totalBesar === 0 && totalKecil === 0) return '';
+
+  // 2. Gunakan data jenjang pertama sebagai template siklus/hari/bahan
+  //    (asumsi: semua jenjang pakai menu yang sama)
+  var template = allData[0];
+  var totalSiswa = template.jumlah_siswa;
+
+  // 3. Helper: hitung per-siswa dari total jenjang
+  function perSiswa(totalVal, jmlSiswa) {
+    return jmlSiswa > 0 ? totalVal / jmlSiswa : 0;
+  }
+
+  // 4. Render satu tabel untuk satu porsi type
+  function renderRekapTable(porsiKey, porsiLabel, porsiCount, colorClass, iconSvg) {
+    if (porsiCount <= 0) return '';
+    var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">';
+    html += '<div class="px-5 py-3 ' + colorClass + ' flex items-center gap-3">';
+    if (iconSvg) html += iconSvg;
+    html += '<span class="font-bold text-base">' + porsiLabel + '</span>';
+    html += '<span class="text-sm font-normal">Jumlah Siswa: <strong>' + fmtPncNum(porsiCount) + '</strong> orang</span>';
+    html += '<span class="text-xs opacity-60">(Rekap semua jenjang)</span>';
+    html += '</div>';
+
+    for (var skIdx = 0; skIdx < template.siklus.length; skIdx++) {
+      var sk = template.siklus[skIdx];
+
+      // Siklus header
+      html += '<div class="px-5 py-2 bg-stone-50 border-b border-stone-200 text-sm font-semibold text-stone-600 flex items-center gap-2">';
+      html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+      html += sk.siklus_nama;
+      html += '</div>';
+
+      // Day tabs
+      if (sk.hari.length > 1) {
+        html += '<div class="px-5 py-2 border-b border-stone-100">';
+        html += '<div class="flex gap-1 bg-stone-100 rounded-lg p-0.5 overflow-x-auto siklus-tab-bar" role="tablist">';
+        for (var h = 0; h < sk.hari.length; h++) {
+          var day = sk.hari[h];
+          var isFirst = h === 0;
+          html += '<button onclick="pncSwitchDayTab(event, this)" class="px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all ' + (isFirst ? 'bg-white shadow-sm font-bold text-sky-700' : 'text-stone-500 hover:text-stone-700 hover:bg-stone-200/50') + '" role="tab" aria-selected="' + (isFirst ? 'true' : 'false') + '">' + day.hari_nama + '</button>';
+        }
+        html += '</div></div>';
+      }
+
+      // Per hari
+      for (var h = 0; h < sk.hari.length; h++) {
+        var day = sk.hari[h];
+        var tabExtraClass = (sk.hari.length > 1 && h > 0) ? ' hidden' : '';
+        html += '<div class="pnc-day-content' + tabExtraClass + '" role="tabpanel">';
+        html += '<div class="px-5 py-3 border-b border-stone-100 bg-stone-50/30">';
+        html += '<div class="flex items-center gap-3 mb-2">';
+        html += '<span class="inline-block px-3 py-1 rounded-lg ' + (porsiKey === 'BESAR' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800') + ' text-sm font-bold">' + day.menu_label + '</span>';
+        html += '<span class="text-sm font-semibold text-stone-700">' + day.hari_nama + '</span>';
+        html += '<span class="text-xs text-stone-400">' + (day.menu_nama || '') + '</span>';
+        html += '</div>';
+
+        if (!day.bahan || !day.bahan.length) {
+          html += '<div class="text-xs text-stone-400 italic px-2 pb-2">Tidak ada bahan</div></div></div>';
+          continue;
+        }
+
+        // Table
+        html += '<div class="overflow-x-auto pb-2"><table class="w-full text-xs border-collapse">';
+        html += '<thead><tr class="border-b border-stone-200">';
+        html += '<th class="px-2 py-1.5 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
+        html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Bersih (g)</th>';
+        html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">BDD (%)</th>';
+        html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Kotor (g)</th>';
+        html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Jumlah Siswa</th>';
+        html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan (kg)</th>';
+        html += '</tr></thead><tbody>';
+
+        for (var bi = 0; bi < day.bahan.length; bi++) {
+          var b = day.bahan[bi];
+          // Hitung per-siswa values
+          var bbPerSiswa = perSiswa(b.berat_bersih, totalSiswa);
+          var bkPerSiswa = perSiswa(b.berat_kotor, totalSiswa);
+          // Kebutuhan untuk porsi ini
+          var kebutuhanPorsi = Math.round((bkPerSiswa * porsiCount / 1000) * 100) / 100;
+
+          html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
+          html += '<td class="px-2 py-1.5 text-sm font-medium">' + b.nama_display + '</td>';
+          html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(bbPerSiswa) + '</td>';
+          html += '<td class="px-2 py-1.5 text-sm text-right mono">' + b.persen_bdd + '%</td>';
+          html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(bkPerSiswa) + '</td>';
+          html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(porsiCount) + '</td>';
+          html += '<td class="px-2 py-1.5 text-sm text-right mono font-bold ' + (porsiKey === 'BESAR' ? 'text-amber-700' : 'text-emerald-700') + '">' + fmtPncNum(kebutuhanPorsi) + '</td>';
+          html += '</tr>';
+        }
+
+        html += '</tbody></table></div></div></div>';
+      }
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  var besarIcon = '<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 10l7-7 7 7"/><path d="M12 3v18"/></svg>';
+  var kecilIcon = '<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14l-7 7-7-7"/><path d="M12 21V3"/></svg>';
+
+  var html = '<div class="mb-6">';
+  html += '<div class="flex items-center gap-2 mb-3">';
+  html += '<svg class="w-5 h-5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>';
+  html += '<span class="text-sm font-bold text-stone-700">Rekap Kebutuhan — Porsi Besar & Kecil</span>';
+  html += '<span class="text-xs text-stone-400">(Semua jenjang digabung)</span>';
+  html += '</div>';
+
+  // Two tables side by side on desktop, stacked on mobile
+  html += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">';
+  html += '<div>' + renderRekapTable('BESAR', 'Porsi Besar', totalBesar, 'bg-amber-50 text-amber-800 border-b-2 border-b-amber-400', besarIcon) + '</div>';
+  html += '<div>' + renderRekapTable('KECIL', 'Porsi Kecil', totalKecil, 'bg-emerald-50 text-emerald-800 border-b-2 border-b-emerald-400', kecilIcon) + '</div>';
+  html += '</div>';
+  html += '</div>';
+
+  return html;
 }
 
 function renderPncJenjangSection(jd, idx) {
