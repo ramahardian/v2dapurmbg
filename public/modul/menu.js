@@ -777,9 +777,9 @@ async function openSiklusMenuPicker() {
       var statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-600';
       html += '<div class="border border-stone-200 rounded-xl overflow-hidden">' +
         '<div class="px-4 py-2.5 bg-stone-50 border-b border-stone-200 flex items-center justify-between">' +
-          '<div class="font-semibold text-sm text-stone-700">' + escHtml(s.nama) + '</div>' +
-          '<div class="flex items-center gap-2">' +
-            (s.kategori_penerima ? '<span class="text-[10px] text-stone-400">' + escHtml(s.kategori_penerima) + '</span>' : '') +
+        '<div class="font-semibold text-sm text-stone-700">' + escHtml(s.nama) + '</div>' +
+            '<div class="flex items-center gap-2">' +
+            (s.jumlah_porsi ? '<span class="text-[10px] text-stone-400">' + s.jumlah_porsi + ' porsi</span>' : '') +
             '<span class="text-[10px] px-2 py-0.5 rounded-full font-medium ' + statusColor + ' capitalize">' + s.status + '</span>' +
           '</div>' +
         '</div>' +
@@ -789,7 +789,7 @@ async function openSiklusMenuPicker() {
         if (n.source === 'menu') {
           // Menu items — clickable, untuk import bahan
           var bahanJson = escHtml(JSON.stringify(n.bahan || []));
-    html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + "', '" + bahanJson + "')\" class=\"w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors\">" +
+    html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + "', '" + bahanJson + "', " + (Number(s.jumlah_porsi) || 0) + ")\" class=\"w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors\">" +
             '<div class="flex items-center gap-2">' +
             '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
             '<span class="text-xs text-stone-500 shrink-0 w-14">' + n.hari_nama + '</span>' +
@@ -836,9 +836,14 @@ async function openSiklusMenuPicker() {
     showAlert('Gagal memuat data siklus: ' + e.message, 'error');
   }
 }
-
-async function selectSiklusMenuName(nama, bahanJson) {
+async function selectSiklusMenuName(nama, bahanJson, siklusPorsi) {
   document.getElementById('m-nama').value = nama;
+  
+  // Auto-fill jumlah porsi jika > 0
+  if (siklusPorsi > 0) {
+    document.getElementById('m-porsi').value = siklusPorsi;
+    window._menuPorsi = siklusPorsi;
+  }
   
   // Load bahan dari siklus
   var bahan = [];
@@ -862,6 +867,8 @@ async function selectSiklusMenuName(nama, bahanJson) {
   } else {
     showToast('Nama diambil dari siklus: ' + nama, 'success');
   }
+  
+  renderBahanList();
   closeSiklusMenuPicker();
 }
 

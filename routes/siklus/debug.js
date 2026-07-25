@@ -10,7 +10,7 @@ const router = express.Router();
  */
 router.get('/siklus/recipe-names', async (req, res) => {
   const [siklusList] = await db.query(
-    'SELECT id, nama, kategori_penerima, total_hari, status FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
+        'SELECT id, nama, kategori_penerima, total_hari, status, jumlah_porsi FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
     [req.user.tenant_id]
   );
 
@@ -78,7 +78,7 @@ router.get('/siklus/recipe-names', async (req, res) => {
 
     result.push({
       id: s.id, nama: s.nama, kategori_penerima: s.kategori_penerima,
-      total_hari: s.total_hari, status: s.status, names,
+      total_hari: s.total_hari, status: s.status, jumlah_porsi: s.jumlah_porsi, names,
     });
   }
   res.json(result);
