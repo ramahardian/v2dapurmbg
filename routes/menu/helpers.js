@@ -149,7 +149,7 @@ async function processBahanItem(b, conn, tenantId, spMap, jumlahPorsi, spRefMap,
     const namaBahan = b.nama || bbNamaMap[idBahan] || '';
     const refData = spRefMap[namaBahan] || {};
     const berat1Sp = refData.berat_bersih || Number(b.berat_1_sp) || 0;
-    jumlah = berat1Sp * spVal * (jumlahPorsi || 1);
+    jumlah = berat1Sp * spVal;
   }
 
   return { idBahan, jumlah };
