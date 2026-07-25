@@ -845,8 +845,12 @@ async function deleteSelectedSiklus() {
 }
 
 async function editSiklus(id) {
-  const data = await api.get('/siklus/' + id);
-  openSiklusForm(data);
+  try {
+    const data = await api.get('/siklus/' + id);
+    openSiklusForm(data);
+  } catch (e) {
+    showToast('Gagal memuat siklus: ' + (e.message || 'Unknown error'), 'error');
+  }
 }
 function bukaKebutuhanPangan(id) {
   window._pbdPendingSiklusId = id;
@@ -871,7 +875,17 @@ function toggleJenjangCb(el) {
 
 async function openSiklusForm(editing) {
   const isEdit = !!(editing && editing.id);
-  const s = editing || { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 0, status: 'Draft', catatan: '', tanggal_mulai: '', items: [] };
+  const s = editing ? { 
+    id: editing.id,
+    nama: editing.nama || '',
+    kategori_penerima: editing.kategori_penerima || '',
+    jumlah_porsi: Number(editing.jumlah_porsi) || 0,
+    total_hari: Number(editing.total_hari) || 0,
+    status: editing.status || 'Draft',
+    catatan: editing.catatan || '',
+    tanggal_mulai: editing.tanggal_mulai || '',
+    items: Array.isArray(editing.items) ? editing.items : []
+  } : { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 0, status: 'Draft', catatan: '', tanggal_mulai: '', items: [] };
   // Preserve existing metadata when re-rendering (e.g. from saveGridPicker / hariChange)
   const prevMeta = window._siklusMeta;
   if (prevMeta) {
@@ -1011,7 +1025,8 @@ async function openSiklusForm(editing) {
             const bgClr = {Karbohidrat:'amber-50','Protein Hewani':'rose-50','Protein Nabati':'emerald-50',Sayur:'green-50',Buah:'orange-50',Susu:'blue-50'}[rk];
             let r = '<tr class="hover:bg-stone-50/50 transition-colors"><td class="px-3 py-2.5 text-xs font-bold text-' + clr + '-700 bg-' + bgClr + ' border-b border-r border-stone-200">' + ROW_LABELS[rk] + '</td>';
             for (const it of formData.items) {
-              const s = gridData[it.hari_ke].bahan[rk] || [];
+              const g = gridData[it.hari_ke];
+              const s = g ? g.bahan[rk] || [] : [];
               r += '<td class="px-2 py-2 border-b border-r border-stone-200 cursor-pointer hover:bg-' + clr + '-50/40 transition-colors" onclick="openGridPicker(' + it.hari_ke + ',\'' + rk + '\')"><div class="flex flex-wrap gap-1">';
               if (s.length) {
                 for (const b of s) {
