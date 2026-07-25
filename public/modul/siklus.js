@@ -1081,6 +1081,7 @@ async function openSiklusForm(editing) {
     var _d2 = new Date(String(_tglMulaiSave).replace(/T.*$/g, '') + 'T00:00:00');
     var totalHari = Math.floor((_d1 - _d2) / 86400000) + 1;
     if (totalHari < 1) totalHari = 1;
+    var meta = window._siklusMeta || {};
     var gd = window._gridData || {};
     var rowKeys = window._rowKeys || [];
     var items = [], gridPayload = [];
@@ -1109,7 +1110,6 @@ async function openSiklusForm(editing) {
       if (!resepMap[hk]) resepMap[hk] = {};
       resepMap[hk][inp.getAttribute('data-kat')] = val;
     }
-    var meta = window._siklusMeta || {};
     for (var ii = 0; ii < items.length; ii++) {
       items[ii].jumlah_porsi = meta.jumlah_porsi || 0;
       if (!items[ii].menu_nama) {
