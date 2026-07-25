@@ -19,13 +19,13 @@ function fmt2(nilai) {
  * Rumus: Berat Kotor = Berat Bersih / (BDD / 100)
  * @param {number} beratBersih - Berat bersih dalam gram
  * @param {number} bddPersen - Persen BDD (1-100)
- * @returns {number} Berat kotor dalam gram, dibulatkan ke bilangan bulat terdekat
+ * @returns {number} Berat kotor dalam gram, presisi 2 desimal
  */
 function hitungBeratKotor(beratBersih, bddPersen) {
   if (!beratBersih || beratBersih <= 0) return 0;
   if (!bddPersen || bddPersen <= 0) return beratBersih;
   var faktor = bddPersen / 100;
-  return Math.round(beratBersih / faktor);
+  return Math.round((beratBersih / faktor) * 100) / 100;
 }
 
 /**

@@ -52,13 +52,13 @@ function hitungSP(b, spMap) {
   const berat1Sp = Number(b.berat_1_sp || 0);
   const persenBdd = Number(b.persen_bdd || 100);
   const beratBersih = spVal !== null ? berat1Sp * spVal : Number(b.jumlah_existing || 0);
-  const beratKotor = persenBdd > 0 ? Math.round(beratBersih / (persenBdd / 100)) : beratBersih;
+  const beratKotor = persenBdd > 0 ? Math.round((beratBersih / (persenBdd / 100)) * 100) / 100 : beratBersih;
   return { sp_value: spVal, berat_1_sp: berat1Sp, persen_bdd: persenBdd, berat_bersih: beratBersih, berat_kotor: beratKotor };
 }
 
 function hitungBDD(beratBersih, persenBdd) {
   const bdd = Number(persenBdd || 100);
-  return bdd > 0 ? Math.round(beratBersih / (bdd / 100)) : beratBersih;
+  return bdd > 0 ? Math.round((beratBersih / (bdd / 100)) * 100) / 100 : beratBersih;
 }
 
 async function getSpMapByJenjang(jenjang) {

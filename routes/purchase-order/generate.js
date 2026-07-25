@@ -77,7 +77,7 @@ function registerGenerateRoutes(router) {
               const actualSp = spVal || 1;
               const beratBersih = Number(br.jumlah) * actualSp * porsiCount;
               const bdd = Number(br.persen_bdd) || 100;
-              const beratKotor = bdd > 0 ? Math.round(beratBersih / (bdd / 100)) : beratBersih;
+              const beratKotor = bdd > 0 ? Math.round((beratBersih / (bdd / 100)) * 100) / 100 : beratBersih;
 
               const key = br.bahan_baku_id;
               if (!agg[key]) {
