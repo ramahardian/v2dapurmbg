@@ -440,6 +440,16 @@ async function openMenuForm(editing) {
     </div>
     `;
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, keterangan: b.keterangan || '' }));
+  // Selalu reset jumlah ke SP standar, bukan pakai nilai tersimpan (cegah korupsi)
+  window._menuBahan.forEach(function(b) {
+    var sp = window._spRefMap && window._spRefMap[b.nama];
+    var ref = sp ? Number(sp.berat_bersih) : 0;
+    if (ref > 0) {
+      b.jumlah = ref;
+    } else if (Number(b.berat_1_sp) > 0) {
+      b.jumlah = Number(b.berat_1_sp);
+    }
+  });
   window._menuPorsi = 0;
   renderBahanList();
   hitungNutrisi();
