@@ -593,33 +593,42 @@ async function renderProduksiHarian(id) {
           '</div>' +
         '</div>';
         
-        // Table
+        // Table — format: Bahan | Kg/pcs/btl (net) | Ket (catatan + gross)
         html += '<div class="overflow-x-auto"><table class="w-full text-xs">' +
           '<thead class="bg-stone-50/50"><tr>' +
             '<th class="text-left px-4 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Bahan</th>' +
-            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Per Porsi</th>' +
-            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Total</th>' +
+            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Kg/pcs/btl</th>' +
             '<th class="text-left px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Ket</th>' +
           '</tr></thead><tbody>';
         
         for (var b of d.bahan) {
-          var perPorsiGram = d.jumlah_porsi > 0 ? Math.round(b.berat_kotor / d.jumlah_porsi) : 0;
           var satuan = b.satuan || 'g';
           var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
-          var totalGram = b.berat_kotor || 0;
-          var displayTotal = satuan === 'Kg' ? fmtNum(totalGram / 1000) + ' kg' :
-            (satuan === 'g' || satuan === 'gram') ? Math.round(totalGram) + ' g' :
-            perUnit > 0 ? (function(){ var v = totalGram / perUnit; return (v >= 10 ? Math.round(v) : fmtNum(v)) + ' ' + satuan; })() :
-            fmtNum(totalGram / 1000) + ' kg';
+          // NET total (after BDD) — what's actually served
+          var netGram = b.berat_bersih || 0;
+          var displayNet = satuan === 'Kg' ? fmtNum(netGram / 1000) + ' kg' :
+            (satuan === 'g' || satuan === 'gram') ? Math.round(netGram) + ' g' :
+            perUnit > 0 ? (function(){ var v = netGram / perUnit; return (v >= 10 ? Math.round(v) : fmtNum(v)) + ' ' + satuan; })() :
+            fmtNum(netGram / 1000) + ' kg';
+          // GROSS total (before BDD) — what to purchase
+          var grossGram = b.berat_kotor || 0;
+          var displayGross = satuan === 'Kg' ? fmtNum(grossGram / 1000) + ' kg' :
+            (satuan === 'g' || satuan === 'gram') ? Math.round(grossGram) + ' g' :
+            perUnit > 0 ? (function(){ var v = grossGram / perUnit; return (v >= 10 ? Math.round(v) : fmtNum(v)) + ' ' + satuan; })() :
+            fmtNum(grossGram / 1000) + ' kg';
+          // Ket column: processing notes + gross total
           var ketParts = [];
-          if (b.persen_bdd < 100) ketParts.push('BDD ' + b.persen_bdd + '%');
+          if (b.keterangan) ketParts.push(b.keterangan);
+          if (b.persen_bdd < 100) {
+            var grossLabel = satuan === 'Kg' ? '' : 'Gross ';
+            ketParts.push(grossLabel + displayGross);
+          }
           if (b.buffer_persen > 0) ketParts.push('Buffer ' + b.buffer_persen + '%');
           var ketStr = ketParts.join(' • ');
           
           html += '<tr class="border-t border-stone-100 hover:bg-stone-50/50 transition-colors">' +
             '<td class="px-4 py-2.5 font-medium text-stone-700">' + b.nama + '</td>' +
-            '<td class="px-3 py-2.5 text-right mono text-stone-600">' + perPorsiGram + ' g</td>' +
-            '<td class="px-3 py-2.5 text-right mono font-bold text-stone-800">' + displayTotal + '</td>' +
+            '<td class="px-3 py-2.5 text-right mono font-bold text-stone-800">' + displayNet + '</td>' +
             '<td class="px-3 py-2.5 text-xs text-stone-400">' + ketStr + '</td>' +
           '</tr>';
         }
