@@ -367,18 +367,9 @@ function renderPncJenjangSection(jd, idx) {
   } else if (_pncSelectedPorsi === 'KECIL') {
     porsiBadge = '<span class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14l-7 7-7-7"/><path d="M12 21V3"/></svg> Porsi Kecil</span>';
   }
-  var besarKecilInfo = '';
-  if (jd.jumlah_besar > 0 || jd.jumlah_kecil > 0) {
-    besarKecilInfo = '<div class="text-xs text-stone-500 mt-1 flex gap-3">' +
-      '<span class="text-amber-700">Besar: ' + fmtPncNum(jd.jumlah_besar || 0) + '</span>' +
-      '<span class="text-emerald-700">Kecil: ' + fmtPncNum(jd.jumlah_kecil || 0) + '</span>' +
-      '</div>';
-  }
-
   html += '<div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between ' + _pncJenjangColors[jIdx % _pncJenjangColors.length] + '">';
   html += '<div><span class="font-bold text-base">' + jd.jenjang + '</span>' + porsiBadge;
-  html += '<span class="ml-3 text-sm font-normal">Jumlah Siswa: <strong>' + fmtPncNum(activeSiswa) + '</strong> orang</span>';
-  html += besarKecilInfo + '</div>';
+  html += '<span class="ml-3 text-sm font-normal">Jumlah Siswa: <strong>' + fmtPncNum(activeSiswa) + '</strong> orang</span></div>';
   html += '<div class="flex items-center gap-2 text-xs">';
   html += '<span>' + jd.siklus.length + ' siklus</span>';
   html += '<button onclick="exportPncExcel(\'' + jd.jenjang.replace(/'/g, "\\'") + '\')" class="px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1 text-xs" title="Export Excel"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> XLSX</button>';
