@@ -520,15 +520,28 @@ function hitungNutrisi() {
 function updateBahan(i, k, v) {
   if (k === 'jumlah') {
     var b = window._menuBahan[i];
+    if (!b) return;
     var porsi = Number(window._menuPorsi) || 1;
     var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
     // Input shows total when porsi>0; convert back to grams per-porsi for storage
     var valPerPorsi = Number(v) / porsi;
+    var newJumlah;
     if (perUnit > 0 && (b.satuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(b.satuan))) {
-      b.jumlah = valPerPorsi * perUnit;
+      newJumlah = valPerPorsi * perUnit;
     } else {
-      b.jumlah = valPerPorsi;
+      newJumlah = valPerPorsi;
     }
+    // Warning jika nilai terlalu jauh dari SP default (> 10x)
+    var sp = window._spRefMap && window._spRefMap[b.nama];
+    var defaultGram = (sp ? Number(sp.berat_bersih) : 0) || Number(b.berat_1_sp) || 0;
+    if (defaultGram > 0 && newJumlah > defaultGram * 10) {
+      var spDisplay = defaultGram / perUnit;
+      if (!confirm('Nilai ' + v + ' ' + b.satuan + ' jauh dari standar SP (' + Math.round(spDisplay * 100) / 100 + ' ' + b.satuan + '). Lanjutkan?')) {
+        renderBahanList();
+        return;
+      }
+    }
+    b.jumlah = newJumlah;
     delete b._autoJumlah;
   } else {
     window._menuBahan[i][k] = v;
@@ -573,7 +586,7 @@ function renderBahanList() {
           '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
         '</div>' +
         '<div class="col-span-3 flex">' +
-          '<input type="number" step="' + inputStep + '" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" ' + (porsi > 0 ? 'readonly' : '') + ' />' +
+          '<input type="number" step="' + inputStep + '" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" />' +
           '<span class="inline-flex items-center px-2 h-9 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-md whitespace-nowrap">' + displaySatuan + '</span>' +
           '<button type="button" onclick="resetBahanToSP(' + i + ')" class="px-1 h-9 text-stone-400 hover:text-blue-600 text-sm transition-colors" title="Reset ke SP default">↺</button>' +
         '</div>' +
