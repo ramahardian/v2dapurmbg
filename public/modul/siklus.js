@@ -316,27 +316,27 @@ async function renderSiklusLaporan(id) {
       </div>
 
       <div class="bg-white border border-stone-200 rounded-lg p-5 mb-4">
-        <div class="font-bold mb-3">Rata-rata Gizi per Hari Terisi</div>
+        <div class="font-bold mb-3">Rata-rata Gizi per Orang per Hari</div>
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <div class="text-center">
             <div class="text-xs text-stone-500">Kalori</div>
-            <div class="mono text-lg font-bold">${fmtNum(stats.avg.kalori)} <span class="text-xs text-stone-400">kkal</span></div>
+            <div class="mono text-lg font-bold">${fmtNum(Math.round(stats.avg.kalori / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">kkal</span></div>
           </div>
           <div class="text-center">
             <div class="text-xs text-stone-500">Protein</div>
-            <div class="mono text-lg font-bold">${fmtNum(stats.avg.protein)} <span class="text-xs text-stone-400">g</span></div>
+            <div class="mono text-lg font-bold">${fmtNum(Math.round(stats.avg.protein / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
           </div>
           <div class="text-center">
             <div class="text-xs text-stone-500">Karbohidrat</div>
-            <div class="mono text-lg font-bold">${fmtNum(stats.avg.karbohidrat)} <span class="text-xs text-stone-400">g</span></div>
+            <div class="mono text-lg font-bold">${fmtNum(Math.round(stats.avg.karbohidrat / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
           </div>
           <div class="text-center">
             <div class="text-xs text-stone-500">Lemak</div>
-            <div class="mono text-lg font-bold">${fmtNum(stats.avg.lemak)} <span class="text-xs text-stone-400">g</span></div>
+            <div class="mono text-lg font-bold">${fmtNum(Math.round(stats.avg.lemak / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
           </div>
           <div class="text-center">
             <div class="text-xs text-stone-500">Serat</div>
-            <div class="mono text-lg font-bold">${fmtNum(stats.avg.serat)} <span class="text-xs text-stone-400">g</span></div>
+            <div class="mono text-lg font-bold">${fmtNum(Math.round(stats.avg.serat / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
           </div>
         </div>
       </div>
