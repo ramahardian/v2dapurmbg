@@ -1,6 +1,7 @@
 // ===== Perencanaan Kebutuhan Bahan Pangan (per Menu) =====
 var _pncData = null;
 var _pncSelectedJenjang = 'SEMUA';
+var _pncSelectedPorsi = 'TOTAL';
 var _pncSiklusId = '';
 var _pncAllJenjangData = null;
 
@@ -64,6 +65,20 @@ async function loadPerencanaanData(siklusId) {
 
     // View indicator
     html += '<div class="text-xs font-medium text-stone-500 bg-stone-100 px-3 py-1.5 rounded-lg">Per Menu</div>';
+
+    // Porsi filter toggle
+    html += '<div class="flex items-center gap-1">';
+    var porsiTabs = [
+      { key: 'TOTAL', label: 'Semua Porsi', color: 'bg-sky-600 text-white' },
+      { key: 'BESAR', label: 'Porsi Besar', color: 'bg-amber-600 text-white' },
+      { key: 'KECIL', label: 'Porsi Kecil', color: 'bg-emerald-600 text-white' }
+    ];
+    for (var pi = 0; pi < porsiTabs.length; pi++) {
+      var pt = porsiTabs[pi];
+      var isActiveP = _pncSelectedPorsi === pt.key;
+      html += '<button data-pnc-porsi="' + pt.key + '" onclick="pncFilterPorsi(\'' + pt.key + '\')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ' + (isActiveP ? pt.color + ' shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200') + '">' + pt.label + '</button>';
+    }
+    html += '</div>';
 
     // Jenjang tabs
     html += '<div class="flex items-center gap-1.5 flex-wrap">';
@@ -141,6 +156,36 @@ async function loadPerencanaanData(siklusId) {
   }
 }
 
+function pncFilterPorsi(porsi) {
+  _pncSelectedPorsi = porsi;
+  // Re-render sections with new porsi filter
+  var wrap = document.getElementById('perencanaan-content');
+  if (!wrap) return;
+
+  // Update porsi tab styles
+  var porsiBtns = wrap.parentElement.querySelectorAll('[data-pnc-porsi]');
+  if (porsiBtns) {
+    var porsiStyles = { 'TOTAL': 'bg-sky-600 text-white', 'BESAR': 'bg-amber-600 text-white', 'KECIL': 'bg-emerald-600 text-white' };
+    for (var pi = 0; pi < porsiBtns.length; pi++) {
+      var btn = porsiBtns[pi];
+      var key = btn.getAttribute('data-pnc-porsi');
+      var style = porsiStyles[key] || 'bg-sky-600 text-white';
+      btn.className = 'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ' + (key === porsi ? style + ' shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200');
+    }
+  }
+
+  // Re-render the content sections
+  var container = document.getElementById('pnc-view-container');
+  if (container && _pncAllJenjangData) {
+    var newHtml = '';
+    for (var j = 0; j < _pncAllJenjangData.length; j++) {
+      newHtml += renderPncJenjangSection(_pncAllJenjangData[j], j);
+    }
+    container.innerHTML = newHtml;
+    applyPncSectionVisibility();
+  }
+}
+
 function pncFilterJenjang(jenjang) {
   _pncSelectedJenjang = jenjang;
   var wrap = document.getElementById('perencanaan-content');
@@ -176,12 +221,33 @@ function renderPncJenjangSection(jd, idx) {
   if (jIdx < 0) jIdx = idx % _pncJenjangColors.length;
   var visible = _pncSelectedJenjang === 'SEMUA' || _pncSelectedJenjang === jd.jenjang;
 
+  // Determine active student count based on porsi filter
+  var activeSiswa = _pncSelectedPorsi === 'BESAR' ? (jd.jumlah_besar || 0)
+    : _pncSelectedPorsi === 'KECIL' ? (jd.jumlah_kecil || 0)
+    : jd.jumlah_siswa;
+  var scaleFactor = jd.jumlah_siswa > 0 ? activeSiswa / jd.jumlah_siswa : 0;
+
   var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6" data-pnc-section="' + jd.jenjang.replace(/"/g, '&quot;') + '" style="' + (visible ? '' : 'display:none') + '">';
 
-  // Jenjang header
+  // Jenjang header with porsi breakdown
+  var porsiBadge = '';
+  if (_pncSelectedPorsi === 'BESAR') {
+    porsiBadge = '<span class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 10l7-7 7 7"/><path d="M12 3v18"/></svg> Porsi Besar</span>';
+  } else if (_pncSelectedPorsi === 'KECIL') {
+    porsiBadge = '<span class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14l-7 7-7-7"/><path d="M12 21V3"/></svg> Porsi Kecil</span>';
+  }
+  var besarKecilInfo = '';
+  if (jd.jumlah_besar > 0 || jd.jumlah_kecil > 0) {
+    besarKecilInfo = '<div class="text-xs text-stone-500 mt-1 flex gap-3">' +
+      '<span class="text-amber-700">Besar: ' + fmtPncNum(jd.jumlah_besar || 0) + '</span>' +
+      '<span class="text-emerald-700">Kecil: ' + fmtPncNum(jd.jumlah_kecil || 0) + '</span>' +
+      '</div>';
+  }
+
   html += '<div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between ' + _pncJenjangColors[jIdx % _pncJenjangColors.length] + '">';
-  html += '<div><span class="font-bold text-base">' + jd.jenjang + '</span>';
-  html += '<span class="ml-3 text-sm font-normal">Jumlah Siswa: <strong>' + fmtPncNum(jd.jumlah_siswa) + '</strong> orang</span></div>';
+  html += '<div><span class="font-bold text-base">' + jd.jenjang + '</span>' + porsiBadge;
+  html += '<span class="ml-3 text-sm font-normal">Jumlah Siswa: <strong>' + fmtPncNum(activeSiswa) + '</strong> orang</span>';
+  html += besarKecilInfo + '</div>';
   html += '<div class="flex items-center gap-2 text-xs">';
   html += '<span>' + jd.siklus.length + ' siklus</span>';
   html += '<button onclick="exportPncExcel(\'' + jd.jenjang.replace(/'/g, "\\'") + '\')" class="px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1 text-xs" title="Export Excel"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> XLSX</button>';
@@ -215,7 +281,7 @@ function renderPncJenjangSection(jd, idx) {
     for (var h = 0; h < sk.hari.length; h++) {
       var day = sk.hari[h];
       html += '<div class="pnc-day-content' + (h > 0 ? ' hidden' : '') + '" role="tabpanel">';
-      html += renderPncMenuTable(day, jd.jumlah_siswa, sk.siklus_id, jd.jenjang);
+      html += renderPncMenuTable(day, activeSiswa, sk.siklus_id, jd.jenjang, scaleFactor);
       html += '</div>';
     }
   }
@@ -317,7 +383,8 @@ async function pncHapusOverride(overrideId) {
   }
 }
 
-function renderPncMenuTable(day, jumlahSiswa, siklusId, jenjang) {
+function renderPncMenuTable(day, jumlahSiswa, siklusId, jenjang, scaleFactor) {
+  scaleFactor = scaleFactor || 1;
   var html = '<div class="px-5 py-3 border-b border-stone-100 bg-stone-50/30">';
 
   // Menu header
@@ -366,7 +433,7 @@ function renderPncMenuTable(day, jumlahSiswa, siklusId, jenjang) {
     html += '<td class="px-2 py-1.5 text-sm text-right mono ' + (sumberBdd ? 'text-emerald-600 font-semibold' : '') + '">' + b.persen_bdd + '%</td>';
     html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(b.berat_kotor) + '</td>';
     html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(jumlahSiswa) + '</td>';
-    html += '<td class="px-2 py-1.5 text-sm text-right mono font-bold text-sky-700">' + fmtPncNum(b.kebutuhan_kg) + '</td>';
+    html += '<td class="px-2 py-1.5 text-sm text-right mono font-bold text-sky-700">' + fmtPncNum(b.kebutuhan_kg * scaleFactor) + '</td>';
     html += '</tr>';
   }
 
@@ -421,6 +488,27 @@ function collectPncExportData(jenjangFilter) {
   return result;
 }
 
+function getPorsiScaleFactor(jd) {
+  if (_pncSelectedPorsi === 'BESAR') {
+    return jd.jumlah_siswa > 0 ? (jd.jumlah_besar || 0) / jd.jumlah_siswa : 0;
+  } else if (_pncSelectedPorsi === 'KECIL') {
+    return jd.jumlah_siswa > 0 ? (jd.jumlah_kecil || 0) / jd.jumlah_siswa : 0;
+  }
+  return 1;
+}
+
+function getPorsiSiswa(jd) {
+  if (_pncSelectedPorsi === 'BESAR') return jd.jumlah_besar || 0;
+  if (_pncSelectedPorsi === 'KECIL') return jd.jumlah_kecil || 0;
+  return jd.jumlah_siswa;
+}
+
+function getPorsiLabel() {
+  if (_pncSelectedPorsi === 'BESAR') return ' - Porsi Besar';
+  if (_pncSelectedPorsi === 'KECIL') return ' - Porsi Kecil';
+  return '';
+}
+
 function exportPncExcel(jenjang) {
   var exportData = collectPncExportData(jenjang || undefined);
   if (!exportData.length) { showAlert('Tidak ada data', 'error'); return; }
@@ -431,7 +519,10 @@ function exportPncExcel(jenjang) {
 
   for (var j = 0; j < exportData.length; j++) {
     var jd = exportData[j];
-    rows.push(['JENJANG: ' + jd.jenjang + ' (Siswa: ' + jd.jumlah_siswa + ')']);
+    var sf = getPorsiScaleFactor(jd);
+    var pSiswa = getPorsiSiswa(jd);
+    var pLabel = getPorsiLabel();
+    rows.push(['JENJANG: ' + jd.jenjang + pLabel + ' (Siswa: ' + fmtPncNum(pSiswa) + ')']);
     for (var s = 0; s < jd.siklus.length; s++) {
       var sk = jd.siklus[s];
       for (var h = 0; h < sk.hari.length; h++) {
@@ -440,10 +531,10 @@ function exportPncExcel(jenjang) {
         if (!day.bahan || !day.bahan.length) {
           rows.push([menuLabel, '', '', '', '', '', '']);
         } else {
-          rows.push([menuLabel, day.bahan[0].nama_display, fmtPncNum(day.bahan[0].berat_bersih), day.bahan[0].persen_bdd + '%', fmtPncNum(day.bahan[0].berat_kotor), fmtPncNum(jd.jumlah_siswa), fmtPncNum(day.bahan[0].kebutuhan_kg)]);
+          rows.push([menuLabel, day.bahan[0].nama_display, fmtPncNum(day.bahan[0].berat_bersih), day.bahan[0].persen_bdd + '%', fmtPncNum(day.bahan[0].berat_kotor), fmtPncNum(pSiswa), fmtPncNum(day.bahan[0].kebutuhan_kg * sf)]);
           for (var i = 1; i < day.bahan.length; i++) {
             var b = day.bahan[i];
-            rows.push(['', b.nama_display, fmtPncNum(b.berat_bersih), b.persen_bdd + '%', fmtPncNum(b.berat_kotor), fmtPncNum(jd.jumlah_siswa), fmtPncNum(b.kebutuhan_kg)]);
+            rows.push(['', b.nama_display, fmtPncNum(b.berat_bersih), b.persen_bdd + '%', fmtPncNum(b.berat_kotor), fmtPncNum(pSiswa), fmtPncNum(b.kebutuhan_kg * sf)]);
           }
         }
       }
@@ -458,8 +549,9 @@ function exportPncExcel(jenjang) {
   ];
   ws['!cols'] = colWidths;
 
+  var fileName = 'Perencanaan Kebutuhan Pangan' + getPorsiLabel().replace(/ /g, '_') + '.xlsx';
   XLSX.utils.book_append_sheet(wb, ws, 'Perencanaan');
-  XLSX.writeFile(wb, 'Perencanaan Kebutuhan Pangan.xlsx');
+  XLSX.writeFile(wb, fileName);
 }
 
 function exportPncPdf(jenjang) {
@@ -469,7 +561,10 @@ function exportPncPdf(jenjang) {
   var tableHtml = '';
   for (var j = 0; j < exportData.length; j++) {
     var jd = exportData[j];
-    tableHtml += '<tr><td colspan="6" style="font-weight:700;background:#e0f2fe;padding:8px 10px;font-size:11pt">' + jd.jenjang + ' — Jumlah Siswa: ' + jd.jumlah_siswa + '</td></tr>';
+    var sf = getPorsiScaleFactor(jd);
+    var pSiswa = getPorsiSiswa(jd);
+    var pLabel = getPorsiLabel();
+    tableHtml += '<tr><td colspan="6" style="font-weight:700;background:#e0f2fe;padding:8px 10px;font-size:11pt">' + jd.jenjang + pLabel + ' — Jumlah Siswa: ' + fmtPncNum(pSiswa) + '</td></tr>';
     for (var s = 0; s < jd.siklus.length; s++) {
       var sk = jd.siklus[s];
       for (var h = 0; h < sk.hari.length; h++) {
@@ -478,7 +573,7 @@ function exportPncPdf(jenjang) {
         if (day.bahan && day.bahan.length) {
           for (var i = 0; i < day.bahan.length; i++) {
             var b = day.bahan[i];
-            tableHtml += '<tr><td style="padding:4px 10px">' + b.nama_display + '</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(b.berat_bersih) + '</td><td style="padding:4px 10px;text-align:right">' + b.persen_bdd + '%</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(b.berat_kotor) + '</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(jd.jumlah_siswa) + '</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(b.kebutuhan_kg) + '</td></tr>';
+            tableHtml += '<tr><td style="padding:4px 10px">' + b.nama_display + '</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(b.berat_bersih) + '</td><td style="padding:4px 10px;text-align:right">' + b.persen_bdd + '%</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(b.berat_kotor) + '</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(pSiswa) + '</td><td style="padding:4px 10px;text-align:right">' + fmtPncNum(b.kebutuhan_kg * sf) + '</td></tr>';
           }
         }
       }
@@ -495,13 +590,13 @@ function exportPncPdf(jenjang) {
   thHtml += '</tr>';
 
   var win = window.open('', '_blank');
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Perencanaan Kebutuhan Pangan</title>';
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Perencanaan Kebutuhan Pangan' + getPorsiLabel() + '</title>';
   html += '<style>body{font-family:sans-serif;padding:30px 40px}';
   html += 'h1{font-size:16pt;margin-bottom:4px}';
   html += 'table{width:100%;border-collapse:collapse;font-size:9pt}';
   html += 'td,th{border:1px solid #ccc}';
   html += '@media print{body{padding:30px 40px}}</style></head><body>';
-  html += '<h1>PERENCANAAN KEBUTUHAN PANGAN</h1>';
+  html += '<h1>PERENCANAAN KEBUTUHAN PANGAN' + getPorsiLabel() + '</h1>';
   html += '<table><thead>' + thHtml + '</thead><tbody>' + tableHtml + '</tbody></table></body></html>';
   win.document.write(html);
   win.document.close();

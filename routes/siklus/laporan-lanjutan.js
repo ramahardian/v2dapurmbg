@@ -48,17 +48,27 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
     });
   }
 
-  // PM totals
+  // PM totals — split paket_besar and paket_kecil
   const [pmRows] = await db.query(
-    `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang, COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
+    `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang, COALESCE(SUM(paket_besar),0) AS paket_besar, COALESCE(SUM(paket_kecil),0) AS paket_kecil FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
     [req.user.tenant_id]
   );
-  const pmByDb = {};
-  for (const p of pmRows) pmByDb[p.jenjang] = Number(p.total);
-  const pmByDisplay = {};
+  const pmByDb = {},
+        pmBesarByDb = {},
+        pmKecilByDb = {};
+  for (const p of pmRows) {
+    pmByDb[p.jenjang] = Number(p.paket_besar) + Number(p.paket_kecil);
+    pmBesarByDb[p.jenjang] = Number(p.paket_besar);
+    pmKecilByDb[p.jenjang] = Number(p.paket_kecil);
+  }
+  const pmByDisplay = {},
+        pmByDisplayBesar = {},
+        pmByDisplayKecil = {};
   for (const [dbJenjang, total] of Object.entries(pmByDb)) {
     const display = dbToDisplay[dbJenjang] || dbJenjang;
     pmByDisplay[display] = (pmByDisplay[display] || 0) + total;
+    pmByDisplayBesar[display] = (pmByDisplayBesar[display] || 0) + (pmBesarByDb[dbJenjang] || 0);
+    pmByDisplayKecil[display] = (pmByDisplayKecil[display] || 0) + (pmKecilByDb[dbJenjang] || 0);
   }
 
   // Hanya tampilkan jenjang yang: ada di siklus target DAN punya penerima manfaat
@@ -100,17 +110,8 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
   const gridBahanBySiklus = await batchLoadGridBahanBySiklus(siklusIds);
 
-  // Build data per jenjang
-  const dataByJenjang = {};
-  for (const j of activeJenjang) {
-    const jmlPm = pmByDisplay[j] || 0;
-    if (!jmlPm) continue;
-
-    const dbVals = JENJANG_DB_MAP[j] || [j];
-    // Find matching sp key
-    const spKey = dbVals.find(v => spByJenjangKat[v]) || j;
-    const spTarget = spByJenjangKat[spKey] || {};
-
+  // Helper: build siklus data for a given PM count
+  function buildSiklusData(jmlPm) {
     const siklusData = [];
     for (const s of siklusList) {
       const allItems = itemsBySiklus[s.id] || [];
@@ -124,7 +125,6 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
       const dayData = [];
       const processedDays = new Set();
 
-      // Process menu-linked items
       for (const it of menuItems) {
         processedDays.add(it.hari_ke);
         const bahanRows = menuBahanMap[it.menu_id] || [];
@@ -138,7 +138,6 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
         dayData.push({ hari_ke: it.hari_ke, hari_nama: it.hari_nama, menu_nama: it.menu_nama || '-', menu_label: 'Menu', bahan: bahanItems });
       }
 
-      // Add grid-based items (bahan picked directly without menu)
       for (const g of gridBahan) {
         const hk = g.hari_ke;
         const gridItem = gridItems.find(it => it.hari_ke === hk);
@@ -158,11 +157,30 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
           dayEntry.bahan.push({ bahan_baku_id: g.bahan_baku_id, nama: g.nama, nama_display: g.nama, satuan: g.satuan || 'g', kategori_sp: g.kategori_sp, persen_bdd: persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 });
         }
       }
-
       siklusData.push({ siklus_id: s.id, siklus_nama: s.nama, hari: dayData });
     }
+    return siklusData;
+  }
 
-    dataByJenjang[j] = { jumlah_siswa: jmlPm, sp_target: spTarget, siklus: siklusData };
+  // Build data per jenjang — split by total, besar, kecil
+  const dataByJenjang = {};
+  for (const j of activeJenjang) {
+    const jmlPm = pmByDisplay[j] || 0;
+    const jmlBesar = pmByDisplayBesar[j] || 0;
+    const jmlKecil = pmByDisplayKecil[j] || 0;
+    if (!jmlPm) continue;
+
+    const dbVals = JENJANG_DB_MAP[j] || [j];
+    const spKey = dbVals.find(v => spByJenjangKat[v]) || j;
+    const spTarget = spByJenjangKat[spKey] || {};
+
+    dataByJenjang[j] = {
+      jumlah_siswa: jmlPm,
+      jumlah_besar: jmlBesar,
+      jumlah_kecil: jmlKecil,
+      sp_target: spTarget,
+      siklus: buildSiklusData(jmlPm)
+    };
   }
 
   // ── Apply overrides ──
