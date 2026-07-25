@@ -400,11 +400,11 @@ async function renderSiklusLaporan(id) {
                 <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Hari</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Menu</th>
                 <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Porsi</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Kalori</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Protein</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Karbohidrat</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Lemak</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Serat</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Kalori <span class="text-stone-400 font-normal">/org</span></th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Protein <span class="text-stone-400 font-normal">/org</span></th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Karbohidrat <span class="text-stone-400 font-normal">/org</span></th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Lemak <span class="text-stone-400 font-normal">/org</span></th>
+                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Serat <span class="text-stone-400 font-normal">/org</span></th>
               </tr>
             </thead>
             <tbody>
@@ -412,11 +412,11 @@ async function renderSiklusLaporan(id) {
                 <td class="px-4 py-3 text-sm whitespace-nowrap">Hari ${it.hari_ke} · ${it.hari_nama}</td>
                 <td class="px-4 py-3 text-sm">${it.menu_nama || '<span class="text-stone-400">—</span>'}</td>
                 <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.jumlah_porsi)}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.kalori)}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.protein)}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.karbohidrat)}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.lemak)}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.serat)}</td>
+                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.kalori / (it.jumlah_porsi || 1))}</td>
+                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.protein / (it.jumlah_porsi || 1))}</td>
+                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.karbohidrat / (it.jumlah_porsi || 1))}</td>
+                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.lemak / (it.jumlah_porsi || 1))}</td>
+                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.serat / (it.jumlah_porsi || 1))}</td>
               </tr>
               ${it.menu_id ? `<tr class="bg-stone-50/50">
                 <td colspan="8" class="px-4 py-2">
