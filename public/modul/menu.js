@@ -205,10 +205,11 @@ function renderMenuBySiklusHtml(data) {
                   <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.kalori}</td>
                   <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.protein}</td>
                   <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.karbohidrat}</td>
-                  <td class="px-4 py-3 text-sm text-right">
-                    <button onclick="switchMenuView('list');editMenuById(${m.id})" class="text-xs text-blue-600 hover:text-blue-800 hover:underline">Edit</button>
-                  </td>
-                </tr>
+                 <td class="px-4 py-3 text-sm text-right">
+                   <button onclick="switchMenuView('list');editMenuById(${m.id})" class="text-xs text-blue-600 hover:text-blue-800 hover:underline mr-2">Edit</button>
+                   <button onclick="switchMenuView('list');saveCurrentMenuForPO({id: ${m.id}, nama: '${m.nama}', kategori_penerima: '${m.kategori_penerima}', jumlah_porsi: ${m.jumlah_porsi || 0}, gramasi_total: ${m.gramasi_total}, kalori: ${m.kalori}, protein: ${m.protein}, karbohidrat: ${m.karbohidrat}, lemak: ${m.lemak}, serat: ${m.serat}, bahan: ${JSON.stringify(m.bahan || [])}, status: '${m.status}'}); openMenuPoModal();" class="text-xs text-emerald-600 hover:text-emerald-800 hover:underline">Buat PO</button>
+                 </td>
+               </tr>
               `).join('') : ''}
             </tbody>
           </table>
@@ -426,9 +427,15 @@ async function openMenuForm(editing) {
     <input id="m-serat" type="hidden" value="${m.serat || 0}" />
 
     <div class="border-t border-stone-200 mt-4 pt-3">
-      <div class="flex items-center gap-3 mb-2">
+      <div class="flex items-center justify-between gap-3 mb-2">
         <div class="font-semibold text-sm">Bahan</div>
-        <button type="button" onclick="addBahanRow()" class="text-xs border border-stone-300 px-3 py-1 rounded hover:bg-stone-50">+ Tambah Bahan</button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="addBahanRow()" class="text-xs border border-stone-300 px-3 py-1 rounded hover:bg-stone-50">+ Tambah Bahan</button>
+          <button type="button" onclick="openMenuPoModal()" class="text-xs border border-emerald-400 text-emerald-700 hover:bg-emerald-50 px-3 py-1 rounded flex items-center gap-1.5" title="Buat PO dari Menu">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Buat PO
+          </button>
+        </div>
       </div>
       <div class="flex items-center gap-2 mb-2 text-xs text-stone-500">
         <span>Tampilkan total untuk</span>
@@ -955,6 +962,263 @@ function showMenuInfo() {
   '</div>';
   div.onclick = function() { div.remove(); };
   document.body.appendChild(div);
+}
+
+// Save current menu for PO creation
+async function openMenuPoModal() {
+  const currentMenu = window._currentMenu || {};
+  if (!currentMenu.id) {
+    showAlert('Tidak ada menu yang dipilih. Simpan menu terlebih dahulu.');
+    return;
+  }
+  
+  document.getElementById('modal-title').textContent = 'Buat PO dari Menu (' + currentMenu.nama + ')';
+  document.getElementById('modal-save').style.display = 'block';
+  document.getElementById('modal-save').textContent = 'Buat PO';
+  document.getElementById('modal-save').onclick = function() { createPoFromMenu(currentMenu.id); };
+  document.getElementById('modal-body').innerHTML = `
+    <div class="text-sm text-stone-600 mb-4">
+      Membuat Purchase Order dari seluruh bahan yang digunakan dalam menu "${currentMenu.nama}".
+      Pilih supplier dan klik "Buat PO" untuk melanjutkan.
+    </div>
+    <div><label class="text-sm font-medium">Supplier *</label>
+      <select id="po-supplier" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
+        <option value="">Pilih Supplier...</option>
+      </select></div>
+    <div class="mt-3"><label class="text-sm font-medium">Catatan (opsional)</label>
+      <textarea id="po-notes" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md" placeholder="Catatan untuk supplier..."></textarea></div>
+    <div id="menu-po-preview" class="mt-4 text-xs text-stone-500"></div>
+  `;
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modal').classList.add('flex');
+  
+  // Load supplier list
+  api.get('/supplier').then(function(res) {
+    const select = document.getElementById('po-supplier');
+    const suppliers = Array.isArray(res) ? res : (res.data || []);
+    suppliers.forEach(function(s) {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.nama;
+      select.appendChild(opt);
+    });
+  }).catch(function() {
+    document.getElementById('po-supplier').innerHTML = '<option value="">Gagal memuat supplier</option>';
+  });
+}
+
+async function createPoFromMenu(menuId) {
+  const supplierId = document.getElementById('po-supplier').value;
+  const notes = document.getElementById('po-notes').value;
+  
+  if (!supplierId) {
+    showAlert('Pilih supplier terlebih dahulu');
+    return;
+  }
+  
+  const currentMenu = window._currentMenu;
+  if (!currentMenu) {
+    showAlert('Tidak ada menu yang dipilih');
+    return;
+  }
+  
+  const poItems = [];
+  let totalRp = 0;
+  
+  // Process the menu's bahan into PO items
+  if (Array.isArray(currentMenu.bahan)) {
+    for (const b of currentMenu.bahan) {
+      if (!b.nama) continue;
+      
+      // Get stock data for unit price estimation
+      try {
+        let unitPrice = b.harga_beli || b.harga_satuan || 0;
+        if (!unitPrice) {
+          // Try to get from bahan_baku endpoint
+          const bahanRes = await api.get('/bahan_baku');
+          const bahanList = Array.isArray(bahanRes) ? bahanRes : (bahanRes.data || []);
+          const bahanItem = bahanList.find(function(fb) { return fb.id === b.bahan_baku_id || fb.nama === b.nama; });
+          if (bahanItem) {
+            unitPrice = bahanItem.harga || bahanItem.harga_beli || 0;
+          }
+        }
+        
+        if (unitPrice > 0) {
+          const subtotal = unitPrice * b.jumlah;
+          totalRp += subtotal;
+          
+          poItems.push({
+            bahan_baku_id: b.bahan_baku_id,
+            nama: b.nama,
+            qty: b.jumlah,
+            satuan: b.satuan || 'g',
+            harga_beli_unit: unitPrice,
+            subtotal: subtotal
+          });
+        }
+      } catch (e) {
+        console.error('Error processing menu bahan:', e);
+      }
+    }
+  }
+  
+  if (poItems.length === 0) {
+    showAlert('Tidak ada bahan dengan harga dari menu ini');
+    return;
+  }
+  
+  try {
+    showToast('Membuat PO dari menu...', 'info');
+    
+    const poRes = await api.post('/purchase-order', {
+      nomor: 'MEN-' + new Date().getTime(),
+      supplier_id: supplierId,
+      notes: notes || `PO otomatis dari menu: ${currentMenu.nama}`,
+      items: poItems,
+      kategori_penerima: currentMenu.kategori_penerima || null
+    });
+    
+    showAlert('✅ PO berhasil dibuat: ' + poRes.nomor, 'success');
+    closeModal();
+    
+    // Refresh purchase order list
+    const pemBelianModule = MODULES['pembelian'];
+    if (pemBelianModule && pemBelianModule.render) {
+      pemBelianModule.render();
+    }
+    
+  } catch (e) {
+    console.error('Error creating PO from menu:', e);
+    showAlert('❌ Gagal membuat PO: ' + (e.message || 'Unknown error'), 'error');
+  }
+}
+
+function openAIDialog() {
+  const currentMenu = window._currentMenu || {};
+  if (!currentMenu.id) {
+    showAlert('Tidak ada menu yang dipilih. Simpan menu terlebih dahulu.');
+    return;
+  }
+  
+  document.getElementById('modal-title').textContent = 'Buat PO dari Menu (' + currentMenu.nama + ')';
+  document.getElementById('modal-save').style.display = 'block';
+  document.getElementById('modal-save').textContent = 'Buat PO';
+  document.getElementById('modal-save').onclick = function() { createPoFromMenu(currentMenu.id); };
+  document.getElementById('modal-body').innerHTML = `
+    <div class="text-sm text-stone-600 mb-4">
+      Membuat Purchase Order dari seluruh bahan yang digunakan dalam menu "${currentMenu.nama}".
+      Pilih supplier dan klik "Buat PO" untuk melanjutkan.
+    </div>
+    <div><label class="text-sm font-medium">Supplier *</label>
+      <select id="po-supplier" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
+        <option value="">Pilih Supplier...</option>
+      </select></div>
+    <div class="mt-3"><label class="text-sm font-medium">Catatan (opsional)</label>
+      <textarea id="po-notes" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md" placeholder="Catatan untuk supplier..."></textarea></div>
+    <div id="menu-po-preview" class="mt-4 text-xs text-stone-500"></div>
+  `;
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modal').classList.add('flex');
+  
+  // Load supplier list
+  api.get('/supplier').then(function(res) {
+    const select = document.getElementById('po-supplier');
+    const suppliers = Array.isArray(res) ? res : (res.data || []);
+    suppliers.forEach(function(s) {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.nama;
+      select.appendChild(opt);
+    });
+  }).catch(function() {
+    document.getElementById('po-supplier').innerHTML = '<option value="">Gagal memuat supplier</option>';
+  });
+}
+
+async function createPoFromMenu(menuId) {
+  const supplierId = document.getElementById('po-supplier').value;
+  const notes = document.getElementById('po-notes').value;
+  
+  if (!supplierId) {
+    showAlert('Pilih supplier terlebih dahulu');
+    return;
+  }
+  
+  const currentMenu = window._currentMenu;
+  if (!currentMenu) {
+    showAlert('Tidak ada menu yang dipilih');
+    return;
+  }
+  
+  const poItems = [];
+  let totalRp = 0;
+  
+  // Process the menu's bahan into PO items
+  if (Array.isArray(currentMenu.bahan)) {
+    for (const b of currentMenu.bahan) {
+      if (!b.nama) continue;
+      
+      // Get stock data for unit price estimation
+      try {
+        let unitPrice = b.harga_beli || b.harga_satuan || 0;
+        if (!unitPrice) {
+          // Try to get from bahan_baku endpoint
+          const bahanRes = await api.get('/bahan_baku');
+          const bahanList = Array.isArray(bahanRes) ? bahanRes : (bahanRes.data || []);
+          const bahanItem = bahanList.find(function(fb) { return fb.id === b.bahan_baku_id || fb.nama === b.nama; });
+          if (bahanItem) {
+            unitPrice = bahanItem.harga || bahanItem.harga_beli || 0;
+          }
+        }
+        
+        if (unitPrice > 0) {
+          const subtotal = unitPrice * b.jumlah;
+          totalRp += subtotal;
+          
+          poItems.push({
+            bahan_baku_id: b.bahan_baku_id,
+            nama: b.nama,
+            qty: b.jumlah,
+            satuan: b.satuan || 'g',
+            harga_beli_unit: unitPrice,
+            subtotal: subtotal
+          });
+        }
+      } catch (e) {
+        console.error('Error processing menu bahan:', e);
+      }
+    }
+  }
+  
+  if (poItems.length === 0) {
+    showAlert('Tidak ada bahan dengan harga dari menu ini');
+    return;
+  }
+  
+  try {
+    showToast('Membuat PO dari menu...', 'info');
+    
+    const poRes = await api.post('/purchase-order', {
+      nomor: 'MEN-' + new Date().getTime(),
+      supplier_id: supplierId,
+      notes: notes || `PO otomatis dari menu: ${currentMenu.nama}`,
+      items: poItems,
+      kategori_penerima: currentMenu.kategori_penerima || null
+    });
+    
+    showAlert('✅ PO berhasil dibuat: ' + poRes.nomor, 'success');
+    closeModal();
+    
+    // Refresh purchase order list
+    const pemBelianModule = MODULES['pembelian'];
+    if (pemBelianModule && pemBelianModule.render) {
+      pemBelianModule.render();
+    }
+    
+  } catch (e) {
+    console.error('Error creating PO from menu:', e);
+    showAlert('❌ Gagal membuat PO: ' + (e.message || 'Unknown error'), 'error');
+  }
 }
 
 function openAIDialog() {
