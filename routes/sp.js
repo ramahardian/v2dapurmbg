@@ -117,7 +117,7 @@ router.post('/sp/hitung-kebutuhan', requireRole('admin', 'ahli_gizi', 'keuangan'
   const mph = menuIds.map(() => '?').join(',');
   const [bahanRows] = await db.query(
     `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah as jumlah_existing,
-            b.nama, b.kategori_sp, b.berat_1_sp, b.persen_bdd, b.satuan, b.berat_per_satuan
+            b.nama, b.kategori_sp, b.berat_1_sp, b.persen_bdd, b.satuan, b.berat_per_satuan, COALESCE(b.buffer_persen, 0) AS buffer_persen
      FROM menu_bahan mb
      JOIN bahan_baku b ON b.id = mb.bahan_baku_id
      WHERE mb.menu_id IN (${mph})`,
@@ -155,6 +155,7 @@ router.post('/sp/hitung-kebutuhan', requireRole('admin', 'ahli_gizi', 'keuangan'
           berat_1_sp: h.berat_1_sp,
           sp_value: h.sp_value,
           persen_bdd: h.persen_bdd,
+          buffer_persen: Number(b.buffer_persen) || 0,
           berat_bersih: h.berat_bersih,
           berat_kotor: h.berat_kotor,
           total_berat_kotor: 0,

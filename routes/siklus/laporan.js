@@ -512,7 +512,7 @@ router.get('/siklus/:id/laporan/produksi-harian', async (req, res) => {
 
   // Get grid bahan
   const [gridBahan] = await db.query(
-    `SELECT sb.hari_ke, sb.kategori_sp, sb.bahan_baku_id, b.nama, b.satuan, b.berat_1_sp, b.persen_bdd, b.kategori_sp as b_kat_sp
+    `SELECT sb.hari_ke, sb.kategori_sp, sb.bahan_baku_id, b.nama, b.satuan, b.berat_1_sp, b.persen_bdd, b.kategori_sp as b_kat_sp, COALESCE(b.berat_per_satuan, 0) AS berat_per_satuan, COALESCE(b.buffer_persen, 0) AS buffer_persen
      FROM siklus_menu_item_bahan sb
      LEFT JOIN bahan_baku b ON b.id = sb.bahan_baku_id
      WHERE sb.siklus_id=?`,
@@ -556,14 +556,14 @@ router.get('/siklus/:id/laporan/produksi-harian', async (req, res) => {
       const kat = mb.kategori_sp || 'Lainnya';
       if (!bahanByKat[kat]) bahanByKat[kat] = [];
       const beratKotor = hitungBDD(Number(mb.jumlah) * jumlahPorsi, mb.persen_bdd);
-      bahanByKat[kat].push({ nama: mb.nama, satuan: mb.satuan, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100, kategori_sp: kat });
+      bahanByKat[kat].push({ nama: mb.nama, satuan: mb.satuan, kategori_sp: kat, persen_bdd: mb.persen_bdd, berat_1_sp: mb.berat_1_sp, berat_per_satuan: Number(mb.berat_per_satuan) || 0, buffer_persen: Number(mb.buffer_persen) || 0, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 });
     }
     // Grid-based
     for (const g of dayGrid) {
       const kat = g.kategori_sp || 'Lainnya';
       if (!bahanByKat[kat]) bahanByKat[kat] = [];
       const beratKotor = hitungBDD(Number(g.berat_1_sp || 0) * jumlahPorsi, g.persen_bdd);
-      bahanByKat[kat].push({ nama: g.nama, satuan: g.satuan, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100, kategori_sp: kat });
+      bahanByKat[kat].push({ nama: g.nama, satuan: g.satuan, kategori_sp: kat, persen_bdd: g.persen_bdd, berat_1_sp: Number(g.berat_1_sp) || 0, berat_per_satuan: Number(g.berat_per_satuan) || 0, buffer_persen: Number(g.buffer_persen) || 0, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 });
     }
 
     const dayBahanList = Object.entries(bahanByKat).map(([kat, list]) => ({ kategori: kat, items: list }));

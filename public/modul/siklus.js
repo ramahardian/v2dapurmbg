@@ -23,6 +23,21 @@ function formatPerPorsi(b) {
   return gram + ' g';
 }
 
+function formatTotalUnit(b) {
+  var totalGram = Number(b.total_berat_kotor) || 0;
+  if (!totalGram) return '0';
+  var satuan = b.satuan || 'g';
+  var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+  if (satuan === 'Kg') return fmtNum(totalGram / 1000) + ' kg';
+  if (satuan === 'g' || satuan === 'gram') return Math.round(totalGram) + ' g';
+  if (perUnit > 0) {
+    var inUnit = totalGram / perUnit;
+    if (inUnit >= 10) return Math.round(inUnit) + ' ' + satuan;
+    return fmtNum(inUnit) + ' ' + satuan;
+  }
+  return fmtNum(totalGram / 1000) + ' kg';
+}
+
 const KAT_SP_ORDER = ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
 const KAT_SP_LABELS = {
   'Karbohidrat': { label: 'Karbohidrat', color: 'text-amber-700 bg-amber-50' },
@@ -582,19 +597,30 @@ async function renderProduksiHarian(id) {
         html += '<div class="overflow-x-auto"><table class="w-full text-xs">' +
           '<thead class="bg-stone-50/50"><tr>' +
             '<th class="text-left px-4 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Bahan</th>' +
-            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Per Porsi (g)</th>' +
-            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Kategori</th>' +
-            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Total (kg)</th>' +
+            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Per Porsi</th>' +
+            '<th class="text-right px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Total</th>' +
+            '<th class="text-left px-3 py-2.5 font-semibold uppercase text-[10px] text-stone-500">Ket</th>' +
           '</tr></thead><tbody>';
         
         for (var b of d.bahan) {
           var perPorsiGram = d.jumlah_porsi > 0 ? Math.round(b.berat_kotor / d.jumlah_porsi) : 0;
+          var satuan = b.satuan || 'g';
+          var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+          var totalGram = b.berat_kotor || 0;
+          var displayTotal = satuan === 'Kg' ? fmtNum(totalGram / 1000) + ' kg' :
+            (satuan === 'g' || satuan === 'gram') ? Math.round(totalGram) + ' g' :
+            perUnit > 0 ? (function(){ var v = totalGram / perUnit; return (v >= 10 ? Math.round(v) : fmtNum(v)) + ' ' + satuan; })() :
+            fmtNum(totalGram / 1000) + ' kg';
+          var ketParts = [];
+          if (b.persen_bdd < 100) ketParts.push('BDD ' + b.persen_bdd + '%');
+          if (b.buffer_persen > 0) ketParts.push('Buffer ' + b.buffer_persen + '%');
+          var ketStr = ketParts.join(' • ');
           
           html += '<tr class="border-t border-stone-100 hover:bg-stone-50/50 transition-colors">' +
             '<td class="px-4 py-2.5 font-medium text-stone-700">' + b.nama + '</td>' +
             '<td class="px-3 py-2.5 text-right mono text-stone-600">' + perPorsiGram + ' g</td>' +
-            '<td class="px-3 py-2.5 text-right text-stone-600">' + (b.kategori_sp || '-') + '</td>' +
-            '<td class="px-3 py-2.5 text-right mono font-bold text-stone-800">' + fmtNum(b.kebutuhan_kg) + ' kg</td>' +
+            '<td class="px-3 py-2.5 text-right mono font-bold text-stone-800">' + displayTotal + '</td>' +
+            '<td class="px-3 py-2.5 text-xs text-stone-400">' + ketStr + '</td>' +
           '</tr>';
         }
         
@@ -641,22 +667,20 @@ async function hitungSpSiklus(id) {
         '<th class="text-left px-4 py-3 text-xs font-semibold uppercase">Bahan</th>' +
         '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kat. SP</th>' +
         '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Per Porsi</th>' +
-        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Berat Bersih (g)</th>' +
-        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">BDD</th>' +
-        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Berat Kotor (g)</th>' +
-        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Total (g)</th>' +
-        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kebutuhan (kg)</th>' +
+        '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Total</th>' +
+        '<th class="text-left px-4 py-3 text-xs font-semibold uppercase">Ket</th>' +
       '</tr></thead><tbody>' +
       items.map(function(b) {
+        var ketParts = [];
+        if (b.persen_bdd < 100) ketParts.push('BDD ' + b.persen_bdd + '%');
+        if (b.buffer_persen > 0) ketParts.push('Buffer ' + b.buffer_persen + '%');
+        var ketStr = ketParts.length ? ketParts.join(' • ') : '';
         return '<tr class="border-t border-stone-100">' +
           '<td class="px-4 py-3 text-sm font-medium">' + b.nama + '</td>' +
           '<td class="px-4 py-3 text-sm text-right">' + (b.kategori_sp || '-') + '</td>' +
           '<td class="px-4 py-3 text-sm text-right mono">' + formatPerPorsi(b) + '</td>' +
-          '<td class="px-4 py-3 text-sm text-right mono">' + b.berat_bersih + '</td>' +
-          '<td class="px-4 py-3 text-sm text-right mono">' + b.persen_bdd + '%</td>' +
-          '<td class="px-4 py-3 text-sm text-right mono">' + b.berat_kotor + '</td>' +
-          '<td class="px-4 py-3 text-sm text-right mono">' + fmtNum(b.total_berat_kotor) + '</td>' +
-          '<td class="px-4 py-3 text-sm text-right mono font-bold">' + b.kebutuhan_kg + '</td>' +
+          '<td class="px-4 py-3 text-sm text-right mono font-bold">' + formatTotalUnit(b) + '</td>' +
+          '<td class="px-4 py-3 text-sm text-stone-400">' + ketStr + '</td>' +
         '</tr>';
       }).join('') +
       '</tbody></table></div></div>';
