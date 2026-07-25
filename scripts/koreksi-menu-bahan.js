@@ -83,19 +83,39 @@ async function runKoreksiMenuBahan(tenantId) {
     log(`  PM per kategori (DB): ${JSON.stringify(pmByKategori)}`);
 
     // ── Perbaiki menu yang kategori_penerima-nya null ──
-    // Cari kategori dari siklus yang menggunakan menu tersebut
-    const [siklusMenuItems] = await db.query(
-      `SELECT DISTINCT smi.menu_id, sm.kategori_penerima
-       FROM siklus_menu_item smi
-       JOIN siklus_menu sm ON sm.id = smi.siklus_id
-       WHERE sm.tenant_id=? AND smi.menu_id IS NOT NULL`,
-      [t.id]
-    );
-    const katFromSiklus = {};
-    for (const r of siklusMenuItems) {
-      if (r.kategori_penerima && !katFromSiklus[r.menu_id]) {
-        katFromSiklus[r.menu_id] = r.kategori_penerima;
+    // Siapkan SP lookup lokal untuk fallback
+    function cariSpValue(nama) {
+      if (!nama) return 0;
+      if (_spRefLocal[nama]) return _spRefLocal[nama];
+      // Partial match: prefer the closest (shortest) match
+      const nLower = nama.toLowerCase();
+      let bestKey = '';
+      let bestVal = 0;
+      for (const [key, val] of Object.entries(_spRefLocal)) {
+        if (key.toLowerCase().includes(nLower)) {
+          if (!bestKey || key.length < bestKey.length) {
+            bestKey = key;
+            bestVal = val;
+          }
+        }
       }
+      return bestVal || _bbSpLocal[nama] || 0;
+    }
+    const _spRefLocal = {};
+    const [spRefRows] = await db.query(
+      `SELECT nama, berat_bersih FROM sp_referensi_bahan WHERE tenant_id=?`,
+      [t.id]
+    ).catch(() => []);
+    for (const r of spRefRows || []) {
+      _spRefLocal[r.nama] = Number(r.berat_bersih) || 0;
+    }
+    const _bbSpLocal = {};
+    const [bbRows] = await db.query(
+      `SELECT nama, berat_1_sp FROM bahan_baku WHERE tenant_id=?`,
+      [t.id]
+    ).catch(() => []);
+    for (const r of bbRows || []) {
+      _bbSpLocal[r.nama] = Number(r.berat_1_sp) || 0;
     }
 
     // Ambil semua menu + menu_bahan
@@ -114,34 +134,45 @@ async function runKoreksiMenuBahan(tenantId) {
     let unchanged = 0;
 
     for (const mb of menuBahan) {
-      // Fallback: jika kategori_penerima null, cari dari siklus
       let kat = mb.kategori_penerima;
-      if (!kat && katFromSiklus[mb.menu_id]) {
-        kat = katFromSiklus[mb.menu_id];
-        // Update menu juga
-        await db.query('UPDATE menu SET kategori_penerima=? WHERE id=?', [kat, mb.menu_id]);
-        log(`  ↪ Kategori "${mb.menu_nama}" diperbaiki: null → ${kat}`);
+      let jumlahPorsi = 0;
+
+      if (kat) {
+        jumlahPorsi = cariJumlahPorsi(kat, pmByKategori);
       }
 
-      const jumlahPorsi = cariJumlahPorsi(kat, pmByKategori);
+      if (jumlahPorsi > 0) {
+        // Case 1: Kategori diketahui → bagi dengan jumlah PM
+        const jumlahLama = Number(mb.jumlah);
+        const jumlahBaru = Math.round((jumlahLama / jumlahPorsi) * 100) / 100;
 
-      if (jumlahPorsi <= 0) {
-        log(`  ⚠ "${mb.menu_nama}" (kat=${kat}): tidak ada PM, SKIP`);
-        unchanged++;
-        continue;
+        if (Math.abs(jumlahLama - jumlahBaru) <= 0.01 || jumlahBaru <= 0) {
+          unchanged++;
+          continue;
+        }
+
+        await db.query('UPDATE menu_bahan SET jumlah=? WHERE id=?', [jumlahBaru, mb.mb_id]);
+        log(`  ✓ "${mb.menu_nama}" (kat=${kat}, ${jumlahPorsi} PM): ${jumlahLama}g → ${jumlahBaru}g`);
+        corrected++;
+      } else {
+        // Case 2: Kategori null → set ke SP reference value langsung
+        // Cari nama bahan dari menu_bahan (join needed for bahan name)
+        const [bahanInfo] = await db.query(
+          `SELECT b.nama FROM menu_bahan mbb JOIN bahan_baku b ON b.id = mbb.bahan_baku_id WHERE mbb.id=?`,
+          [mb.mb_id]
+        );
+        const namaBahan = bahanInfo[0]?.nama || '';
+        const spValue = cariSpValue(namaBahan);
+
+        if (spValue > 0) {
+          await db.query('UPDATE menu_bahan SET jumlah=? WHERE id=?', [spValue, mb.mb_id]);
+          log(`  ✓ "${mb.menu_nama}" (kat=null, SP fallback): ${Number(mb.jumlah)}g → ${spValue}g`);
+          corrected++;
+        } else {
+          log(`  ⚠ "${mb.menu_nama}" (kat=null): tidak ada SP reference, SKIP`);
+          unchanged++;
+        }
       }
-
-      const jumlahLama = Number(mb.jumlah);
-      const jumlahBaru = Math.round((jumlahLama / jumlahPorsi) * 100) / 100;
-
-      if (Math.abs(jumlahLama - jumlahBaru) <= 0.01 || jumlahBaru <= 0) {
-        unchanged++;
-        continue;
-      }
-
-      await db.query('UPDATE menu_bahan SET jumlah=? WHERE id=?', [jumlahBaru, mb.mb_id]);
-      log(`  ✓ "${mb.menu_nama}" (kat=${mb.kategori_penerima}, ${jumlahPorsi} PM): ${jumlahLama}g → ${jumlahBaru}g`);
-      corrected++;
     }
 
     log(`  Hasil: ${corrected} diperbaiki, ${unchanged} tidak berubah`);
