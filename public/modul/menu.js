@@ -487,7 +487,7 @@ async function openMenuForm(editing) {
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
 }
-function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: '', nama: '', keterangan: '' }); renderBahanList(); }
+function addBahanRow() { window._menuBahan.push({ bahan_baku_id: '', jumlah: 0, satuan: 'g', nama: '', kategori_sp: '', berat_1_sp: 0, persen_bdd: 100, berat_per_satuan: 0, keterangan: '' }); renderBahanList(); }
 function removeBahanRow(i) { window._menuBahan.splice(i, 1); renderBahanList(); hitungNutrisi(); }
 function hitungNutrisi() {
   var totalKalori = 0, totalProtein = 0, totalKarbo = 0, totalLemak = 0, totalSerat = 0;
@@ -538,6 +538,7 @@ function renderBahanList() {
     } else if (displaySatuan === 'Kg') {
       displaySatuan = 'g'; // per-serving in grams is clearer than kg
     }
+    var inputStep = ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan) ? '1' : '0.01';
     var inputTitle = displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')';
     return '<div class="grid grid-cols-12 gap-1.5 items-center">' +
       '<div class="col-span-4 relative">' +
@@ -545,7 +546,7 @@ function renderBahanList() {
         '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
       '</div>' +
       '<div class="col-span-3 flex">' +
-        '<input type="number" step="0.01" value="' + (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" />' +
+        '<input type="number" step="' + inputStep + '" value="' + (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0') + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-l-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" />' +
         '<span class="inline-flex items-center px-2 h-9 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-md whitespace-nowrap">' + displaySatuan + '</span>' +
       '</div>' +
       '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="col-span-4 h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
