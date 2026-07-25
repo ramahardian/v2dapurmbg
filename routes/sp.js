@@ -103,7 +103,7 @@ router.post('/sp/hitung-kebutuhan', requireRole('admin', 'ahli_gizi', 'keuangan'
     for (const it of items) {
       dayRows.push({
         menu_id: it.menu_id,
-        jumlah_porsi: Number(it.jumlah_porsi) || 0,
+        jumlah_porsi: Number(it.jumlah_porsi) || Number(s.jumlah_porsi) || 0,
         kategori_db: it.menu_kat || s.kategori_penerima,
       });
     }

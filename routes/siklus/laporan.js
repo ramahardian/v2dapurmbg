@@ -122,7 +122,7 @@ router.get('/siklus/laporan/bahan', async (req, res) => {
     for (const it of items) {
       const dayKey = `${s.id}-${it.hari_ke}`;
       if (!dayMap[dayKey]) {
-        dayMap[dayKey] = { siklus_id: s.id, siklus_nama: s.nama, kategori_db: s.kategori_penerima || '-', hari_ke: it.hari_ke, hari_nama: it.hari_nama, jumlah_porsi: Number(it.jumlah_porsi) || 0, menu_ids: [] };
+        dayMap[dayKey] = { siklus_id: s.id, siklus_nama: s.nama, kategori_db: s.kategori_penerima || '-', hari_ke: it.hari_ke, hari_nama: it.hari_nama, jumlah_porsi: Number(it.jumlah_porsi) || Number(s.jumlah_porsi) || 0, menu_ids: [] };
       }
       dayMap[dayKey].menu_ids.push(it.menu_id);
     }
