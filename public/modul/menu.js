@@ -86,23 +86,11 @@ function renderMenuBySiklusHtml(data) {
   </div>`;
 
   // Stats cards
-  const statsHtml = `<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-    <div class="bg-white border border-stone-200 rounded-xl p-4">
-      <div class="text-xs uppercase tracking-wider text-stone-500 font-medium">Total Menu</div>
-      <div class="text-2xl font-bold text-stone-800 mt-1">${totalMenu}</div>
-    </div>
-    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
-      <div class="text-xs uppercase tracking-wider text-blue-700 font-medium">Digunakan di Siklus</div>
-      <div class="text-2xl font-bold text-blue-800 mt-1">${usedInSiklus}</div>
-    </div>
-    <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
-      <div class="text-xs uppercase tracking-wider text-emerald-700 font-medium">Standalone</div>
-      <div class="text-2xl font-bold text-emerald-800 mt-1">${standalone.length}</div>
-    </div>
-    <div class="bg-amber-50 border border-amber-100 rounded-xl p-4">
-      <div class="text-xs uppercase tracking-wider text-amber-700 font-medium">Siklus Aktif</div>
-      <div class="text-2xl font-bold text-amber-800 mt-1">${groups.filter(g => g.status === 'Aktif').length}</div>
-    </div>
+  const statsHtml = `<div class="flex flex-wrap gap-3 mb-6">
+    <div class="flex-1 min-w-[140px] bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">Total Menu</div><div class="text-xl font-bold text-blue-800">${totalMenu}</div></div>
+    <div class="flex-1 min-w-[140px] bg-gradient-to-br from-sky-50 to-sky-100/60 rounded-2xl border border-sky-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-sky-700 mb-0.5">Digunakan di Siklus</div><div class="text-xl font-bold text-sky-800">${usedInSiklus}</div></div>
+    <div class="flex-1 min-w-[140px] bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 mb-0.5">Standalone</div><div class="text-xl font-bold text-emerald-800">${standalone.length}</div></div>
+    <div class="flex-1 min-w-[140px] bg-gradient-to-br from-amber-50 to-amber-100/60 rounded-2xl border border-amber-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-amber-700 mb-0.5">Siklus Aktif</div><div class="text-xl font-bold text-amber-800">${groups.filter(g => g.status === 'Aktif').length}</div></div>
   </div>`;
 
   // Siklus groups
@@ -123,7 +111,7 @@ function renderMenuBySiklusHtml(data) {
       const filledDays = s.days.filter(d => d.menu_id || d._has_content).length;
       const coverage = s.total_hari ? Math.round((filledDays / s.total_hari) * 100) : 0;
 
-      return `<div class="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+      return `<div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
         <!-- Siklus Header -->
         <div class="px-5 py-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -178,36 +166,36 @@ function renderMenuBySiklusHtml(data) {
         <h3 class="font-bold text-stone-700">Menu Tidak Terpakai</h3>
         <span class="bg-stone-100 text-stone-500 text-xs px-2.5 py-0.5 rounded-full font-medium">${standalone.length}</span>
       </div>
-      <div class="bg-white border border-stone-200 rounded-xl overflow-hidden">
+      <div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full">
-            <thead class="bg-stone-50">
-              <tr>
-                <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Kategori</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gramasi</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kalori</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Protein</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Karbo</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
+            <thead>
+              <tr class="border-b border-stone-100">
+                <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Nama</th>
+                <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kategori</th>
+                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Gramasi</th>
+                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kalori</th>
+                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Protein</th>
+                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Karbo</th>
+                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th>
               </tr>
             </thead>
             <tbody>
               ${standalone.length > 0 ? standalone.map(m => `
-                <tr class="border-t border-stone-100 hover:bg-stone-50/50 transition-colors">
-                  <td class="px-4 py-3 text-sm font-medium">
+                <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+                  <td class="px-4 py-3 text-xs font-medium text-stone-700">
                     <div class="flex items-center gap-2">
                       <span class="truncate max-w-[180px]" title="${m.nama}">${m.nama}</span>
                     </div>
                   </td>
-                  <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
-                  <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
-                  <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.kalori}</td>
-                  <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.protein}</td>
-                  <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.karbohidrat}</td>
-                 <td class="px-4 py-3 text-sm text-right">
-                   <button onclick="switchMenuView('list');editMenuById(${m.id})" class="text-xs text-blue-600 hover:text-blue-800 hover:underline mr-2">Edit</button>
-                   <button onclick="switchMenuView('list');saveCurrentMenuForPO({id: ${m.id}, nama: '${m.nama}', kategori_penerima: '${m.kategori_penerima}', jumlah_porsi: ${m.jumlah_porsi || 0}, gramasi_total: ${m.gramasi_total}, kalori: ${m.kalori}, protein: ${m.protein}, karbohidrat: ${m.karbohidrat}, lemak: ${m.lemak}, serat: ${m.serat}, bahan: ${JSON.stringify(m.bahan || [])}, status: '${m.status}'}); openMenuPoModal();" class="text-xs text-emerald-600 hover:text-emerald-800 hover:underline">Buat PO</button>
+                  <td class="px-4 py-3 text-xs whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
+                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
+                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${m.kalori}</td>
+                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${m.protein}</td>
+                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${m.karbohidrat}</td>
+                 <td class="px-4 py-3 text-xs text-right">
+                    <button onclick="switchMenuView('list');editMenuById(${m.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                    <button onclick="switchMenuView('list');saveCurrentMenuForPO({id: ${m.id}, nama: '${m.nama}', kategori_penerima: '${m.kategori_penerima}', jumlah_porsi: ${m.jumlah_porsi || 0}, gramasi_total: ${m.gramasi_total}, kalori: ${m.kalori}, protein: ${m.protein}, karbohidrat: ${m.karbohidrat}, lemak: ${m.lemak}, serat: ${m.serat}, bahan: ${JSON.stringify(m.bahan || [])}, status: '${m.status}'}); openMenuPoModal();" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Buat PO"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                  </td>
                </tr>
               `).join('') : ''}
@@ -306,54 +294,57 @@ function renderGramasiCell(gramasiTotal, bahan) {
 function renderMenuHtml(menus) {
   return `<div class="flex flex-wrap justify-between gap-2 mb-4">
     <div class="flex flex-wrap items-center gap-2">
-      <button id="add-menu-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah Menu</button>
-      <button id="menu-delete-selected" onclick="deleteSelectedMenu()" class="hidden px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md items-center gap-1.5">
+      <button id="add-menu-btn" class="h-11 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Tambah Menu
+      </button>
+      <button id="menu-delete-selected" onclick="deleteSelectedMenu()" class="hidden h-10 px-4 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl items-center gap-1.5 shadow-sm transition-all">
         Hapus Terpilih <span id="menu-selected-count" class="font-bold">0</span>
       </button>
     </div>
     <div class="flex gap-2">
-      <button id="recalc-nutrisi-btn" onclick="recalcNutrisiMenu()" class="border border-emerald-400 text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-md text-sm font-medium">Hitung Ulang Nutrisi</button>
+      <button id="recalc-nutrisi-btn" onclick="recalcNutrisiMenu()" class="h-11 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-sm font-medium shadow-sm transition-all">Hitung Ulang Nutrisi</button>
       <div class="relative">
         <input type="text" id="search-menu-input" placeholder="Cari nama menu..." value="${menuState.search}"
-          class="pl-10 pr-4 py-2 border border-stone-200 rounded-md text-sm w-48 focus:outline-none focus:border-[#1e40af]">
-        <svg class="absolute left-3 top-2.5 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          class="w-56 h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
       </div>
     </div>
   </div>
-  <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
+  <div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full">
-        <thead class="bg-stone-50">
-          <tr>
-            <th class="text-left px-4 py-3 text-xs font-semibold uppercase w-10">
+        <thead>
+          <tr class="border-b border-stone-100">
+            <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500 w-10">
               <input type="checkbox" id="menu-select-all" onchange="toggleSelectAllMenu(this)" class="cb-modern">
             </th>
-            <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
-            <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Kategori</th>
-            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gramasi <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-stone-200 text-stone-500 text-[9px] cursor-help font-bold" title="Gramasi total = jumlah seluruh bahan (g). 0 = belum ada bahan/ jumlah. Default terisi otomatis dari SP Referensi saat pilih bahan.">?</span></th>
-            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kalori</th>
-            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Bahan</th>
-            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
+            <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Nama</th>
+            <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kategori</th>
+            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Gramasi <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-stone-200 text-stone-500 text-[9px] cursor-help font-bold" title="Gramasi total = jumlah seluruh bahan (g). 0 = belum ada bahan/ jumlah. Default terisi otomatis dari SP Referensi saat pilih bahan.">?</span></th>
+            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kalori</th>
+            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Bahan</th>
+            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th>
           </tr>
         </thead>
         <tbody id="menu-table-body">
             ${menus.length > 0 ? menus.map(m => `
-            <tr class="border-t border-stone-100">
-              <td class="px-4 py-3 text-sm">
+            <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+              <td class="px-4 py-3 text-xs">
                 <input type="checkbox" value="${m.id}" onchange="updateSelectedMenuCount()" class="menu-checkbox cb-modern">
               </td>
-              <td class="px-4 py-3 text-sm font-medium truncate max-w-[180px]" title="${m.nama}">${m.nama}</td>
-              <td class="px-4 py-3 text-sm whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
-              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
-              <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${m.kalori} kkal</td>
-              <td class="px-4 py-3 text-sm text-left whitespace-nowrap">${renderBahanCell(m.bahan)}</td>
-              <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                <button data-menu-id="${m.id}" class="edit-btn text-stone-500 hover:text-stone-900 mr-2" title="Edit"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                <button data-menu-id="${m.id}" class="delete-btn text-red-600 hover:text-red-800" title="Hapus"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+              <td class="px-4 py-3 text-xs font-medium text-stone-700 truncate max-w-[180px]" title="${m.nama}">${m.nama}</td>
+              <td class="px-4 py-3 text-xs whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
+              <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
+              <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${m.kalori} kkal</td>
+              <td class="px-4 py-3 text-xs text-left whitespace-nowrap">${renderBahanCell(m.bahan)}</td>
+              <td class="px-4 py-3 text-xs text-right whitespace-nowrap">
+                <button data-menu-id="${m.id}" class="edit-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button data-menu-id="${m.id}" class="delete-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
               </td>
-            </tr>`).join('') : '<tr><td colspan="7" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><div>Belum ada menu</div></td></tr>'}
+            </tr>`).join('') : '<tr><td colspan="7" class="text-center py-16 text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><div class="text-sm">Belum ada menu</div></td></tr>'}
         </tbody>
       </table>
     </div>
@@ -365,10 +356,14 @@ function renderPagination() {
   const wrap = document.getElementById('pagination-controls');
   if (!wrap) return;
   if (menuState.totalPages <= 1) { wrap.innerHTML = ''; return; }
-  wrap.innerHTML = `<div class="flex items-center justify-start gap-2 mt-4">
-    ${menuState.page > 1 ? '<button onclick="goToPage(' + (menuState.page - 1) + ')" class="px-4 py-1.5 text-sm rounded border border-stone-200 hover:bg-stone-50">Prev</button>' : ''}
-    <span class="text-sm text-stone-500">Halaman ${menuState.page} dari ${menuState.totalPages}</span>
-    ${menuState.page < menuState.totalPages ? '<button onclick="goToPage(' + (menuState.page + 1) + ')" class="px-4 py-1.5 text-sm rounded border border-stone-200 hover:bg-stone-50">Next</button>' : ''}
+  var total = menuState.total;
+  wrap.innerHTML = `<div class="flex items-center justify-between mt-3">
+    <span class="text-sm text-stone-500">${total} data</span>
+    <div class="flex gap-2">
+      ${menuState.page > 1 ? '<button onclick="goToPage(' + (menuState.page - 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Prev</button>' : ''}
+      <span class="text-sm text-stone-500">Hal ${menuState.page} dari ${menuState.totalPages}</span>
+      ${menuState.page < menuState.totalPages ? '<button onclick="goToPage(' + (menuState.page + 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Next</button>' : ''}
+    </div>
   </div>`;
 }
 
@@ -409,16 +404,16 @@ function attachMenuHandlers() {
 async function openMenuForm(editing) {
   await ensureBahanBakuLoaded();
   const m = editing || { nama: '', deskripsi: '', gramasi_total: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
-  document.getElementById('modal-title').innerHTML = (editing ? 'Edit Menu' : 'Menu Baru') + '<button onclick="event.stopPropagation();showMenuInfo()" class="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-stone-100 hover:bg-blue-100 hover:text-blue-700 text-stone-400 transition-colors" title="Info"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button>';
+  document.getElementById('modal-title').innerHTML = (editing ? 'Edit Menu' : 'Menu Baru') + '<button onclick="event.stopPropagation();showMenuInfo()" class="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-stone-100 hover:bg-blue-100 hover:text-blue-700 text-stone-400 transition-all" title="Info"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button>';
   document.getElementById('modal-body').innerHTML = `
     <div>
-      <label class="text-sm font-medium">Nama Menu *</label>
-      <div class="flex gap-2 mt-1">
-        <input id="m-nama" value="${m.nama}" class="flex-1 h-10 px-3 border border-stone-200 rounded-md" />
-        <button type="button" onclick="openSiklusMenuPicker()" class="shrink-0 px-3 h-10 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 whitespace-nowrap transition-colors" title="Ambil nama & bahan dari siklus">📋 Siklus</button>
+      <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Menu *</label>
+      <div class="flex gap-2 mt-1.5">
+        <input id="m-nama" value="${m.nama}" class="flex-1 h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />
+        <button type="button" onclick="openSiklusMenuPicker()" class="shrink-0 px-4 h-11 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 whitespace-nowrap transition-all shadow-sm" title="Ambil nama & bahan dari siklus">📋 Siklus</button>
       </div>
     </div>
-    <div class="mt-3"><label class="text-sm font-medium">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md">${m.deskripsi || ''}</textarea></div>
+    <div class="mt-3"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1.5 w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">${m.deskripsi || ''}</textarea></div>
     
     <input id="m-kalori" type="hidden" value="${m.kalori || 0}" />
     <input id="m-protein" type="hidden" value="${m.protein || 0}" />
@@ -428,10 +423,10 @@ async function openMenuForm(editing) {
 
     <div class="border-t border-stone-200 mt-4 pt-3">
       <div class="flex items-center justify-between gap-3 mb-2">
-        <div class="font-semibold text-sm">Bahan</div>
+        <div class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Bahan</div>
         <div class="flex items-center gap-2">
-          <button type="button" onclick="addBahanRow()" class="text-xs border border-stone-300 px-3 py-1 rounded hover:bg-stone-50">+ Tambah Bahan</button>
-          <button type="button" onclick="openMenuPoModal()" class="text-xs border border-emerald-400 text-emerald-700 hover:bg-emerald-50 px-3 py-1 rounded flex items-center gap-1.5" title="Buat PO dari Menu">
+          <button type="button" onclick="addBahanRow()" class="text-xs font-medium border border-stone-200 px-3 py-1.5 rounded-lg hover:bg-stone-50 shadow-sm transition-all">+ Tambah Bahan</button>
+          <button type="button" onclick="openMenuPoModal()" class="text-xs font-medium border border-emerald-300 text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5" title="Buat PO dari Menu">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             Buat PO
           </button>
@@ -439,10 +434,10 @@ async function openMenuForm(editing) {
       </div>
       <div class="flex items-center gap-2 mb-2 text-xs text-stone-500">
         <span>Tampilkan total untuk</span>
-        <input type="number" id="m-porsi" value="0" min="0" step="1" onchange="onPorsiChange()" placeholder="0" class="w-20 h-7 px-2 border border-stone-200 rounded text-sm text-center mono" />
+        <input type="number" id="m-porsi" value="0" min="0" step="1" onchange="onPorsiChange()" placeholder="0" class="w-20 h-8 px-2 rounded-lg border border-stone-200 text-sm text-center mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />
         <span>porsi</span>
         <span class="flex-1"></span>
-        <button type="button" onclick="resetAllToSP()" class="text-xs border border-stone-300 px-2 py-1 rounded hover:bg-stone-50 text-stone-500">↺ Reset Semua ke SP</button>
+        <button type="button" onclick="resetAllToSP()" class="text-xs font-medium border border-stone-200 px-2.5 py-1.5 rounded-lg hover:bg-stone-50 text-stone-500 shadow-sm transition-all">↺ Reset Semua ke SP</button>
       </div>
       <div id="bahan-list" class="space-y-2"></div>
     </div>
@@ -603,17 +598,17 @@ function renderBahanList() {
       return '<div class="mb-1.5">' +
         '<div class="grid grid-cols-12 gap-1.5 items-center">' +
           '<div class="col-span-4 relative">' +
-            '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
-            '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-md shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
+            '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
+            '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-lg shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
           '</div>' +
           '<div class="col-span-3 flex">' +
-            '<input type="number" step="' + inputStep + '" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-9 px-2 border border-stone-200 rounded-md text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" title="' + inputTitle + '" />' +
-            '<span class="inline-flex items-center px-2 h-9 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-md whitespace-nowrap">' + displaySatuan + '</span>' +
+            '<input type="number" step="' + inputStep + '" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-10 px-3 border border-stone-200 rounded-l-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" title="' + inputTitle + '" />' +
+            '<span class="inline-flex items-center px-2.5 h-10 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-lg whitespace-nowrap">' + displaySatuan + '</span>' +
           '</div>' +
           '<div class="col-span-4">' +
-            '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="w-full h-9 px-2 border border-stone-200 rounded-md text-sm" />' +
+            '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
           '</div>' +
-          '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 text-red-600 text-center py-2 hover:bg-red-50 rounded-md transition-colors" title="Hapus bahan">×</button>' +
+          '<button type="button" onclick="removeBahanRow(' + i + ')" class="col-span-1 inline-flex items-center justify-center h-10 w-full text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Hapus bahan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
         '</div>' +
       '</div>';
   }).join('');
@@ -984,12 +979,12 @@ async function openMenuPoModal() {
       Membuat Purchase Order dari seluruh bahan yang digunakan dalam menu "${currentMenu.nama}".
       Pilih supplier dan klik "Buat PO" untuk melanjutkan.
     </div>
-    <div><label class="text-sm font-medium">Supplier *</label>
-      <select id="po-supplier" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
+    <div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Supplier *</label>
+      <select id="po-supplier" class="w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
         <option value="">Pilih Supplier...</option>
       </select></div>
-    <div class="mt-3"><label class="text-sm font-medium">Catatan (opsional)</label>
-      <textarea id="po-notes" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md" placeholder="Catatan untuk supplier..."></textarea></div>
+    <div class="mt-3"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Catatan (opsional)</label>
+      <textarea id="po-notes" rows="2" class="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="Catatan untuk supplier..."></textarea></div>
     <div id="menu-po-preview" class="mt-4 text-xs text-stone-500"></div>
   `;
   document.getElementById('modal').classList.remove('hidden');
@@ -1112,12 +1107,12 @@ function openAIDialog() {
       Membuat Purchase Order dari seluruh bahan yang digunakan dalam menu "${currentMenu.nama}".
       Pilih supplier dan klik "Buat PO" untuk melanjutkan.
     </div>
-    <div><label class="text-sm font-medium">Supplier *</label>
-      <select id="po-supplier" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
+    <div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Supplier *</label>
+      <select id="po-supplier" class="w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
         <option value="">Pilih Supplier...</option>
       </select></div>
-    <div class="mt-3"><label class="text-sm font-medium">Catatan (opsional)</label>
-      <textarea id="po-notes" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md" placeholder="Catatan untuk supplier..."></textarea></div>
+    <div class="mt-3"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Catatan (opsional)</label>
+      <textarea id="po-notes" rows="2" class="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="Catatan untuk supplier..."></textarea></div>
     <div id="menu-po-preview" class="mt-4 text-xs text-stone-500"></div>
   `;
   document.getElementById('modal').classList.remove('hidden');
@@ -1227,12 +1222,12 @@ async function createPoFromMenu(menuId) {
 function openAIDialog() {
   document.getElementById('modal-title').textContent = '✨ Saran Menu AI';
   document.getElementById('modal-body').innerHTML = `
-    <div><label class="text-sm">Kategori Penerima</label>
-      <select id="ai-kat" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
+    <div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Kategori Penerima</label>
+      <select id="ai-kat" class="w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
         ${['TK/PAUD','SD 1-3','SD 4-6','SMP','SMA','Ibu Hamil','Ibu Menyusui','Balita','Posyandu'].map(o => `<option>${o}</option>`).join('')}
       </select></div>
-    <div class="mt-3"><label class="text-sm">Catatan (opsional)</label>
-      <textarea id="ai-note" rows="2" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md" placeholder="Mis. hindari kacang, bahan lokal Jawa Tengah"></textarea></div>
+    <div class="mt-3"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Catatan (opsional)</label>
+      <textarea id="ai-note" rows="2" class="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="Mis. hindari kacang, bahan lokal Jawa Tengah"></textarea></div>
     <div id="ai-out" class="mt-4"></div>`;
   document.getElementById('modal-save').style.display = 'none';
   document.getElementById('modal').classList.remove('hidden');
