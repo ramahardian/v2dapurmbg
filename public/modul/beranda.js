@@ -44,53 +44,36 @@ async function renderDashboardKeuangan() {
     const labaLabel = d.laba_rugi >= 0 ? 'Laba' : 'Rugi';
 
     // Stat cards
-    let html = `
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-      <div class="bg-white border border-stone-200 rounded-xl p-4 sm:p-5">
-        <div class="flex items-center gap-2 mb-2">
-          <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </div>
-          <div class="text-[11px] uppercase tracking-wider font-medium text-stone-500">Saldo Kas</div>
+    const statCards = [
+      { label: 'Saldo Kas', value: fmtIDR(d.saldo_kas), gradient: 'from-emerald-50 to-emerald-100/60', border: 'border-emerald-200/60', icon: 'circle', iconColor: 'text-emerald-500', textColor: 'text-emerald-800', extra: '' },
+      { label: 'Pendapatan Bulan Ini', value: fmtIDR(d.pendapatan_bulan_ini), gradient: 'from-blue-50 to-blue-100/60', border: 'border-blue-200/60', icon: 'arrow-up', iconColor: 'text-blue-500', textColor: 'text-blue-800', extra: `${growthBadge(d.pendapatan_growth)} <span class="text-[10px] text-stone-400">vs bulan lalu</span>` },
+      { label: 'Biaya Bulan Ini', value: fmtIDR(d.biaya_bulan_ini), gradient: 'from-orange-50 to-orange-100/60', border: 'border-orange-200/60', icon: 'arrow-down', iconColor: 'text-orange-500', textColor: 'text-orange-800', extra: `${growthBadge(d.biaya_growth)} <span class="text-[10px] text-stone-400">vs bulan lalu</span>` },
+      { label: `${labaLabel} Bulan Ini`, value: fmtIDR(Math.abs(d.laba_rugi)), gradient: d.laba_rugi >= 0 ? 'from-emerald-50 to-emerald-100/60' : 'from-red-50 to-red-100/60', border: d.laba_rugi >= 0 ? 'border-emerald-200/60' : 'border-red-200/60', icon: 'dollar', iconColor: labaClass, textColor: labaClass, extra: `<span class="text-[10px] text-stone-500">Margin: ${d.margin}%</span>` },
+    ];
+    let html = `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">`;
+    statCards.forEach(c => {
+      const iconSvg = {
+        'circle': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+        'arrow-up': '<path d="M12 19V5m0 0l-7 7m7-7l7 7"/>',
+        'arrow-down': '<path d="M12 5v14m0 0l7-7m-7 7l-7-7"/>',
+        'dollar': '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+      }[c.icon];
+      html += `
+      <div class="bg-gradient-to-br ${c.gradient} rounded-2xl border ${c.border} p-4 sm:p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-semibold uppercase tracking-wider ${c.textColor}">${c.label}</span>
+          <svg class="w-4 h-4 ${c.iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">${iconSvg}</svg>
         </div>
-        <div class="mono text-xl sm:text-2xl font-bold">${fmtIDR(d.saldo_kas)}</div>
-      </div>
-      <div class="bg-white border border-stone-200 rounded-xl p-4 sm:p-5">
-        <div class="flex items-center gap-2 mb-2">
-          <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 19V5m0 0l-7 7m7-7l7 7"/></svg>
-          </div>
-          <div class="text-[11px] uppercase tracking-wider font-medium text-stone-500">Pendapatan Bulan Ini</div>
-        </div>
-        <div class="mono text-xl sm:text-2xl font-bold">${fmtIDR(d.pendapatan_bulan_ini)}</div>
-        <div class="mt-1">${growthBadge(d.pendapatan_growth)} <span class="text-[10px] text-stone-400">vs bulan lalu</span></div>
-      </div>
-      <div class="bg-white border border-stone-200 rounded-xl p-4 sm:p-5">
-        <div class="flex items-center gap-2 mb-2">
-          <div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
-            <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 5v14m0 0l7-7m-7 7l-7-7"/></svg>
-          </div>
-          <div class="text-[11px] uppercase tracking-wider font-medium text-stone-500">Biaya Bulan Ini</div>
-        </div>
-        <div class="mono text-xl sm:text-2xl font-bold">${fmtIDR(d.biaya_bulan_ini)}</div>
-        <div class="mt-1">${growthBadge(d.biaya_growth)} <span class="text-[10px] text-stone-400">vs bulan lalu</span></div>
-      </div>
-      <div class="bg-white border border-stone-200 rounded-xl p-4 sm:p-5">
-        <div class="flex items-center gap-2 mb-2">
-          <div class="w-8 h-8 rounded-lg ${labaClass.replace('text-', 'bg-').replace('600', '100')} flex items-center justify-center shrink-0">
-            <svg class="w-4 h-4 ${labaClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          </div>
-          <div class="text-[11px] uppercase tracking-wider font-medium text-stone-500">${labaLabel} Bulan Ini</div>
-        </div>
-        <div class="mono text-xl sm:text-2xl font-bold ${labaClass}">${fmtIDR(Math.abs(d.laba_rugi))}</div>
-        <div class="mt-1"><span class="text-[10px] text-stone-500">Margin: ${d.margin}%</span></div>
-      </div>
-    </div>`;
+        <div class="mono text-xl sm:text-2xl font-bold ${c.textColor}">${c.value}</div>
+        ${c.extra ? `<div class="mt-1">${c.extra}</div>` : ''}
+      </div>`;
+    });
+    html += `</div>`;
 
     // Low stock alert
     if (d.stok_menipis > 0) {
       html += `
-      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center gap-3">
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-center gap-3 shadow-sm">
         <div class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
           <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
         </div>
@@ -105,38 +88,40 @@ async function renderDashboardKeuangan() {
     // Recent transactions table
     const transaksi = d.transaksi_terbaru || [];
     html += `
-    <div class="bg-white border border-stone-200 rounded-xl overflow-hidden">
+    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
       <div class="px-4 sm:px-5 py-3 sm:py-4 border-b border-stone-200 flex items-center justify-between">
-        <h3 class="font-bold text-sm">Transaksi Terbaru</h3>
-        <span class="text-[10px] text-stone-500">${d.bulan}/${d.tahun}</span>
+        <h3 class="font-bold text-sm text-stone-800">Transaksi Terbaru</h3>
+        <span class="text-[10px] font-medium text-stone-500">${d.bulan}/${d.tahun}</span>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-xs">
+        <table class="w-full">
           <thead>
-            <tr class="bg-stone-50">
-              <th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold text-stone-500">Tanggal</th>
-              <th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold text-stone-500">Tipe</th>
-              <th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold text-stone-500">Kategori</th>
-              <th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold text-stone-500">Deskripsi</th>
-              <th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold text-stone-500">Jumlah</th>
+            <tr class="border-b border-stone-100">
+              <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Tanggal</th>
+              <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Tipe</th>
+              <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kategori</th>
+              <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Deskripsi</th>
+              <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Jumlah</th>
             </tr>
           </thead>
           <tbody>`;
 
     if (transaksi.length === 0) {
-      html += '<tr><td colspan="5" class="text-center py-8 text-stone-400">Belum ada transaksi</td></tr>';
+      html += '<tr><td colspan="5" class="text-center py-12 text-stone-400">Belum ada transaksi</td></tr>';
     } else {
       transaksi.forEach(t => {
-        const tipeClass = t.tipe === 'masuk' ? 'text-emerald-600' : 'text-red-600';
+        const isMasuk = t.tipe === 'masuk';
+        const tipeClass = isMasuk ? 'text-emerald-600' : 'text-red-600';
+        const badgeBg = isMasuk ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700';
         html += `
-          <tr class="border-t border-stone-100 hover:bg-stone-50 transition-colors">
-            <td class="px-3 sm:px-4 py-2.5 mono text-[10px]">${fmtDate(t.tanggal)}</td>
-            <td class="px-3 sm:px-4 py-2.5">
-              <span class="badge ${tipeClass === 'text-emerald-600' ? 'badge-hadir' : 'badge-alpha'}">${t.tipe}</span>
+          <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+            <td class="px-4 py-3 mono text-[10px] text-stone-600">${fmtDate(t.tanggal)}</td>
+            <td class="px-4 py-3">
+              <span class="inline-block px-2.5 py-0.5 text-[10px] font-semibold rounded-lg ${badgeBg}">${t.tipe}</span>
             </td>
-            <td class="px-3 sm:px-4 py-2.5">${t.kategori || '-'}</td>
-            <td class="px-3 sm:px-4 py-2.5 max-w-[200px] truncate">${escHtml(t.deskripsi || '-')}</td>
-            <td class="px-3 sm:px-4 py-2.5 text-right mono font-medium ${tipeClass}">${fmtIDR(t.jumlah)}</td>
+            <td class="px-4 py-3 text-xs text-stone-600">${t.kategori || '-'}</td>
+            <td class="px-4 py-3 text-xs text-stone-600 max-w-[200px] truncate">${escHtml(t.deskripsi || '-')}</td>
+            <td class="px-4 py-3 text-right mono text-xs font-semibold ${tipeClass}">${fmtIDR(t.jumlah)}</td>
           </tr>`;
       });
     }
