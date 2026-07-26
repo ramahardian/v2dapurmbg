@@ -1873,7 +1873,7 @@ function editSaldoAwal(current) {
   overlay.id = 'saldo-awal-modal';
   overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center';
   overlay.innerHTML =
-    '<div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="tutupModalSaldoAwal()"></div>' +
+    '<div class="absolute inset-0 bg-black/40 " onclick="tutupModalSaldoAwal()"></div>' +
     '<div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform transition-all duration-200 animate-in fade-in zoom-in-95">' +
       // Header
       '<div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5">' +
