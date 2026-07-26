@@ -449,9 +449,8 @@ function registerRabRoutes(router) {
       let grandPenerima = 0;
       let grandTotal = 0;
       const POSYANDU_SLICE = [
-        { subKat: 'Ibu Hamil', display: 'Bumil/Busui', col: 'total_besar' },
-        { subKat: 'Ibu Menyusui', display: 'Bumil/Busui', col: 'total_besar' },
-        { subKat: 'Balita', display: 'Balita', col: 'total_kecil' },
+        { display: 'Bumil/Busui', col: 'total_besar' },
+        { display: 'Balita', col: 'total_kecil' },
       ];
       const rows = [];
       for (const p of penerima) {
