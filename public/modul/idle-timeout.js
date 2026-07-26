@@ -1,5 +1,5 @@
 let idleTimer = null;
-const IDLE_TIMEOUT = 10 * 1000;
+const IDLE_TIMEOUT = 5 * 60 * 1000;
 const ACTIVITY_EVENTS = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
 
 function resetIdleTimer() {
