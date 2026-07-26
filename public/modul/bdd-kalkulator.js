@@ -271,7 +271,7 @@ async function renderBddKalkulator() {
     '</div>',
 
     // Panel Utama
-    '<div class="bg-white border border-stone-200 rounded-xl p-5 mb-4">',
+    '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-4">',
 
       // Pilih bahan
       '<div class="mb-5">',
@@ -335,31 +335,31 @@ async function renderBddKalkulator() {
     '<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">',
 
       // Hasil Berat Bersih
-      '<div class="bg-white border border-stone-200 rounded-xl p-5">',
-        '<div class="text-xs uppercase tracking-wider text-stone-500 font-medium mb-1">Berat Bersih</div>',
-        '<div class="text-2xl font-bold text-emerald-700"><span id="bdd-hasil-bersih" class="mono">0</span> <span class="text-sm font-normal text-stone-400">g</span></div>',
-        '<div class="text-xs text-stone-400 mt-1">Bagian yang dapat dimakan</div>',
+      '<div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-5 shadow-sm">',
+        '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Berat Bersih</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>',
+        '<div class="text-2xl font-bold text-emerald-800"><span id="bdd-hasil-bersih" class="mono">0</span> <span class="text-sm font-normal text-emerald-500">g</span></div>',
+        '<div class="text-[10px] text-emerald-600/70">Bagian yang dapat dimakan</div>',
       '</div>',
 
       // Hasil Berat Kotor
-      '<div class="bg-white border border-stone-200 rounded-xl p-5">',
-        '<div class="text-xs uppercase tracking-wider text-stone-500 font-medium mb-1">Berat Kotor</div>',
-        '<div class="text-2xl font-bold text-amber-700"><span id="bdd-hasil-kotor" class="mono">0</span> <span class="text-sm font-normal text-stone-400">g</span></div>',
-        '<div class="text-xs text-stone-400 mt-1">Berat sebelum dibersihkan</div>',
+      '<div class="bg-gradient-to-br from-amber-50 to-amber-100/60 rounded-2xl border border-amber-200/60 p-5 shadow-sm">',
+        '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Berat Kotor</span><svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></div>',
+        '<div class="text-2xl font-bold text-amber-800"><span id="bdd-hasil-kotor" class="mono">0</span> <span class="text-sm font-normal text-amber-500">g</span></div>',
+        '<div class="text-[10px] text-amber-600/70">Berat sebelum dibersihkan</div>',
       '</div>',
 
       // Hasil Kebutuhan
-      '<div class="bg-white border border-stone-200 rounded-xl p-5 bg-emerald-50 border-emerald-200">',
-        '<div class="text-xs uppercase tracking-wider text-emerald-600 font-medium mb-1">Total Kebutuhan</div>',
-        '<div class="text-2xl font-bold text-emerald-800"><span id="bdd-hasil-kebutuhan" class="mono">0</span> <span class="text-sm font-normal text-emerald-500">kg</span></div>',
-        '<div class="text-xs text-emerald-500 mt-1">Untuk <span id="bdd-label-siswa">0</span> siswa</div>',
+      '<div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-5 shadow-sm">',
+        '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Total Kebutuhan</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>',
+        '<div class="text-2xl font-bold text-blue-800"><span id="bdd-hasil-kebutuhan" class="mono">0</span> <span class="text-sm font-normal text-blue-500">kg</span></div>',
+        '<div class="text-[10px] text-blue-600/70">Untuk <span id="bdd-label-siswa">0</span> siswa</div>',
       '</div>',
 
     '</div>',
 
     // Breakdown Rumus
-    '<div class="bg-white border border-stone-200 rounded-xl p-5 mb-4">',
-      '<div class="text-sm font-bold text-stone-700 mb-3">📐 Detail Perhitungan</div>',
+    '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-4">',
+      '<div class="text-sm font-bold text-stone-700 mb-3">Detail Perhitungan</div>',
       '<div class="space-y-2 text-sm">',
         '<div class="flex items-start gap-3">',
           '<span class="text-stone-400 font-medium shrink-0 w-28">Rumus:</span>',
