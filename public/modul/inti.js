@@ -404,13 +404,14 @@ function renderKaryawanList(filter) {
     return;
   }
   container.innerHTML = filtered.map(function(k) {
-    return '<label class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-black/5 transition">'
+    return '<label class="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all hover:bg-blue-50 active:bg-blue-100" style="border-bottom:1px solid var(--border)">'
       + '<input type="checkbox" class="karyawan-checkbox" value="'+k.id+'" onchange="updatePilihSemuaCheckbox()">'
+      + '<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style="background:var(--border);color:var(--text-body)">'+getInitials(k.nama)+'</div>'
       + '<div class="flex-1 min-w-0">'
-      + '<div class="text-xs font-medium">'+escHtml(k.nama)+'</div>'
-      + '<div class="text-[10px]" style="opacity:0.5">'+escHtml(k.departemen||k.jabatan||'-')+'</div>'
+      + '<div class="text-sm font-medium" style="color:var(--text-body)">'+escHtml(k.nama)+'</div>'
+      + '<div class="text-[11px]" style="color:var(--text-body);opacity:0.5">'+escHtml(k.departemen||k.jabatan||'-')+'</div>'
       + '</div>'
-      + '<div class="text-[10px]" style="opacity:0.4">'+escHtml(k.nik||'')+'</div>'
+      + '<div class="text-[11px] mono" style="color:var(--text-body);opacity:0.35">'+escHtml(k.nik||'')+'</div>'
       + '</label>';
   }).join('');
 }

@@ -207,24 +207,24 @@
       </div>
       <div class="p-5 overflow-y-auto flex-1 space-y-4">
         <div>
-          <label class="text-xs font-medium" style="opacity:.7">Judul</label>
-          <input id="pesan-judul" type="text" class="w-full px-3 py-2 border rounded-lg text-sm mt-1" placeholder="Contoh: Pengumuman" style="background:var(--bg-card);border-color:var(--border);color:var(--text-body)">
+          <label class="block text-xs font-semibold uppercase tracking-wider" style="color:var(--text-body);opacity:0.6">Judul</label>
+          <input id="pesan-judul" type="text" class="w-full px-4 py-2.5 rounded-xl text-sm mt-1.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="Contoh: Pengumuman" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-body)">
         </div>
         <div>
-          <label class="text-xs font-medium" style="opacity:.7">Pesan</label>
-          <textarea id="pesan-isi" class="w-full px-3 py-2 border rounded-lg text-sm mt-1" rows="3" placeholder="Tulis pesan..." style="background:var(--bg-card);border-color:var(--border);color:var(--text-body)"></textarea>
+          <label class="block text-xs font-semibold uppercase tracking-wider" style="color:var(--text-body);opacity:0.6">Pesan</label>
+          <textarea id="pesan-isi" class="w-full px-4 py-2.5 rounded-xl text-sm mt-1.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" rows="3" placeholder="Tulis pesan..." style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-body)"></textarea>
         </div>
         <div>
-          <label class="text-xs font-medium" style="opacity:.7">Penerima</label>
-          <div class="mt-1 flex gap-2">
-            <input id="pesan-cari" type="text" class="flex-1 px-3 py-2 border rounded-lg text-sm" placeholder="Cari karyawan..." oninput="filterKaryawanList()" style="background:var(--bg-card);border-color:var(--border);color:var(--text-body)">
-            <label class="flex items-center gap-1.5 text-xs cursor-pointer px-3 py-2 rounded-lg border" style="border-color:var(--border)">
+          <label class="block text-xs font-semibold uppercase tracking-wider" style="color:var(--text-body);opacity:0.6">Penerima</label>
+          <div class="mt-1.5 flex gap-2">
+            <input id="pesan-cari" type="text" class="flex-1 px-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="Cari karyawan..." oninput="filterKaryawanList()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-body)">
+            <label class="flex items-center gap-1.5 text-xs cursor-pointer px-3 py-2.5 rounded-xl font-medium transition-all hover:bg-blue-50" style="border:1px solid var(--border);color:var(--text-body)">
               <input type="checkbox" id="pilih-semua-karyawan" onchange="togglePilihSemua(this.checked)">
               Semua
             </label>
           </div>
-          <div id="daftar-karyawan" class="mt-2 max-h-[200px] overflow-y-auto space-y-0.5 border rounded-lg p-1" style="border-color:var(--border)">
-            <div class="px-3 py-3 text-center text-sm" style="opacity:0.5">Memuat daftar karyawan...</div>
+          <div id="daftar-karyawan" class="mt-2 max-h-[240px] overflow-y-auto rounded-xl" style="border:1px solid var(--border)">
+            <div class="px-4 py-6 text-center text-sm" style="color:var(--text-body);opacity:0.4">Memuat daftar karyawan...</div>
           </div>
         </div>
       </div>
