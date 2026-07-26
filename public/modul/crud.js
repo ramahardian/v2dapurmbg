@@ -290,12 +290,21 @@ function openForm(cfg, editing) {
     const sel = document.getElementById('f-' + f.k);
     api.get(f.source).then(rows => {
       const list = Array.isArray(rows) ? rows : (rows.data || []);
-      sel.innerHTML = '<option value="">— Pilih ' + f.l + ' —</option>' +
-        list.map(r => {
-          var label = r[f.labelField || 'nama'];
-          if (f.labelFormat) label = f.labelFormat.replace(/\{(\w+)\}/g, function(_, k) { return r[k] != null ? r[k] : ''; });
-          return `<option value="${r[f.valueField || 'id']}" data-item='${encodeURIComponent(JSON.stringify(r))}' ${editing?.[f.k] == r[f.valueField || 'id'] ? 'selected' : ''}>${label}</option>`;
-        }).join('');
+      sel.innerHTML = '';
+      if (!list.length) {
+        sel.innerHTML = '<option value="">— Data ' + f.l + ' belum tersedia —</option>';
+        var emptyInfo = document.createElement('div');
+        emptyInfo.className = 'flex items-center gap-2 p-3 mt-2 text-amber-700 bg-amber-50 rounded-lg text-xs';
+        emptyInfo.innerHTML = '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div>Belum ada data ' + f.l + '. ' + (f.emptyHint || 'Silakan isi data terlebih dahulu di menu terkait.') + '</div>';
+        sel.parentNode.appendChild(emptyInfo);
+      } else {
+        sel.innerHTML = '<option value="">— Pilih ' + f.l + ' —</option>' +
+          list.map(r => {
+            var label = r[f.labelField || 'nama'];
+            if (f.labelFormat) label = f.labelFormat.replace(/\{(\w+)\}/g, function(_, k) { return r[k] != null ? r[k] : ''; });
+            return `<option value="${r[f.valueField || 'id']}" data-item='${encodeURIComponent(JSON.stringify(r))}' ${editing?.[f.k] == r[f.valueField || 'id'] ? 'selected' : ''}>${label}</option>`;
+          }).join('');
+      }
       sel.onchange = function() {
         const opt = sel.options[sel.selectedIndex];
         if (opt && opt.dataset.item) {
