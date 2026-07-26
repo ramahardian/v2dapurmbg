@@ -534,3 +534,21 @@ INSERT INTO standar_sp (jenjang, kategori_sp, sp_value) VALUES
 ('SMA', 'Susu', 1),
 ('SMA', 'Minyak', 1.5)
 ON DUPLICATE KEY UPDATE sp_value=VALUES(sp_value);
+
+CREATE TABLE IF NOT EXISTS notifikasi (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  pengirim_id INT DEFAULT NULL,
+  penerima_id INT NOT NULL,
+  judul VARCHAR(200) NOT NULL,
+  pesan TEXT,
+  link VARCHAR(500) DEFAULT NULL,
+  is_read TINYINT(1) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+  FOREIGN KEY (pengirim_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (penerima_id) REFERENCES karyawan(id) ON DELETE CASCADE,
+  INDEX idx_notif_tenant (tenant_id),
+  INDEX idx_notif_penerima (penerima_id),
+  INDEX idx_notif_read (penerima_id, is_read)
+) ENGINE=InnoDB;

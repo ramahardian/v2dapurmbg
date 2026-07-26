@@ -281,6 +281,216 @@ function closeStockNotif() {
   document.getElementById('stock-notif-dropdown')?.classList.add('hidden');
 }
 
+// ===== Notifikasi Pesan (Admin) =====
+let pesanDropdownOpen = false;
+let _pesanKaryawanData = [];
+
+function togglePesanDropdown() {
+  const dd = document.getElementById('pesan-dropdown');
+  const list = document.getElementById('pesan-list');
+  if (!dd) return;
+  pesanDropdownOpen = !pesanDropdownOpen;
+  dd.classList.toggle('hidden', !pesanDropdownOpen);
+  if (pesanDropdownOpen) {
+    list.innerHTML = '<div class="px-4 py-6 text-center text-sm" style="opacity:0.5">Memuat...</div>';
+    loadPesanList();
+  }
+}
+
+function closePesanDropdown() {
+  pesanDropdownOpen = false;
+  document.getElementById('pesan-dropdown')?.classList.add('hidden');
+}
+
+async function loadPesanUnread() {
+  try {
+    const r = await fetch('/api/notifikasi/unread-count?_='+Date.now());
+    const d = await r.json();
+    const badge = document.getElementById('pesan-notif-badge');
+    if (!badge) return;
+    if (d.count > 0) {
+      badge.textContent = d.count > 99 ? '99+' : d.count;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  } catch {}
+}
+
+async function loadPesanList() {
+  const list = document.getElementById('pesan-list');
+  if (!list) return;
+  try {
+    const r = await fetch('/api/notifikasi/saya?limit=20&_='+Date.now());
+    const d = await r.json();
+    if (!d.data || !d.data.length) {
+      list.innerHTML = '<div class="px-4 py-8 text-center text-sm" style="opacity:0.5"><svg class="w-8 h-8 mx-auto mb-2" style="opacity:0.3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>Tidak ada pesan</div>';
+      return;
+    }
+    list.innerHTML = d.data.map(function(n) {
+      return '<div class="px-4 py-3 border-b cursor-pointer transition hover:bg-black/5" style="border-color:var(--border)" onclick="bacaPesan('+n.id+')">'
+        + '<div class="flex items-start gap-3">'
+        + '<div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold '+(n.is_read ? 'bg-stone-100 text-stone-500' : 'bg-blue-100 text-blue-700')+'">'
+        + (n.pengirim_nama ? getInitials(n.pengirim_nama) : '?')
+        + '</div>'
+        + '<div class="flex-1 min-w-0">'
+        + '<div class="flex items-start justify-between gap-2">'
+        + '<div class="font-medium text-xs '+(n.is_read ? '' : 'text-blue-700')+'">'+escHtml(n.judul)+'</div>'
+        + (!n.is_read ? '<span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1"></span>' : '')
+        + '</div>'
+        + (n.pesan ? '<div class="text-[11px] mt-0.5 line-clamp-2" style="opacity:0.6">'+escHtml(n.pesan)+'</div>' : '')
+        + '<div class="text-[10px] mt-1" style="opacity:0.4">'+fmtWaktu(n.created_at)+'</div>'
+        + '</div></div></div>';
+    }).join('');
+  } catch {
+    list.innerHTML = '<div class="px-4 py-6 text-center text-sm text-red-500">Gagal memuat pesan</div>';
+  }
+}
+
+async function bacaPesan(id) {
+  try {
+    await fetch('/api/notifikasi/'+id+'/baca', { method:'PUT' });
+    loadPesanUnread();
+    loadPesanList();
+  } catch {}
+}
+
+async function bacaSemuaPesan() {
+  try {
+    await fetch('/api/notifikasi/baca-semua', { method:'PUT' });
+    loadPesanUnread();
+    loadPesanList();
+  } catch {}
+}
+
+function openKirimPesanModal() {
+  document.getElementById('kirim-pesan-modal').classList.remove('hidden');
+  document.getElementById('kirim-pesan-modal').style.display = 'flex';
+  document.getElementById('pesan-judul').value = '';
+  document.getElementById('pesan-isi').value = '';
+  document.getElementById('pesan-cari').value = '';
+  document.getElementById('pilih-semua-karyawan').checked = false;
+  loadKaryawanList();
+}
+
+function closeKirimPesanModal() {
+  document.getElementById('kirim-pesan-modal').classList.add('hidden');
+  document.getElementById('kirim-pesan-modal').style.display = '';
+}
+
+async function loadKaryawanList() {
+  const container = document.getElementById('daftar-karyawan');
+  if (!container) return;
+  try {
+    const r = await fetch('/api/notifikasi/karyawan-list?_='+Date.now());
+    _pesanKaryawanData = await r.json();
+    renderKaryawanList('');
+  } catch {
+    container.innerHTML = '<div class="px-3 py-3 text-center text-sm text-red-500">Gagal memuat karyawan</div>';
+  }
+}
+
+function renderKaryawanList(filter) {
+  const container = document.getElementById('daftar-karyawan');
+  if (!container) return;
+  const data = _pesanKaryawanData;
+  const filtered = filter ? data.filter(function(k) {
+    return (k.nama||'').toLowerCase().indexOf(filter.toLowerCase()) !== -1
+      || (k.nik||'').indexOf(filter) !== -1
+      || (k.departemen||'').toLowerCase().indexOf(filter.toLowerCase()) !== -1;
+  }) : data;
+  if (!filtered.length) {
+    container.innerHTML = '<div class="px-3 py-3 text-center text-sm" style="opacity:0.5">Tidak ada karyawan</div>';
+    return;
+  }
+  container.innerHTML = filtered.map(function(k) {
+    return '<label class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-black/5 transition">'
+      + '<input type="checkbox" class="karyawan-checkbox" value="'+k.id+'" onchange="updatePilihSemuaCheckbox()">'
+      + '<div class="flex-1 min-w-0">'
+      + '<div class="text-xs font-medium">'+escHtml(k.nama)+'</div>'
+      + '<div class="text-[10px]" style="opacity:0.5">'+escHtml(k.departemen||k.jabatan||'-')+'</div>'
+      + '</div>'
+      + '<div class="text-[10px]" style="opacity:0.4">'+escHtml(k.nik||'')+'</div>'
+      + '</label>';
+  }).join('');
+}
+
+function filterKaryawanList() {
+  const filter = document.getElementById('pesan-cari').value;
+  renderKaryawanList(filter);
+}
+
+function togglePilihSemua(checked) {
+  document.querySelectorAll('.karyawan-checkbox').forEach(function(cb) {
+    cb.checked = checked;
+  });
+}
+
+function updatePilihSemuaCheckbox() {
+  const all = document.querySelectorAll('.karyawan-checkbox');
+  const checked = document.querySelectorAll('.karyawan-checkbox:checked');
+  const pilihSemua = document.getElementById('pilih-semua-karyawan');
+  if (pilihSemua) {
+    pilihSemua.checked = all.length > 0 && all.length === checked.length;
+  }
+}
+
+async function kirimPesan() {
+  const judul = document.getElementById('pesan-judul').value.trim();
+  const pesan = document.getElementById('pesan-isi').value.trim();
+  const checked = document.querySelectorAll('.karyawan-checkbox:checked');
+  if (!judul) { showToast('Judul pesan wajib diisi', 'error'); return; }
+  if (!checked.length) { showToast('Pilih minimal 1 penerima', 'error'); return; }
+  const penerima_ids = Array.from(checked).map(function(cb) { return parseInt(cb.value); });
+  const btn = document.getElementById('btn-kirim-pesan');
+  btn.disabled = true;
+  btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Mengirim...';
+  try {
+    const r = await fetch('/api/notifikasi/kirim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ penerima_ids, judul, pesan: pesan || null })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Gagal kirim');
+    showToast('Pesan terkirim ke ' + d.jumlah + ' karyawan', 'success');
+    closeKirimPesanModal();
+    loadPesanUnread();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Kirim';
+  }
+}
+
+function fmtWaktu(ts) {
+  if (!ts) return '-';
+  const d = new Date(ts);
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  if (diff < 60) return 'Baru saja';
+  if (diff < 3600) return Math.floor(diff/60) + ' menit lalu';
+  if (diff < 86400) return Math.floor(diff/3600) + ' jam lalu';
+  if (diff < 172800) return 'Kemarin';
+  return d.toLocaleDateString('id-ID', { day:'2-digit', month:'short' });
+}
+
+// Click outside to close pesan dropdown
+document.addEventListener('click', function(e) {
+  if (!pesanDropdownOpen) return;
+  const wrap = document.getElementById('pesan-notif-wrap');
+  const dd = document.getElementById('pesan-dropdown');
+  if (pesanDropdownOpen && wrap && !wrap.contains(e.target) && dd && !dd.contains(e.target)) {
+    pesanDropdownOpen = false;
+    dd.classList.add('hidden');
+  }
+});
+
+// Poll for unread messages every 60 seconds
+setInterval(loadPesanUnread, 60000);
+setTimeout(loadPesanUnread, 3000);
+
 function navigateTo(key) {
   closeStockNotif();
   const link = document.querySelector(`a[data-key="${key}"]`);

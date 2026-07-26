@@ -92,6 +92,12 @@
         </div>
       </div>
       <div class="flex items-center gap-1">
+        <div class="relative" id="notif-wrap">
+          <button id="btn-notif" onclick="toggleNotifDropdown()" class="p-2 text-white/70 hover:text-white transition rounded-lg hover:bg-white/10 relative" title="Notifikasi">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            <span id="notif-badge" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 hidden" style="box-shadow:0 0 0 2px #1e293b">0</span>
+          </button>
+        </div>
         <button id="btn-refresh" class="p-2 text-white/40 hover:text-white/80 transition rounded-lg hover:bg-white/10" title="Refresh">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:1.125rem;height:1.125rem"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
         </button>
@@ -323,6 +329,20 @@
           </form>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ─── Notification Dropdown ─── -->
+  <div id="notif-dropdown" class="fixed right-4 top-16 w-80 rounded-xl shadow-lg border z-50 hidden" style="background:#fff;border-color:#e2e8f0">
+    <div class="px-4 py-3 border-b font-bold text-sm flex items-center justify-between" style="border-color:#e2e8f0">
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        Notifikasi
+      </div>
+      <button id="notif-baca-semua" onclick="bacaSemuaNotif()" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Tandai sudah dibaca</button>
+    </div>
+    <div id="notif-list" class="max-h-[350px] overflow-y-auto">
+      <div class="px-4 py-6 text-center text-sm text-slate-400">Memuat...</div>
     </div>
   </div>
 
@@ -811,8 +831,97 @@
     document.getElementById('btn-logout').addEventListener('click',async()=>{await fetch('/api/auth/logout',{method:'POST'});window.location.href='/absen';});
     document.getElementById('btn-refresh').addEventListener('click',()=>{loadAll();});
 
+    // ─── Notifikasi ───
+    let notifDropdownOpen = false;
+    function toggleNotifDropdown() {
+      notifDropdownOpen = !notifDropdownOpen;
+      const dd = document.getElementById('notif-dropdown');
+      if (notifDropdownOpen) {
+        dd.classList.remove('hidden');
+        loadNotifList();
+      } else {
+        dd.classList.add('hidden');
+      }
+    }
+    document.addEventListener('click', function(e) {
+      const wrap = document.getElementById('notif-wrap');
+      const dd = document.getElementById('notif-dropdown');
+      if (notifDropdownOpen && wrap && !wrap.contains(e.target) && !dd.contains(e.target)) {
+        notifDropdownOpen = false;
+        dd.classList.add('hidden');
+      }
+    });
+
+    async function loadNotifUnread() {
+      try {
+        const r = await fetch('/api/notifikasi/unread-count?_='+Date.now());
+        if (!r.ok) return;
+        const data = await r.json();
+        const badge = document.getElementById('notif-badge');
+        if (data.count > 0) {
+          badge.textContent = data.count > 99 ? '99+' : data.count;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      } catch(e) {}
+    }
+
+    async function loadNotifList() {
+      const list = document.getElementById('notif-list');
+      list.innerHTML = '<div class="px-4 py-6 text-center text-sm text-slate-400"><div class="spinner mx-auto"></div></div>';
+      try {
+        const r = await fetch('/api/notifikasi/saya?limit=20&_='+Date.now());
+        if (!r.ok) throw new Error('Gagal');
+        const data = await r.json();
+        if (data.data.length === 0) {
+          list.innerHTML = '<div class="px-4 py-8 text-center text-sm text-slate-400"><svg class="w-8 h-8 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>Tidak ada notifikasi</div>';
+          return;
+        }
+        var html = '';
+        data.data.forEach(function(n) {
+          var isNew = !n.is_read;
+          var d = new Date(n.created_at);
+          var timeStr = d.toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+          html += '<div class="px-4 py-3 border-b ' + (isNew ? 'bg-blue-50/50' : '') + ' hover:bg-slate-50/50 cursor-pointer transition" style="border-color:#e2e8f0" onclick="bacaNotif(' + n.id + ')">' +
+            '<div class="flex items-start gap-2.5">' +
+              (isNew ? '<span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1.5"></span>' : '<span class="w-2 h-2 rounded-full bg-transparent shrink-0 mt-1.5"></span>') +
+              '<div class="min-w-0 flex-1">' +
+                '<div class="text-xs font-semibold text-slate-800">' + n.judul + '</div>' +
+                (n.pesan ? '<div class="text-[11px] text-slate-500 mt-0.5 line-clamp-2">' + n.pesan + '</div>' : '') +
+                '<div class="text-[10px] text-slate-400 mt-1">' + (n.pengirim_nama ? 'Dari: ' + n.pengirim_nama + ' · ' : '') + timeStr + '</div>' +
+              '</div>' +
+            '</div></div>';
+        });
+        list.innerHTML = html;
+      } catch(e) {
+        list.innerHTML = '<div class="px-4 py-6 text-center text-sm text-red-500">Gagal memuat notifikasi</div>';
+      }
+      loadNotifUnread();
+    }
+
+    async function bacaNotif(id) {
+      try {
+        await fetch('/api/notifikasi/'+id+'/baca', { method:'PUT' });
+        loadNotifUnread();
+        loadNotifList();
+      } catch(e) {}
+    }
+
+    async function bacaSemuaNotif() {
+      try {
+        await fetch('/api/notifikasi/baca-semua', { method:'PUT' });
+        loadNotifUnread();
+        loadNotifList();
+      } catch(e) {}
+    }
+
+    // Poll notifikasi setiap 60 detik
+    setInterval(loadNotifUnread, 60000);
+
     // Init
     loadAll();
+    setTimeout(loadNotifUnread, 2000);
 
     // Service Worker (PWA installable)
     if ('serviceWorker' in navigator) {

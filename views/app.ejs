@@ -130,6 +130,12 @@
               <span id="stock-notif-badge" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 hidden" style="box-shadow:0 0 0 2px var(--bg-header)">0</span>
             </button>
           </div>
+          <div class="relative" id="pesan-notif-wrap">
+            <button id="pesan-notif-btn" onclick="togglePesanDropdown()" class="p-2 rounded-lg relative" style="color:var(--text-body)" title="Pesan">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              <span id="pesan-notif-badge" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 hidden" style="box-shadow:0 0 0 2px var(--bg-header)">0</span>
+            </button>
+          </div>
           <button id="dark-toggle" onclick="toggleDarkMode()" class="p-2 rounded-lg" style="color:var(--text-body)" title="Mode Gelap/Terang">
           <svg id="sun-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
           <svg id="moon-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
@@ -166,6 +172,69 @@
     <div class="flex border-t" style="border-color:var(--border)">
       <a href="/gudang" data-key="gudang" class="flex-1 block px-4 py-2.5 text-xs font-medium text-center" style="opacity:0.7" onclick="closeStockNotif()">Stok</a>
       <a href="/siklus" data-key="siklus" class="flex-1 block px-4 py-2.5 text-xs font-medium text-center border-l" style="border-color:var(--border);opacity:0.7" onclick="closeStockNotif()">Siklus</a>
+    </div>
+  </div>
+
+  <!-- Pesan Notification Dropdown -->
+  <div id="pesan-dropdown" class="fixed right-4 top-16 w-80 rounded-xl shadow-lg border z-50 hidden" style="background:var(--bg-card);border-color:var(--border);color:var(--text-body)">
+    <div class="px-4 py-3 border-b flex items-center justify-between" style="border-color:var(--border)">
+      <span class="font-bold text-sm flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        Pesan
+      </span>
+      <button id="pesan-baca-semua" onclick="bacaSemuaPesan()" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Tandai dibaca</button>
+    </div>
+    <div id="pesan-list" class="max-h-[350px] overflow-y-auto">
+      <div class="px-4 py-6 text-center text-sm" style="opacity:0.5">Memuat...</div>
+    </div>
+    <div class="border-t" style="border-color:var(--border)">
+      <button onclick="openKirimPesanModal()" class="w-full px-4 py-2.5 text-xs font-medium text-center hover:bg-black/5 transition flex items-center justify-center gap-2" style="color:var(--text-body)">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Kirim Pesan Baru
+      </button>
+    </div>
+  </div>
+
+  <!-- Kirim Pesan Modal -->
+  <div id="kirim-pesan-modal" class="fixed inset-0 hidden items-center justify-center z-[60] p-4" style="background:rgba(0,0,0,.65)">
+    <div class="rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-body)">
+      <div class="px-5 py-4 flex justify-between items-center" style="border-bottom:1px solid var(--border)">
+        <h3 class="text-base font-bold flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          Kirim Pesan
+        </h3>
+        <button onclick="closeKirimPesanModal()" class="text-lg" style="opacity:.5">×</button>
+      </div>
+      <div class="p-5 overflow-y-auto flex-1 space-y-4">
+        <div>
+          <label class="text-xs font-medium" style="opacity:.7">Judul</label>
+          <input id="pesan-judul" type="text" class="w-full px-3 py-2 border rounded-lg text-sm mt-1" placeholder="Contoh: Pengumuman" style="background:var(--bg-card);border-color:var(--border);color:var(--text-body)">
+        </div>
+        <div>
+          <label class="text-xs font-medium" style="opacity:.7">Pesan</label>
+          <textarea id="pesan-isi" class="w-full px-3 py-2 border rounded-lg text-sm mt-1" rows="3" placeholder="Tulis pesan..." style="background:var(--bg-card);border-color:var(--border);color:var(--text-body)"></textarea>
+        </div>
+        <div>
+          <label class="text-xs font-medium" style="opacity:.7">Penerima</label>
+          <div class="mt-1 flex gap-2">
+            <input id="pesan-cari" type="text" class="flex-1 px-3 py-2 border rounded-lg text-sm" placeholder="Cari karyawan..." oninput="filterKaryawanList()" style="background:var(--bg-card);border-color:var(--border);color:var(--text-body)">
+            <label class="flex items-center gap-1.5 text-xs cursor-pointer px-3 py-2 rounded-lg border" style="border-color:var(--border)">
+              <input type="checkbox" id="pilih-semua-karyawan" onchange="togglePilihSemua(this.checked)">
+              Semua
+            </label>
+          </div>
+          <div id="daftar-karyawan" class="mt-2 max-h-[200px] overflow-y-auto space-y-0.5 border rounded-lg p-1" style="border-color:var(--border)">
+            <div class="px-3 py-3 text-center text-sm" style="opacity:0.5">Memuat daftar karyawan...</div>
+          </div>
+        </div>
+      </div>
+      <div class="px-5 py-3 flex justify-end gap-2" style="border-top:1px solid var(--border)">
+        <button onclick="closeKirimPesanModal()" class="px-4 py-2 text-sm btn-ghost rounded" style="color:var(--text-body)">Batal</button>
+        <button id="btn-kirim-pesan" onclick="kirimPesan()" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-medium flex items-center gap-2">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          Kirim
+        </button>
+      </div>
     </div>
   </div>
 
