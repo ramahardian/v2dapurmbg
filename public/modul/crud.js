@@ -112,6 +112,7 @@ async function reloadCrud(cfg) {
       return `<td class="px-4 py-3 text-xs text-stone-600">${cell}</td>`;
     }).join('')}
     <td class="px-4 py-3 text-right whitespace-nowrap">
+      ${cfg.suratJalan ? '<button onclick="cetakSuratJalan(' + r.id + ')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Cetak Surat Jalan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>' : ''}
       <button onclick='editRow(${JSON.stringify(cfg).replace(/'/g, "&#39;")}, ${JSON.stringify(r).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
     </td></tr>`).join('');
@@ -640,3 +641,58 @@ window.tanyaAi = async function(fieldId, sourceField) {
     textarea.value = 'Error: ' + (e.message || 'Gagal');
   }
 };
+
+// ===== Surat Jalan Distribusi =====
+async function cetakSuratJalan(id) {
+  try {
+    var res = await api.get('/distribusi/' + id);
+    var d = res.id ? res : (res.data || res);
+    if (!d || !d.id) throw new Error('Data tidak ditemukan');
+    var tgl = fmtDate(d.tanggal_distribusi) || d.tanggal_distribusi;
+    var no = 'SJ/' + String(d.id).padStart(4, '0') + '/' + (d.tanggal_distribusi ? d.tanggal_distribusi.slice(0, 7).replace('-', '/') : '');
+    var html = '<html><head><meta charset="utf-8"><title>Surat Jalan</title>' +
+      '<style>' +
+      'body{font-family:Arial,sans-serif;margin:0;padding:40px;color:#1c1917}' +
+      '.kop{text-align:center;border-bottom:2px solid #1c1917;padding-bottom:12px;margin-bottom:24px}' +
+      '.kop h1{margin:0;font-size:18px;text-transform:uppercase;letter-spacing:1px}' +
+      '.kop p{margin:2px 0;font-size:12px;color:#57534e}' +
+      'h2{text-align:center;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 20px}' +
+      'table.detail{width:100%;border-collapse:collapse;margin-bottom:24px}' +
+      'table.detail td{padding:4px 8px;font-size:12px;vertical-align:top}' +
+      'table.detail td.label{width:120px;font-weight:700;color:#57534e}' +
+      'table.detail td.sep{width:12px;text-align:center}' +
+      'table.items{width:100%;border-collapse:collapse;margin-bottom:32px}' +
+      'table.items th{background:#f5f5f4;font-size:11px;text-transform:uppercase;padding:8px;text-align:left;border:1px solid #d6d3d1}' +
+      'table.items td{font-size:12px;padding:8px;border:1px solid #d6d3d1}' +
+      '.ttd{display:flex;justify-content:space-between;margin-top:48px}' +
+      '.ttd div{text-align:center;width:200px}' +
+      '.ttd .line{margin-top:48px;padding-top:4px;border-top:1px solid #1c1917;font-size:11px}' +
+      '@media print{body{padding:20px}}' +
+      '</style></head><body>' +
+      '<div class="kop"><h1>DAPUR SUKALUYU</h1><p>Jl. Contoh No. 123, Kota Sukaluyu</p><p>Telp: (0265) 123456</p></div>' +
+      '<h2>SURAT JALAN</h2>' +
+      '<table class="detail">' +
+      '<tr><td class="label">No. Surat Jalan</td><td class="sep">:</td><td>' + no + '</td></tr>' +
+      '<tr><td class="label">Tanggal</td><td class="sep">:</td><td>' + tgl + '</td></tr>' +
+      '<tr><td class="label">Kepada</td><td class="sep">:</td><td><strong>' + (d.pm_nama || d.nama_kelompok || '-') + '</strong></td></tr>' +
+      '<tr><td class="label">Alamat</td><td class="sep">:</td><td>' + (d.pm_alamat || d.lokasi || '-') + '</td></tr>' +
+      '<tr><td class="label">Kategori</td><td class="sep">:</td><td>' + (d.kategori_penerima || '-') + '</td></tr>' +
+      (d.kurir ? '<tr><td class="label">Kurir / Driver</td><td class="sep">:</td><td>' + d.kurir + '</td></tr>' : '') +
+      '</table>' +
+      '<table class="items"><thead><tr><th style="width:40px">No</th><th>Deskripsi</th><th style="width:100px;text-align:center">Jumlah</th><th style="width:80px;text-align:center">Satuan</th></tr></thead><tbody>' +
+      '<tr><td style="text-align:center">1</td><td>Paket Makanan ' + (d.kategori_penerima || '') + '</td><td style="text-align:center">' + fmtNum(d.jumlah_porsi || 0) + '</td><td style="text-align:center">Porsi</td></tr>' +
+      '</tbody></table>' +
+      (d.catatan ? '<p style="font-size:11px;color:#57534e;margin-bottom:24px">Catatan: ' + d.catatan + '</p>' : '') +
+      '<div class="ttd">' +
+      '<div><div>Pengirim</div><div class="line">( ' + (d.kurir || '________') + ' )</div></div>' +
+      '<div><div>Mengetahui</div><div class="line">( ______________ )</div></div>' +
+      '<div><div>Penerima</div><div class="line">( ______________ )</div></div>' +
+      '</div></body></html>';
+    var w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    w.print();
+  } catch (e) {
+    showAlert('Gagal memuat data: ' + e.message, 'error');
+  }
+}

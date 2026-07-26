@@ -36,9 +36,10 @@ const MODULES = {
     ], cols: ['tanggal_produksi','menu_nama','kategori_penerima','jumlah_porsi','status'] }
   },
 distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
-    crud: { endpoint: '/distribusi', fields: [
+    crud: { endpoint: '/distribusi', suratJalan: true, fields: [
       { k: 'tanggal_distribusi', l: 'Tanggal', type: 'date', req: true },
-      { k: 'penerima_manfaat_id', l: 'Penerima Manfaat (PM)', type: 'select-api', source: '/penerima_manfaat', valueField: 'id', labelField: 'nama_kelompok', req: true },
+      { k: 'penerima_manfaat_id', l: 'Penerima Manfaat (PM)', type: 'select-api', source: '/penerima_manfaat', valueField: 'id', labelField: 'nama_kelompok', req: true,
+        fill: { nama_kelompok: 'pm_nama', lokasi: 'pm_alamat' } },
       { k: 'kategori_penerima', l: 'Kategori' },
       { k: 'jumlah_porsi', l: 'Jumlah Porsi', type: 'number', fmt: 'num' },
       { k: 'kurir', l: 'Kurir / Driver', type: 'select-api', source: '/karyawan?status=Aktif&jabatan=Driver', valueField: 'nama', labelField: 'nama' },
