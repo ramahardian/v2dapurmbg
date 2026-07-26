@@ -462,7 +462,7 @@ function registerRabRoutes(router) {
 
       // Supplier purchase details
       const [supplierPayments] = await db.query(
-        `SELECT k.id, k.tanggal, k.no_transaksi, k.deskripsi, k.jumlah, s.nama as supplier_nama
+        `SELECT k.id, k.tanggal, k.no_transaksi, k.deskripsi, k.jumlah, s.nama as supplier_nama, po.item as po_item
          FROM kas_bank k
          LEFT JOIN purchase_order po ON po.no_po = k.no_transaksi AND po.tenant_id = k.tenant_id
          LEFT JOIN supplier s ON s.id = po.supplier_id
@@ -472,14 +472,31 @@ function registerRabRoutes(router) {
          ORDER BY k.tanggal DESC`,
         [t, periode]
       );
-      const supplierRincian = supplierPayments.map(sp => ({
-        id: sp.id,
-        tanggal: sp.tanggal,
-        no_transaksi: sp.no_transaksi,
-        deskripsi: sp.deskripsi,
-        supplier: sp.supplier_nama || '-',
-        jumlah: Number(sp.jumlah),
-      }));
+      const supplierRincian = supplierPayments.map(sp => {
+        let items = [];
+        try {
+          if (sp.po_item) {
+            const parsed = JSON.parse(sp.po_item);
+            if (Array.isArray(parsed)) {
+              items = parsed.map(it => ({
+                nama: it.nama || it.bahan_nama || '',
+                qty: Number(it.qty || it.qty_buffer || it.total_qty || 0),
+                satuan: it.satuan || '',
+                harga: Number(it.harga || it.harga_satuan || 0),
+              }));
+            }
+          }
+        } catch (e) { /* ignore parse error */ }
+        return {
+          id: sp.id,
+          tanggal: sp.tanggal,
+          no_transaksi: sp.no_transaksi,
+          deskripsi: sp.deskripsi,
+          supplier: sp.supplier_nama || '-',
+          jumlah: Number(sp.jumlah),
+          items,
+        };
+      });
 
       let grandPenerima = 0;
       let grandTotal = 0;

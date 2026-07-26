@@ -324,16 +324,32 @@ const tabColors = {
           var color = supColors[supIdx % supColors.length];
           supIdx++;
           var detailRows = g.items.map(function(sp) {
+            var itemsHtml = '';
+            if (sp.items && sp.items.length > 0) {
+              itemsHtml = '<tr class="bg-stone-50/30"><td colspan="5" class="px-4 py-1.5"><div class="pl-10 text-[10px] text-stone-400">Item pembelian:</div><div class="pl-10 space-y-0.5">' +
+                sp.items.map(function(it) {
+                  var itHarga = it.harga > 0 ? ' @ ' + fmtIdr(it.harga) + '/' + (it.satuan || '') : '';
+                  var itTotal = it.harga > 0 && it.qty > 0 ? ' = ' + fmtIdr(it.harga * it.qty) : '';
+                  return '<div class="text-xs text-stone-600 flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-stone-300"></span>' +
+                    escHtml(it.nama) +
+                    (it.qty > 0 ? ' <span class="text-stone-400">× ' + it.qty + '</span>' : '') +
+                    (it.satuan ? ' <span class="text-stone-400">' + it.satuan + '</span>' : '') +
+                    itHarga + itTotal +
+                  '</div>';
+                }).join('') +
+              '</div></td></tr>';
+            }
             return '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
               '<td class="px-4 py-2.5 text-xs text-stone-500 pl-10">' + fmtDate(sp.tanggal) + '</td>' +
               '<td class="px-4 py-2.5 text-xs text-stone-600">' + escHtml(sp.no_transaksi || '-') + '</td>' +
               '<td class="px-4 py-2.5 text-xs text-stone-500">' + escHtml(sp.deskripsi || '-') + '</td>' +
               '<td class="px-4 py-2.5 text-right mono text-xs font-semibold text-stone-700">' + fmtIdr(sp.jumlah) + '</td>' +
-            '</tr>';
+              '<td></td>' +
+            '</tr>' + itemsHtml;
           }).join('');
           var pct = totalPembelianSupplier > 0 ? (g.total / totalPembelianSupplier * 100).toFixed(1) : 0;
           supplierRows += '<tr class="border-t border-stone-100">' +
-            '<td class="px-4 py-3 font-medium text-xs" colspan="4"><span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:' + color + '"></span><strong>' + escHtml(g.supplier) + '</strong> <span class="text-stone-400 font-normal">(' + g.items.length + ' transaksi)</span></span></td>' +
+            '<td class="px-4 py-3 font-medium text-xs" colspan="3"><span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:' + color + '"></span><strong>' + escHtml(g.supplier) + '</strong> <span class="text-stone-400 font-normal">(' + g.items.length + ' transaksi)</span></span></td>' +
             '<td class="px-4 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtIdr(g.total) + '</td>' +
             '<td class="px-4 py-3 text-right text-xs text-stone-500">' + pct + '%</td>' +
           '</tr>' +
