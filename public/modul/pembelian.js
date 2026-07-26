@@ -770,7 +770,7 @@ async function openSiklusPicker() {
         ${siklusList && siklusList.length ? '<div class="space-y-1">' + siklusList.map(s => {
           var statusBadge = s.status === 'Aktif' ? '<span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-700">Aktif</span>' : '<span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-amber-100 text-amber-700">Draft</span>';
           return '<label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-2 rounded-lg">' +
-            '<input type="checkbox" class="siklus-check cb-modern" value="' + s.id + '">' +
+            '<input type="checkbox" class="siklus-check cb-modern" value="' + s.id + '" data-status="' + (s.status || 'Draft') + '">' +
             '<span class="text-sm text-stone-700 flex-1">' + s.nama + ' — ' + (s.kategori_penerima || '-') + ' (' + (s.jumlah_porsi || 0) + ' porsi)</span>' +
             statusBadge +
           '</label>';
@@ -792,6 +792,14 @@ async function generatePOFromSiklus() {
   const checked = document.querySelectorAll('.siklus-check:checked');
   const ids = Array.from(checked).map(cb => parseInt(cb.value));
   if (!ids.length) { showAlert('Pilih minimal satu siklus'); return; }
+
+  // Cek apakah ada siklus yang masih Draft
+  var draftSiklus = Array.from(checked).filter(function(cb) { return cb.getAttribute('data-status') === 'Draft'; });
+  if (draftSiklus.length) {
+    var draftNames = draftSiklus.map(function(cb) { return cb.closest('label')?.querySelector('span.text-stone-700')?.textContent?.split(' — ')[0] || '#' + cb.value; }).join(', ');
+    document.getElementById('po-preview').innerHTML = '<div class="flex items-start gap-2 p-4 text-amber-700 bg-amber-50 rounded-lg border border-amber-200"><svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-medium">Siklus masih Draft</div><div class="text-[10px] mt-0.5">Siklus berikut belum Aktif dan tidak bisa di-generate: <strong>' + draftNames + '</strong>. Aktifkan siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>';
+    return;
+  }
 
   const preview = document.getElementById('po-preview');
   preview.innerHTML = '<div class="text-center py-4 text-stone-500">⏳ Menghitung kebutuhan bahan...</div>';
