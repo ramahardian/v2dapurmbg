@@ -9,24 +9,30 @@ async function renderCrud(cfg) {
   c.innerHTML = `<div id="crud-stats" class="${cfg.stats ? '' : 'hidden'}">
     <div id="crud-stats-content" class="flex flex-wrap gap-3 mb-4"></div>
   </div>
-  <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
     <div class="flex items-center gap-2">
-      <button id="add-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah</button>
-      <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md items-center gap-1.5">
+      <button id="add-btn" class="h-11 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Tambah
+      </button>
+      <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden h-10 px-4 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl items-center gap-1.5 shadow-sm transition-all">
         Hapus Terpilih <span id="crud-selected-count" class="font-bold">0</span>
       </button>
-      ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-200 text-stone-400 hover:text-stone-600 hover:bg-stone-50 transition-colors" title="Info halaman ini">
+      ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-400 hover:text-stone-600 hover:bg-stone-50 shadow-sm transition-all" title="Info halaman ini">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       </button>` : ''}
     </div>
     <div class="flex items-center gap-2">
-      <input id="crud-search" placeholder="Cari..." class="h-10 px-3 border border-stone-200 rounded-md text-sm w-48">
-      ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="border border-emerald-400 text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-md text-sm font-medium">${cfg.sync.label}</button>` : ''}
-      ${cfg.extraButtons ? cfg.extraButtons.map(b => `<button onclick="${b.onclick}" class="${b.cls || 'border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium'}">${b.label}</button>`).join('') : ''}
-      <button onclick="exportXlsx()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-md text-sm font-medium">Export XLSX</button>
+      <div class="relative">
+        <input id="crud-search" placeholder="Cari..." class="w-56 h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </div>
+      ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="h-11 px-4 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-xl text-sm font-medium shadow-sm transition-all">${cfg.sync.label}</button>` : ''}
+      ${cfg.extraButtons ? cfg.extraButtons.map(b => `<button onclick="${b.onclick}" class="h-11 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-sm font-medium shadow-sm transition-all">${b.label}</button>`).join('') : ''}
+      <button onclick="exportXlsx()" class="h-11 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-sm font-medium shadow-sm transition-all">Export XLSX</button>
     </div>
   </div>
-  <div id="table-wrap" class="bg-white border border-stone-200 rounded-lg overflow-hidden"></div>
+  <div id="table-wrap" class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden"></div>
   <div id="crud-pagination" class="flex items-center justify-between mt-3"></div>`;
   window._crudInfoCfg = cfg;
   document.getElementById('add-btn').onclick = () => openForm(cfg, null);
@@ -63,9 +69,9 @@ async function reloadCrud(cfg) {
         if (contentEl) {
           const fmt = cfg.stats.format === 'num' ? fmtNum(totalVal) : totalVal;
           contentEl.innerHTML = `
-            <div class="flex-1 min-w-[140px] bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
-              <div class="text-xs uppercase tracking-wider text-blue-700 font-medium mb-0.5">${cfg.stats.label || 'Total'}</div>
-              <div class="text-xl font-bold text-blue-900">${fmt}</div>
+            <div class="flex-1 min-w-[140px] bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 px-4 py-3 shadow-sm">
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">${cfg.stats.label || 'Total'}</div>
+              <div class="text-xl font-bold text-blue-800">${fmt}</div>
             </div>
           `;
         }
@@ -77,14 +83,14 @@ async function reloadCrud(cfg) {
 
   const w = document.getElementById('table-wrap');
   if (!rows.length) {
-    w.innerHTML = '<div class="p-12 text-center text-stone-400"><svg class="w-16 h-16 mx-auto mb-4 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div>Belum ada data</div><div class="text-sm mt-1 text-stone-400">Klik "Tambah" untuk mulai.</div></div>';
+    w.innerHTML = '<div class="py-16 text-center text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Belum ada data</div><div class="text-xs text-stone-400 mt-1">Klik "Tambah" untuk mulai.</div></div>';
     document.getElementById('crud-pagination').innerHTML = '';
     return;
   }
 
-  const headers = cfg.cols.map(k => `<th class="text-left px-4 py-3 text-xs font-semibold text-stone-600 uppercase">${cfg.fields.find(f => f.k === k)?.l || k}</th>`).join('');
-  const body = rows.map(r => `<tr class="border-t border-stone-100">
-    <td class="px-4 py-3 text-sm">
+  const headers = cfg.cols.map(k => `<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">${cfg.fields.find(f => f.k === k)?.l || k}</th>`).join('');
+  const body = rows.map(r => `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+    <td class="px-4 py-3">
       <input type="checkbox" value="${r.id}" onchange="updateSelectedCrudCount()" class="crud-checkbox cb-modern">
     </td>
     ${cfg.cols.map(k => {
@@ -95,17 +101,17 @@ async function reloadCrud(cfg) {
       else if (f?.fmt === 'num') cell = `<span class="mono">${f.decimals != null ? Number(v).toFixed(f.decimals) : fmtNum(v)}</span>`;
       else if (f?.fmt === 'pct') cell = `<span class="mono">${Math.round(v * 100)}</span>%`;
       else if (f?.type === 'date') cell = fmtDate(v);
-      return `<td class="px-4 py-3 text-xs">${cell}</td>`;
+      return `<td class="px-4 py-3 text-xs text-stone-600">${cell}</td>`;
     }).join('')}
     <td class="px-4 py-3 text-right whitespace-nowrap">
-      <button onclick='editRow(${JSON.stringify(cfg).replace(/'/g, "&#39;")}, ${JSON.stringify(r).replace(/'/g, "&#39;")})' class="text-stone-500 hover:text-stone-900 p-1.5 inline-flex items-center" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-      <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "&#39;")})' class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      <button onclick='editRow(${JSON.stringify(cfg).replace(/'/g, "&#39;")}, ${JSON.stringify(r).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
     </td></tr>`).join('');
-  w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead class="bg-stone-50"><tr>
-    <th class="text-left px-4 py-3 text-xs font-semibold uppercase w-10">
+  w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-stone-100">
+    <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500 w-10">
       <input type="checkbox" id="crud-select-all" onchange="toggleSelectAllCrud(this)" class="cb-modern">
     </th>
-    ${headers}<th class="px-4 py-3 text-right text-xs font-semibold text-stone-600 uppercase">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
+    ${headers}<th class="px-4 py-3.5 text-right text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
 
   renderCrudPagination();
 }
@@ -114,8 +120,8 @@ function renderCrudPagination() {
   const wrap = document.getElementById('crud-pagination');
   const { page, totalPages, total } = _crudState;
   if (totalPages <= 1) { wrap.innerHTML = total > 0 ? `<span class="text-sm text-stone-400">${total} data</span>` : ''; return; }
-  const prev = page > 1 ? `<button onclick="crudGoToPage(${page - 1})" class="px-2 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Prev</button>` : '';
-  const next = page < totalPages ? `<button onclick="crudGoToPage(${page + 1})" class="px-2 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Next</button>` : '';
+  const prev = page > 1 ? `<button onclick="crudGoToPage(${page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Prev</button>` : '';
+  const next = page < totalPages ? `<button onclick="crudGoToPage(${page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Next</button>` : '';
   wrap.innerHTML = `<span class="text-sm text-stone-500">${total} data — Hal ${page} dari ${totalPages}</span><div class="flex gap-2">${prev}${next}</div>`;
 }
 
@@ -213,26 +219,27 @@ function renderField(f, editing) {
   const val = editing?.[f.k];
   let actionHtml = '';
   if (f.action) {
-      actionHtml = `<button type="button" onclick='${f.action.onclick}' class="text-xs border border-blue-300 text-blue-700 hover:bg-blue-50 px-2 py-0.5 rounded flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>${f.action.label}</button>`;
+      actionHtml = `<button type="button" onclick='${f.action.onclick}' class="text-[10px] border border-blue-300 text-blue-700 hover:bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1 font-semibold"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>${f.action.label}</button>`;
   }
   let input;
   if (f.type === 'select') {
-    input = `<select id="f-${f.k}" ${ro ? 'disabled' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm ${roCls}">
+    input = `<select id="f-${f.k}" ${ro ? 'disabled' : ''} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all ${roCls}">
       <option value="">— Pilih —</option>${f.opts.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
     </select>`;
   } else if (f.type === 'select-api') {
-    input = `<select id="f-${f.k}" ${ro ? 'disabled' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm ${roCls}"><option value="">— Memuat data... —</option></select>`;
+    input = `<select id="f-${f.k}" ${ro ? 'disabled' : ''} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all ${roCls}"><option value="">— Memuat data... —</option></select>`;
   } else if (f.type === 'textarea') {
-    input = `<textarea id="f-${f.k}" rows="2" ${ro ? 'readonly' : ''} class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md text-sm ${roCls}">${val || ''}</textarea>`;
+    input = `<textarea id="f-${f.k}" rows="2" ${ro ? 'readonly' : ''} class="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all ${roCls}">${val || ''}</textarea>`;
   } else {
     const itype = f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text';
     let ival = val != null ? (f.type === 'date' ? String(val).slice(0,10) : val) : '';
     if (f.fmt === 'pct' && val != null) ival = Math.round(val * 100);
     if (f.fmt === 'num' && f.decimals != null && val != null) ival = Number(val).toFixed(f.decimals);
-    input = `<input id="f-${f.k}" type="${itype}" value="${ival}" ${ro ? 'readonly' : ''} class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm ${f.type === 'number' ? 'mono' : ''} ${roCls}" />`;
+    input = `<input id="f-${f.k}" type="${itype}" value="${ival}" ${ro ? 'readonly' : ''} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all ${f.type === 'number' ? 'mono' : ''} ${roCls}" />`;
   }
-  const header = f.action ? `<div class="flex items-center justify-between"><label class="text-sm text-stone-700">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>${actionHtml}</div>` : `<label class="text-sm text-stone-700">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>`;
-  return `<div class="${f.type === 'hidden' ? '' : 'mb-3'}">${header}${input}</div>`;
+  const label = `<label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>`;
+  const header = f.action ? `<div class="flex items-center justify-between">${label}${actionHtml}</div>` : label;
+  return `<div class="${f.type === 'hidden' ? '' : 'mb-4'}">${header}${input}</div>`;
 }
 
 function openForm(cfg, editing) {
@@ -247,8 +254,8 @@ function openForm(cfg, editing) {
     cfg.groups.forEach(g => {
       const gFields = cfg.fields.filter(f => f.group === g.key && f.type !== 'hidden');
       if (!gFields.length) return;
-      html += `<div class="mb-6">
-        <h4 class="text-sm font-semibold text-stone-700 mb-3 pb-2" style="border-bottom:1px solid var(--border)">${g.label}</h4>
+      html += `<div class="mb-5">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3 pb-2 border-b border-stone-200">${g.label}</h4>
         <div class="grid grid-cols-1 ${g.cols === 2 ? 'md:grid-cols-2' : ''} gap-x-4 gap-y-1">`;
       gFields.forEach(f => { html += renderField(f, editing); });
       html += `</div></div>`;

@@ -49,17 +49,14 @@ function showGudang(tab) {
   gudangState.search = '';
   const searchInput = document.getElementById('gudang-search');
   if (searchInput) searchInput.value = '';
-  const tabColors = {
-    stok: { active: 'bg-white text-blue-600 shadow-sm', inactive: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
-    masuk: { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
-    keluar: { active: 'bg-white text-orange-600 shadow-sm', inactive: 'bg-orange-100 text-orange-700 hover:bg-orange-200' },
-  };
   ['stok','masuk','keluar'].forEach(t => {
     const el = document.getElementById('tab-'+t);
-    const c = tabColors[t];
-    const base = 'px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border border-b-0 border-stone-200 -mb-px';
-    const extra = t === tab ? ' relative z-[2]' : '';
-    if (el) el.className = base + ' ' + (t === tab ? c.active : c.inactive) + extra;
+    if (!el) return;
+    if (t === tab) {
+      el.className = 'px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-blue-600 shadow-sm';
+    } else {
+      el.className = 'px-4 py-2 rounded-lg text-sm font-medium transition-all text-stone-600 hover:text-stone-800';
+    }
   });
   loadGudang();
 }
@@ -79,27 +76,27 @@ async function loadGudang() {
       const pagination = res.pagination || { total: data.length, totalPages: 1, page: 1 };
       gudangState = { ...gudangState, total: pagination.total, totalPages: pagination.totalPages, page: pagination.page };
 
-      wrap.innerHTML = `<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto"><table class="w-full">
-        <thead class="bg-stone-50"><tr>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Nama</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Kategori</th>
-          <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Stok</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Satuan</th>
-          <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Min</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Status</th>
+      wrap.innerHTML = `<div class="overflow-x-auto"><table class="w-full">
+        <thead><tr class="border-b border-stone-100">
+          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Nama</th>
+          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kategori</th>
+          <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Stok</th>
+          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Satuan</th>
+          <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Min</th>
+          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Status</th>
         </tr></thead><tbody>
         ${data.map(b => {
           const low = Number(b.stok_saat_ini) < Number(b.stok_minimum);
-          return `<tr class="border-t border-stone-100">
-            <td class="px-4 py-3 text-sm font-medium whitespace-nowrap">${b.nama}</td>
-            <td class="px-4 py-3 text-sm whitespace-nowrap">${b.kategori || '-'}</td>
-            <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap ${low ? 'text-red-700' : ''}">${b.stok_saat_ini}</td>
-            <td class="px-4 py-3 text-sm whitespace-nowrap">${b.satuan}</td>
-            <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${b.stok_minimum}</td>
-            <td class="px-4 py-3 text-sm whitespace-nowrap">${low ? '<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Menipis</span>' : '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Aman</span>'}</td>
+          return `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+            <td class="px-4 py-3 text-xs font-medium text-stone-700">${b.nama}</td>
+            <td class="px-4 py-3 text-xs text-stone-600">${b.kategori || '-'}</td>
+            <td class="px-4 py-3 text-xs text-right mono ${low ? 'text-red-700 font-semibold' : 'text-stone-700'}">${b.stok_saat_ini}</td>
+            <td class="px-4 py-3 text-xs text-stone-600">${b.satuan}</td>
+            <td class="px-4 py-3 text-xs text-right mono text-stone-600">${b.stok_minimum}</td>
+            <td class="px-4 py-3 text-xs">${low ? '<span class="inline-block px-2.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-semibold rounded-lg">Menipis</span>' : '<span class="inline-block px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded-lg">Aman</span>'}</td>
           </tr>`;
-        }).join('') || '<tr><td colspan="6" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><div>Belum ada bahan</div></td></tr>'}
-        </tbody></table></div></div>`;
+        }).join('') || '<tr><td colspan="6" class="text-center py-16 text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><div class="text-sm">Belum ada bahan</div></td></tr>'}
+        </tbody></table></div>`;
     } else {
       const endpoint = gudangState.tab === 'masuk' ? 'stok_masuk' : 'stok_keluar';
       const res = await api.get('/' + endpoint + '?' + params);
@@ -108,21 +105,21 @@ async function loadGudang() {
       gudangState = { ...gudangState, total: pagination.total, totalPages: pagination.totalPages, page: pagination.page };
 
       const labelKey = gudangState.tab === 'masuk' ? 'sumber' : 'tujuan';
-      wrap.innerHTML = `<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto"><table class="w-full">
-        <thead class="bg-stone-50"><tr>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Tanggal</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Bahan</th>
-          <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Jumlah</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">${gudangState.tab === 'masuk' ? 'Sumber' : 'Tujuan'}</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Catatan</th>
-        </tr></thead><tbody>${data.map(r => `<tr class="border-t border-stone-100">
-          <td class="px-4 py-3 text-sm whitespace-nowrap">${fmtDate(r.tanggal)}</td>
-          <td class="px-4 py-3 text-sm whitespace-nowrap">${r.nama_bahan}</td>
-          <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${r.jumlah} ${r.satuan}</td>
-          <td class="px-4 py-3 text-sm whitespace-nowrap">${r[labelKey] || '-'}</td>
-          <td class="px-4 py-3 text-sm whitespace-nowrap">${r.catatan || '-'}</td>
-        </tr>`).join('') || '<tr><td colspan="5" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div>Belum ada riwayat</div></td></tr>'}
-        </tbody></table></div></div>`;
+      wrap.innerHTML = `<div class="overflow-x-auto"><table class="w-full">
+        <thead><tr class="border-b border-stone-100">
+          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Tanggal</th>
+          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Bahan</th>
+          <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Jumlah</th>
+          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">${gudangState.tab === 'masuk' ? 'Sumber' : 'Tujuan'}</th>
+          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Catatan</th>
+        </tr></thead><tbody>${data.map(r => `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+          <td class="px-4 py-3 text-xs mono text-stone-600">${fmtDate(r.tanggal)}</td>
+          <td class="px-4 py-3 text-xs font-medium text-stone-700">${r.nama_bahan}</td>
+          <td class="px-4 py-3 text-xs text-right mono text-stone-700">${r.jumlah} ${r.satuan}</td>
+          <td class="px-4 py-3 text-xs text-stone-600">${r[labelKey] || '-'}</td>
+          <td class="px-4 py-3 text-xs text-stone-500">${r.catatan || '-'}</td>
+        </tr>`).join('') || '<tr><td colspan="5" class="text-center py-16 text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div class="text-sm">Belum ada riwayat</div></td></tr>'}
+        </tbody></table></div>`;
     }
 
     renderGudangPagination();
@@ -135,8 +132,8 @@ function renderGudangPagination() {
   const wrap = document.getElementById('gudang-pagination');
   if (!wrap) return;
   if (gudangState.totalPages <= 1) { wrap.innerHTML = ''; return; }
-  const prevBtn = gudangState.page > 1 ? `<button onclick="gudangGoToPage(${gudangState.page - 1})" class="px-2 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Prev</button>` : '';
-  const nextBtn = gudangState.page < gudangState.totalPages ? `<button onclick="gudangGoToPage(${gudangState.page + 1})" class="px-2 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Next</button>` : '';
+  const prevBtn = gudangState.page > 1 ? `<button onclick="gudangGoToPage(${gudangState.page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Prev</button>` : '';
+  const nextBtn = gudangState.page < gudangState.totalPages ? `<button onclick="gudangGoToPage(${gudangState.page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Next</button>` : '';
   wrap.innerHTML = `<span class="text-sm text-stone-500">Hal ${gudangState.page} dari ${gudangState.totalPages}</span>
     <div class="flex gap-2">${prevBtn}${nextBtn}</div>`;
 }
@@ -165,25 +162,25 @@ async function openStokForm(tipe) {
   const bahanList = _bahanListCache;
   const supplierList = _supplierListCache;
   const sumberHtml = tipe === 'masuk'
-    ? `<input id="s-sumber" list="s-supplier-list" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" placeholder="Ketik atau pilih supplier" autocomplete="off" />
+    ? `<input id="s-sumber" list="s-supplier-list" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="Ketik atau pilih supplier" autocomplete="off" />
         <datalist id="s-supplier-list">
           ${supplierList.map(s => `<option value="${s.nama}">`).join('')}
         </datalist>`
-    : `<input id="s-sumber" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" placeholder="cth: Produksi Menu A" />`;
+    : `<input id="s-sumber" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="cth: Produksi Menu A" />`;
   document.getElementById('modal-body').innerHTML = `
-    <div class="mb-3"><label class="text-sm">Tanggal</label>
-      <input id="s-tanggal" type="date" value="${new Date().toISOString().slice(0,10)}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" /></div>
-    <div class="mb-3"><label class="text-sm">Bahan Baku</label>
-      <select id="s-bahan" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md">
+    <div class="mb-4"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal</label>
+      <input id="s-tanggal" type="date" value="${new Date().toISOString().slice(0,10)}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" /></div>
+    <div class="mb-4"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Bahan Baku</label>
+      <select id="s-bahan" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
         <option value="">— Pilih —</option>
         ${bahanList.map(b => `<option value="${b.id}">${b.nama} (stok: ${b.stok_saat_ini} ${b.satuan})</option>`).join('')}
       </select></div>
-    <div class="mb-3"><label class="text-sm">Jumlah</label>
-      <input id="s-jumlah" type="number" step="0.001" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md mono" /></div>
-    <div class="mb-3"><label class="text-sm">${tipe === 'masuk' ? 'Supplier' : 'Tujuan (Produksi)'}</label>
+    <div class="mb-4"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Jumlah</label>
+      <input id="s-jumlah" type="number" step="0.001" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all mono" /></div>
+    <div class="mb-4"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">${tipe === 'masuk' ? 'Supplier' : 'Tujuan (Produksi)'}</label>
       ${sumberHtml}</div>
-    <div class="mb-3"><label class="text-sm">Catatan</label>
-      <input id="s-catatan" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" /></div>`;
+    <div class="mb-4"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Catatan</label>
+      <input id="s-catatan" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" /></div>`;
   document.getElementById('modal-save').onclick = async () => {
     try {
       if (!validateForm([

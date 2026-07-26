@@ -9,9 +9,15 @@ async function renderPembelian() {
 }
 
 function switchPrPoTab(tab) {
-  document.getElementById('tab-pr').className = 'px-4 py-2 rounded-md text-sm font-medium' + (tab === 'pr' ? ' bg-white shadow' : '');
-  document.getElementById('tab-po').className = 'px-4 py-2 rounded-md text-sm font-medium' + (tab === 'po' ? ' bg-white shadow' : '');
-  // Refresh data for both tabs
+  ['pr','po'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if (!el) return;
+    if (t === tab) {
+      el.className = 'px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-blue-600 shadow-sm';
+    } else {
+      el.className = 'px-4 py-2 rounded-lg text-sm font-medium transition-all text-stone-600 hover:text-stone-800';
+    }
+  });
   refreshPoList();
   if (tab === 'pr') renderPrView();
   else renderPoView();
@@ -31,13 +37,11 @@ async function refreshPoList() {
 async function renderPembelianPage(tab) {
   const activeTab = tab || 'pr';
   const content = document.getElementById('content');
-  content.innerHTML = `<div class="space-y-4">
-    <div class="flex gap-1 bg-stone-100 rounded-lg p-1 w-fit" id="pr-po-tabs">
-      <button onclick="switchPrPoTab('pr')" id="tab-pr" class="px-4 py-2 rounded-md text-sm font-medium${activeTab === 'pr' ? ' bg-white shadow' : ''}">PR — Purchase Request</button>
-      <button onclick="switchPrPoTab('po')" id="tab-po" class="px-4 py-2 rounded-md text-sm font-medium${activeTab === 'po' ? ' bg-white shadow' : ''}">PO — Purchase Order</button>
+  content.innerHTML = `<div class="flex gap-1 bg-stone-100 rounded-xl p-1 w-fit mb-5">
+      <button onclick="switchPrPoTab('pr')" id="tab-pr" class="px-4 py-2 rounded-lg text-sm font-medium transition-all${activeTab === 'pr' ? ' bg-white text-blue-600 shadow-sm' : ' text-stone-600 hover:text-stone-800'}">PR — Purchase Request</button>
+      <button onclick="switchPrPoTab('po')" id="tab-po" class="px-4 py-2 rounded-lg text-sm font-medium transition-all${activeTab === 'po' ? ' bg-white text-blue-600 shadow-sm' : ' text-stone-600 hover:text-stone-800'}">PO — Purchase Order</button>
     </div>
-    <div id="pr-po-content"></div>
-  </div>`;
+    <div id="pr-po-content"></div>`;
 
   // Fetch all purchase_order records
   let allRows = [];
@@ -63,56 +67,53 @@ async function renderPembelianPage(tab) {
 function renderPrView() {
   const wrap = document.getElementById('pr-po-content');
   wrap.innerHTML = `
-    <div class="flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-stone-800">Daftar Purchase Request</h2>
-      <button onclick="openBuatPrForm()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm font-medium">+ Buat PR</button>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-bold text-stone-800">Daftar Purchase Request</h2>
+      <button onclick="openBuatPrForm()" class="h-10 px-5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Buat PR
+      </button>
     </div>
-    <div class="mt-3 overflow-x-auto bg-white rounded-lg border border-stone-200" id="pr-table-wrap">
-      ${_prList.length === 0 ? '<div class="p-6 text-center text-stone-400 text-sm">Belum ada PR. Klik "+ Buat PR" untuk membuat Purchase Request baru.</div>' : `
-      <table class="w-full text-sm">
-        <thead class="bg-stone-50">
-          <tr>
-            <th class="text-left px-4 py-3 font-semibold text-xs">No PR</th>
-            <th class="text-left px-4 py-3 font-semibold text-xs">Periode</th>
-            <th class="text-right px-4 py-3 font-semibold text-xs">Item</th>
-            <th class="text-right px-4 py-3 font-semibold text-xs">Total Estimasi</th>
-            <th class="text-left px-4 py-3 font-semibold text-xs">Status</th>
-            <th class="text-center px-4 py-3 font-semibold text-xs">Aksi</th>
-          </tr>
-        </thead>
+    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden" id="pr-table-wrap">
+      ${_prList.length === 0 ? '<div class="py-16 text-center text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><div class="text-sm">Belum ada PR</div><div class="text-xs text-stone-400 mt-1">Klik "+ Buat PR" untuk membuat Purchase Request baru.</div></div>' : `
+      <div class="overflow-x-auto"><table class="w-full">
+        <thead><tr class="border-b border-stone-100">
+          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">No PR</th>
+          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Periode</th>
+          <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Item</th>
+          <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Total Estimasi</th>
+          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Status</th>
+          <th class="text-center px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th>
+        </tr></thead>
         <tbody>
           ${_prList.map(pr => {
             let items = [];
             try { items = JSON.parse(pr.item); } catch {}
             const itemCount = items.length;
             const periode = (pr.tanggal || '').slice(0, 7);
-            return `<tr class="border-t border-stone-100">
-              <td class="px-4 py-3 font-medium">${pr.no_po}</td>
-              <td class="px-4 py-3">${periode}</td>
-              <td class="px-4 py-3 text-right">${itemCount} bahan</td>
-              <td class="px-4 py-3 text-right mono">${fmtIDR(pr.total_nilai || 0)}</td>
-              <td class="px-4 py-3">${(pr.catatan || '').includes('[DITOLAK]')
-                ? '<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs">Ditolak</span>'
-                : pr.status === 'Disetujui'
-                  ? '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs">Disetujui</span>'
-                  : '<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">Menunggu</span>'
-              }</td>
-              <td class="px-4 py-3 text-center whitespace-nowrap">
-                <button onclick="viewPrItems(${pr.id})" class="text-blue-600 hover:text-blue-800 text-xs font-medium mr-2">Detail</button>
-                ${pr.status === 'Disetujui' ? `<button onclick="buatPoDariPr(${pr.id})" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium">Buat PO</button>` : ''}
+            const statusText = (pr.catatan || '').includes('[DITOLAK]') ? 'Ditolak' : pr.status === 'Disetujui' ? 'Disetujui' : 'Menunggu';
+            const statusColors = { 'Ditolak': 'bg-red-100 text-red-700', 'Disetujui': 'bg-emerald-100 text-emerald-700', 'Menunggu': 'bg-amber-100 text-amber-700' };
+            return `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+              <td class="px-4 py-3 text-xs font-semibold text-stone-700">${pr.no_po}</td>
+              <td class="px-4 py-3 text-xs text-stone-600">${periode}</td>
+              <td class="px-4 py-3 text-xs text-right text-stone-600">${itemCount} bahan</td>
+              <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(pr.total_nilai || 0)}</td>
+              <td class="px-4 py-3 text-xs"><span class="inline-block px-2.5 py-0.5 text-[10px] font-semibold rounded-lg ${statusColors[statusText]}">${statusText}</span></td>
+              <td class="px-4 py-3 text-center whitespace-nowrap text-xs">
+                <button onclick="viewPrItems(${pr.id})" class="text-blue-600 hover:text-blue-800 font-medium mr-2">Detail</button>
+                ${pr.status === 'Disetujui' ? `<button onclick="buatPoDariPr(${pr.id})" class="text-emerald-600 hover:text-emerald-800 font-medium">Buat PO</button>` : ''}
                 ${(currentUser?.role === 'admin' || currentUser?.role === 'keuangan') && pr.status === 'Draft' ? `
-                  <button onclick="approvePr(${pr.id})" class="text-green-600 hover:text-green-800 text-xs font-medium mr-1">Setujui</button>
-                  <button onclick="rejectPr(${pr.id})" class="text-red-600 hover:text-red-800 text-xs font-medium">Tolak</button>
+                  <button onclick="approvePr(${pr.id})" class="text-green-600 hover:text-green-800 font-medium mr-1">Setujui</button>
+                  <button onclick="rejectPr(${pr.id})" class="text-red-600 hover:text-red-800 font-medium">Tolak</button>
                 ` : ''}
-                ${(pr.catatan || '').includes('[DITOLAK]') ? '<span class="text-red-500 text-xs">Ditolak</span>' : ''}
-                ${pr.status !== 'Disetujui' ? `<button onclick="deletePr(${pr.id})" class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus">
+                ${pr.status !== 'Disetujui' ? `<button onclick="deletePr(${pr.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all ml-1" title="Hapus">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>` : ''}
               </td>
             </tr>`;
           }).join('')}
         </tbody>
-      </table>`}
+      </table></div>`}
     </div>`;
 }
 
@@ -137,31 +138,31 @@ async function openBuatPrForm() {
 
   document.getElementById('modal-title').textContent = 'Buat Purchase Request';
   document.getElementById('modal-body').innerHTML = `
-    <div class="space-y-3">
+    <div class="space-y-4">
       <div>
-        <label class="text-sm font-medium">Periode <span class="text-red-500">*</span></label>
-        <input id="pr-periode" type="month" value="${defaultPeriode}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Periode <span class="text-red-500">*</span></label>
+        <input id="pr-periode" type="month" value="${defaultPeriode}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
       </div>
       <div>
-        <label class="text-sm font-medium">Pilih Siklus</label>
-        <div class="mt-1 space-y-1 max-h-48 overflow-y-auto border border-stone-200 rounded-lg p-2">
+        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Pilih Siklus</label>
+        <div class="mt-1.5 space-y-1 max-h-48 overflow-y-auto rounded-xl border border-stone-200 p-2">
           ${siklusList.filter(s => s.status === 'Aktif').map((s, i) => `
-            <label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-1.5 rounded">
+            <label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-2 rounded-lg">
               <input type="checkbox" class="pr-siklus-check cb-modern" value="${s.id}" data-hari="${Number(s.total_hari) || 7}" checked>
-              <span class="text-sm">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi, ${Number(s.total_hari) || 7} hari)</span>
+              <span class="text-sm text-stone-700">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi, ${Number(s.total_hari) || 7} hari)</span>
             </label>
           `).join('')}
         </div>
-        <p class="text-xs text-stone-400 mt-1">Kosongkan pilihan untuk menggunakan semua siklus Aktif</p>
+        <p class="text-[10px] text-stone-400 mt-1">Kosongkan pilihan untuk menggunakan semua siklus Aktif</p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-3">
         <div class="flex-1">
-          <label class="text-sm font-medium">Hari Mulai</label>
-          <input id="pr-hari-mulai" type="number" min="1" value="1" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Hari Mulai</label>
+          <input id="pr-hari-mulai" type="number" min="1" value="1" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
         </div>
         <div class="flex-1">
-          <label class="text-sm font-medium">Hari Selesai</label>
-          <input id="pr-hari-selesai" type="number" min="1" value="${maxHari}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Hari Selesai</label>
+          <input id="pr-hari-selesai" type="number" min="1" value="${maxHari}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
         </div>
       </div>
       <p class="text-xs text-stone-400" id="pr-hari-info">Rentang hari 1 — ${maxHari}</p>
@@ -241,42 +242,41 @@ async function generatePr() {
       return;
     }
 
-    const budgetHtml = result.budget_warning ? `<div class="bg-amber-50 border-l-4 border-amber-400 px-3 py-2 text-sm text-amber-800 mb-2">
-      ⚠️ <strong>Peringatan Budget:</strong> ${result.budget_warning.message}<br>
-      <span class="text-xs">Total Budget: ${fmtIDR(result.budget_warning.total_budget)} | Realisasi: ${fmtIDR(result.budget_warning.total_realisasi)} | Sisa: ${fmtIDR(result.budget_warning.sisa_budget)} | Estimasi PR: ${fmtIDR(result.budget_warning.estimated_total)} | Defisit: ${fmtIDR(result.budget_warning.defisit)}</span>
+    const budgetHtml = result.budget_warning ? `<div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 mb-3">
+      <div class="flex items-center gap-2 font-semibold mb-1"><svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>Peringatan Budget</div>
+      <div>${result.budget_warning.message}</div>
+      <div class="text-[10px] mt-1 text-amber-700">Total Budget: ${fmtIDR(result.budget_warning.total_budget)} | Realisasi: ${fmtIDR(result.budget_warning.total_realisasi)} | Sisa: ${fmtIDR(result.budget_warning.sisa_budget)} | Estimasi PR: ${fmtIDR(result.budget_warning.estimated_total)} | Defisit: ${fmtIDR(result.budget_warning.defisit)}</div>
     </div>` : '';
 
     preview.innerHTML = `
-      <div class="border border-stone-200 rounded-lg overflow-hidden">
-        <div class="bg-emerald-50 px-3 py-2 text-sm text-emerald-800 font-medium">✅ ${result.message}</div>
-        ${result.total_hari ? '<div class="px-3 py-1.5 text-xs text-stone-500 bg-stone-50 border-t border-stone-200">Hari produksi: ' + result.hari_mulai + ' — ' + result.hari_selesai + ' (total ' + result.total_hari + ' hari)</div>' : ''}
+      <div class="rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-50 to-emerald-100/60 px-4 py-3 text-sm font-semibold text-emerald-800">${result.message}</div>
+        ${result.total_hari ? '<div class="px-4 py-2 text-[10px] text-stone-500 bg-stone-50 border-t border-stone-100">Hari produksi: ' + result.hari_mulai + ' — ' + result.hari_selesai + ' (total ' + result.total_hari + ' hari)</div>' : ''}
         ${budgetHtml}
-        <table class="w-full text-sm">
-          <thead class="bg-stone-50">
-            <tr>
-              <th class="text-left px-3 py-2 text-xs font-semibold">Bahan</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">Kebutuhan</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">+Buffer 10%</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">Harga</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">Subtotal</th>
-            </tr>
-          </thead>
+        <div class="overflow-x-auto"><table class="w-full">
+          <thead><tr class="border-b border-stone-100">
+            <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Bahan</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kebutuhan</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">+Buffer 10%</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Harga</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Subtotal</th>
+          </tr></thead>
           <tbody>
-            ${result.items.map(i => `<tr class="border-t border-stone-100">
-              <td class="px-3 py-2">${i.nama}</td>
-              <td class="px-3 py-2 text-right mono">${i.total_qty} ${i.satuan}</td>
-              <td class="px-3 py-2 text-right mono">${i.buffer_10} ${i.satuan}</td>
-              <td class="px-3 py-2 text-right mono">${fmtIDR(i.harga_satuan)}</td>
-              <td class="px-3 py-2 text-right mono">${fmtIDR(i.subtotal)}</td>
+            ${result.items.map(i => `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+              <td class="px-4 py-3 text-xs text-stone-700">${i.nama}</td>
+              <td class="px-4 py-3 text-xs text-right mono text-stone-700">${i.total_qty} ${i.satuan}</td>
+              <td class="px-4 py-3 text-xs text-right mono text-stone-700">${i.buffer_10} ${i.satuan}</td>
+              <td class="px-4 py-3 text-xs text-right mono text-stone-600">${fmtIDR(i.harga_satuan)}</td>
+              <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(i.subtotal)}</td>
             </tr>`).join('')}
           </tbody>
-          <tfoot class="bg-stone-50 border-t border-stone-200">
-            <tr><td colspan="4" class="px-3 py-2 text-right font-semibold">Total Estimasi</td>
-              <td class="px-3 py-2 text-right font-semibold mono">${fmtIDR(result.total_estimated)}</td></tr>
+          <tfoot><tr class="bg-gradient-to-r from-stone-50 to-stone-100/60 border-t border-stone-200">
+            <td colspan="4" class="px-4 py-3 text-xs text-right font-bold text-stone-700">Total Estimasi</td>
+            <td class="px-4 py-3 text-xs text-right font-bold mono text-stone-800">${fmtIDR(result.total_estimated)}</td></tr>
           </tfoot>
-        </table>
+        </table></div>
       </div>
-      <div class="mt-2 text-sm text-stone-500">PR <strong>${result.no_pr}</strong> telah tersimpan. Gunakan tombol "Buat PO" di daftar PR untuk membuat Purchase Order.</div>`;
+      <div class="mt-2 text-xs text-stone-500">PR <strong>${result.no_pr}</strong> telah tersimpan. Gunakan tombol "Buat PO" di daftar PR untuk membuat Purchase Order.</div>`;
 
     saveBtn.style.display = 'none';
     // Refresh PR list
@@ -299,31 +299,35 @@ async function viewPrItems(prId) {
 
   document.getElementById('modal-title').textContent = 'Detail PR: ' + pr.no_po;
   document.getElementById('modal-body').innerHTML = `
-    <div class="space-y-2">
-      <div class="text-sm text-stone-500">Periode: ${(pr.tanggal || '').slice(0, 7)} | Status: ${pr.status} | Total: ${fmtIDR(pr.total_nilai || 0)}</div>
-      <div class="border border-stone-200 rounded-lg overflow-hidden">
-        <table class="w-full text-sm">
-          <thead class="bg-stone-50">
-            <tr>
-              <th class="text-left px-3 py-2 text-xs font-semibold">Bahan</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">Qty (dgn buffer)</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">Satuan</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">Harga</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">Subtotal</th>
-            </tr>
-          </thead>
+    <div class="space-y-3">
+      <div class="flex items-center gap-3 text-xs text-stone-500 bg-stone-50 rounded-xl px-4 py-2.5">
+        <span><span class="font-semibold text-stone-700">Periode:</span> ${(pr.tanggal || '').slice(0, 7)}</span>
+        <span class="text-stone-200">|</span>
+        <span><span class="font-semibold text-stone-700">Status:</span> ${pr.status}</span>
+        <span class="text-stone-200">|</span>
+        <span><span class="font-semibold text-stone-700">Total:</span> <span class="mono">${fmtIDR(pr.total_nilai || 0)}</span></span>
+      </div>
+      <div class="rounded-2xl border border-stone-200 overflow-hidden">
+        <div class="overflow-x-auto"><table class="w-full">
+          <thead><tr class="border-b border-stone-100">
+            <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Bahan</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Qty (dgn buffer)</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Satuan</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Harga</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Subtotal</th>
+          </tr></thead>
           <tbody>
-            ${items.map(i => `<tr class="border-t border-stone-100">
-              <td class="px-3 py-2">${i.nama || '-'}</td>
-              <td class="px-3 py-2 text-right mono">${Number(i.qty || 0).toFixed(2)}</td>
-              <td class="px-3 py-2 text-right">${i.satuan || '-'}</td>
-              <td class="px-3 py-2 text-right mono">${fmtIDR(Number(i.harga || 0))}</td>
-              <td class="px-3 py-2 text-right mono">${fmtIDR(Number(i.subtotal || 0))}</td>
+            ${items.map(i => `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+              <td class="px-4 py-3 text-xs text-stone-700">${i.nama || '-'}</td>
+              <td class="px-4 py-3 text-xs text-right mono text-stone-700">${Number(i.qty || 0).toFixed(2)}</td>
+              <td class="px-4 py-3 text-xs text-right text-stone-500">${i.satuan || '-'}</td>
+              <td class="px-4 py-3 text-xs text-right mono text-stone-600">${fmtIDR(Number(i.harga || 0))}</td>
+              <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(Number(i.subtotal || 0))}</td>
             </tr>`).join('')}
           </tbody>
-        </table>
+        </table></div>
       </div>
-      <div class="text-xs text-stone-400">${pr.catatan || ''}</div>
+      ${pr.catatan ? `<div class="text-[10px] text-stone-400 bg-stone-50 rounded-xl px-4 py-2">${pr.catatan}</div>` : ''}
     </div>`;
 
   document.getElementById('modal-save').textContent = 'Tutup';
@@ -386,17 +390,21 @@ async function renderPoView() {
 
   const wrap = document.getElementById('pr-po-content');
   wrap.innerHTML = `
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
       <div class="flex items-center gap-2">
-        <button id="po-add-btn" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">+ Tambah PO</button>
-        <button id="po-from-siklus-btn" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm font-medium">+ Buat dari Siklus</button>
+        <button id="po-add-btn" class="h-11 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Tambah PO
+        </button>
+        <button id="po-from-siklus-btn" class="h-11 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all">+ Buat dari Siklus</button>
       </div>
-      <div class="flex items-center gap-2">
-        <input id="po-search" placeholder="Cari PO..." class="h-10 px-3 border border-stone-200 rounded-md text-sm w-48">
+      <div class="relative">
+        <input id="po-search" placeholder="Cari PO..." class="w-56 h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
       </div>
     </div>
-    <div id="po-table-wrap" class="bg-white border border-stone-200 rounded-lg overflow-hidden">
-      ${_poList.length === 0 ? '<div class="p-12 text-center text-stone-400"><div>Belum ada PO</div><div class="text-sm mt-1">Klik "Tambah PO" atau "Buat dari Siklus" untuk mulai.</div></div>' : renderPoTable(_poList)}
+    <div id="po-table-wrap" class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+      ${_poList.length === 0 ? '<div class="py-16 text-center text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><div class="text-sm">Belum ada PO</div><div class="text-xs text-stone-400 mt-1">Klik "Tambah PO" atau "Buat dari Siklus" untuk mulai.</div></div>' : renderPoTable(_poList)}
     </div>`;
 
   document.getElementById('po-add-btn').onclick = () => openPembelianForm(null);
@@ -416,41 +424,39 @@ async function renderPoView() {
 }
 
 function renderPoTable(rows) {
-  return `<div class="overflow-x-auto"><table class="w-full text-sm">
-    <thead class="bg-stone-50">
-      <tr>
-        <th class="text-left px-4 py-3 font-semibold text-xs">No PO</th>
-        <th class="text-left px-4 py-3 font-semibold text-xs">Tanggal</th>
-        <th class="text-left px-4 py-3 font-semibold text-xs">Supplier</th>
-        <th class="text-left px-4 py-3 font-semibold text-xs">Unit Dapur</th>
-        <th class="text-right px-4 py-3 font-semibold text-xs">Total</th>
-        <th class="text-left px-4 py-3 font-semibold text-xs">Status</th>
-        <th class="text-center px-4 py-3 font-semibold text-xs">Aksi</th>
-      </tr>
-    </thead>
+  return `<div class="overflow-x-auto"><table class="w-full">
+    <thead><tr class="border-b border-stone-100">
+      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">No PO</th>
+      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Tanggal</th>
+      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Supplier</th>
+      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Unit Dapur</th>
+      <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Total</th>
+      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Status</th>
+      <th class="text-center px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th>
+    </tr></thead>
     <tbody>
       ${rows.map(r => {
         let items = [];
         try { items = JSON.parse(r.item); } catch {}
         const statusColors = { 'Draft': 'bg-stone-100 text-stone-700', 'Disetujui': 'bg-blue-100 text-blue-700', 'Dikirim': 'bg-amber-100 text-amber-700', 'Diterima': 'bg-emerald-100 text-emerald-700', 'Dibayar': 'bg-green-100 text-green-700' };
-        return `<tr class="border-t border-stone-100">
-          <td class="px-4 py-3 font-medium">${r.no_po || '-'}</td>
-          <td class="px-4 py-3">${fmtDate(r.tanggal)}</td>
-          <td class="px-4 py-3">${r.supplier_nama || '-'}</td>
-          <td class="px-4 py-3">${r.unit_dapur || '-'}</td>
-          <td class="px-4 py-3 text-right mono">${fmtIDR(r.total_nilai || 0)}</td>
-          <td class="px-4 py-3"><span class="${statusColors[r.status] || 'bg-stone-100 text-stone-700'} px-2 py-0.5 rounded text-xs">${r.status || 'Draft'}</span></td>
+        return `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+          <td class="px-4 py-3 text-xs font-semibold text-stone-700">${r.no_po || '-'}</td>
+          <td class="px-4 py-3 text-xs text-stone-600">${fmtDate(r.tanggal)}</td>
+          <td class="px-4 py-3 text-xs text-stone-600">${r.supplier_nama || '-'}</td>
+          <td class="px-4 py-3 text-xs text-stone-600">${r.unit_dapur || '-'}</td>
+          <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(r.total_nilai || 0)}</td>
+          <td class="px-4 py-3 text-xs"><span class="inline-block px-2.5 py-0.5 text-[10px] font-semibold rounded-lg ${statusColors[r.status] || 'bg-stone-100 text-stone-700'}">${r.status || 'Draft'}</span></td>
           <td class="px-4 py-3 text-center whitespace-nowrap">
-            <button onclick="openPembelianForm(JSON.parse(this.dataset.po))" data-po='${JSON.stringify(r).replace(/'/g, "&#39;")}' class="text-stone-500 hover:text-stone-900 p-1.5 inline-flex items-center" title="Edit">
+            <button onclick="openPembelianForm(JSON.parse(this.dataset.po))" data-po='${JSON.stringify(r).replace(/'/g, "&#39;")}' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
-            <button onclick="deletePo(${r.id})" class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus">
+            <button onclick="deletePo(${r.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
-            ${r.status === 'Dikirim' ? `<button onclick="terimaPo(${r.id})" class="text-emerald-600 hover:text-emerald-800 p-1.5 inline-flex items-center" title="Terima Barang">
+            ${r.status === 'Dikirim' ? `<button onclick="terimaPo(${r.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 transition-all" title="Terima Barang">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
             </button>` : ''}
-            <button onclick="kirimKeKoperasi(JSON.parse(this.dataset.po))" data-po='${JSON.stringify(r).replace(/'/g, "&#39;")}' class="text-emerald-600 hover:text-emerald-800 p-1.5 inline-flex items-center" title="Kirim ke Koperasi">
+            <button onclick="kirimKeKoperasi(JSON.parse(this.dataset.po))" data-po='${JSON.stringify(r).replace(/'/g, "&#39;")}' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 transition-all" title="Kirim ke Koperasi">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
             </button>
           </td>
@@ -594,41 +600,41 @@ async function openPembelianForm(editing, prItems, prRef) {
   document.getElementById('modal-title').textContent = editing ? 'Edit Purchase Order' : prItems ? 'Buat PO dari PR (' + (prRef || '') + ')' : 'Tambah Purchase Order';
 
   document.getElementById('modal-body').innerHTML = `
-    <div class="space-y-3">
+    <div class="space-y-4">
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="text-sm text-stone-700">Nomor PO <span class="text-red-500">*</span></label>
-          <input id="po-no_po" value="${editing ? editing.no_po : nomor}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nomor PO <span class="text-red-500">*</span></label>
+          <input id="po-no_po" value="${editing ? editing.no_po : nomor}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
         </div>
         <div>
-          <label class="text-sm text-stone-700">Tanggal <span class="text-red-500">*</span></label>
-          <input id="po-tanggal" type="date" value="${editing ? (editing.tanggal || '').slice(0, 10) : tgl}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal <span class="text-red-500">*</span></label>
+          <input id="po-tanggal" type="date" value="${editing ? (editing.tanggal || '').slice(0, 10) : tgl}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
         </div>
       </div>
       <div>
-        <label class="text-sm text-stone-700">Supplier</label>
-        <select id="po-supplier_nama" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Supplier</label>
+        <select id="po-supplier_nama" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
           <option value="">— Pilih Supplier —</option>
           ${supplierList.map(s => `<option value="${s.nama}" data-id="${s.id}" ${editing && editing.supplier_nama === s.nama ? 'selected' : ''}>${s.nama}</option>`).join('')}
         </select>
       </div>
       <div>
-        <label class="text-sm text-stone-700">Unit Dapur</label>
-        <input id="po-unit_dapur" value="${editing ? (editing.unit_dapur || '') : ''}" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Unit Dapur</label>
+        <input id="po-unit_dapur" value="${editing ? (editing.unit_dapur || '') : ''}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
       </div>
       <div>
-        <label class="text-sm text-stone-700 font-medium">Daftar Item</label>
-        <div id="po-items-list" class="mt-1 space-y-1"></div>
-        <button onclick="addPoItemRow()" class="mt-2 text-sm text-[#1e40af] hover:underline">+ Tambah Item</button>
+        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Daftar Item</label>
+        <div id="po-items-list" class="mt-1.5 space-y-2"></div>
+        <button onclick="addPoItemRow()" class="mt-2 text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">+ Tambah Item</button>
       </div>
-      <div class="flex items-center justify-between border-t border-stone-200 pt-3">
-        <span class="text-sm font-semibold">Total: <span id="po-total-display" class="mono">Rp 0</span></span>
+      <div class="flex items-center justify-between rounded-xl bg-stone-50 px-4 py-3">
+        <span class="text-sm font-bold text-stone-700">Total: <span id="po-total-display" class="mono">Rp 0</span></span>
         <input type="hidden" id="po-item-json" value='${JSON.stringify(items)}'>
         <input type="hidden" id="po-total_nilai" value="0">
       </div>
       <div>
-        <label class="text-sm text-stone-700">Status</label>
-        <select id="po-status" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md text-sm">
+        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Status</label>
+        <select id="po-status" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
           <option>Draft</option><option ${editing && editing.status === 'Disetujui' ? 'selected' : ''}>Disetujui</option>
           <option ${editing && editing.status === 'Dikirim' ? 'selected' : ''}>Dikirim</option>
           <option ${editing && editing.status === 'Diterima' ? 'selected' : ''}>Diterima</option>
@@ -636,8 +642,8 @@ async function openPembelianForm(editing, prItems, prRef) {
         </select>
       </div>
       <div>
-        <label class="text-sm text-stone-700">Catatan</label>
-        <textarea id="po-catatan" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-md text-sm" rows="2">${editing ? (editing.catatan || '') : ''}</textarea>
+        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Catatan</label>
+        <textarea id="po-catatan" class="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" rows="2">${editing ? (editing.catatan || '') : ''}</textarea>
       </div>
     </div>`;
 
@@ -658,8 +664,8 @@ function renderPoItems(items) {
     return;
   }
   wrap.innerHTML = items.map((item, i) => `
-    <div class="flex gap-2 items-start bg-stone-50 rounded-lg p-2">
-      <select onchange="updatePoItem(${i}, 'bahan_baku_id', this.value)" class="flex-1 h-10 px-3 border border-stone-200 rounded-md text-sm">
+    <div class="flex gap-2 items-center bg-stone-50 rounded-xl p-2.5">
+      <select onchange="updatePoItem(${i}, 'bahan_baku_id', this.value)" class="flex-1 h-10 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
         <option value="">— Pilih Bahan —</option>
         ${_bahanBakuList.map(b => {
           const isNew = b.created_at && (Date.now() - new Date(b.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
@@ -671,9 +677,11 @@ function renderPoItems(items) {
       </select>
       <input type="number" step="0.001" value="${item.qty || ''}" placeholder="Qty"
         onchange="updatePoItem(${i}, 'qty', this.value)"
-        class="w-24 h-10 px-3 border border-stone-200 rounded-md text-sm mono">
-      <span class="h-10 leading-10 text-sm text-stone-500 shrink-0">${item.satuan || ''}</span>
-      <button onclick="removePoItem(${i})" class="h-10 px-2 text-red-600 hover:bg-red-50 rounded" title="Hapus">×</button>
+        class="w-24 h-10 px-3 rounded-lg border border-stone-200 text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+      <span class="h-10 leading-10 text-xs text-stone-500 shrink-0 font-medium">${item.satuan || ''}</span>
+      <button onclick="removePoItem(${i})" class="w-8 h-8 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 hover:text-red-700 transition-all" title="Hapus">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
   `).join('');
   updatePoTotal();
@@ -766,13 +774,13 @@ async function openSiklusPicker() {
 
   document.getElementById('modal-title').textContent = 'Buat PO dari Siklus Menu';
   document.getElementById('modal-body').innerHTML = `
-    <div class="mb-3">
-      <label class="text-sm font-medium">Pilih Siklus</label>
-      <div class="mt-1 space-y-1 max-h-48 overflow-y-auto border border-stone-200 rounded-lg p-2">
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Pilih Siklus</label>
+      <div class="mt-1.5 space-y-1 max-h-48 overflow-y-auto rounded-xl border border-stone-200 p-2">
         ${siklusList.map(s => `
-          <label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-1.5 rounded">
+          <label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-2 rounded-lg">
             <input type="checkbox" class="siklus-check cb-modern" value="${s.id}">
-            <span class="text-sm">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi)</span>
+            <span class="text-sm text-stone-700">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi)</span>
           </label>
         `).join('')}
       </div>
@@ -813,43 +821,41 @@ async function generatePOFromSiklus() {
     }
 
     preview.innerHTML = `
-      <div class="border border-stone-200 rounded-lg overflow-hidden">
-        <table class="w-full text-sm">
-          <thead class="bg-stone-50">
-            <tr>
-              <th class="text-left px-3 py-2 text-xs font-semibold">Bahan</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">Total</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">+Buffer 10%</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">Harga</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold">Subtotal</th>
-            </tr>
-          </thead>
+      <div class="rounded-2xl border border-stone-200 overflow-hidden mb-3">
+        <div class="overflow-x-auto"><table class="w-full">
+          <thead><tr class="border-b border-stone-100">
+            <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Bahan</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Total</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">+Buffer 10%</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Harga</th>
+            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Subtotal</th>
+          </tr></thead>
           <tbody>
             ${result.items.map(i => {
               const kodeNum = i.kode ? (i.kode.match(/EXT[-\s]?(\d+)/i)?.[1] || i.kode) : '';
-              return `<tr class="border-t border-stone-100">
-                <td class="px-3 py-2">${kodeNum ? '[' + kodeNum + '] ' : ''}${i.bahan_nama}</td>
-                <td class="px-3 py-2 text-right mono">${i.total_qty} ${i.satuan}</td>
-                <td class="px-3 py-2 text-right mono">${i.buffer_10} ${i.satuan}</td>
-                <td class="px-3 py-2 text-right mono">${fmtIDR(i.harga_satuan)}</td>
-                <td class="px-3 py-2 text-right mono">${fmtIDR(i.estimated_subtotal)}</td>
+              return `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+                <td class="px-4 py-3 text-xs text-stone-700">${kodeNum ? '[' + kodeNum + '] ' : ''}${i.bahan_nama}</td>
+                <td class="px-4 py-3 text-xs text-right mono text-stone-700">${i.total_qty} ${i.satuan}</td>
+                <td class="px-4 py-3 text-xs text-right mono text-stone-700">${i.buffer_10} ${i.satuan}</td>
+                <td class="px-4 py-3 text-xs text-right mono text-stone-600">${fmtIDR(i.harga_satuan)}</td>
+                <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(i.estimated_subtotal)}</td>
               </tr>`;
             }).join('')}
           </tbody>
-          <tfoot class="bg-stone-50 border-t border-stone-200">
-            <tr><td colspan="4" class="px-3 py-2 text-right font-semibold">Total Estimasi</td>
-              <td class="px-3 py-2 text-right font-semibold mono">${fmtIDR(result.total_estimated)}</td></tr>
+          <tfoot><tr class="bg-gradient-to-r from-stone-50 to-stone-100/60 border-t border-stone-200">
+            <td colspan="4" class="px-4 py-3 text-xs text-right font-bold text-stone-700">Total Estimasi</td>
+            <td class="px-4 py-3 text-xs text-right font-bold mono text-stone-800">${fmtIDR(result.total_estimated)}</td></tr>
           </tfoot>
-        </table>
+        </table></div>
       </div>
-      <div class="mt-3 flex gap-2">
-        <select id="po-supplier" class="flex-1 h-10 px-3 border border-stone-200 rounded-md text-sm">
+      <div class="flex gap-2 mb-3">
+        <select id="po-supplier" class="flex-1 h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
           <option value="">— Pilih Supplier —</option>
           ${siklusSupplierList.map(s => `<option value="${s.nama}" data-id="${s.id}">${s.nama}</option>`).join('')}
         </select>
-        <input id="po-unit_dapur-siklus" placeholder="Unit Dapur" class="flex-1 h-10 px-3 border border-stone-200 rounded-md text-sm">
+        <input id="po-unit_dapur-siklus" placeholder="Unit Dapur" class="flex-1 h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
       </div>
-      <button id="confirm-create-po" class="mt-2 bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md text-sm font-medium">Konfirmasi & Buat PO</button>`;
+      <button id="confirm-create-po" class="w-full h-11 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all">Konfirmasi & Buat PO</button>`;
 
     document.getElementById('modal-save').style.display = 'none';
     document.getElementById('confirm-create-po').onclick = async () => {
