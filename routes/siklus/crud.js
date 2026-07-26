@@ -252,4 +252,92 @@ router.post('/siklus/bulk-delete', async (req, res) => {
   res.json({ ok: true, deleted: ids.length });
 });
 
+/**
+ * POST /siklus/:id/duplicate
+ * Duplikasi siklus — bisa seluruh hari atau rentang tertentu (hari_mulai & hari_akhir).
+ */
+router.post('/siklus/:id/duplicate', async (req, res) => {
+  const [[siklus]] = await db.query(
+    'SELECT * FROM siklus_menu WHERE id=? AND tenant_id=?',
+    [req.params.id, req.user.tenant_id]
+  );
+  if (!siklus) return res.status(404).json({ error: 'Siklus tidak ditemukan' });
+
+  // Rentang hari
+  const hariMulai = parseInt(req.body.hari_mulai) || 1;
+  const hariAkhir = parseInt(req.body.hari_akhir) || siklus.total_hari;
+  if (hariMulai < 1 || hariAkhir > siklus.total_hari || hariMulai > hariAkhir) {
+    return res.status(400).json({ error: 'Rentang hari tidak valid (1-' + siklus.total_hari + ')' });
+  }
+  const rangeTotal = hariAkhir - hariMulai + 1;
+
+  // Generate nama baru unik
+  const rangeLabel = (hariMulai === 1 && hariAkhir === siklus.total_hari) ? '' : ' (Hari ' + hariMulai + '-' + hariAkhir + ')';
+  let newNama = siklus.nama + rangeLabel + ' (Duplikat)';
+  const [existing] = await db.query(
+    'SELECT id FROM siklus_menu WHERE nama=? AND tenant_id=?',
+    [newNama, req.user.tenant_id]
+  );
+  if (existing.length) {
+    let counter = 2;
+    while (true) {
+      newNama = siklus.nama + rangeLabel + ' (Duplikat ' + counter + ')';
+      const [cek] = await db.query(
+        'SELECT id FROM siklus_menu WHERE nama=? AND tenant_id=?',
+        [newNama, req.user.tenant_id]
+      );
+      if (!cek.length) break;
+      counter++;
+    }
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 1. Duplikasi header siklus (status selalu Draft, total_hari = range)
+    const [r] = await conn.query(
+      `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [req.user.tenant_id, newNama, siklus.kategori_penerima, siklus.jumlah_porsi, rangeTotal, 'Draft', siklus.catatan, siklus.tanggal_mulai]
+    );
+    const newId = r.insertId;
+
+    // 2. Duplikasi item per hari (filter berdasarkan rentang)
+    const [items] = await conn.query(
+      'SELECT * FROM siklus_menu_item WHERE siklus_id=? AND hari_ke >= ? AND hari_ke <= ? ORDER BY hari_ke ASC',
+      [req.params.id, hariMulai, hariAkhir]
+    );
+    for (const it of items) {
+      await conn.query(
+        `INSERT INTO siklus_menu_item (siklus_id, hari_ke, hari_nama, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, resep_map)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [newId, it.hari_ke, it.hari_nama, it.menu_id, it.menu_nama, it.jumlah_porsi,
+         it.kalori || 0, it.protein || 0, it.karbohidrat || 0, it.lemak || 0, it.serat || 0, it.resep_map || null]
+      );
+    }
+
+    // 3. Duplikasi bahan grid (filter berdasarkan rentang)
+    const [bahanGrid] = await conn.query(
+      'SELECT * FROM siklus_menu_item_bahan WHERE siklus_id=? AND hari_ke >= ? AND hari_ke <= ?',
+      [req.params.id, hariMulai, hariAkhir]
+    );
+    for (const bg of bahanGrid) {
+      await conn.query(
+        'INSERT INTO siklus_menu_item_bahan (siklus_id, hari_ke, kategori_sp, bahan_baku_id) VALUES (?,?,?,?)',
+        [newId, bg.hari_ke, bg.kategori_sp, bg.bahan_baku_id]
+      );
+    }
+
+    await conn.commit();
+    res.json({ id: newId, nama: newNama, ok: true });
+  } catch (e) {
+    await conn.rollback();
+    console.error('Duplikasi siklus error:', e);
+    res.status(400).json({ error: 'Gagal menduplikasi siklus: ' + (e.message || '') });
+  } finally {
+    conn.release();
+  }
+});
+
 module.exports = router;

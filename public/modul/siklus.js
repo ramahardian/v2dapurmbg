@@ -228,6 +228,7 @@ async function reloadSiklusList() {
           <button onclick="event.stopPropagation();loadSiklusDetail(${s.id})" class="w-7 h-7 flex items-center justify-center text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Detail"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button onclick="event.stopPropagation();bukaKebutuhanPangan(${s.id})" class="w-7 h-7 flex items-center justify-center text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Kebutuhan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></button>
           <button onclick="event.stopPropagation();editSiklus(${s.id})" class="w-7 h-7 flex items-center justify-center text-stone-600 hover:bg-stone-100 rounded-lg transition-colors" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button onclick="event.stopPropagation();duplikasiSiklus(${s.id}, ${s.total_hari})" class="w-7 h-7 flex items-center justify-center text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Duplikat"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
           <button onclick="event.stopPropagation();deleteSiklus(${s.id})" class="w-7 h-7 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
         </div>
       </div>
@@ -734,6 +735,111 @@ async function deleteSiklus(id) {
   await api.del('/siklus/' + id);
   document.getElementById('siklus-detail').innerHTML = '';
   reloadSiklusList();
+}
+
+async function duplikasiSiklus(id, totalHari) {
+  // Tampilkan modal rentang hari
+  const modalId = 'siklus-duplikasi-modal';
+  
+  // Hapus modal lama jika ada
+  const existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+  
+  const modal = document.createElement('div');
+  modal.id = modalId;
+  modal.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-black/40';
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-6" onclick="event.stopPropagation()">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </div>
+        <div>
+          <h3 class="font-bold text-sm text-stone-800">Duplikasi Siklus</h3>
+          <p class="text-xs text-stone-500">Pilih rentang hari yang akan di-duplikasi</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-5">
+        <div>
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1.5 block">Dari Hari ke</label>
+          <input id="dpl-dari" type="number" min="1" max="${totalHari}" value="1"
+            class="w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all mono">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1.5 block">Sampai Hari ke</label>
+          <input id="dpl-sampai" type="number" min="1" max="${totalHari}" value="${totalHari}"
+            class="w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all mono">
+        </div>
+      </div>
+      <div class="text-xs text-stone-400 mb-4 bg-stone-50 rounded-lg px-3 py-2">
+        Total hari: <span id="dpl-total-hari" class="font-semibold text-stone-700">${totalHari}</span>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button id="dpl-batal" class="px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">Batal</button>
+        <button id="dpl-ok" class="px-5 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors">Duplikat</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  
+  // Animasi masuk
+  const content = modal.querySelector('div');
+  content.classList.add('opacity-0', 'scale-95', 'transition-all', 'duration-200');
+  requestAnimationFrame(() => {
+    content.classList.remove('opacity-0', 'scale-95');
+    content.classList.add('opacity-100', 'scale-100');
+  });
+  
+  // Update total hari live
+  const dariInput = document.getElementById('dpl-dari');
+  const sampaiInput = document.getElementById('dpl-sampai');
+  const totalSpan = document.getElementById('dpl-total-hari');
+  function updateTotal() {
+    const d = parseInt(dariInput.value) || 1;
+    const s = parseInt(sampaiInput.value) || totalHari;
+    const t = Math.max(0, s - d + 1);
+    totalSpan.textContent = t > 0 ? t : 0;
+  }
+  dariInput.addEventListener('input', updateTotal);
+  sampaiInput.addEventListener('input', updateTotal);
+  
+  // Close function
+  function closeModal() {
+    content.classList.add('opacity-0', 'scale-95');
+    content.classList.remove('opacity-100', 'scale-100');
+    setTimeout(() => modal.remove(), 200);
+  }
+  
+  // Handler OK
+  document.getElementById('dpl-ok').onclick = async () => {
+    const d = parseInt(dariInput.value) || 1;
+    const s = parseInt(sampaiInput.value) || totalHari;
+    
+    if (d < 1 || s > totalHari || d > s) {
+      showAlert('Rentang hari tidak valid (1-' + totalHari + ')', 'warning');
+      return;
+    }
+    
+    closeModal();
+    
+    try {
+      const result = await api.post('/siklus/' + id + '/duplicate', { hari_mulai: d, hari_akhir: s });
+      showToast('Siklus "' + result.nama + '" berhasil diduplikasi', 'success');
+      document.getElementById('siklus-detail').innerHTML = '';
+      reloadSiklusList();
+    } catch (e) {
+      showToast('Gagal menduplikasi siklus: ' + (e.message || 'Unknown error'), 'error');
+    }
+  };
+  
+  // Handler Batal & klik luar
+  document.getElementById('dpl-batal').onclick = closeModal;
+  modal.onclick = (e) => {
+    if (e.target === modal) closeModal();
+  };
+  
+  // Focus input pertama
+  dariInput.focus();
 }
 
 function toggleSelectAll(master) {
