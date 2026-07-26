@@ -508,36 +508,60 @@ const tabColors = {
       const menuHarian = menuHarianRes || [];
       const kategori_order = ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'];
 
-      // Filter bar
-      var filterBar = '<div class="mb-4 flex flex-wrap items-center gap-3">' +
-        '<label class="text-xs font-medium text-stone-500">Siklus:</label>' +
-        '<select onchange="gantiFilterSiklus()" id="siklus-lap-filter" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
-        '<option value="">Semua Siklus</option>' +
-        siklusList.map(function(s) { return '<option value="' + s.id + '" ' + (String(s.id) === filterSiklusId ? 'selected' : '') + '>' + escHtml(s.nama) + '</option>'; }).join('') +
-        '</select></div>';
+      var filterBar = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">' +
+        '<div class="flex flex-wrap items-center gap-3">' +
+          '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>' +
+          '<select onchange="gantiFilterSiklus()" id="siklus-lap-filter" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
+          '<option value="">Semua Siklus</option>' +
+          siklusList.map(function(s) { return '<option value="' + s.id + '" ' + (String(s.id) === filterSiklusId ? 'selected' : '') + '>' + escHtml(s.nama) + '</option>'; }).join('') +
+          '</select>' +
+        '</div></div>';
 
-      // Build Laporan 1: Siklus Menu 10 Hari
-      let lap1Html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6">';
-      lap1Html += '<div style="padding:8px 12px;font-weight:700;font-size:14px;background:#f59e0b;color:#fff;border-bottom:2px solid #000;">LAPORAN 1 — SIKLUS MENU 10 HARI</div>';
-      lap1Html += renderDailyMenuTable(menuHarian, kategori_order);
-      lap1Html += '</div>';
-
-      // Build Laporan 2: Identifikasi Resep
-      let lap2Html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">';
-      lap2Html += '<div style="padding:8px 12px;font-weight:700;font-size:14px;background:#f59e0b;color:#fff;border-bottom:2px solid #000;">LAPORAN 2 — IDENTIFIKASI RESEP</div>';
-      lap2Html += renderResepTable(menuHarian, kategori_order);
-      lap2Html += '</div>';
-
-      window._lapStatCards = filterBar +
-        '<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">' +
-        statCard('Total Siklus', fmtNum(ringkasan.totalSiklus), 'siklus', 'bg-rose-50') +
-        statCard('Total Hari', fmtNum(ringkasan.totalHari), 'hari siklus', 'bg-blue-50') +
-        statCard('Hari Terisi', fmtNum(ringkasan.totalFilled), ringkasan.rataCoverage + '% coverage', 'bg-emerald-50') +
-        statCard('Hari Kosong', fmtNum(ringkasan.totalKosong), 'belum terisi', 'bg-orange-50') +
-        statCard('Menu Unik', fmtNum(ringkasan.totalMenuUnik), 'menu digunakan', 'bg-violet-50') +
+      var statCards = '<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">' +
+        '<div class="bg-gradient-to-br from-rose-50 to-rose-100/60 rounded-2xl border border-rose-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-rose-700">Siklus</span><svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div>' +
+          '<div class="text-lg font-bold text-rose-800">' + fmtNum(ringkasan.totalSiklus) + '</div>' +
+          '<div class="text-[10px] text-rose-600/70">Total siklus</div>' +
         '</div>' +
-        lap1Html +
-        lap2Html;
+        '<div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Hari</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg></div>' +
+          '<div class="text-lg font-bold text-blue-800">' + fmtNum(ringkasan.totalHari) + '</div>' +
+          '<div class="text-[10px] text-blue-600/70">Hari siklus</div>' +
+        '</div>' +
+        '<div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Terisi</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+          '<div class="text-lg font-bold text-emerald-800">' + fmtNum(ringkasan.totalFilled) + '</div>' +
+          '<div class="text-[10px] text-emerald-600/70">' + ringkasan.rataCoverage + '% coverage</div>' +
+        '</div>' +
+        '<div class="bg-gradient-to-br from-orange-50 to-orange-100/60 rounded-2xl border border-orange-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">Kosong</span><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>' +
+          '<div class="text-lg font-bold text-orange-800">' + fmtNum(ringkasan.totalKosong) + '</div>' +
+          '<div class="text-[10px] text-orange-600/70">Belum terisi</div>' +
+        '</div>' +
+        '<div class="bg-gradient-to-br from-violet-50 to-violet-100/60 rounded-2xl border border-violet-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-violet-700">Menu</span><svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>' +
+          '<div class="text-lg font-bold text-violet-800">' + fmtNum(ringkasan.totalMenuUnik) + '</div>' +
+          '<div class="text-[10px] text-violet-600/70">Menu unik digunakan</div>' +
+        '</div>' +
+      '</div>';
+
+      var lap1Html = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-6">' +
+        '<div class="px-4 py-3 bg-gradient-to-r from-amber-400 to-amber-500 flex items-center justify-between">' +
+          '<h3 class="text-xs font-bold text-white uppercase tracking-wider">Laporan 1 — Siklus Menu 10 Hari</h3>' +
+          '<span class="text-[10px] text-amber-100">' + (ringkasan.totalHari || 0) + ' hari</span>' +
+        '</div>' +
+        renderDailyMenuTable(menuHarian, kategori_order) +
+      '</div>';
+
+      var lap2Html = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">' +
+        '<div class="px-4 py-3 bg-gradient-to-r from-amber-400 to-amber-500 flex items-center justify-between">' +
+          '<h3 class="text-xs font-bold text-white uppercase tracking-wider">Laporan 2 — Identifikasi Resep</h3>' +
+          '<span class="text-[10px] text-amber-100">Menu per kategori</span>' +
+        '</div>' +
+        renderResepTable(menuHarian, kategori_order) +
+      '</div>';
+
+      window._lapStatCards = filterBar + statCards + lap1Html + lap2Html;
     } else if (tab === 'pembelian') {
       const r = await api.get('/laporan/pembelian');
       const rows = r.rows || [];
@@ -545,12 +569,12 @@ const tabColors = {
       window._lapData = { tab, rows, headers: ['No PO','Tanggal','Supplier','Item','Total','Status'], fields: ['no_po','tanggal','supplier_nama','item_nama','total_nilai','status'],
         fmt: rows.map(d => [d.no_po, fmtDate(d.tanggal), d.supplier_nama||'-', fmtItem(d), fmtIDR(d.total_nilai), d.status]) };
       window['_export_pembelian'] = { data: rows.map(d => ({ ...d, item_nama: fmtItem(d) })), fields: ['no_po','tanggal','supplier_nama','item_nama','total_nilai','status'] };
-      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
-        ${statCard('Total PO', fmtNum(r.stats.total_po), '', 'bg-indigo-50')}
-        ${statCard('Draft', fmtNum(r.stats.draft), '', 'bg-stone-50')}
-        ${statCard('Disetujui', fmtNum(r.stats.disetujui), '', 'bg-blue-50')}
-        ${statCard('Diterima', fmtNum(r.stats.diterima), '', 'bg-emerald-50')}
-        ${statCard('Total Nilai', fmtIDR(r.stats.total_nilai), '', 'bg-indigo-50')}
+      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100/60 rounded-2xl border border-indigo-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-indigo-700">Total PO</span><svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><div class="text-lg font-bold text-indigo-800">${fmtNum(r.stats.total_po)}</div><div class="text-[10px] text-indigo-600/70">Total purchase order</div></div>
+        <div class="bg-gradient-to-br from-stone-50 to-stone-100/60 rounded-2xl border border-stone-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-700">Draft</span><svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="text-lg font-bold text-stone-800">${fmtNum(r.stats.draft)}</div><div class="text-[10px] text-stone-600/70">Menunggu approval</div></div>
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Disetujui</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><div class="text-lg font-bold text-blue-800">${fmtNum(r.stats.disetujui)}</div><div class="text-[10px] text-blue-600/70">Telah disetujui</div></div>
+        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Diterima</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><div class="text-lg font-bold text-emerald-800">${fmtNum(r.stats.diterima)}</div><div class="text-[10px] text-emerald-600/70">Barang diterima</div></div>
+        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100/60 rounded-2xl border border-indigo-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-indigo-700">Nilai</span><svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="text-lg font-bold text-indigo-800">${fmtIDR(r.stats.total_nilai)}</div><div class="text-[10px] text-indigo-600/70">Total nilai PO</div></div>
       </div>`;
     } else if (tab === 'penerimaan') {
       const r = await api.get('/laporan/penerimaan');
@@ -558,11 +582,15 @@ const tabColors = {
       window._lapData = { tab, rows, headers: ['No Dokumen','Tanggal','Supplier','Ref PO','Nilai','QC'], fields: ['no_dokumen','tanggal_terima','supplier_nama','ref_po','total_nilai','status_qc'],
         fmt: rows.map(d => [d.no_dokumen, fmtDate(d.tanggal_terima), d.supplier_nama||'-', d.ref_po||'-', fmtIDR(d.total_nilai), d.status_qc]) };
       window['_export_penerimaan'] = { data: rows, fields: ['no_dokumen','tanggal_terima','supplier_nama','ref_po','total_nilai','status_qc'] };
-      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
-        ${statCard('Total', fmtNum(r.stats.total), '', 'bg-teal-50')}
-        ${statCard('Lolos QC', fmtNum(r.stats.lolos), '', 'bg-emerald-50')}
-        ${statCard('Retur', fmtNum(r.stats.retur), '', 'bg-orange-50')}
-        ${statCard('Total Nilai', fmtIDR(r.stats.total_nilai), '', 'bg-teal-50')}
+      const totalR = r.stats.total || 0;
+      const lolosR = r.stats.lolos || 0;
+      const returR = r.stats.retur || 0;
+      const returPct = totalR > 0 ? (returR / totalR * 100).toFixed(1) : 0;
+      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div class="bg-gradient-to-br from-teal-50 to-teal-100/60 rounded-2xl border border-teal-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-teal-700">Total</span><svg class="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div><div class="text-lg font-bold text-teal-800">${fmtNum(totalR)}</div><div class="text-[10px] text-teal-600/70">Total penerimaan</div></div>
+        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Lolos QC</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><div class="text-lg font-bold text-emerald-800">${fmtNum(lolosR)}</div><div class="text-[10px] text-emerald-600/70">Kualitas baik</div></div>
+        <div class="bg-gradient-to-br from-orange-50 to-orange-100/60 rounded-2xl border border-orange-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">Retur</span><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><div class="text-lg font-bold text-orange-800">${fmtNum(returR)}</div><div class="text-[10px] text-orange-600/70">${returPct}% dari total</div></div>
+        <div class="bg-gradient-to-br from-teal-50 to-teal-100/60 rounded-2xl border border-teal-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-teal-700">Nilai</span><svg class="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="text-lg font-bold text-teal-800">${fmtIDR(r.stats.total_nilai)}</div><div class="text-[10px] text-teal-600/70">Total nilai barang</div></div>
       </div>`;
     } else if (tab === 'mutasi') {
       const r = await api.get('/laporan/mutasi-stok');
@@ -572,10 +600,11 @@ const tabColors = {
       window['_export_mutasi'] = { data: rows, fields: ['tanggal','jenis','bahan_nama','jumlah','satuan','keterangan'] };
       const totalMasuk = Number(r.stats.total_masuk).toFixed(2);
       const totalKeluar = Number(r.stats.total_keluar).toFixed(2);
-      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
-        ${statCard('Total Masuk', totalMasuk, r.stats.count_masuk + ' transaksi', 'bg-emerald-50')}
-        ${statCard('Total Keluar', totalKeluar, r.stats.count_keluar + ' transaksi', 'bg-orange-50')}
-        ${statCard('Selisih', (totalMasuk - totalKeluar).toFixed(2), '', 'bg-blue-50')}
+      const selisihMutasi = (totalMasuk - totalKeluar).toFixed(2);
+      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Masuk</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/></svg></div><div class="text-lg font-bold text-emerald-800">${totalMasuk}</div><div class="text-[10px] text-emerald-600/70">${r.stats.count_masuk || 0} transaksi</div></div>
+        <div class="bg-gradient-to-br from-orange-50 to-orange-100/60 rounded-2xl border border-orange-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">Keluar</span><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="21 16 21 21 16 21"/><line x1="4" y1="4" x2="21" y2="21"/></svg></div><div class="text-lg font-bold text-orange-800">${totalKeluar}</div><div class="text-[10px] text-orange-600/70">${r.stats.count_keluar || 0} transaksi</div></div>
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Selisih</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><div class="text-lg font-bold text-blue-800">${selisihMutasi}</div><div class="text-[10px] text-blue-600/70">Masuk - Keluar</div></div>
       </div>`;
     } else if (tab === 'produksi') {
       const r = await api.get('/laporan/produksi');
@@ -583,11 +612,12 @@ const tabColors = {
       window._lapData = { tab, rows, headers: ['Tanggal','Menu','Kategori','Porsi','Status'], fields: ['tanggal_produksi','menu_nama','kategori_penerima','jumlah_porsi','status'],
         fmt: rows.map(d => [fmtDate(d.tanggal_produksi), d.menu_nama, d.kategori_penerima||'-', fmtNum(d.jumlah_porsi), d.status]) };
       window['_export_produksi'] = { data: rows, fields: ['tanggal_produksi','menu_nama','kategori_penerima','jumlah_porsi','status'] };
-      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
-        ${statCard('Total Produksi', fmtNum(r.stats.total), 'kali', 'bg-lime-50')}
-        ${statCard('Total Porsi', fmtNum(r.stats.total_porsi), 'porsi', 'bg-blue-50')}
-        ${statCard('Diproduksi', fmtNum(r.stats.diproduksi), '', 'bg-emerald-50')}
-        ${statCard('Selesai', fmtNum(r.stats.selesai), '', 'bg-stone-50')}
+      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+        <div class="bg-gradient-to-br from-lime-50 to-lime-100/60 rounded-2xl border border-lime-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-lime-700">Produksi</span><svg class="w-4 h-4 text-lime-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div><div class="text-lg font-bold text-lime-800">${fmtNum(r.stats.total)}</div><div class="text-[10px] text-lime-600/70">Total produksi</div></div>
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Porsi</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="text-lg font-bold text-blue-800">${fmtNum(r.stats.total_porsi)}</div><div class="text-[10px] text-blue-600/70">Total porsi diproduksi</div></div>
+        <div class="bg-gradient-to-br from-sky-50 to-sky-100/60 rounded-2xl border border-sky-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-sky-700">Rata/Hari</span><svg class="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg></div><div class="text-lg font-bold text-sky-800">${r.stats.total > 0 ? fmtNum(Math.round(r.stats.total_porsi / r.stats.total)) : 0}</div><div class="text-[10px] text-sky-600/70">Porsi per produksi</div></div>
+        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Diproduksi</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><div class="text-lg font-bold text-emerald-800">${fmtNum(r.stats.diproduksi)}</div><div class="text-[10px] text-emerald-600/70">Sedang diproses</div></div>
+        <div class="bg-gradient-to-br from-stone-50 to-stone-100/60 rounded-2xl border border-stone-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-700">Selesai</span><svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><div class="text-lg font-bold text-stone-800">${fmtNum(r.stats.selesai)}</div><div class="text-[10px] text-stone-600/70">Telah selesai</div></div>
       </div>`;
     } else if (tab === 'payroll') {
       const r = await api.get('/laporan/payroll');
@@ -595,10 +625,10 @@ const tabColors = {
       window._lapData = { tab, rows, headers: ['Periode','Karyawan','Jabatan','Gaji Pokok','Tunjangan','Potongan','Total Gaji','Status'], fields: ['periode','karyawan_nama','jabatan','gaji_pokok','tunjangan','potongan','total_gaji','status'],
         fmt: rows.map(d => [d.periode, d.karyawan_nama, d.jabatan||'-', fmtIDR(d.gaji_pokok), fmtIDR(d.tunjangan), fmtIDR(d.potongan), fmtIDR(d.total_gaji), d.status]) };
       window['_export_payroll'] = { data: rows, fields: ['periode','karyawan_nama','jabatan','gaji_pokok','tunjangan','potongan','total_gaji','status'] };
-      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
-        ${statCard('Total Karyawan', fmtNum(r.stats.total_karyawan), 'data gaji', 'bg-pink-50')}
-        ${statCard('Total Gaji', fmtIDR(r.stats.total_gaji), r.stats.periode_count + ' periode', 'bg-blue-50')}
-        ${statCard('Rata-rata', fmtIDR(r.stats.total_karyawan ? Math.round(r.stats.total_gaji / r.stats.total_karyawan) : 0), '/karyawan', 'bg-violet-50')}
+      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+        <div class="bg-gradient-to-br from-pink-50 to-pink-100/60 rounded-2xl border border-pink-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-pink-700">Karyawan</span><svg class="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="text-lg font-bold text-pink-800">${fmtNum(r.stats.total_karyawan)}</div><div class="text-[10px] text-pink-600/70">Data gaji</div></div>
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Total Gaji</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="text-lg font-bold text-blue-800">${fmtIDR(r.stats.total_gaji)}</div><div class="text-[10px] text-blue-600/70">${r.stats.periode_count} periode</div></div>
+        <div class="bg-gradient-to-br from-violet-50 to-violet-100/60 rounded-2xl border border-violet-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-violet-700">Rata-rata</span><svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="text-lg font-bold text-violet-800">${fmtIDR(r.stats.total_karyawan ? Math.round(r.stats.total_gaji / r.stats.total_karyawan) : 0)}</div><div class="text-[10px] text-violet-600/70">Per karyawan</div></div>
       </div>`;
     } else if (tab === 'payroll-mingguan') {
       const now = new Date();
@@ -611,23 +641,26 @@ const tabColors = {
       var exportBtn = '<button onclick="exportPayrollMingguanLap()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5">' +
         '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
         'Export XLSX</button>';
-      var pmFilterBar = '<div class="mb-4 flex flex-wrap items-center gap-3">' +
-        '<div class="flex items-center gap-2">' +
-        '<label class="text-xs font-medium text-stone-500">Bulan:</label>' +
-        '<select id="pm-bulan" onchange="pmGanti()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
-        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(blnVal)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
-        '</select>' +
-        '<select id="pm-tahun" onchange="pmGanti()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
-        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(thnVal)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
-        '</select>' +
-        '<select id="pm-minggu" onchange="pmGanti()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
-        [1,2,3,4,5].map(function(m) { return '<option value="' + m + '" ' + (parseInt(mggVal)===m?'selected':'') + '>Minggu ' + m + '</option>'; }).join('') +
-        '</select></div>' +
-        '<div class="flex gap-1.5">' +
-        '<span id="pm-export-btn">' + exportBtn + '</span>' +
-        '<button onclick="bayarPayrollMingguanLap()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5">' +
-        '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' +
-        'Bayar & Jurnal</button>' +
+      var pmFilterBar = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">' +
+        '<div class="flex flex-wrap items-center gap-x-4 gap-y-2">' +
+          '<div class="flex items-center gap-2">' +
+            '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' +
+            '<select id="pm-bulan" onchange="pmGanti()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
+            [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(blnVal)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
+            '</select>' +
+            '<select id="pm-tahun" onchange="pmGanti()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
+            [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(thnVal)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
+            '</select>' +
+            '<select id="pm-minggu" onchange="pmGanti()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
+            [1,2,3,4,5].map(function(m) { return '<option value="' + m + '" ' + (parseInt(mggVal)===m?'selected':'') + '>Minggu ' + m + '</option>'; }).join('') +
+            '</select>' +
+          '</div>' +
+          '<div class="flex gap-1.5">' +
+          '<span id="pm-export-btn">' + exportBtn + '</span>' +
+          '<button onclick="bayarPayrollMingguanLap()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 shadow-sm">' +
+          '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' +
+          'Bayar & Jurnal</button>' +
+          '</div>' +
         '</div></div>';
 
       try {
@@ -645,25 +678,25 @@ const tabColors = {
         const fmtIdr = fmtIDR;
 
         // Info header
-        var infoHtml = '<div class="mb-4">' +
-          '<div class="flex items-center gap-2 text-sm font-medium text-stone-700">' +
-          '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ' + minggu.label + '</div>' +
-          '<div class="text-xs text-stone-500 mt-1">' + totals.total_karyawan + ' karyawan · ' + totals.total_hadir + ' hadir · Total: ' + fmtIdr(totals.total_gaji) + '</div>' +
-          '</div>';
+        var infoHtml = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4 mb-4">' +
+          '<div class="flex items-center justify-between">' +
+            '<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center shadow-sm"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div><div class="text-sm font-bold text-stone-800">' + minggu.label + '</div><div class="text-xs text-stone-500">' + totals.total_karyawan + ' karyawan · ' + totals.total_hadir + ' hadir</div></div></div>' +
+            '<div class="text-right"><div class="text-lg font-bold text-stone-800">' + fmtIdr(totals.total_gaji) + '</div><div class="text-[10px] text-stone-500">Total gaji</div></div>' +
+          '</div></div>';
 
         // Table header
-        var tableHtml = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-[11px]"><thead class="bg-stone-50"><tr>' +
-          '<th class="text-left px-3 py-2 font-semibold border-r border-stone-200 whitespace-nowrap">Nama</th>' +
-          '<th class="text-left px-2 py-2 font-semibold border-r border-stone-200 whitespace-nowrap text-stone-500">Jabatan</th>';
+        var tableHtml = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-[11px]"><thead class="bg-stone-50"><tr>' +
+          '<th class="text-left px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-r border-stone-200 whitespace-nowrap">Nama</th>' +
+          '<th class="text-left px-2 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-r border-stone-200 whitespace-nowrap">Jabatan</th>';
         minggu.dates.forEach(function(tgl, i) {
           const d = new Date(tgl + 'T00:00:00');
           const hari = tglNama[d.getDay()];
           const tglNum = tgl.slice(8, 10);
-          tableHtml += '<th class="text-center px-1 py-1 font-semibold border-l border-stone-200 min-w-[72px] ' + ([0,6].includes(d.getDay()) ? 'text-red-400' : '') + '">' + hari + '<br><span class="text-xs">' + tglNum + '</span></th>';
+          tableHtml += '<th class="text-center px-1 py-1.5 font-bold text-stone-500 text-[9px] uppercase tracking-wider border-l border-stone-200 min-w-[72px] ' + ([0,6].includes(d.getDay()) ? 'text-red-400' : '') + '">' + hari + '<br><span class="text-xs">' + tglNum + '</span></th>';
         });
-        tableHtml += '<th class="text-center px-2 py-2 font-semibold border-l border-stone-200 whitespace-nowrap">Hadir</th>' +
-          '<th class="text-right px-2 py-2 font-semibold whitespace-nowrap mono">Upah/Hari</th>' +
-          '<th class="text-right px-2 py-2 font-semibold whitespace-nowrap mono">Total</th></tr></thead><tbody>';
+        tableHtml += '<th class="text-center px-2 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-l border-stone-200 whitespace-nowrap">Hadir</th>' +
+          '<th class="text-right px-2 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider whitespace-nowrap">Upah/Hari</th>' +
+          '<th class="text-right px-2 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider whitespace-nowrap">Total</th></tr></thead><tbody>';
 
         var totalHadir = 0, totalGaji = 0;
 
@@ -715,14 +748,16 @@ const tabColors = {
       const now = new Date();
       const blnVal = lapState.lr_bulan || String(now.getMonth() + 1).padStart(2, '0');
       const thnVal = lapState.lr_tahun || String(now.getFullYear());
-      var lrFilterBar = '<div class="mb-4 flex flex-wrap items-center gap-3"><div class="flex items-center gap-2">' +
-        '<label class="text-xs font-medium text-stone-500">Periode:</label>' +
-        '<select id="lr-bulan" onchange="gantiPeriodeLR()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
-        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(blnVal)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
-        '</select>' +
-        '<select id="lr-tahun" onchange="gantiPeriodeLR()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
-        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(thnVal)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
-        '</select></div></div>';
+      var lrFilterBar = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">' +
+        '<div class="flex flex-wrap items-center gap-3">' +
+          '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>' +
+          '<select id="lr-bulan" onchange="gantiPeriodeLR()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
+          [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(blnVal)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
+          '</select>' +
+          '<select id="lr-tahun" onchange="gantiPeriodeLR()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
+          [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(thnVal)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
+          '</select>' +
+        '</div></div>';
 
       const r = await api.get('/laporan/laba-rugi?bulan=' + blnVal + '&tahun=' + thnVal);
       const rows = r.rows || [];
@@ -746,31 +781,47 @@ const tabColors = {
       var margin = pend.total > 0 ? (laba / pend.total * 100) : 0;
 
       // Summary & detail tables
-      var lrContent = '<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">' +
-        statCard('Pendapatan', fmtIDR(pend.total), pend.rincian?.length + ' kategori', 'bg-emerald-50') +
-        statCard('Biaya', fmtIDR(biaya.total), biaya.rincian?.length + ' kategori', 'bg-orange-50') +
-        statCard('Laba/' + (laba>=0?'Rugi':'Rugi'), `<span class="${laba>=0?'text-green-600':'text-red-600'}">${fmtIDR(Math.abs(laba))}</span>`, laba>=0?' surplus':' defisit', 'bg-blue-50') +
-        statCard('Margin', margin.toFixed(1) + '%', 'dari pendapatan', margin>=0?'bg-emerald-50':'bg-red-50') +
+      var lrContent = '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">' +
+        '<div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Pendapatan</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>' +
+          '<div class="text-lg font-bold text-emerald-800">' + fmtIDR(pend.total) + '</div>' +
+          '<div class="text-[10px] text-emerald-600/70">' + (pend.rincian?.length || 0) + ' kategori</div>' +
+        '</div>' +
+        '<div class="bg-gradient-to-br from-orange-50 to-orange-100/60 rounded-2xl border border-orange-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">Biaya</span><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>' +
+          '<div class="text-lg font-bold text-orange-800">' + fmtIDR(biaya.total) + '</div>' +
+          '<div class="text-[10px] text-orange-600/70">' + (biaya.rincian?.length || 0) + ' kategori</div>' +
+        '</div>' +
+        '<div class="bg-gradient-to-br from-' + (laba>=0?'emerald':'red') + '-50 to-' + (laba>=0?'emerald':'red') + '-100/60 rounded-2xl border border-' + (laba>=0?'emerald':'red') + '-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-' + (laba>=0?'emerald':'red') + '-700">Laba/Rugi</span><svg class="w-4 h-4 text-' + (laba>=0?'emerald':'red') + '-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 17V9m0 0l-4 4m4-4l4 4"/></svg></div>' +
+          '<div class="text-lg font-bold text-' + (laba>=0?'emerald':'red') + '-800">' + fmtIDR(Math.abs(laba)) + '</div>' +
+          '<div class="text-[10px] text-' + (laba>=0?'emerald':'red') + '-600/70">' + (laba>=0?'Surplus':'Defisit') + '</div>' +
+        '</div>' +
+        '<div class="bg-gradient-to-br from-' + (margin>=0?'emerald':'red') + '-50 to-' + (margin>=0?'emerald':'red') + '-100/60 rounded-2xl border border-' + (margin>=0?'emerald':'red') + '-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-' + (margin>=0?'emerald':'red') + '-700">Margin</span><svg class="w-4 h-4 text-' + (margin>=0?'emerald':'red') + '-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>' +
+          '<div class="text-lg font-bold text-' + (margin>=0?'emerald':'red') + '-800">' + margin.toFixed(1) + '%</div>' +
+          '<div class="text-[10px] text-' + (margin>=0?'emerald':'red') + '-600/70">Dari pendapatan</div>' +
+        '</div>' +
       '</div>' +
       '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">' +
       // Pendapatan table
-      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
-      '<div class="px-4 py-2.5 font-bold text-sm border-b border-stone-200 bg-emerald-50 text-emerald-800 flex items-center justify-between"><span>💳 PENDAPATAN</span><span class="text-xs font-normal">' + fmtIDR(pend.total) + '</span></div>' +
-      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-3 py-2 text-[10px] font-semibold">Kategori</th><th class="text-right px-3 py-2 text-[10px] font-semibold">Jumlah</th><th class="text-right px-3 py-2 text-[10px] font-semibold">%</th></tr></thead><tbody>' +
+      '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+      '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between"><h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Pendapatan</h3><span class="text-xs font-bold text-emerald-700">' + fmtIDR(pend.total) + '</span></div>' +
+      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Kategori</th><th class="text-right px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Jumlah</th><th class="text-right px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase">%</th></tr></thead><tbody>' +
       pendapatanHtml +
-      '<tr class="border-t-2 border-stone-400 font-bold bg-emerald-50"><td class="px-3 py-2.5 text-xs">Total Pendapatan</td><td class="px-3 py-2.5 text-right mono text-xs">' + fmtIDR(pend.total) + '</td><td class="px-3 py-2.5 text-right text-xs">100%</td></tr>' +
+      '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-emerald-50 to-emerald-100/60 font-bold"><td class="px-4 py-3 text-xs text-stone-800">Total Pendapatan</td><td class="px-4 py-3 text-right mono text-xs text-emerald-700">' + fmtIDR(pend.total) + '</td><td class="px-4 py-3 text-right text-xs text-emerald-700">100%</td></tr>' +
       '</tbody></table></div>' +
       // Biaya table
-      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
-      '<div class="px-4 py-2.5 font-bold text-sm border-b border-stone-200 bg-orange-50 text-orange-800 flex items-center justify-between"><span>📉 BIAYA</span><span class="text-xs font-normal">' + fmtIDR(biaya.total) + '</span></div>' +
-      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-3 py-2 text-[10px] font-semibold">Kategori</th><th class="text-right px-3 py-2 text-[10px] font-semibold">Jumlah</th><th class="text-right px-3 py-2 text-[10px] font-semibold">%</th></tr></thead><tbody>' +
+      '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+      '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between"><h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Biaya</h3><span class="text-xs font-bold text-orange-700">' + fmtIDR(biaya.total) + '</span></div>' +
+      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Kategori</th><th class="text-right px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Jumlah</th><th class="text-right px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase">%</th></tr></thead><tbody>' +
       biayaHtml +
-      '<tr class="border-t-2 border-stone-400 font-bold bg-orange-50"><td class="px-3 py-2.5 text-xs">Total Biaya</td><td class="px-3 py-2.5 text-right mono text-xs">' + fmtIDR(biaya.total) + '</td><td class="px-3 py-2.5 text-right text-xs">100%</td></tr>' +
+      '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-orange-50 to-orange-100/60 font-bold"><td class="px-4 py-3 text-xs text-stone-800">Total Biaya</td><td class="px-4 py-3 text-right mono text-xs text-orange-700">' + fmtIDR(biaya.total) + '</td><td class="px-4 py-3 text-right text-xs text-orange-700">100%</td></tr>' +
       '</tbody></table></div></div>' +
       // Summary bottom
-      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
-      '<div class="p-4 flex items-center justify-between"><div><span class="text-sm font-bold">Laba ' + (laba>=0?'Bersih':'Rugi Bersih') + '</span><br><span class="text-xs text-stone-500">' + r.periode + '</span></div>' +
-      '<div class="text-right"><div class="text-lg font-bold mono ' + (laba>=0?'text-green-600':'text-red-600') + '">' + (laba>=0?'':'−') + fmtIDR(Math.abs(laba)) + '</div>' +
+      '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+      '<div class="p-4 sm:p-5 flex items-center justify-between"><div><span class="text-sm font-bold text-stone-800">Laba ' + (laba>=0?'Bersih':'Rugi Bersih') + '</span><br><span class="text-xs text-stone-500">' + r.periode + '</span></div>' +
+      '<div class="text-right"><div class="text-xl font-bold mono ' + (laba>=0?'text-emerald-600':'text-red-600') + '">' + (laba>=0?'':'−') + fmtIDR(Math.abs(laba)) + '</div>' +
       '<div class="text-xs text-stone-500">Margin: ' + margin.toFixed(1) + '%</div></div></div></div>'
 
       window._lapData = { tab, rows, headers: ['Periode','Pendapatan','Biaya','Laba/Rugi'], fields: ['periode','pendapatan','biaya'],
@@ -801,60 +852,56 @@ const tabColors = {
       };
       window['_export_pengeluaran-bulanan'] = { data: transaksi, fields: ['tanggal','tipe','kategori','akun','deskripsi','jumlah'] };
       const bulanNama = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][parseInt(bulan||new Date().getMonth()+1)-1];
+      var totalPengeluaran = r.total_pengeluaran || 0;
+      var danaTersedia = r.dana_tersedia || 0;
+      var serapanPeng = danaTersedia > 0 ? (totalPengeluaran / danaTersedia * 100) : 0;
       window._lapStatCards = `
-<div class="mb-4 flex flex-wrap items-center gap-3">
-  <div class="flex items-center gap-2">
-    <label class="text-xs font-medium text-stone-500">Bulan:</label>
-    <select id="filter-bulan" onchange="gantiPeriodePengeluaran()" class="text-xs border border-stone-300 rounded px-2 py-1.5">
-      ${[1,2,3,4,5,6,7,8,9,10,11,12].map(b => `<option value="${b}" ${(parseInt(bulan||new Date().getMonth()+1))===b?'selected':''}>${['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1]}</option>`).join('')}
-    </select>
-    <select id="filter-tahun" onchange="gantiPeriodePengeluaran()" class="text-xs border border-stone-300 rounded px-2 py-1.5">
-      ${[2024,2025,2026,2027,2028].map(t => `<option value="${t}" ${(parseInt(tahun||new Date().getFullYear()))===t?'selected':''}>${t}</option>`).join('')}
-    </select>
-  </div>
-  <div class="text-xs text-stone-500 font-medium">Periode: ${bulanNama} ${tahun||new Date().getFullYear()}</div>
-</div>
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
-  <div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4">
-    <div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Sisa Dana Lalu</div>
-    <div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold">${fmtIDR(r.sisa_dana_lalu)}</div>
-  </div>
-  <div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-blue-50 border-0 rounded-xl">
-    <div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Dana Diterima</div>
-    <div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold text-blue-700">${fmtIDR(r.dana_diterima)}</div>
-  </div>
-  <div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-emerald-50 border-0 rounded-xl">
-    <div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Dana Tersedia</div>
-    <div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold text-emerald-700">${fmtIDR(r.dana_tersedia)}</div>
-  </div>
-  <div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 ${r.sisa_dana_saat_ini >= 0 ? 'bg-emerald-50' : 'bg-red-50'} border-0 rounded-xl">
-    <div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Sisa Dana Saat Ini</div>
-    <div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold ${r.sisa_dana_saat_ini >= 0 ? 'text-emerald-700' : 'text-red-700'}">${fmtIDR(r.sisa_dana_saat_ini)}</div>
+<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+    <div class="flex items-center gap-2">
+      <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+      <select id="filter-bulan" onchange="gantiPeriodePengeluaran()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+        ${[1,2,3,4,5,6,7,8,9,10,11,12].map(b => `<option value="${b}" ${(parseInt(bulan||new Date().getMonth()+1))===b?'selected':''}>${['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1]}</option>`).join('')}
+      </select>
+      <select id="filter-tahun" onchange="gantiPeriodePengeluaran()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+        ${[2024,2025,2026,2027,2028].map(t => `<option value="${t}" ${(parseInt(tahun||new Date().getFullYear()))===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>
+    <span class="text-xs text-stone-500 font-medium ml-auto">${bulanNama} ${tahun||new Date().getFullYear()}</span>
   </div>
 </div>
-<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">
-  <div class="px-4 py-3 font-bold text-sm border-b border-stone-200 bg-stone-50">Rincian Pengeluaran Bulanan</div>
-  <table class="w-full text-xs sm:text-sm">
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+  <div class="bg-gradient-to-br from-stone-50 to-stone-100/60 rounded-2xl border border-stone-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-700">Sisa Dana Lalu</span><svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="text-lg font-bold text-stone-800">${fmtIDR(r.sisa_dana_lalu)}</div><div class="text-[10px] text-stone-600/70">Dari periode sebelumnya</div></div>
+  <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Dana Diterima</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="text-lg font-bold text-blue-800">${fmtIDR(r.dana_diterima)}</div><div class="text-[10px] text-blue-600/70">Pemasukan periode ini</div></div>
+  <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Dana Tersedia</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/></svg></div><div class="text-lg font-bold text-emerald-800">${fmtIDR(danaTersedia)}</div><div class="flex items-center gap-1 mt-1"><div class="w-full bg-emerald-200/60 rounded-full h-1.5 overflow-hidden"><div class="bg-emerald-500 h-1.5 rounded-full" style="width:${Math.min(serapanPeng,100)}%"></div></div><span class="text-[10px] text-emerald-600/70 ml-1">${serapanPeng.toFixed(1)}%</span></div></div>
+  <div class="bg-gradient-to-br from-${r.sisa_dana_saat_ini >= 0 ? 'emerald' : 'red'}-50 to-${r.sisa_dana_saat_ini >= 0 ? 'emerald' : 'red'}-100/60 rounded-2xl border border-${r.sisa_dana_saat_ini >= 0 ? 'emerald' : 'red'}-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-${r.sisa_dana_saat_ini >= 0 ? 'emerald' : 'red'}-700">Sisa Dana</span><svg class="w-4 h-4 text-${r.sisa_dana_saat_ini >= 0 ? 'emerald' : 'red'}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div class="text-lg font-bold text-${r.sisa_dana_saat_ini >= 0 ? 'emerald' : 'red'}-800">${fmtIDR(r.sisa_dana_saat_ini)}</div><div class="text-[10px] text-${r.sisa_dana_saat_ini >= 0 ? 'emerald' : 'red'}-600/70">${r.sisa_dana_saat_ini >= 0 ? 'Sisa dana' : 'Defisit'}</div></div>
+</div>
+<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">
+  <div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
+    <h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Rincian Pengeluaran Bulanan</h3>
+    <span class="text-[10px] text-stone-400">${bulanNama} ${tahun}</span>
+  </div>
+  <table class="w-full text-xs">
     <tbody>
       <tr class="border-t border-stone-100">
-        <td class="px-4 py-3 font-medium">Biaya Bahan Baku</td>
-        <td class="px-4 py-3 text-right mono font-semibold">${fmtIDR(r.biaya_bahan_baku)}</td>
+        <td class="px-4 py-3 font-medium text-stone-700">Biaya Bahan Baku</td>
+        <td class="px-4 py-3 text-right mono font-semibold text-stone-800">${fmtIDR(r.biaya_bahan_baku)}</td>
       </tr>
-      <tr class="border-t border-stone-100 bg-stone-50">
-        <td class="px-4 py-3 font-medium">Biaya Operasional</td>
-        <td class="px-4 py-3 text-right mono font-semibold">${fmtIDR(r.biaya_operasional)}</td>
+      <tr class="border-t border-stone-100 bg-stone-50/50">
+        <td class="px-4 py-3 font-medium text-stone-700">Biaya Operasional</td>
+        <td class="px-4 py-3 text-right mono font-semibold text-stone-800">${fmtIDR(r.biaya_operasional)}</td>
       </tr>
       <tr class="border-t border-stone-100">
-        <td class="px-4 py-3 font-medium">Biaya Insentif Fasilitas</td>
-        <td class="px-4 py-3 text-right mono font-semibold">${fmtIDR(r.biaya_insentif_fasilitas)}</td>
+        <td class="px-4 py-3 font-medium text-stone-700">Biaya Insentif Fasilitas</td>
+        <td class="px-4 py-3 text-right mono font-semibold text-stone-800">${fmtIDR(r.biaya_insentif_fasilitas)}</td>
       </tr>
-      ${r.biaya_lainnya > 0 ? `<tr class="border-t border-stone-100 bg-stone-50">
+      ${r.biaya_lainnya > 0 ? `<tr class="border-t border-stone-100 bg-stone-50/50">
         <td class="px-4 py-3 font-medium text-stone-500">Biaya Lainnya</td>
         <td class="px-4 py-3 text-right mono text-stone-500">${fmtIDR(r.biaya_lainnya)}</td>
       </tr>` : ''}
-      <tr class="border-t-2 border-stone-400 bg-orange-50">
-        <td class="px-4 py-3 font-bold">Total Pengeluaran</td>
-        <td class="px-4 py-3 text-right mono font-bold text-red-700">${fmtIDR(r.total_pengeluaran)}</td>
+      <tr class="border-t-2 border-stone-300 bg-gradient-to-r from-orange-50 to-orange-100/60">
+        <td class="px-4 py-3.5 font-bold text-stone-800">Total Pengeluaran</td>
+        <td class="px-4 py-3.5 text-right mono font-bold text-red-600">${fmtIDR(totalPengeluaran)}</td>
       </tr>
     </tbody>
   </table>
@@ -1152,28 +1199,28 @@ const tabColors = {
           detailHtml = '<tr id="bpkas-detail-' + a.akun_id + '" class="bg-stone-50"><td colspan="6" class="px-4 py-2">' +
             '<table class="w-full text-[10px]">' +
             '<thead><tr class="text-stone-500 border-b border-stone-200">' +
-            '<th class="px-2 py-1 text-left">Tanggal</th><th class="px-2 py-1 text-left">No Transaksi</th>' +
-            '<th class="px-2 py-1 text-left">Tipe</th><th class="px-2 py-1 text-left">Kategori</th>' +
-            '<th class="px-2 py-1 text-left">Deskripsi</th><th class="px-2 py-1 text-right">Jumlah</th></tr></thead><tbody>';
+            '<th class="px-2 py-1 text-left font-semibold text-stone-500 uppercase text-[9px]">Tanggal</th><th class="px-2 py-1 text-left font-semibold text-stone-500 uppercase text-[9px]">No Transaksi</th>' +
+            '<th class="px-2 py-1 text-left font-semibold text-stone-500 uppercase text-[9px]">Tipe</th><th class="px-2 py-1 text-left font-semibold text-stone-500 uppercase text-[9px]">Kategori</th>' +
+            '<th class="px-2 py-1 text-left font-semibold text-stone-500 uppercase text-[9px]">Deskripsi</th><th class="px-2 py-1 text-right font-semibold text-stone-500 uppercase text-[9px]">Jumlah</th></tr></thead><tbody>';
           a.transaksi.forEach(function(t) {
             detailHtml += '<tr class="border-b border-stone-100">' +
-              '<td class="px-2 py-1">' + fmtDate(t.tanggal) + '</td>' +
-              '<td class="px-2 py-1">' + escHtml(t.no_transaksi||'-') + '</td>' +
-              '<td class="px-2 py-1"><span class="' + (t.tipe==='masuk'?'text-green-600':'text-red-600') + ' font-medium">' + t.tipe + '</span></td>' +
-              '<td class="px-2 py-1">' + escHtml(t.kategori||'-') + '</td>' +
-              '<td class="px-2 py-1">' + escHtml(t.deskripsi||'-') + '</td>' +
-              '<td class="px-2 py-1 text-right mono">' + fmtIDR(t.jumlah) + '</td></tr>';
+              '<td class="px-2 py-1 text-xs">' + fmtDate(t.tanggal) + '</td>' +
+              '<td class="px-2 py-1 text-xs">' + escHtml(t.no_transaksi||'-') + '</td>' +
+              '<td class="px-2 py-1 text-xs"><span class="' + (t.tipe==='masuk'?'text-green-600':'text-red-600') + ' font-medium">' + t.tipe + '</span></td>' +
+              '<td class="px-2 py-1 text-xs">' + escHtml(t.kategori||'-') + '</td>' +
+              '<td class="px-2 py-1 text-xs">' + escHtml(t.deskripsi||'-') + '</td>' +
+              '<td class="px-2 py-1 text-right mono text-xs font-semibold">' + fmtIDR(t.jumlah) + '</td></tr>';
           });
           detailHtml += '</tbody></table></td></tr>';
         }
         var sisa = a.total_masuk - a.total_keluar;
-        akunRows += '<tr class="border-t border-stone-100 hover:bg-stone-50 cursor-pointer" onclick="bpkasToggle(' + a.akun_id + ')">' +
-          '<td class="px-3 py-2 text-xs">' + escHtml(a.akun_kode) + '</td>' +
-          '<td class="px-3 py-2 text-xs font-medium">' + escHtml(a.akun_nama) + '</td>' +
-          '<td class="px-3 py-2 text-xs text-right mono">' + fmtIDR(a.saldo_awal) + '</td>' +
-          '<td class="px-3 py-2 text-xs text-right mono text-green-600">' + fmtIDR(a.total_masuk) + '</td>' +
-          '<td class="px-3 py-2 text-xs text-right mono text-red-600">' + fmtIDR(a.total_keluar) + '</td>' +
-          '<td class="px-3 py-2 text-xs text-right mono font-semibold">' + fmtIDR(a.saldo_akhir) + '</td></tr>' +
+        akunRows += '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors cursor-pointer" onclick="bpkasToggle(' + a.akun_id + ')">' +
+          '<td class="px-4 py-3 text-xs font-mono text-stone-500">' + escHtml(a.akun_kode) + '</td>' +
+          '<td class="px-4 py-3 text-xs font-medium text-stone-700">' + escHtml(a.akun_nama) + '</td>' +
+          '<td class="px-4 py-3 text-xs text-right mono font-semibold text-stone-700">' + fmtIDR(a.saldo_awal) + '</td>' +
+          '<td class="px-4 py-3 text-xs text-right mono text-green-600 font-semibold">' + fmtIDR(a.total_masuk) + '</td>' +
+          '<td class="px-4 py-3 text-xs text-right mono text-red-600 font-semibold">' + fmtIDR(a.total_keluar) + '</td>' +
+          '<td class="px-4 py-3 text-xs text-right mono font-bold text-stone-800">' + fmtIDR(a.saldo_akhir) + '</td></tr>' +
           detailHtml;
       });
 
@@ -1186,37 +1233,39 @@ const tabColors = {
       window['_export_bp-kas'] = { data: akunData, fields: ['akun_kode','akun_nama','saldo_awal','total_masuk','total_keluar','saldo_akhir'] };
 
       window._lapStatCards =
-        '<div class="mb-4 flex flex-wrap items-center gap-3">' +
-        '<div class="flex items-center gap-2">' +
-        '<label class="text-xs font-medium text-stone-500">Bulan:</label>' +
-        '<select id="bpkas-bulan" onchange="bpkasFilter()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
-        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(kasBulan)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
-        '</select>' +
-        '<select id="bpkas-tahun" onchange="bpkasFilter()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
-        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(kasTahun)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
-        '</select></div></div>' +
-        '<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">' +
-        '<div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-stone-50 border-0 rounded-xl"><div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Saldo Awal</div><div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold">' + totalSa + '</div></div>' +
-        '<div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-blue-50 border-0 rounded-xl"><div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Debit (Masuk)</div><div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold text-blue-700">' + totalMi + '</div></div>' +
-        '<div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-orange-50 border-0 rounded-xl"><div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Kredit (Keluar)</div><div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold text-orange-700">' + totalKk + '</div></div>' +
-        '<div class="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 bg-emerald-50 border-0 rounded-xl"><div class="text-[10px] sm:text-xs uppercase tracking-wider text-stone-500 font-medium">Saldo Akhir</div><div class="mono text-sm sm:text-xl mt-1 sm:mt-2 font-semibold text-emerald-700">' + totalSaAkhir + '</div></div>' +
+        '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">' +
+        '<div class="flex flex-wrap items-center gap-3">' +
+          '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>' +
+          '<select id="bpkas-bulan" onchange="bpkasFilter()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
+          [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(kasBulan)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
+          '</select>' +
+          '<select id="bpkas-tahun" onchange="bpkasFilter()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
+          [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(kasTahun)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
+          '</select>' +
+        '</div></div>' +
+        '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">' +
+        '<div class="bg-gradient-to-br from-stone-50 to-stone-100/60 rounded-2xl border border-stone-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-700">Saldo Awal</span><svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="text-lg font-bold text-stone-800">' + totalSa + '</div><div class="text-[10px] text-stone-600/70">Saldo awal periode</div></div>' +
+        '<div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Debit</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="text-lg font-bold text-blue-800">' + totalMi + '</div><div class="text-[10px] text-blue-600/70">Total kas masuk</div></div>' +
+        '<div class="bg-gradient-to-br from-orange-50 to-orange-100/60 rounded-2xl border border-orange-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">Kredit</span><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="text-lg font-bold text-orange-800">' + totalKk + '</div><div class="text-[10px] text-orange-600/70">Total kas keluar</div></div>' +
+        '<div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Saldo Akhir</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/></svg></div><div class="text-lg font-bold text-emerald-800">' + totalSaAkhir + '</div><div class="text-[10px] text-emerald-600/70">Saldo akhir periode</div></div>' +
         '</div>' +
-        '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
+        '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+        '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between"><h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider">BP Kas per Akun</h3><span class="text-[10px] text-stone-400">' + akunData.length + ' akun</span></div>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs">' +
-        '<thead class="bg-stone-50"><tr>' +
-        '<th class="text-left px-3 py-2.5 text-[10px] font-semibold uppercase">Kode</th>' +
-        '<th class="text-left px-3 py-2.5 text-[10px] font-semibold uppercase">Nama Akun</th>' +
-        '<th class="text-right px-3 py-2.5 text-[10px] font-semibold uppercase">Saldo Awal</th>' +
-        '<th class="text-right px-3 py-2.5 text-[10px] font-semibold uppercase">Debit</th>' +
-        '<th class="text-right px-3 py-2.5 text-[10px] font-semibold uppercase">Kredit</th>' +
-        '<th class="text-right px-3 py-2.5 text-[10px] font-semibold uppercase">Saldo Akhir</th></tr></thead><tbody>' +
+        '<thead><tr class="bg-stone-50">' +
+        '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase">Kode</th>' +
+        '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase">Nama Akun</th>' +
+        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase">Saldo Awal</th>' +
+        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase">Debit</th>' +
+        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase">Kredit</th>' +
+        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase">Saldo Akhir</th></tr></thead><tbody>' +
         (akunRows || '<tr><td colspan="6" class="text-center py-8 text-stone-400">Belum ada transaksi BP Kas periode ini</td></tr>') +
-        '<tr class="border-t-2 border-stone-400 font-bold bg-stone-100">' +
-        '<td colspan="2" class="px-3 py-2.5 text-xs">TOTAL</td>' +
-        '<td class="px-3 py-2.5 text-right text-xs mono">' + totalSa + '</td>' +
-        '<td class="px-3 py-2.5 text-right text-xs mono text-green-700">' + totalMi + '</td>' +
-        '<td class="px-3 py-2.5 text-right text-xs mono text-red-700">' + totalKk + '</td>' +
-        '<td class="px-3 py-2.5 text-right text-xs mono">' + totalSaAkhir + '</td></tr>' +
+        '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-stone-100 to-stone-50 font-bold">' +
+        '<td colspan="2" class="px-4 py-3.5 text-xs text-stone-800">TOTAL</td>' +
+        '<td class="px-4 py-3.5 text-right text-xs mono text-stone-800">' + totalSa + '</td>' +
+        '<td class="px-4 py-3.5 text-right text-xs mono text-green-700">' + totalMi + '</td>' +
+        '<td class="px-4 py-3.5 text-right text-xs mono text-red-700">' + totalKk + '</td>' +
+        '<td class="px-4 py-3.5 text-right text-xs mono text-stone-800">' + totalSaAkhir + '</td></tr>' +
         '</tbody></table></div></div>' + listBadge;
 
       window._lapData = null;
@@ -1239,12 +1288,12 @@ const tabColors = {
       window['_export_hpp'] = { data: rows, fields: ['menu_nama','kategori_penerima','jumlah_bahan','total_hpp'] };
 
       // Build stat cards
-      let statHtml = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
-        ${statCard('Total Menu', fmtNum(stats.total_menu || 0), '', 'bg-amber-50')}
-        ${statCard('Total Bahan', fmtNum(stats.total_bahan || 0), 'semua menu', 'bg-blue-50')}
-        ${statCard('Total HPP', fmtIDR(stats.total_hpp_all || 0), '', 'bg-emerald-50')}
-        ${statCard('Rata-rata HPP', fmtIDR(stats.rata_hpp || 0), '/menu', 'bg-violet-50')}
-        ${statCard('Menu Tanpa Bahan', fmtNum(stats.menu_tanpa_bahan || 0), 'belum diisi', stats.menu_tanpa_bahan > 0 ? 'bg-red-50' : 'bg-emerald-50')}
+      let statHtml = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+        <div class="bg-gradient-to-br from-amber-50 to-amber-100/60 rounded-2xl border border-amber-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Menu</span><svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div><div class="text-lg font-bold text-amber-800">${fmtNum(stats.total_menu || 0)}</div><div class="text-[10px] text-amber-600/70">Total menu</div></div>
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Bahan</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><div class="text-lg font-bold text-blue-800">${fmtNum(stats.total_bahan || 0)}</div><div class="text-[10px] text-blue-600/70">Semua menu</div></div>
+        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Total HPP</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="text-lg font-bold text-emerald-800">${fmtIDR(stats.total_hpp_all || 0)}</div><div class="text-[10px] text-emerald-600/70">Seluruh menu</div></div>
+        <div class="bg-gradient-to-br from-violet-50 to-violet-100/60 rounded-2xl border border-violet-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-violet-700">Rata HPP</span><svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="text-lg font-bold text-violet-800">${fmtIDR(stats.rata_hpp || 0)}</div><div class="text-[10px] text-violet-600/70">Per menu</div></div>
+        <div class="bg-gradient-to-br from-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-50 to-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-100/60 rounded-2xl border border-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-700">Tanpa Bahan</span><svg class="w-4 h-4 text-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><div class="text-lg font-bold text-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-800">${fmtNum(stats.menu_tanpa_bahan || 0)}</div><div class="text-[10px] text-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-600/70">${stats.menu_tanpa_bahan > 0 ? 'Belum diisi' : 'Lengkap'}</div></div>
       </div>`;
 
       // Build table with expandable detail
@@ -1291,14 +1340,16 @@ const tabColors = {
       const now = new Date();
       const blnVal = lapState.ak_bulan || String(now.getMonth() + 1).padStart(2, '0');
       const thnVal = lapState.ak_tahun || String(now.getFullYear());
-      var akFilterBar = '<div class="mb-4 flex flex-wrap items-center gap-3"><div class="flex items-center gap-2">' +
-        '<label class="text-xs font-medium text-stone-500">Periode:</label>' +
-        '<select id="ak-bulan" onchange="gantiPeriodeAK()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
-        [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(blnVal)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
-        '</select>' +
-        '<select id="ak-tahun" onchange="gantiPeriodeAK()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
-        [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(thnVal)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
-        '</select></div></div>';
+      var akFilterBar = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">' +
+        '<div class="flex flex-wrap items-center gap-3">' +
+          '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>' +
+          '<select id="ak-bulan" onchange="gantiPeriodeAK()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
+          [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(blnVal)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
+          '</select>' +
+          '<select id="ak-tahun" onchange="gantiPeriodeAK()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
+          [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(thnVal)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
+          '</select>' +
+        '</div></div>';
 
       const r = await api.get('/laporan/arus-kas?bulan=' + blnVal + '&tahun=' + thnVal);
       const fmtIdr = fmtIDR;
@@ -1318,38 +1369,37 @@ const tabColors = {
       var saldoAkhir = r.saldo_akhir || 0;
       var selisih = r.selisih || 0;
 
-      var akContent = '<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">' +
-        statCard('Saldo Awal', fmtIdr(r.saldo_awal), 'sebelum periode', 'bg-stone-50') +
-        statCard('Kas Masuk', fmtIdr(r.kas_masuk?.total||0), r.kas_masuk?.rincian?.length + ' kategori', 'bg-emerald-50') +
-        statCard('Kas Keluar', fmtIdr(r.kas_keluar?.total||0), r.kas_keluar?.rincian?.length + ' kategori', 'bg-orange-50') +
-        statCard('Saldo Akhir', fmtIdr(saldoAkhir), selisih>=0?'surplus':'defisit', selisih>=0?'bg-emerald-50':'bg-red-50') +
+      var akContent = '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">' +
+        '<div class="bg-gradient-to-br from-stone-50 to-stone-100/60 rounded-2xl border border-stone-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-700">Saldo Awal</span><svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="text-lg font-bold text-stone-800">' + fmtIdr(r.saldo_awal) + '</div><div class="text-[10px] text-stone-600/70">Sebelum periode</div></div>' +
+        '<div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Kas Masuk</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="text-lg font-bold text-emerald-800">' + fmtIdr(r.kas_masuk?.total||0) + '</div><div class="text-[10px] text-emerald-600/70">' + (r.kas_masuk?.rincian?.length||0) + ' kategori</div></div>' +
+        '<div class="bg-gradient-to-br from-orange-50 to-orange-100/60 rounded-2xl border border-orange-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">Kas Keluar</span><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="text-lg font-bold text-orange-800">' + fmtIdr(r.kas_keluar?.total||0) + '</div><div class="text-[10px] text-orange-600/70">' + (r.kas_keluar?.rincian?.length||0) + ' kategori</div></div>' +
+        '<div class="bg-gradient-to-br from-' + (selisih>=0?'emerald':'red') + '-50 to-' + (selisih>=0?'emerald':'red') + '-100/60 rounded-2xl border border-' + (selisih>=0?'emerald':'red') + '-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-' + (selisih>=0?'emerald':'red') + '-700">Saldo Akhir</span><svg class="w-4 h-4 text-' + (selisih>=0?'emerald':'red') + '-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/></svg></div><div class="text-lg font-bold text-' + (selisih>=0?'emerald':'red') + '-800">' + fmtIdr(saldoAkhir) + '</div><div class="text-[10px] text-' + (selisih>=0?'emerald':'red') + '-600/70">' + (selisih>=0?'Surplus':'Defisit') + '</div></div>' +
       '</div>' +
       // Detail tables
       '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">' +
       // Masuk
-      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
-      '<div class="px-4 py-2.5 font-bold text-sm border-b border-stone-200 bg-emerald-50 text-emerald-800 flex items-center justify-between"><span>💳 KAS MASUK</span><span class="text-xs font-normal">' + fmtIdr(r.kas_masuk?.total||0) + '</span></div>' +
-      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-3 py-2 text-[10px] font-semibold">Kategori</th><th class="text-right px-3 py-2 text-[10px] font-semibold">Jumlah</th></tr></thead><tbody>' +
+      '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+      '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between"><h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Kas Masuk</h3><span class="text-xs font-bold text-emerald-700">' + fmtIdr(r.kas_masuk?.total||0) + '</span></div>' +
+      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Kategori</th><th class="text-right px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Jumlah</th></tr></thead><tbody>' +
       masukHtml +
       '<tr class="border-t-2 border-stone-400 font-bold bg-emerald-50"><td class="px-3 py-2.5 text-xs">Total Masuk</td><td class="px-3 py-2.5 text-right mono text-xs">' + fmtIdr(r.kas_masuk?.total||0) + '</td></tr>' +
       '</tbody></table></div>' +
       // Keluar
-      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
-      '<div class="px-4 py-2.5 font-bold text-sm border-b border-stone-200 bg-orange-50 text-orange-800 flex items-center justify-between"><span>📉 KAS KELUAR</span><span class="text-xs font-normal">' + fmtIdr(r.kas_keluar?.total||0) + '</span></div>' +
-      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-3 py-2 text-[10px] font-semibold">Kategori</th><th class="text-right px-3 py-2 text-[10px] font-semibold">Jumlah</th></tr></thead><tbody>' +
+      '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+      '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between"><h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Kas Keluar</h3><span class="text-xs font-bold text-orange-700">' + fmtIdr(r.kas_keluar?.total||0) + '</span></div>' +
+      '<table class="w-full text-xs"><thead><tr class="bg-stone-50"><th class="text-left px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Kategori</th><th class="text-right px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Jumlah</th></tr></thead><tbody>' +
       keluarHtml +
-      '<tr class="border-t-2 border-stone-400 font-bold bg-orange-50"><td class="px-3 py-2.5 text-xs">Total Keluar</td><td class="px-3 py-2.5 text-right mono text-xs">' + fmtIdr(r.kas_keluar?.total||0) + '</td></tr>' +
+      '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-orange-50 to-orange-100/60 font-bold"><td class="px-4 py-3 text-xs text-stone-800">Total Kas Keluar</td><td class="px-4 py-3 text-right mono text-xs text-orange-700">' + fmtIdr(r.kas_keluar?.total||0) + '</td></tr>' +
       '</tbody></table></div></div>' +
-      // Ringkasan bottom
-      '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">' +
-      '<div class="p-4 flex items-center justify-between">' +
-      '<div><span class="text-sm font-bold">💵 Ringkasan Arus Kas</span><br><span class="text-xs text-stone-500">' + r.periode + '</span></div>' +
-      '<div class="text-right">' +
-      '<div class="text-xs text-stone-500">Saldo Awal: ' + fmtIdr(r.saldo_awal) + '</div>' +
-      '<div class="text-xs text-stone-500">(+) Masuk: ' + fmtIdr(r.kas_masuk?.total||0) + '</div>' +
-      '<div class="text-xs text-stone-500">(−) Keluar: ' + fmtIdr(r.kas_keluar?.total||0) + '</div>' +
-      '<div class="text-sm font-bold mono ' + (selisih>=0?'text-green-600':'text-red-600') + '">= Saldo Akhir: ' + fmtIdr(saldoAkhir) + '</div>' +
-      '</div></div></div>';
+      // Summary
+      '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+      '<div class="p-4 sm:p-5"><div class="flex items-center justify-between"><div><span class="text-xs font-bold text-stone-700 uppercase tracking-wider">Ringkasan Arus Kas</span><br><span class="text-xs text-stone-500">' + r.periode + '</span></div></div>' +
+      '<div class="mt-3 space-y-2">' +
+      '<div class="flex justify-between text-xs"><span class="text-stone-500">(+) Saldo Awal</span><span class="font-semibold text-stone-800">' + fmtIdr(r.saldo_awal) + '</span></div>' +
+      '<div class="flex justify-between text-xs"><span class="text-emerald-600">(+) Kas Masuk</span><span class="font-semibold text-emerald-600">' + fmtIdr(r.kas_masuk?.total||0) + '</span></div>' +
+      '<div class="flex justify-between text-xs"><span class="text-red-500">(−) Kas Keluar</span><span class="font-semibold text-red-500">' + fmtIdr(r.kas_keluar?.total||0) + '</span></div>' +
+      '<div class="border-t border-stone-200 pt-2 flex justify-between text-sm"><span class="font-bold text-stone-700">= Saldo Akhir</span><span class="font-bold mono ' + (selisih>=0?'text-emerald-600':'text-red-600') + '">' + fmtIdr(saldoAkhir) + '</span></div>' +
+      '</div></div></div></div>';
 
       window._lapData = null;
       window._lapStatCards = akFilterBar + akContent;
@@ -1361,16 +1411,18 @@ const tabColors = {
       window['_export_keuangan'] = { data: rows, fields: ['tanggal','tipe','kategori','akun_bp','akun','deskripsi','jumlah'] };
       let bpCards = '';
       if (d.by_bp && d.by_bp.length) {
-        bpCards = '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4">' +
-          d.by_bp.map(b => statCard(b.bp, fmtIDR(b.masuk - b.keluar), b.transaksi + ' transaksi', 'bg-stone-50')).join('') +
+        bpCards = '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+          d.by_bp.map(function(b) {
+            var bpSelisih = b.masuk - b.keluar;
+            return '<div class="bg-gradient-to-br from-stone-50 to-stone-100/60 rounded-2xl border border-stone-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-700">' + escHtml(b.bp) + '</span></div><div class="text-lg font-bold text-' + (bpSelisih >= 0 ? 'emerald' : 'red') + '-800">' + fmtIDR(bpSelisih) + '</div><div class="text-[10px] text-stone-600/70">' + b.transaksi + ' transaksi</div></div>';
+          }).join('') +
           '</div>';
       }
-      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
-        ${statCard('Saldo Awal Buku', fmtIDR(d.saldo_awal),
-          `<button onclick="editSaldoAwal(${d.saldo_awal})" class="text-[10px] text-blue-600 hover:text-blue-800 underline">ubah</button>`, 'bg-stone-50')}
-        ${statCard('Kas Masuk', fmtIDR(d.total_kas_masuk), '', 'bg-blue-50')}
-        ${statCard('Kas Keluar', fmtIDR(d.total_kas_keluar), '', 'bg-orange-50')}
-        ${statCard('Saldo Akhir', fmtIDR(d.saldo), 'saldo_awal + masuk - keluar', 'bg-emerald-50')}
+      window._lapStatCards = `<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div class="bg-gradient-to-br from-stone-50 to-stone-100/60 rounded-2xl border border-stone-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-700">Saldo Awal</span><svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="text-lg font-bold text-stone-800">${fmtIDR(d.saldo_awal)}</div><div class="text-[10px] text-stone-600/70"><button onclick="editSaldoAwal(${d.saldo_awal})" class="underline text-blue-600 hover:text-blue-800">ubah</button></div></div>
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Kas Masuk</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="text-lg font-bold text-blue-800">${fmtIDR(d.total_kas_masuk)}</div><div class="text-[10px] text-blue-600/70">Total pemasukan</div></div>
+        <div class="bg-gradient-to-br from-orange-50 to-orange-100/60 rounded-2xl border border-orange-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">Kas Keluar</span><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="text-lg font-bold text-orange-800">${fmtIDR(d.total_kas_keluar)}</div><div class="text-[10px] text-orange-600/70">Total pengeluaran</div></div>
+        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Saldo Akhir</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/></svg></div><div class="text-lg font-bold text-emerald-800">${fmtIDR(d.saldo)}</div><div class="text-[10px] text-emerald-600/70">Saldo_awal + masuk - keluar</div></div>
       </div>` + bpCards;
     } else if (tab === 'jurnal-umum') {
       const r = await api.get('/laporan/jurnal-umum');
@@ -1383,10 +1435,13 @@ const tabColors = {
         ])
       };
       window['_export_jurnal-umum'] = { data: jurnal, fields: ['no_jurnal','tanggal','deskripsi','total_debit','total_kredit','sumber_transaksi'] };
-      window._lapStatCards = `<div class="mb-4 flex flex-wrap items-center gap-3">
-        <div class="text-xs text-stone-500">${r.total} jurnal · ${r.periode?.start} s/d ${r.periode?.end}</div>
-        <div class="text-xs font-medium">Grand Total Debit: ${fmtIDR(r.grand_debit)}</div>
-        <div class="text-xs font-medium">Grand Total Kredit: ${fmtIDR(r.grand_kredit)}</div>
+      window._lapStatCards = `<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+          <span class="text-stone-500">${r.total} jurnal</span>
+          <span class="text-stone-500">${r.periode?.start} s/d ${r.periode?.end}</span>
+          <span class="font-semibold text-stone-700">Debit: ${fmtIDR(r.grand_debit)}</span>
+          <span class="font-semibold text-stone-700">Kredit: ${fmtIDR(r.grand_kredit)}</span>
+        </div>
       </div>`;
 
     } else if (tab === 'buku-besar') {
@@ -1400,40 +1455,43 @@ const tabColors = {
       var akunOpts = '<option value="">— Semua Akun —</option>' +
         coa.map(function(a) { return '<option value="' + a.id + '" ' + (String(a.id) === String(akunId) ? 'selected' : '') + '>' + a.kode + ' - ' + a.nama + '</option>'; }).join('');
 
-      var filterBar = '<div class="mb-4 flex flex-wrap items-center gap-3">' +
-        '<label class="text-xs font-medium text-stone-500">Akun:</label>' +
-        '<select onchange="lapState.bb_akun_id=this.value;showLap(\'buku-besar\')" class="text-xs border border-stone-300 rounded px-2 py-1.5 min-w-[200px]">' + akunOpts + '</select>' +
-        '<span class="text-xs text-stone-400">' + r.periode?.start + ' s/d ' + r.periode?.end + '</span></div>';
+      var filterBar = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">' +
+        '<div class="flex flex-wrap items-center gap-3">' +
+          '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>' +
+          '<select onchange="lapState.bb_akun_id=this.value;showLap(\'buku-besar\')" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white min-w-[220px] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' + akunOpts + '</select>' +
+          '<span class="text-xs text-stone-500">' + r.periode?.start + ' s/d ' + r.periode?.end + '</span>' +
+        '</div></div>';
 
       var tableContent = '';
       akunList.forEach(function(akun) {
-        tableContent += '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">' +
-          '<div class="px-4 py-3 font-bold text-sm border-b border-stone-200 bg-stone-50 flex items-center justify-between">' +
-          '<span>' + akun.akun_kode + ' - ' + akun.akun_nama + '</span>' +
-          '<span class="text-xs font-normal text-stone-500">' + akun.kelompok + ' (' + akun.saldo_normal + ')</span></div>' +
-          '<div class="px-4 py-2 bg-stone-50 border-b border-stone-200 text-xs text-stone-500 flex gap-4">' +
-          '<span>Saldo Awal: <strong class="mono">' + fmtIDR(akun.saldo_awal) + '</strong></span>' +
-          '<span>Debit: <strong class="mono">' + fmtIDR(akun.total_debit) + '</strong></span>' +
-          '<span>Kredit: <strong class="mono">' + fmtIDR(akun.total_kredit) + '</strong></span>' +
-          '<span>Saldo Akhir: <strong class="mono">' + fmtIDR(akun.saldo_akhir) + '</strong></span></div>';
+        tableContent += '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">' +
+          '<div class="px-4 py-3 flex items-center justify-between border-b border-stone-100">' +
+            '<h3 class="text-xs font-bold text-stone-700"><span class="text-stone-400 font-mono">' + akun.akun_kode + '</span> — ' + akun.akun_nama + '</h3>' +
+            '<div class="flex gap-3 text-[10px] text-stone-500"><span>' + akun.kelompok + ' (' + akun.saldo_normal + ')</span></div>' +
+          '</div>' +
+          '<div class="px-4 py-2 bg-stone-50/70 border-b border-stone-100 text-xs flex flex-wrap gap-4 text-stone-600">' +
+          '<span>Saldo Awal: <strong class="mono text-stone-800">' + fmtIDR(akun.saldo_awal) + '</strong></span>' +
+          '<span>Debit: <strong class="mono text-stone-800">' + fmtIDR(akun.total_debit) + '</strong></span>' +
+          '<span>Kredit: <strong class="mono text-stone-800">' + fmtIDR(akun.total_kredit) + '</strong></span>' +
+          '<span>Saldo Akhir: <strong class="mono text-stone-800">' + fmtIDR(akun.saldo_akhir) + '</strong></span></div>';
 
         if (akun.mutasi && akun.mutasi.length) {
           tableContent += '<div class="overflow-x-auto"><table class="w-full text-xs"><thead class="bg-stone-50"><tr>' +
-            '<th class="text-left px-3 py-2 text-[10px] font-semibold uppercase">Tanggal</th>' +
-            '<th class="text-left px-3 py-2 text-[10px] font-semibold uppercase">No Jurnal</th>' +
-            '<th class="text-left px-3 py-2 text-[10px] font-semibold uppercase">Deskripsi</th>' +
-            '<th class="text-right px-3 py-2 text-[10px] font-semibold uppercase">Debit</th>' +
-            '<th class="text-right px-3 py-2 text-[10px] font-semibold uppercase">Kredit</th>' +
-            '<th class="text-right px-3 py-2 text-[10px] font-semibold uppercase">Saldo</th>' +
+            '<th class="text-left px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Tanggal</th>' +
+            '<th class="text-left px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase">No Jurnal</th>' +
+            '<th class="text-left px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Deskripsi</th>' +
+            '<th class="text-right px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Debit</th>' +
+            '<th class="text-right px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Kredit</th>' +
+            '<th class="text-right px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase">Saldo</th>' +
             '</tr></thead><tbody>';
           akun.mutasi.forEach(function(m) {
-            tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50">' +
-              '<td class="px-3 py-2">' + fmtDate(m.tanggal) + '</td>' +
-              '<td class="px-3 py-2 mono text-[10px]">' + m.no_jurnal + '</td>' +
-              '<td class="px-3 py-2">' + (m.deskripsi||'-') + '</td>' +
-              '<td class="px-3 py-2 text-right mono">' + (m.debit > 0 ? fmtIDR(m.debit) : '') + '</td>' +
-              '<td class="px-3 py-2 text-right mono">' + (m.kredit > 0 ? fmtIDR(m.kredit) : '') + '</td>' +
-              '<td class="px-3 py-2 text-right mono font-medium">' + fmtIDR(m.saldo) + '</td></tr>';
+            tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
+              '<td class="px-3 py-2.5 text-xs">' + fmtDate(m.tanggal) + '</td>' +
+              '<td class="px-3 py-2.5 text-xs font-mono text-stone-500">' + m.no_jurnal + '</td>' +
+              '<td class="px-3 py-2.5 text-xs">' + (m.deskripsi||'-') + '</td>' +
+              '<td class="px-3 py-2.5 text-right mono text-xs">' + (m.debit > 0 ? '<span class="font-semibold">' + fmtIDR(m.debit) + '</span>' : '') + '</td>' +
+              '<td class="px-3 py-2.5 text-right mono text-xs">' + (m.kredit > 0 ? '<span class="font-semibold">' + fmtIDR(m.kredit) + '</span>' : '') + '</td>' +
+              '<td class="px-3 py-2.5 text-right mono text-xs font-bold text-stone-700">' + fmtIDR(m.saldo) + '</td></tr>';
           });
           tableContent += '</tbody></table></div>';
         } else {
@@ -1443,7 +1501,7 @@ const tabColors = {
       });
 
       if (!akunList.length) {
-        tableContent = '<div class="text-center py-12 text-stone-400">Tidak ada data buku besar</div>';
+        tableContent = '<div class="text-center py-12 text-stone-400 bg-white rounded-2xl border border-stone-200 shadow-sm">Tidak ada data buku besar</div>';
       }
 
       window._lapData = null;
@@ -1454,52 +1512,53 @@ const tabColors = {
 
       var fmtIdr3 = fmtIDR;
       var selisihClass = Math.abs(r.selisih) < 1 ? 'text-emerald-600' : 'text-red-600';
+      var balanceText = Math.abs(r.selisih) < 1 ? 'Balance ✓' : 'Tidak Balance!';
 
-      window._lapStatCards = `<div class="mb-4 grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-        ${statCard('Total Aktiva', fmtIdr3(r.aktiva.total), '', 'bg-blue-50')}
-        ${statCard('Total Kewajiban', fmtIdr3(r.kewajiban.total), '', 'bg-orange-50')}
-        ${statCard('Total Ekuitas', fmtIdr3(r.ekuitas.total), 'Laba berjalan: ' + fmtIdr3(r.ekuitas.laba_berjalan), 'bg-emerald-50')}
-        ${statCard('Selisih', fmtIdr3(r.selisih), Math.abs(r.selisih) < 1 ? 'Balance ✓' : 'Tidak Balance!', selisihClass)}
+      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Aktiva</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/></svg></div><div class="text-lg font-bold text-blue-800">${fmtIdr3(r.aktiva.total)}</div><div class="text-[10px] text-blue-600/70">Total aset</div></div>
+        <div class="bg-gradient-to-br from-orange-50 to-orange-100/60 rounded-2xl border border-orange-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">Kewajiban</span><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="text-lg font-bold text-orange-800">${fmtIdr3(r.kewajiban.total)}</div><div class="text-[10px] text-orange-600/70">Total liabilitas</div></div>
+        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Ekuitas</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="text-lg font-bold text-emerald-800">${fmtIdr3(r.ekuitas.total)}</div><div class="text-[10px] text-emerald-600/70">Laba berjalan: ${fmtIdr3(r.ekuitas.laba_berjalan)}</div></div>
+        <div class="bg-gradient-to-br from-${Math.abs(r.selisih) < 1 ? 'emerald' : 'red'}-50 to-${Math.abs(r.selisih) < 1 ? 'emerald' : 'red'}-100/60 rounded-2xl border border-${Math.abs(r.selisih) < 1 ? 'emerald' : 'red'}-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-${Math.abs(r.selisih) < 1 ? 'emerald' : 'red'}-700">Selisih</span><svg class="w-4 h-4 text-${Math.abs(r.selisih) < 1 ? 'emerald' : 'red'}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div class="text-lg font-bold text-${Math.abs(r.selisih) < 1 ? 'emerald' : 'red'}-800">${fmtIdr3(r.selisih)}</div><div class="text-[10px] text-${Math.abs(r.selisih) < 1 ? 'emerald' : 'red'}-600/70">${balanceText}</div></div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
-          <div class="px-4 py-3 font-bold text-sm bg-blue-50 border-b border-stone-200">AKTIVA</div>
+        <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+          <div class="px-4 py-3 border-b border-stone-100 bg-gradient-to-r from-blue-50 to-blue-100/60"><h3 class="text-xs font-bold text-blue-700 uppercase tracking-wider">Aktiva</h3></div>
           <table class="w-full text-xs">
             <tbody>
               ${(r.aktiva.rincian||[]).map(function(a) {
-                return '<tr class="border-t border-stone-100 hover:bg-stone-50"><td class="px-4 py-2">' + a.akun_kode + ' - ' + a.akun_nama + '</td><td class="px-4 py-2 text-right mono font-medium">' + fmtIdr3(a.saldo) + '</td></tr>';
+                return '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors"><td class="px-4 py-2.5 text-xs text-stone-700">' + a.akun_kode + ' — ' + a.akun_nama + '</td><td class="px-4 py-2.5 text-right mono font-semibold text-stone-800">' + fmtIdr3(a.saldo) + '</td></tr>';
               }).join('') || '<tr><td class="px-4 py-4 text-center text-stone-400">Tidak ada data</td></tr>'}
-              <tr class="border-t-2 border-stone-400 bg-blue-50 font-bold"><td class="px-4 py-2">TOTAL AKTIVA</td><td class="px-4 py-2 text-right mono">' + fmtIdr3(r.aktiva.total) + '</td></tr>
+              <tr class="border-t-2 border-stone-300 bg-gradient-to-r from-blue-50 to-blue-100/60 font-bold"><td class="px-4 py-3 text-xs text-blue-800">TOTAL AKTIVA</td><td class="px-4 py-3 text-right mono text-blue-800">${fmtIdr3(r.aktiva.total)}</td></tr>
             </tbody>
           </table>
         </div>
         <div>
-          <div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">
-            <div class="px-4 py-3 font-bold text-sm bg-orange-50 border-b border-stone-200">KEWAJIBAN</div>
+          <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">
+            <div class="px-4 py-3 border-b border-stone-100 bg-gradient-to-r from-orange-50 to-orange-100/60"><h3 class="text-xs font-bold text-orange-700 uppercase tracking-wider">Kewajiban</h3></div>
             <table class="w-full text-xs">
               <tbody>
                 ${(r.kewajiban.rincian||[]).map(function(a) {
-                  return '<tr class="border-t border-stone-100 hover:bg-stone-50"><td class="px-4 py-2">' + a.akun_kode + ' - ' + a.akun_nama + '</td><td class="px-4 py-2 text-right mono font-medium">' + fmtIdr3(a.saldo) + '</td></tr>';
+                  return '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors"><td class="px-4 py-2.5 text-xs text-stone-700">' + a.akun_kode + ' — ' + a.akun_nama + '</td><td class="px-4 py-2.5 text-right mono font-semibold text-stone-800">' + fmtIdr3(a.saldo) + '</td></tr>';
                 }).join('') || '<tr><td class="px-4 py-4 text-center text-stone-400">Tidak ada data</td></tr>'}
-                <tr class="border-t-2 border-stone-400 bg-orange-50 font-bold"><td class="px-4 py-2">TOTAL KEWAJIBAN</td><td class="px-4 py-2 text-right mono">' + fmtIdr3(r.kewajiban.total) + '</td></tr>
+                <tr class="border-t-2 border-stone-300 bg-gradient-to-r from-orange-50 to-orange-100/60 font-bold"><td class="px-4 py-3 text-xs text-orange-800">TOTAL KEWAJIBAN</td><td class="px-4 py-3 text-right mono text-orange-800">${fmtIdr3(r.kewajiban.total)}</td></tr>
               </tbody>
             </table>
           </div>
-          <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
-            <div class="px-4 py-3 font-bold text-sm bg-emerald-50 border-b border-stone-200">EKUITAS</div>
+          <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-b border-stone-100 bg-gradient-to-r from-emerald-50 to-emerald-100/60"><h3 class="text-xs font-bold text-emerald-700 uppercase tracking-wider">Ekuitas</h3></div>
             <table class="w-full text-xs">
               <tbody>
                 ${(r.ekuitas.rincian||[]).map(function(a) {
-                  return '<tr class="border-t border-stone-100 hover:bg-stone-50"><td class="px-4 py-2">' + a.akun_kode + ' - ' + a.akun_nama + '</td><td class="px-4 py-2 text-right mono font-medium">' + fmtIdr3(a.saldo) + '</td></tr>';
+                  return '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors"><td class="px-4 py-2.5 text-xs text-stone-700">' + a.akun_kode + ' — ' + a.akun_nama + '</td><td class="px-4 py-2.5 text-right mono font-semibold text-stone-800">' + fmtIdr3(a.saldo) + '</td></tr>';
                 }).join('') || ''}
-                <tr class="border-t border-stone-100 bg-emerald-50"><td class="px-4 py-2">Laba Berjalan</td><td class="px-4 py-2 text-right mono font-medium">' + fmtIdr3(r.ekuitas.laba_berjalan) + '</td></tr>
-                <tr class="border-t-2 border-stone-400 bg-emerald-50 font-bold"><td class="px-4 py-2">TOTAL EKUITAS</td><td class="px-4 py-2 text-right mono">' + fmtIdr3(r.ekuitas.total) + '</td></tr>
+                <tr class="border-t border-stone-100 bg-emerald-50/50"><td class="px-4 py-2.5 text-xs text-stone-700">Laba Berjalan</td><td class="px-4 py-2.5 text-right mono font-semibold text-stone-800">${fmtIdr3(r.ekuitas.laba_berjalan)}</td></tr>
+                <tr class="border-t-2 border-stone-300 bg-gradient-to-r from-emerald-50 to-emerald-100/60 font-bold"><td class="px-4 py-3 text-xs text-emerald-800">TOTAL EKUITAS</td><td class="px-4 py-3 text-right mono text-emerald-800">${fmtIdr3(r.ekuitas.total)}</td></tr>
               </tbody>
             </table>
           </div>
         </div>
       </div>
-      <div class="text-center text-xs text-stone-500">
+      <div class="text-center text-xs text-stone-400 bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3">
         Neraca per ${r.tanggal} &nbsp;|&nbsp; Aktiva: ${fmtIdr3(r.aktiva.total)} = Kewajiban: ${fmtIdr3(r.kewajiban.total)} + Ekuitas: ${fmtIdr3(r.ekuitas.total)}
       </div>`;
       window._lapData = null;
@@ -1561,9 +1620,9 @@ function statCard(title, value, sub, bgClass) {
   </div>`;
 }
 function tableHtml(headers, rows) {
-  return `<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mt-3"><div class="overflow-x-auto"><table class="w-full">
-    <thead class="bg-stone-50"><tr>${headers.map(h => `<th class="text-left px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider whitespace-nowrap">${h}</th>`).join('')}</tr></thead>
-    <tbody>${rows.length ? rows.map(r => `<tr class="border-t border-stone-100 transition-colors">${r.map(c => `<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm whitespace-nowrap leading-relaxed">${c}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${headers.length}" class="text-center py-8 sm:py-12 text-stone-400"><svg class="w-10 h-10 sm:w-14 sm:h-14 mx-auto mb-2 sm:mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-xs sm:text-sm">Belum ada data</div></td></tr>`}</tbody>
+  return `<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mt-3"><div class="overflow-x-auto"><table class="w-full">
+    <thead class="bg-stone-50"><tr>${headers.map(h => `<th class="text-left px-3 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-xs font-bold text-stone-500 uppercase tracking-wider whitespace-nowrap">${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.length ? rows.map(r => `<tr class="border-t border-stone-100 transition-colors hover:bg-stone-50/80">${r.map(c => `<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm whitespace-nowrap leading-relaxed">${c}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${headers.length}" class="text-center py-8 sm:py-12 text-stone-400"><svg class="w-10 h-10 sm:w-14 sm:h-14 mx-auto mb-2 sm:mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-xs sm:text-sm">Belum ada data</div></td></tr>`}</tbody>
   </table></div></div>`;
 }
 function exportBar(name, data, fields) {
