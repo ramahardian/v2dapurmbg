@@ -125,16 +125,11 @@ async function openBuatPrForm() {
     showAlert('Gagal memuat siklus');
     return;
   }
-  if (!siklusList || !siklusList.length) {
-    showAlert('Belum ada siklus menu. Buat siklus terlebih dahulu.');
-    return;
-  }
-
   const now = new Date();
   const defaultPeriode = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
 
-  // Hitung max total_hari dari semua siklus untuk default range
-  var maxHari = Math.max(...siklusList.filter(s => s.status === 'Aktif').map(s => Number(s.total_hari) || 7), 7);
+  var activeSiklus = (siklusList || []).filter(s => s.status === 'Aktif');
+  var maxHari = Math.max(...activeSiklus.map(s => Number(s.total_hari) || 7), 7);
 
   document.getElementById('modal-title').textContent = 'Buat Purchase Request';
   document.getElementById('modal-body').innerHTML = `
@@ -145,15 +140,15 @@ async function openBuatPrForm() {
       </div>
       <div>
         <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Pilih Siklus</label>
-        <div class="mt-1.5 space-y-1 max-h-48 overflow-y-auto rounded-xl border border-stone-200 p-2">
-          ${siklusList.filter(s => s.status === 'Aktif').map((s, i) => `
+        <div class="mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-stone-200 p-2">
+          ${activeSiklus.length ? '<div class="space-y-1">' + activeSiklus.map((s, i) => `
             <label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-2 rounded-lg">
               <input type="checkbox" class="pr-siklus-check cb-modern" value="${s.id}" data-hari="${Number(s.total_hari) || 7}" checked>
               <span class="text-sm text-stone-700">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi, ${Number(s.total_hari) || 7} hari)</span>
             </label>
-          `).join('')}
+          `).join('') + '</div>' : '<div class="flex items-center gap-2 p-4 text-amber-700 bg-amber-50 rounded-lg"><svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-medium">Belum ada siklus Aktif</div><div class="text-[10px] mt-0.5">Buat siklus menu terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu, lalu aktifkan.</div></div></div>'}
         </div>
-        <p class="text-[10px] text-stone-400 mt-1">Kosongkan pilihan untuk menggunakan semua siklus Aktif</p>
+        <p class="text-[10px] text-stone-400 mt-1">${activeSiklus.length ? 'Kosongkan pilihan untuk menggunakan semua siklus Aktif' : ''}</p>
       </div>
       <div class="flex gap-3">
         <div class="flex-1">
@@ -767,29 +762,24 @@ async function openSiklusPicker() {
     return;
   }
 
-  if (!siklusList || !siklusList.length) {
-    showAlert('Belum ada siklus menu. Buat siklus terlebih dahulu di menu Ahli Gizi > Siklus Menu.');
-    return;
-  }
-
   document.getElementById('modal-title').textContent = 'Buat PO dari Siklus Menu';
   document.getElementById('modal-body').innerHTML = `
     <div class="mb-4">
       <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Pilih Siklus</label>
-      <div class="mt-1.5 space-y-1 max-h-48 overflow-y-auto rounded-xl border border-stone-200 p-2">
-        ${siklusList.map(s => `
+      <div class="mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-stone-200 p-2">
+        ${siklusList && siklusList.length ? '<div class="space-y-1">' + siklusList.map(s => `
           <label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-2 rounded-lg">
             <input type="checkbox" class="siklus-check cb-modern" value="${s.id}">
             <span class="text-sm text-stone-700">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi)</span>
           </label>
-        `).join('')}
+        `).join('') + '</div>' : '<div class="flex items-center gap-2 p-4 text-amber-700 bg-amber-50 rounded-lg"><svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-medium">Belum ada siklus menu</div><div class="text-[10px] mt-0.5">Buat siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>'}
       </div>
     </div>
     <div id="po-preview"></div>`;
 
   const saveBtn = document.getElementById('modal-save');
   saveBtn.textContent = 'Generate Draft';
-  saveBtn.style.display = 'inline-block';
+  saveBtn.style.display = siklusList && siklusList.length ? 'inline-block' : 'none';
   saveBtn.onclick = generatePOFromSiklus;
 
   document.getElementById('modal').classList.remove('hidden');
