@@ -28,6 +28,28 @@ async function renderPerencanaan() {
   }
 }
 
+function adjustExportVisibilityForEmptyData() {
+  const globalExport = document.querySelector('button[onclick*="exportPncExcel()\"][title*="Export All Excel\"]');
+  const planningTitle = document.querySelector('.bg-gradient-to-br div h2');
+  const planningContent = document.getElementById('perencanaan-content');
+  
+  if (planningTitle && planningContent) {
+    const titleText = planningTitle.textContent || '';
+    const hasContent = planningContent.innerHTML.includes('data-sold');
+    
+    if (globalExport) {
+      globalExport.style.display = hasContent ? '' : 'none';
+    }
+    
+    const statusMessage = document.querySelector('.rounded-xl.border.border-amber-200.bg-amber-50');
+    if (statusMessage && !hasContent) {
+      statusMessage.style.display = '';
+    } else if (statusMessage) {
+      statusMessage.style.display = 'none';
+    }
+  }
+}
+
 async function loadPerencanaanData(siklusId) {
   const wrap = document.getElementById('perencanaan-content');
   if (!wrap) return;
@@ -154,6 +176,9 @@ async function loadPerencanaanData(siklusId) {
     if (_pncSelectedJenjang !== 'SEMUA') {
       applyPncSectionVisibility();
     }
+    
+    // Adjust export button visibility based on data availability
+    setTimeout(adjustExportVisibilityForEmptyData, 100);
   } catch (err) {
     wrap.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal: ' + err.message + '</div>';
   }
@@ -367,13 +392,24 @@ function renderPncJenjangSection(jd, idx) {
   } else if (_pncSelectedPorsi === 'KECIL') {
     porsiBadge = '<span class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14l-7 7-7-7"/><path d="M12 21V3"/></svg> Porsi Kecil</span>';
   }
+  // Check if there's data for this jenjang to enable exports
+  var dataForJenjang = _pncAllJenjangData ? _pncAllJenjangData.filter(function(item) { return item.jenjang === jd.jenjang; }) : [];
+  var canExport = dataForJenjang && dataForJenjang.length > 0 && dataForJenjang.every(function(item) { return item.bahan && item.bahan.length > 0; });
+
   html += '<div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between ' + _pncJenjangColors[jIdx % _pncJenjangColors.length] + '">';
   html += '<div><span class="font-bold text-base">' + jd.jenjang + '</span>' + porsiBadge;
   html += '<span class="ml-3 text-sm font-normal">Jumlah Siswa: <strong>' + fmtPncNum(activeSiswa) + '</strong> orang</span></div>';
   html += '<div class="flex items-center gap-2 text-xs">';
   html += '<span>' + jd.siklus.length + ' siklus</span>';
-  html += '<button onclick="exportPncExcel(\'' + jd.jenjang.replace(/'/g, "\\'") + '\')" class="px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1 text-xs" title="Export Excel"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> XLSX</button>';
-  html += '<button onclick="exportPncPdf(\'' + jd.jenjang.replace(/'/g, "\\'") + '\')" class="px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-1 text-xs" title="Export PDF"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> PDF</button>';
+
+  // Export buttons - only visible if there's data
+  if (canExport) {
+    html += '<button onclick="exportPncExcel(\'' + jd.jenjang.replace(/\'/g, "\\\\\'") + '\')" class="px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1 text-xs" title="Export Excel"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> XLSX</button>';
+    html += '<button onclick="exportPncPdf(\'' + jd.jenjang.replace(/\'/g, "\\\\\'") + '\')" class="px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-1 text-xs" title="Export PDF"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> PDF</button>';
+  } else {
+    html += '<span class="px-2 py-1 rounded bg-stone-100 text-stone-400 text-xs flex items-center gap-1" title="Tidak ada data untuk di-export"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export Tidak Tersedia</span>';
+  }
+  html += '</div>';
   html += '</div>';
   html += '</div>';
 
