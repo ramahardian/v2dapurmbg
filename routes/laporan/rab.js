@@ -548,6 +548,24 @@ function registerRabRoutes(router) {
       const selisih = totalBudgetAgg - totalRealisasiManual;
       const serapan = totalBudgetAgg > 0 ? (totalRealisasiManual / totalBudgetAgg * 100) : 0;
 
+      // Menu per jenjang per hari (hanya jika siklus dipilih)
+      let menuPerHari = [];
+      if (siklusId) {
+        const [menuItems] = await db.query(
+          `SELECT si.hari_ke, si.hari_nama, si.menu_id, si.menu_nama, si.jumlah_porsi, m.kategori_penerima as menu_kategori
+           FROM siklus_menu_item si
+           LEFT JOIN menu m ON m.id = si.menu_id
+           WHERE si.siklus_id=?
+           ORDER BY si.hari_ke ASC`,
+          [siklusId]
+        );
+        // Map kategori penerima ke display name
+        for (const mi of menuItems) {
+          mi.menu_kategori_display = mi.menu_kategori ? (dbToDisplay[mi.menu_kategori] || mi.menu_kategori) : '-';
+        }
+        menuPerHari = menuItems;
+      }
+
       res.json({
         rows,
         grand_penerima: grandPenerima,
@@ -569,6 +587,7 @@ function registerRabRoutes(router) {
         },
         supplier_pembelian: supplierRincian,
         total_pembelian_supplier: supplierRincian.reduce((s, sp) => s + sp.jumlah, 0),
+        menu_per_hari: menuPerHari,
       });
     } catch (err) {
       console.error('RAB sinkron error:', err);

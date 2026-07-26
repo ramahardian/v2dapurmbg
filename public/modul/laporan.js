@@ -304,6 +304,64 @@ const tabColors = {
         '</tr>' +
         '</tbody></table></div></div>';
 
+      // Tabel Menu per Jenjang per Hari
+      var menuPerHari = r.menu_per_hari || [];
+      var menuPerHariContent = '';
+      if (menuPerHari.length > 0) {
+        // Group by hari_ke
+        var dayGroups = {};
+        var jenjangSet = {};
+        menuPerHari.forEach(function(m) {
+          if (!dayGroups[m.hari_ke]) dayGroups[m.hari_ke] = { hari_ke: m.hari_ke, hari_nama: m.hari_nama, menus: [] };
+          dayGroups[m.hari_ke].menus.push(m);
+          jenjangSet[m.menu_kategori_display || '-'] = true;
+        });
+        var jenjangList = Object.keys(jenjangSet).sort();
+        var dayKeys = Object.keys(dayGroups).sort(function(a,b) { return Number(a) - Number(b); });
+
+        var menuRows = '';
+        dayKeys.forEach(function(hk) {
+          var dg = dayGroups[hk];
+          var menuByJenjang = {};
+          jenjangList.forEach(function(j) { menuByJenjang[j] = []; });
+          dg.menus.forEach(function(m) {
+            var kat = m.menu_kategori_display || '-';
+            if (menuByJenjang[kat]) {
+              var menuNama = escHtml(m.menu_nama || (m.menu_id ? 'Menu #' + m.menu_id : '-'));
+              menuByJenjang[kat].push(menuNama);
+            }
+          });
+          var jenjangCells = jenjangList.map(function(j) {
+            var names = menuByJenjang[j] || [];
+            var cellHtml = names.length > 0
+              ? names.map(function(n) { return '<div class="text-xs text-stone-700">' + n + '</div>'; }).join('')
+              : '<span class="text-xs text-stone-300">—</span>';
+            return '<td class="px-3 py-2.5 align-top">' + cellHtml + '</td>';
+          }).join('');
+          menuRows += '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
+            '<td class="px-4 py-2.5 font-medium text-xs text-stone-700 whitespace-nowrap">Hari ' + dg.hari_ke + '<br><span class="text-[10px] text-stone-400 font-normal">' + escHtml(dg.hari_nama || '') + '</span></td>' +
+            jenjangCells +
+          '</tr>';
+        });
+
+        var jenjangHeaders = jenjangList.map(function(j) {
+          return '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">' + j + '</th>';
+        }).join('');
+
+        menuPerHariContent = '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+          '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">' +
+            '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>Daftar Menu per Jenjang — ' + escHtml(siklusInfo ? siklusInfo.nama : '') + '</h3>' +
+            '<span class="text-[10px] text-stone-400">' + dayKeys.length + ' hari, ' + menuPerHari.length + ' menu</span>' +
+          '</div>' +
+          '<div class="overflow-x-auto"><table class="w-full text-xs">' +
+          '<thead><tr class="bg-stone-50">' +
+          '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Hari</th>' +
+          jenjangHeaders +
+          '</tr></thead><tbody>' +
+          menuRows +
+          '</tbody></table></div></div>';
+      }
+
       // Tabel Daftar Pembelian per Pemasok
       var supplierPembelian = r.supplier_pembelian || [];
       var totalPembelianSupplier = r.total_pembelian_supplier || 0;
@@ -394,7 +452,7 @@ const tabColors = {
         '</div>';
         window._lapStatCards = rabFilterBar + draftMsg;
       } else {
-        window._lapStatCards = rabFilterBar + statCards + summaryCards + tableContent + biayaContent + supplierContent;
+        window._lapStatCards = rabFilterBar + statCards + summaryCards + tableContent + biayaContent + menuPerHariContent + supplierContent;
       }
     } else if (tab === 'rab-bulanan') {
       var rbBulan = lapState.rb_bulan || '';
