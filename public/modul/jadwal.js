@@ -27,7 +27,7 @@ async function openShiftForm(editing) {
     var assigned = await api.get('/shift/' + editing.id + '/divisi');
     selectedDivisi = assigned.map(function(d) { return d.id; });
   }
-  function selTime(id, val) { var h=val.slice(0,2), m=val.slice(3,5); return '<select id="'+id+'-h" class="w-20 h-10 px-2 border border-stone-200 rounded-md text-sm mono">'+Array.from({length:24},(_,i)=>'<option value="'+String(i).padStart(2,'0')+'" '+(h==String(i).padStart(2,'0')?'selected':'')+'>'+String(i).padStart(2,'0')+'</option>').join('')+'</select><span class="text-sm text-stone-400 mx-1">:</span><select id="'+id+'-m" class="w-20 h-10 px-2 border border-stone-200 rounded-md text-sm mono">'+['00','15','30','45'].map(function(v){return '<option value="'+v+'" '+(m==v?'selected':'')+'>'+v+'</option>'}).join('')+'</select>'; }
+  function selTime(id, val) { var h=val.slice(0,2), m=val.slice(3,5); return '<select id="'+id+'-h" class="w-20 h-10 px-2 rounded-lg border border-stone-200 text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">'+Array.from({length:24},(_,i)=>'<option value="'+String(i).padStart(2,'0')+'" '+(h==String(i).padStart(2,'0')?'selected':'')+'>'+String(i).padStart(2,'0')+'</option>').join('')+'</select><span class="text-sm text-stone-400 mx-1">:</span><select id="'+id+'-m" class="w-20 h-10 px-2 rounded-lg border border-stone-200 text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">'+['00','15','30','45'].map(function(v){return '<option value="'+v+'" '+(m==v?'selected':'')+'>'+v+'</option>'}).join('')+'</select>'; }
   function renderDivisiChecks() {
     if (!divisiList.length) return '<div class="text-xs text-stone-400 italic">Belum ada divisi. Buat divisi dulu di menu Divisi.</div>';
     return divisiList.map(function(d) {
@@ -38,13 +38,13 @@ async function openShiftForm(editing) {
   document.getElementById('modal-title').textContent = editing ? 'Edit Shift' : 'Shift Baru';
   document.getElementById('modal-body').innerHTML =
     '<div class="space-y-4">' +
-    '<div><label class="text-sm font-medium text-stone-700">Nama Shift *</label><input id="sf-nama" value="' + s.nama + '" placeholder="cth: Shift Pagi" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" /></div>' +
+    '<div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Shift *</label><input id="sf-nama" value="' + s.nama + '" placeholder="cth: Shift Pagi" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" /></div>' +
     '<div class="grid grid-cols-2 gap-3">' +
-    '<div><label class="text-sm font-medium text-stone-700">Jam Masuk *</label><div class="mt-1 flex items-center">' + selTime('sf-masuk', s.jam_masuk) + '</div></div>' +
-    '<div><label class="text-sm font-medium text-stone-700">Jam Keluar *</label><div class="mt-1 flex items-center">' + selTime('sf-keluar', s.jam_keluar) + '</div></div>' +
+    '<div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Jam Masuk *</label><div class="mt-1.5 flex items-center">' + selTime('sf-masuk', s.jam_masuk) + '</div></div>' +
+    '<div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Jam Keluar *</label><div class="mt-1.5 flex items-center">' + selTime('sf-keluar', s.jam_keluar) + '</div></div>' +
     '</div>' +
-    '<div><label class="text-sm font-medium text-stone-700">Warna (opsional)</label><div class="flex items-center gap-2 mt-1"><input id="sf-warna" type="color" value="' + s.warna + '" class="h-10 w-14 rounded border border-stone-200 cursor-pointer" /><span class="text-xs text-stone-500">' + s.warna + '</span></div></div>' +
-    '<div><label class="text-sm font-medium text-stone-700">Digunakan oleh Divisi</label><div class="mt-1 border border-stone-200 rounded-md p-2 max-h-40 overflow-y-auto space-y-0.5">' + renderDivisiChecks() + '</div></div>' +
+    '<div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Warna (opsional)</label><div class="flex items-center gap-2 mt-1.5"><input id="sf-warna" type="color" value="' + s.warna + '" class="h-10 w-14 rounded-lg border border-stone-200 cursor-pointer" /><span class="text-xs text-stone-500">' + s.warna + '</span></div></div>' +
+    '<div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Digunakan oleh Divisi</label><div class="mt-1.5 border border-stone-200 rounded-xl p-2 max-h-40 overflow-y-auto space-y-0.5">' + renderDivisiChecks() + '</div></div>' +
     '</div>';
 
   document.getElementById('modal-save').onclick = async function() {
@@ -103,30 +103,30 @@ function renderJadwalTable(list) {
   var wrap = document.getElementById('jadwal-content');
   if (!wrap) return;
   if (!list.length) {
-    wrap.innerHTML = '<div class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div>Belum ada jadwal shift.</div></div>';
+    wrap.innerHTML = '<div class="text-center py-16 text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div class="text-sm">Belum ada jadwal shift.</div></div>';
     return;
   }
   var HARI = ['', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
   var rowsHtml = list.map(function(j) {
     var hariArr = (j.hari_kerja || '1,2,3,4,5,6,7').split(',').map(function(h) { return HARI[parseInt(h)] || ''; }).filter(Boolean);
     var hariLabel = hariArr.length >= 7 ? 'Setiap hari' : (hariArr.length === 5 && hariArr[0] === 'Senin' && hariArr[4] === 'Jumat' ? 'Sen-Jum' : hariArr.slice(0,3).join(',') + (hariArr.length > 3 ? '...' : ''));
-    return '<tr class="border-t border-stone-100">' +
-      '<td class="px-4 py-3 text-sm font-medium">' + (j.nama_karyawan || '—') + '</td>' +
-      '<td class="px-4 py-3 text-sm"><span class="px-2 py-0.5 rounded text-xs font-medium" style="background:' + (j.warna || '#3B82F6') + '20;color:' + (j.warna || '#3B82F6') + '">' + (j.shift_nama || '—') + '</span></td>' +
-      '<td class="px-4 py-3 text-sm text-center mono">' + (j.jam_masuk ? j.jam_masuk.slice(0,5) : '—') + ' - ' + (j.jam_keluar ? j.jam_keluar.slice(0,5) : '—') + (j.jam_masuk && j.jam_keluar && j.jam_keluar <= j.jam_masuk ? '<span class="ml-1.5 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded cursor-default" title="Lintas hari (berakhir besok)">+1</span>' : '') + '</td>' +
-      '<td class="px-4 py-3 text-sm text-center">' + (j.tanggal_mulai || '—') + '</td>' +
-      '<td class="px-4 py-3 text-sm text-center">' + (j.tanggal_selesai || '—') + '</td>' +
-      '<td class="px-4 py-3 text-sm text-center">' + hariLabel + '</td>' +
-      '<td class="px-4 py-3 text-sm text-right whitespace-nowrap"><button onclick="editJadwal(' + j.id + ')" class="text-stone-500 hover:text-stone-900 p-1.5 inline-flex" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button onclick="deleteJadwal(' + j.id + ')" class="text-red-600 hover:text-red-800 p-1.5 inline-flex" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></td></tr>';
+    return '<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">' +
+      '<td class="px-4 py-3 text-xs font-medium text-stone-700">' + (j.nama_karyawan || '—') + '</td>' +
+      '<td class="px-4 py-3 text-xs"><span class="inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-semibold" style="background:' + (j.warna || '#3B82F6') + '20;color:' + (j.warna || '#3B82F6') + '">' + (j.shift_nama || '—') + '</span></td>' +
+      '<td class="px-4 py-3 text-xs text-center mono text-stone-700">' + (j.jam_masuk ? j.jam_masuk.slice(0,5) : '—') + ' - ' + (j.jam_keluar ? j.jam_keluar.slice(0,5) : '—') + (j.jam_masuk && j.jam_keluar && j.jam_keluar <= j.jam_masuk ? '<span class="ml-1.5 text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-lg cursor-default" title="Lintas hari (berakhir besok)">+1</span>' : '') + '</td>' +
+      '<td class="px-4 py-3 text-xs text-center text-stone-600">' + (j.tanggal_mulai || '—') + '</td>' +
+      '<td class="px-4 py-3 text-xs text-center text-stone-600">' + (j.tanggal_selesai || '—') + '</td>' +
+      '<td class="px-4 py-3 text-xs text-center text-stone-600">' + hariLabel + '</td>' +
+      '<td class="px-4 py-3 text-xs text-right whitespace-nowrap"><button onclick="editJadwal(' + j.id + ')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button onclick="deleteJadwal(' + j.id + ')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></td></tr>';
   }).join('');
-  wrap.innerHTML = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-stone-50"><tr>' +
-    '<th class="text-left px-4 py-3 text-xs font-semibold uppercase">Karyawan</th>' +
-    '<th class="text-left px-4 py-3 text-xs font-semibold uppercase">Shift</th>' +
-    '<th class="text-center px-4 py-3 text-xs font-semibold uppercase">Jam</th>' +
-    '<th class="text-center px-4 py-3 text-xs font-semibold uppercase">Mulai</th>' +
-    '<th class="text-center px-4 py-3 text-xs font-semibold uppercase">Selesai</th>' +
-    '<th class="text-center px-4 py-3 text-xs font-semibold uppercase">Hari</th>' +
-    '<th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th></tr></thead><tbody>' +
+  wrap.innerHTML = '<div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-stone-100">' +
+    '<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Karyawan</th>' +
+    '<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Shift</th>' +
+    '<th class="text-center px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Jam</th>' +
+    '<th class="text-center px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Mulai</th>' +
+    '<th class="text-center px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Selesai</th>' +
+    '<th class="text-center px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Hari</th>' +
+    '<th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th></tr></thead><tbody>' +
     rowsHtml + '</tbody></table></div>';
 }
 
@@ -137,15 +137,15 @@ async function openJadwalForm(editing) {
   document.getElementById('modal-title').textContent = editing ? 'Edit Jadwal Shift' : 'Atur Jadwal Shift';
   document.getElementById('modal-body').innerHTML =
     '<div class="space-y-4">' +
-    '<div><label class="text-sm font-medium text-stone-700">Karyawan *</label><select id="jd-karyawan" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md"><option value="">— Pilih Karyawan —</option>' +
+    '<div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Karyawan *</label><select id="jd-karyawan" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"><option value="">— Pilih Karyawan —</option>' +
     karyawanList.map(function(k) { return '<option value="' + k.id + '" ' + (j.karyawan_id == k.id ? 'selected' : '') + '>' + k.nama + ' — ' + (k.jabatan_nama || '-') + '</option>'; }).join('') +
     '</select></div>' +
-    '<div><label class="text-sm font-medium text-stone-700">Shift *</label><select id="jd-shift" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md"><option value="">— Pilih Shift —</option>' +
+    '<div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Shift *</label><select id="jd-shift" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"><option value="">— Pilih Shift —</option>' +
     shiftList.map(function(s) { return '<option value="' + s.id + '" ' + (j.shift_id == s.id ? 'selected' : '') + '>' + s.nama + ' (' + s.jam_masuk.slice(0,5) + '-' + s.jam_keluar.slice(0,5) + ')</option>'; }).join('') +
     '</select></div>' +
     '<div class="grid grid-cols-2 gap-3">' +
-    '<div><label class="text-sm font-medium text-stone-700">Tanggal Mulai *</label><input id="jd-mulai" type="date" value="' + j.tanggal_mulai + '" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" /></div>' +
-    '<div><label class="text-sm font-medium text-stone-700">Tanggal Selesai</label><input id="jd-selesai" type="date" value="' + (j.tanggal_selesai || '') + '" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" /><div class="text-xs text-stone-400 mt-1">Kosongkan jika tidak ada batas</div></div>' +
+    '<div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Mulai *</label><input id="jd-mulai" type="date" value="' + j.tanggal_mulai + '" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" /></div>' +
+    '<div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Selesai</label><input id="jd-selesai" type="date" value="' + (j.tanggal_selesai || '') + '" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" /><div class="text-[10px] text-stone-400 mt-1">Kosongkan jika tidak ada batas</div></div>' +
     '</div></div>';
 
   document.getElementById('modal-save').onclick = async function() {

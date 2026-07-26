@@ -1461,7 +1461,7 @@ async function renderStandarSp() {
 
     var html = '<div class="space-y-6">';
     html += '<div class="flex flex-wrap items-center justify-between gap-2">';
-    html += '<div><h2 class="text-xl font-bold">Standar Satuan Penukar (SP)</h2><p class="text-sm text-stone-500">Nilai SP berdasarkan jenjang penerima — edit langsung di tabel</p></div>';
+    html += '<div><p class="text-sm text-stone-500">Nilai SP berdasarkan jenjang penerima — edit langsung di tabel</p></div>';
     html += '<button onclick="saveStandarSp()" class="px-5 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-colors"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Simpan Perubahan</button>';
     html += '</div>';
 
