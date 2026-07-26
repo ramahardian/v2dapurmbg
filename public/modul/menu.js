@@ -293,7 +293,7 @@ function renderGramasiCell(gramasiTotal, bahan) {
     displayGramasi = calculated;
   }
   if (displayGramasi === 0) {
-    return '<span class="text-stone-300">0g</span>';
+    return '<span class="text-stone-300 cursor-help" title="Gramasi 0 karena menu belum memiliki bahan atau jumlah bahan belum diisi. Tambah bahan & pilih dari SP Referensi untuk isi otomatis.">0g</span>';
   }
   var rounded = Math.round(displayGramasi * 10) / 10;
   var title = '';
@@ -332,7 +332,7 @@ function renderMenuHtml(menus) {
             </th>
             <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Nama</th>
             <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Kategori</th>
-            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gramasi</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Gramasi <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-stone-200 text-stone-500 text-[9px] cursor-help font-bold" title="Gramasi total = jumlah seluruh bahan (g). 0 = belum ada bahan/ jumlah. Default terisi otomatis dari SP Referensi saat pilih bahan.">?</span></th>
             <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Kalori</th>
             <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Bahan</th>
             <th class="text-right px-4 py-3 text-xs font-semibold uppercase">Aksi</th>
@@ -940,7 +940,11 @@ function showMenuInfo() {
     '<div class="space-y-4 text-sm text-stone-600">' +
       '<div class="flex gap-3 items-start">' +
         '<span class="shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>' +
-        '<div><span class="font-semibold text-stone-700">Buat Resep</span><br>Tulis nama menu, deskripsi, dan tambahkan bahan-bahan. Jumlah gramasi per porsi auto terisi dari SP referensi.</div>' +
+        '<div><span class="font-semibold text-stone-700">Buat Resep</span><br>Tulis nama menu, deskripsi, dan tambahkan bahan-bahan. Jumlah gramasi per porsi auto terisi dari <strong>SP Referensi</strong> (berat_bersih).</div>' +
+      '</div>' +
+      '<div class="flex gap-3 items-start">' +
+        '<span class="shrink-0 w-7 h-7 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>' +
+        '<div><span class="font-semibold text-stone-700">Gramasi 0?</span><br>Kolom Gramasi menunjukkan 0 jika menu belum punya bahan atau jumlah bahan belum diisi. <strong>Cara set default:</strong> buka <strong>SP Referensi</strong> → isi Berat Bersih (gram) → saat tambah bahan di form menu, jumlah auto terisi dari nilai tersebut. Bisa juga klik <strong>↺ Reset Semua ke SP</strong> untuk mengembalikan ke default.</div>' +
       '</div>' +
       '<div class="flex gap-3 items-start">' +
         '<span class="shrink-0 w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>' +
