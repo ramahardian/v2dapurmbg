@@ -210,4 +210,84 @@ router.get('/notifikasi/karyawan-list', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/notifikasi/:id/detail
+ * Mendapatkan detail satu notifikasi + riwayat balasan.
+ */
+router.get('/notifikasi/:id/detail', async (req, res) => {
+  try {
+    let karyawanId = req.user.karyawan_id;
+    if (!karyawanId) {
+      const [k] = await db.query('SELECT id FROM karyawan WHERE email=? AND tenant_id=? LIMIT 1', [req.user.email, req.user.tenant_id]);
+      if (!k.length) return res.status(404).json({ error: 'Karyawan tidak ditemukan' });
+      karyawanId = k[0].id;
+    }
+
+    const [notif] = await db.query(
+      `SELECT n.id, n.judul, n.pesan, n.link, n.is_read, n.created_at, n.pengirim_id,
+              u.nama as pengirim_nama
+       FROM notifikasi n
+       LEFT JOIN users u ON u.id=n.pengirim_id
+       WHERE n.id=? AND n.penerima_id=? AND n.tenant_id=?`,
+      [req.params.id, karyawanId, req.user.tenant_id]
+    );
+
+    if (!notif.length) return res.status(404).json({ error: 'Notifikasi tidak ditemukan' });
+
+    // Mark as read
+    await db.query('UPDATE notifikasi SET is_read=1 WHERE id=? AND penerima_id=?', [req.params.id, karyawanId]);
+
+    res.json(notif[0]);
+  } catch (err) {
+    console.error('Detail notifikasi error:', err);
+    res.status(500).json({ error: 'Gagal memuat detail notifikasi' });
+  }
+});
+
+/**
+ * POST /api/notifikasi/:id/balas
+ * Membalas notifikasi. Balasan akan dikirim sebagai notifikasi baru ke pengirim asli.
+ * Body: { pesan: string }
+ */
+router.post('/notifikasi/:id/balas', async (req, res) => {
+  try {
+    let karyawanId = req.user.karyawan_id;
+    if (!karyawanId) {
+      const [k] = await db.query('SELECT id FROM karyawan WHERE email=? AND tenant_id=? LIMIT 1', [req.user.email, req.user.tenant_id]);
+      if (!k.length) return res.status(404).json({ error: 'Karyawan tidak ditemukan' });
+      karyawanId = k[0].id;
+    }
+
+    const { pesan } = req.body;
+    if (!pesan || !pesan.trim()) {
+      return res.status(400).json({ error: 'Pesan balasan wajib diisi' });
+    }
+
+    // Get original notification
+    const [notif] = await db.query(
+      'SELECT id, pengirim_id, judul, tenant_id FROM notifikasi WHERE id=? AND penerima_id=? AND tenant_id=?',
+      [req.params.id, karyawanId, req.user.tenant_id]
+    );
+    if (!notif.length) return res.status(404).json({ error: 'Notifikasi tidak ditemukan' });
+
+    const original = notif[0];
+    const t = original.tenant_id;
+
+    // Get karyawan name for reply sender identity
+    const [kr] = await db.query('SELECT nama FROM karyawan WHERE id=?', [karyawanId]);
+    const namaKaryawan = kr.length ? kr[0].nama : 'Karyawan';
+
+    await db.query(
+      `INSERT INTO notifikasi (tenant_id, pengirim_id, penerima_id, judul, pesan, link)
+       VALUES (?, NULL, ?, ?, ?, ?)`,
+      [t, original.pengirim_id, 'Balasan: ' + original.judul, namaKaryawan + ' membalas:\n' + pesan.trim(), '/absensi']
+    );
+
+    res.json({ ok: true, pesan: 'Balasan terkirim' });
+  } catch (err) {
+    console.error('Balas notifikasi error:', err);
+    res.status(500).json({ error: 'Gagal mengirim balasan: ' + err.message });
+  }
+});
+
 module.exports = router;
