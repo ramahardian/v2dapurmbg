@@ -52,18 +52,18 @@ async function loadKaryawan() {
 }
 function renderKaryawanTable(list) {
   const tb = document.querySelector('#karyawan-modal').parentElement.querySelector('tbody');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg><div>Belum ada karyawan</div></td></tr>'; return; }
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="text-center py-16 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg><div class="text-sm">Belum ada karyawan</div></td></tr>'; return; }
   tb.innerHTML = list.map(k => `
-    <tr class="border-t border-stone-100">
-      <td class="px-3 py-2 text-xs font-medium"><a href="/karyawan?id=${k.id}" onclick="event.preventDefault();navigate('karyawan?id=${k.id}')" class="text-[#1e40af] hover:underline">${k.nama}</a></td>
-      <td class="px-3 py-2 text-xs">${k.nik || '-'}</td>
-      <td class="px-3 py-2 text-xs">${k.jabatan_nama || '-'}</td>
-      <td class="px-3 py-2 text-xs">${k.departemen || '-'}</td>
-      <td class="px-3 py-2 text-xs text-right mono">${fmtIDR(k.gaji_pokok)}</td>
-      <td class="px-3 py-2 text-xs">${k.status}</td>
-      <td class="px-3 py-2 text-xs text-right whitespace-nowrap">
-        <button onclick="openKaryawanForm(karyawanData.find(x => x.id == ${k.id}))" class="text-stone-500 hover:text-stone-900 mr-2" title="Edit"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button onclick="deleteKaryawan(${k.id})" class="text-red-600 hover:text-red-800" title="Hapus"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+    <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+      <td class="px-4 py-3 text-xs font-medium"><a href="/karyawan?id=${k.id}" onclick="event.preventDefault();navigate('karyawan?id=${k.id}')" class="text-blue-600 hover:text-blue-800 font-semibold">${k.nama}</a></td>
+      <td class="px-4 py-3 text-xs text-stone-600">${k.nik || '-'}</td>
+      <td class="px-4 py-3 text-xs text-stone-600">${k.jabatan_nama || '-'}</td>
+      <td class="px-4 py-3 text-xs text-stone-600">${k.departemen || '-'}</td>
+      <td class="px-4 py-3 text-xs text-right mono text-stone-700 font-medium">${fmtIDR(k.gaji_pokok)}</td>
+      <td class="px-4 py-3 text-xs">${k.status}</td>
+      <td class="px-4 py-3 text-xs text-right whitespace-nowrap">
+        <button onclick="openKaryawanForm(karyawanData.find(x => x.id == ${k.id}))" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button onclick="deleteKaryawan(${k.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
       </td>
     </tr>`).join('');
 }
@@ -96,8 +96,8 @@ function renderKaryawanPagination() {
   const wrap = document.getElementById('karyawan-pagination');
   if (!wrap) return;
   if (karyawanState.totalPages <= 1) { wrap.innerHTML = ''; return; }
-  const prevBtn = karyawanState.page > 1 ? `<button onclick="kryGoToPage(${karyawanState.page - 1})" class="px-2 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Prev</button>` : '';
-  const nextBtn = karyawanState.page < karyawanState.totalPages ? `<button onclick="kryGoToPage(${karyawanState.page + 1})" class="px-2 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Next</button>` : '';
+  const prevBtn = karyawanState.page > 1 ? `<button onclick="kryGoToPage(${karyawanState.page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Prev</button>` : '';
+  const nextBtn = karyawanState.page < karyawanState.totalPages ? `<button onclick="kryGoToPage(${karyawanState.page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Next</button>` : '';
   wrap.innerHTML = `<span class="text-sm text-stone-500">Hal ${karyawanState.page} dari ${karyawanState.totalPages}</span>
     <div class="flex gap-2">${prevBtn}${nextBtn}</div>`;
 }
