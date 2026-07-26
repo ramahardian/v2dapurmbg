@@ -304,76 +304,86 @@ const tabColors = {
         '</tr>' +
         '</tbody></table></div></div>';
 
-      // Tabel Menu per Jenjang per Hari
-      var menuPerHari = r.menu_per_hari || [];
-      var menuPerHariContent = '';
-      if (menuPerHari.length > 0) {
-        // Group by hari_ke
-        var dayGroups = {};
-        var jenjangSet = {};
-        menuPerHari.forEach(function(m) {
-          if (!dayGroups[m.hari_ke]) dayGroups[m.hari_ke] = { hari_ke: m.hari_ke, hari_nama: m.hari_nama, menus: [] };
-          dayGroups[m.hari_ke].menus.push(m);
-          var kat = m.menu_kategori_display || '-';
-          if (kat !== '-') jenjangSet[kat] = true;
-        });
-        var jenjangList = Object.keys(jenjangSet).sort();
-        var dayKeys = Object.keys(dayGroups).sort(function(a,b) { return Number(a) - Number(b); });
-        var hasJenjang = jenjangList.length > 0;
-        var useColumns = hasJenjang ? jenjangList : ['Menu'];
+      // Tabel Menu per Jenjang (terpisah) + Kebutuhan Pangan
+      var menuPerJenjang = r.menu_per_jenjang || [];
+      var menuPerJenjangContent = '';
+      if (menuPerJenjang.length > 0) {
+        menuPerJenjangContent = menuPerJenjang.map(function(mj, idx) {
+          var isEven = idx % 2 === 0;
+          var borderColor = isEven ? 'border-emerald-200' : 'border-blue-200';
+          var headerBg = isEven ? 'from-emerald-50 to-emerald-100/60' : 'from-blue-50 to-blue-100/60';
+          var iconColor = isEven ? 'text-emerald-500' : 'text-blue-500';
+          var badgeColor = isEven ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700';
 
-        var menuRows = '';
-        dayKeys.forEach(function(hk) {
-          var dg = dayGroups[hk];
-          var menuByCol = {};
-          useColumns.forEach(function(c) { menuByCol[c] = []; });
-          dg.menus.forEach(function(m) {
-            var kat = m.menu_kategori_display || '-';
-            var menuNama = escHtml(m.menu_nama || (m.menu_id ? 'Menu #' + m.menu_id : '-'));
-            if (hasJenjang && !menuByCol[kat]) return; // skip items without matching jenjang column
-            var col = hasJenjang ? kat : useColumns[0];
-            menuByCol[col].push(menuNama);
-          });
-          var colCells = useColumns.map(function(c) {
-            var names = menuByCol[c] || [];
-            return '<td class="px-3 py-2.5 align-top">' +
-              (names.length > 0
-                ? names.map(function(n) { return '<div class="text-xs text-stone-700 py-0.5">' + n + '</div>'; }).join('')
-                : '<span class="text-xs text-stone-300">—</span>') +
-            '</td>';
-          }).join('');
-          menuRows += '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
-            '<td class="px-4 py-2.5 font-medium text-xs text-stone-700 whitespace-nowrap w-16 align-top">Hari ' + dg.hari_ke + '<br><span class="text-[10px] text-stone-400 font-normal">' + escHtml(dg.hari_nama || '') + '</span></td>' +
-            colCells +
-          '</tr>';
-        });
-
-        var headerExtra = useColumns.map(function(c) {
-          return '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">' + c + '</th>';
-        }).join('');
-
-        var siklusKat = '';
-        if (siklusInfo && siklusInfo.kategori_penerima) {
-          try {
-            var parsedKat = JSON.parse(siklusInfo.kategori_penerima);
-            if (Array.isArray(parsedKat) && parsedKat.length > 0) {
-              siklusKat = ' — <span class="text-[10px] text-stone-500 font-normal">' + escHtml(parsedKat.join(', ')) + '</span>';
+          // Build menu table rows
+          var menuRows = mj.hari.map(function(h) {
+            var bahanStr = '';
+            if (h.bahan && h.bahan.length > 0) {
+              bahanStr = '<div class="mt-1.5 pl-4 border-l-2 border-stone-200">' +
+                h.bahan.map(function(b) {
+                  return '<div class="text-[10px] text-stone-500 leading-tight">' +
+                    escHtml(b.bahan_nama) + ': ' + fmtNum(b.total_gram) + ' ' + escHtml(b.satuan || 'g') +
+                    (b.total_kg > 0 ? ' (' + fmtNum(b.total_kg) + ' kg)' : '') +
+                  '</div>';
+                }).join('') +
+              '</div>';
             }
-          } catch(e) {}
-        }
+            return '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
+              '<td class="px-4 py-3 font-medium text-xs text-stone-700 whitespace-nowrap w-16 align-top">Hari ' + h.hari_ke + '<br><span class="text-[10px] text-stone-400 font-normal">' + escHtml(h.hari_nama || '') + '</span></td>' +
+              '<td class="px-4 py-3 align-top">' +
+                '<div class="text-xs font-semibold text-stone-700">' + escHtml(h.menu_nama) + '</div>' +
+                bahanStr +
+              '</td>' +
+              '<td class="px-4 py-3 text-right text-xs text-stone-500 whitespace-nowrap align-top">' + fmtNum(h.jumlah_porsi) + ' porsi</td>' +
+            '</tr>';
+          }).join('');
 
-        menuPerHariContent = '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
-          '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">' +
-            '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2 flex-wrap"><svg class="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>Daftar Menu' + (siklusInfo ? ' — ' + escHtml(siklusInfo.nama) : '') + siklusKat + '</h3>' +
-            '<span class="text-[10px] text-stone-400 shrink-0">' + dayKeys.length + ' hari' + '</span>' +
-          '</div>' +
-          '<div class="overflow-x-auto"><table class="w-full text-xs">' +
-          '<thead><tr class="bg-stone-50">' +
-          '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Hari</th>' +
-          headerExtra +
-          '</tr></thead><tbody>' +
-          menuRows +
-          '</tbody></table></div></div>';
+          // Build total kebutuhan table
+          var kebutuhanRows = '';
+          if (mj.total_kebutuhan && mj.total_kebutuhan.length > 0) {
+            kebutuhanRows = mj.total_kebutuhan.map(function(k) {
+              return '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
+                '<td class="px-4 py-2 text-xs text-stone-600">' + escHtml(k.bahan_nama) + '</td>' +
+                '<td class="px-4 py-2 text-right mono text-xs font-semibold text-stone-700">' + fmtNum(k.total_gram) + '</td>' +
+                '<td class="px-4 py-2 text-xs text-stone-500">' + escHtml(k.satuan || 'g') + '</td>' +
+                '<td class="px-4 py-2 text-right text-xs text-stone-500">' + (k.total_kg > 0 ? fmtNum(k.total_kg) + ' kg' : '—') + '</td>' +
+              '</tr>';
+            }).join('');
+          }
+
+          return '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+            '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between bg-gradient-to-r ' + headerBg + '">' +
+              '<div class="flex items-center gap-3">' +
+                '<div class="w-8 h-8 rounded-xl flex items-center justify-center shadow-sm ' + (isEven ? 'bg-emerald-500' : 'bg-blue-500') + '"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></div>' +
+                '<div>' +
+                  '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider">' + escHtml(mj.jenjang) + '</h3>' +
+                  '<div class="text-[10px] text-stone-500">' + mj.total_hari + ' hari · ' + fmtNum(mj.jumlah_penerima) + ' penerima' + '</div>' +
+                '</div>' +
+              '</div>' +
+              '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium ' + badgeColor + '">' +
+                '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' +
+                fmtNum(mj.jumlah_penerima) + ' org' +
+              '</span>' +
+            '</div>' +
+            '<div class="overflow-x-auto"><table class="w-full text-xs">' +
+            '<thead><tr class="bg-stone-50">' +
+            '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Hari</th>' +
+            '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Menu & Bahan</th>' +
+            '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Porsi</th>' +
+            '</tr></thead><tbody>' + menuRows + '</tbody></table></div>' +
+            (kebutuhanRows ? '<div class="border-t border-stone-200">' +
+              '<div class="px-4 py-2.5 bg-stone-50/80 border-b border-stone-100">' +
+                '<h4 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-3.5 h-3.5 ' + iconColor + '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Total Kebutuhan Pangan — ' + escHtml(mj.jenjang) + '</h4>' +
+              '</div>' +
+              '<div class="overflow-x-auto"><table class="w-full text-xs">' +
+              '<thead><tr class="bg-stone-50">' +
+              '<th class="text-left px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Bahan</th>' +
+              '<th class="text-right px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Total</th>' +
+              '<th class="text-left px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Satuan</th>' +
+              '<th class="text-right px-4 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Berat</th>' +
+              '</tr></thead><tbody>' + kebutuhanRows + '</tbody></table></div></div>' : '') +
+          '</div>';
+        }).join('');
       }
 
       // Tabel Daftar Pembelian per Pemasok
@@ -466,7 +476,7 @@ const tabColors = {
         '</div>';
         window._lapStatCards = rabFilterBar + draftMsg;
       } else {
-        window._lapStatCards = rabFilterBar + statCards + summaryCards + tableContent + biayaContent + menuPerHariContent + supplierContent;
+        window._lapStatCards = rabFilterBar + statCards + summaryCards + tableContent + biayaContent + menuPerJenjangContent + supplierContent;
       }
     } else if (tab === 'rab-bulanan') {
       var rbBulan = lapState.rb_bulan || '';
