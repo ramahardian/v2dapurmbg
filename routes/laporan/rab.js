@@ -384,15 +384,17 @@ function registerRabRoutes(router) {
       const dbToDisplay = buildDbToDisplay();
 
       let penerima;
+      const penerimaQuery = `SELECT kategori_penerima,
+        SUM(paket_besar) as total_besar, SUM(paket_kecil) as total_kecil,
+        SUM(paket_besar + paket_kecil) as total_penerima
+        FROM penerima_manfaat WHERE tenant_id=?`;
       if (siklusInfo && siklusInfo.kategori_penerima) {
         const katList = parseKategoriPenerima(siklusInfo.kategori_penerima);
         const dbKatList = expandJenjangToDbValues(katList);
         if (dbKatList.length) {
           const ph = dbKatList.map(() => '?').join(',');
           [penerima] = await db.query(
-            `SELECT kategori_penerima, SUM(paket_besar + paket_kecil) as total_penerima
-             FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})
-             GROUP BY kategori_penerima ORDER BY kategori_penerima`,
+            penerimaQuery + ` AND kategori_penerima IN (${ph}) GROUP BY kategori_penerima ORDER BY kategori_penerima`,
             [t, ...dbKatList]
           );
         } else {
@@ -400,9 +402,7 @@ function registerRabRoutes(router) {
         }
       } else {
         [penerima] = await db.query(
-          `SELECT kategori_penerima, SUM(paket_besar + paket_kecil) as total_penerima
-           FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IS NOT NULL
-           GROUP BY kategori_penerima ORDER BY kategori_penerima`,
+          penerimaQuery + ` AND kategori_penerima IS NOT NULL GROUP BY kategori_penerima ORDER BY kategori_penerima`,
           [t]
         );
       }
@@ -448,24 +448,51 @@ function registerRabRoutes(router) {
 
       let grandPenerima = 0;
       let grandTotal = 0;
-      const rows = penerima.map(p => {
+      const POSYANDU_SLICE = [
+        { subKat: 'Ibu Hamil', display: 'Bumil/Busui', col: 'total_besar' },
+        { subKat: 'Ibu Menyusui', display: 'Bumil/Busui', col: 'total_besar' },
+        { subKat: 'Balita', display: 'Balita', col: 'total_kecil' },
+      ];
+      const rows = [];
+      for (const p of penerima) {
         const kategori = dbToDisplay[p.kategori_penerima] || p.kategori_penerima;
-        const harga = hargaMap[kategori] || 0;
-        const jmlPenerima = Number(p.total_penerima);
-        const jmlHari = total_hari || 0;
-        const total = harga * jmlPenerima * jmlHari;
-        grandPenerima += jmlPenerima;
-        grandTotal += total;
-        return {
-          kategori,
-          harga_per_porsi: harga,
-          jumlah_penerima: jmlPenerima,
-          jumlah_hari: jmlHari,
-          budget: budgetMap[kategori] || 0,
-          realisasi: realisasiMap[kategori] || 0,
-          total,
-        };
-      });
+        const rawKat = p.kategori_penerima;
+        if (rawKat === 'Posyandu') {
+          for (const sl of POSYANDU_SLICE) {
+            const subJml = Number(p[sl.col]) || 0;
+            if (!subJml) continue;
+            const harga = hargaMap[sl.display] || 0;
+            const total = harga * subJml * (total_hari || 0);
+            grandPenerima += subJml;
+            grandTotal += total;
+            rows.push({
+              kategori: 'Posyandu (' + sl.display + ')',
+              harga_per_porsi: harga,
+              jumlah_penerima: subJml,
+              jumlah_hari: total_hari || 0,
+              budget: budgetMap[sl.display] || 0,
+              realisasi: realisasiMap[sl.display] || 0,
+              total,
+            });
+          }
+        } else {
+          const harga = hargaMap[kategori] || 0;
+          const jmlPenerima = Number(p.total_penerima);
+          const jmlHari = total_hari || 0;
+          const total = harga * jmlPenerima * jmlHari;
+          grandPenerima += jmlPenerima;
+          grandTotal += total;
+          rows.push({
+            kategori,
+            harga_per_porsi: harga,
+            jumlah_penerima: jmlPenerima,
+            jumlah_hari: jmlHari,
+            budget: budgetMap[kategori] || 0,
+            realisasi: realisasiMap[kategori] || 0,
+            total,
+          });
+        }
+      }
 
       const selisih = totalBudgetAgg - totalRealisasiManual;
       const serapan = totalBudgetAgg > 0 ? (totalRealisasiManual / totalBudgetAgg * 100) : 0;
