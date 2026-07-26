@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="/manifest.json">
   <title>Dashboard Absen — Dapur Sukaluyu</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1025,43 +1024,7 @@
     loadAll();
     loadNotifUnread();
 
-    // Service Worker (PWA installable)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(function() {});
-    }
 
-    // Install App prompt
-    var installPrompt = null;
-    var installBanner = null;
-    window.addEventListener('beforeinstallprompt', function(e) {
-      e.preventDefault();
-      installPrompt = e;
-      if (!installBanner) {
-        installBanner = document.createElement('div');
-        installBanner.className = 'fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto bg-white border border-slate-200 rounded-xl shadow-xl p-4 flex items-center gap-3 animate-alert-in';
-        installBanner.innerHTML = '<div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-white shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div><div class="flex-1 min-w-0"><div class="text-sm font-semibold text-slate-800">Install Aplikasi Absensi</div><div class="text-xs text-slate-500 mt-0.5">Pasang di layar utama untuk akses cepat</div></div><button id="install-btn" class="shrink-0 px-4 py-2 text-xs font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors">Install</button><button id="install-dismiss" class="shrink-0 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-lg" title="Tutup">&times;</button>';
-        document.body.appendChild(installBanner);
-        document.getElementById('install-btn').addEventListener('click', function() {
-          if (!installPrompt) return;
-          installPrompt.prompt();
-          installPrompt.userChoice.then(function() { installPrompt = null; if (installBanner) { installBanner.remove(); installBanner = null; } });
-        });
-        document.getElementById('install-dismiss').addEventListener('click', function() {
-          if (installBanner) { installBanner.remove(); installBanner = null; }
-          // Jangan tampilkan lagi selama session ini
-          sessionStorage.setItem('pwa-install-dismissed', '1');
-        });
-      }
-    });
-    window.addEventListener('appinstalled', function() {
-      installPrompt = null;
-      if (installBanner) { installBanner.remove(); installBanner = null; }
-    });
-    // Sembunyikan banner jika pernah ditutup di session ini
-    if (sessionStorage.getItem('pwa-install-dismissed') && installBanner) {
-      installBanner.remove();
-      installBanner = null;
-    }
   </script>
 </body>
 </html>
