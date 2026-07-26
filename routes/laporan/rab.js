@@ -4,6 +4,7 @@
  */
 const db = require('../../db');
 const { roleFinance, roleOps } = require('./config');
+const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP } = require('../siklus/helpers');
 
 function registerRabRoutes(router) {
   // 8. RAB Bulanan (agregat per periode) - Operasional/Produksi/Admin
@@ -380,28 +381,12 @@ function registerRabRoutes(router) {
         }
       }
 
-      const JENJANG_DISPLAY_ORDER = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
-      const JENJANG_DB_MAP = {
-        'TK/PAUD': ['TK/PAUD', 'TK', 'PAUD'],
-        'SD/MI (1-3)': ['SD 1-3', 'SD/MI (1-3)', 'SD'],
-        'SD/MI (4-6)': ['SD 4-6', 'SD/MI (4-6)'],
-        'SMP/MTs, SMA/SMK': ['SMP', 'SMA', 'SMP/MTs, SMA/SMK'],
-        'Bumil/Busui': ['Ibu Hamil', 'Ibu Menyusui', 'Bumil/Busui'],
-        'Balita': ['Balita'],
-      };
-      const dbToDisplay = {};
-      for (const [display, dbVals] of Object.entries(JENJANG_DB_MAP)) {
-        for (const dv of dbVals) dbToDisplay[dv] = display;
-      }
+      const dbToDisplay = buildDbToDisplay();
 
       let penerima;
       if (siklusInfo && siklusInfo.kategori_penerima) {
-        const katList = siklusInfo.kategori_penerima.split(',').map(s => s.trim()).filter(Boolean);
-        const dbKatList = [];
-        for (const k of katList) {
-          const mapped = JENJANG_DB_MAP[k] || [k];
-          for (const m of mapped) dbKatList.push(m);
-        }
+        const katList = parseKategoriPenerima(siklusInfo.kategori_penerima);
+        const dbKatList = expandJenjangToDbValues(katList);
         if (dbKatList.length) {
           const ph = dbKatList.map(() => '?').join(',');
           [penerima] = await db.query(
