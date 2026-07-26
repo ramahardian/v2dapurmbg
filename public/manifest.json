@@ -1,0 +1,19 @@
+{
+  "name": "Absensi Dapur Sukaluyu",
+  "short_name": "Absensi",
+  "description": "Absensi karyawan Dapur Sukaluyu",
+  "start_url": "/absen/dashboard",
+  "scope": "/absen",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f5f9",
+  "theme_color": "#1e293b",
+  "icons": [
+    {
+      "src": "/asset/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
