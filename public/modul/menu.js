@@ -131,6 +131,22 @@ function renderMenuBySiklusHtml(data) {
             Kelola Siklus →
           </a>
         </div>
+        ${s.status === 'Draft' ? `
+        <!-- Draft Info -->
+        <div class="px-4 pb-4">
+          <div class="bg-amber-50 border-2 border-amber-200/80 rounded-xl p-5 text-center shadow-sm">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center">
+              <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+            </div>
+            <h4 class="text-sm font-bold text-amber-800 mb-1.5">Siklus Masih Draft</h4>
+            <p class="text-xs text-amber-700/80 max-w-sm mx-auto leading-relaxed">Siklus <strong>${s.nama}</strong> masih berstatus <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-200/60 text-amber-800 font-semibold text-[10px]">DRAFT</span>. Silakan aktifkan siklus terlebih dahulu untuk mengelola menu dan bahan baku.</p>
+            <a href="#" onclick="navigate('siklus');return false" class="inline-flex items-center gap-1.5 mt-3 px-4 py-2 text-xs font-medium text-amber-700 bg-white border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+              Aktifkan Siklus
+            </a>
+          </div>
+        </div>
+        ` : `
         <!-- Days Grid -->
         <div class="p-4">
           <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
@@ -154,6 +170,7 @@ function renderMenuBySiklusHtml(data) {
             }).join('')}
           </div>
         </div>
+        `}
       </div>`;
     }).join('<div class="h-3"></div>');
   }
