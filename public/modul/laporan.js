@@ -265,6 +265,45 @@ const tabColors = {
 
       tableContent += '</tbody></table></div></div>';
 
+      // Tabel Rincian Biaya Pengeluaran
+      var biayaContent = '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+        '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">' +
+          '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Biaya Bahan Baku & Pengeluaran</h3>' +
+          '<span class="text-[10px] text-stone-400">' + filterPeriode + '</span>' +
+        '</div>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs">' +
+        '<thead><tr class="bg-stone-50">' +
+        '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Jenis Biaya</th>' +
+        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Jumlah</th>' +
+        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">% Thd Total</th>' +
+        '</tr></thead><tbody>' +
+        '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
+          '<td class="px-4 py-3 font-medium text-xs"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-teal-500"></span>Biaya Bahan Baku</span></td>' +
+          '<td class="px-4 py-3 text-right mono text-xs font-semibold text-teal-600">' + fmtIdr(biayaBahanBaku) + '</td>' +
+          '<td class="px-4 py-3 text-right text-xs font-semibold text-stone-700">' + (totalBiayaKas > 0 ? (biayaBahanBaku / totalBiayaKas * 100).toFixed(1) + '%' : '—') + '</td>' +
+        '</tr>' +
+        '<tr class="border-t border-stone-100 bg-stone-50/40 hover:bg-stone-50/80 transition-colors">' +
+          '<td class="px-4 py-3 font-medium text-xs"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span>Biaya Operasional</span></td>' +
+          '<td class="px-4 py-3 text-right mono text-xs font-semibold text-stone-700">' + fmtIdr(biayaOperasional) + '</td>' +
+          '<td class="px-4 py-3 text-right text-xs font-semibold text-stone-700">' + (totalBiayaKas > 0 ? (biayaOperasional / totalBiayaKas * 100).toFixed(1) + '%' : '—') + '</td>' +
+        '</tr>' +
+        '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
+          '<td class="px-4 py-3 font-medium text-xs"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Biaya Gaji</span></td>' +
+          '<td class="px-4 py-3 text-right mono text-xs font-semibold text-amber-600">' + fmtIdr(biayaGaji) + '</td>' +
+          '<td class="px-4 py-3 text-right text-xs font-semibold text-stone-700">' + (totalBiayaKas > 0 ? (biayaGaji / totalBiayaKas * 100).toFixed(1) + '%' : '—') + '</td>' +
+        '</tr>' +
+        (biayaLainnya > 0 ? '<tr class="border-t border-stone-100 bg-stone-50/40 hover:bg-stone-50/80 transition-colors">' +
+          '<td class="px-4 py-3 font-medium text-xs"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-stone-400"></span>Biaya Lainnya</span></td>' +
+          '<td class="px-4 py-3 text-right mono text-xs text-stone-500">' + fmtIdr(biayaLainnya) + '</td>' +
+          '<td class="px-4 py-3 text-right text-xs font-semibold text-stone-700">' + (totalBiayaKas > 0 ? (biayaLainnya / totalBiayaKas * 100).toFixed(1) + '%' : '—') + '</td>' +
+        '</tr>' : '') +
+        '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-orange-50 to-amber-50">' +
+          '<td class="px-4 py-3.5 font-bold text-xs text-stone-800">Total Pengeluaran</td>' +
+          '<td class="px-4 py-3.5 text-right mono font-bold text-xs text-red-600">' + fmtIdr(totalBiayaKas) + '</td>' +
+          '<td class="px-4 py-3.5 text-right text-xs font-bold text-stone-700">100%</td>' +
+        '</tr>' +
+        '</tbody></table></div></div>';
+
       window._lapData = null;
       if (isRABDraft) {
         var draftMsg = '<div class="bg-amber-50 border-2 border-amber-200/80 rounded-2xl p-6 sm:p-8 text-center shadow-sm">' +
@@ -282,7 +321,7 @@ const tabColors = {
         '</div>';
         window._lapStatCards = rabFilterBar + draftMsg;
       } else {
-        window._lapStatCards = rabFilterBar + statCards + summaryCards + tableContent;
+        window._lapStatCards = rabFilterBar + statCards + summaryCards + tableContent + biayaContent;
       }
     } else if (tab === 'rab-bulanan') {
       var rbBulan = lapState.rb_bulan || '';
