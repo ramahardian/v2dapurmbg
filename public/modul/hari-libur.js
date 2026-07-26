@@ -3,12 +3,9 @@ async function renderHariLibur() {
   const c = document.getElementById('content');
   c.innerHTML = `
   <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-    <div>
-      <h2 class="text-lg font-bold text-stone-900">Hari Libur</h2>
-      <p class="text-sm text-stone-500">Kalender hari libur nasional & perusahaan. Tanggal libur otomatis mengunci absensi.</p>
-    </div>
+    <div></div>
     <div class="flex gap-2">
-      <button onclick="openHariLiburForm()" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1.5">
+      <button onclick="openHariLiburForm()" class="h-11 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Tambah Libur
       </button>
@@ -32,7 +29,7 @@ async function loadHariLibur(page) {
     const totalPages = res.pagination?.totalPages || 1;
 
     if (!list.length) {
-      wrap.innerHTML = '<div class="bg-white border border-stone-200 rounded-xl p-12 text-center"><svg class="w-16 h-16 mx-auto mb-4 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2"/><path d="M12 14v2l1 1"/></svg><div class="text-sm text-stone-400 mt-2">Belum ada hari libur</div><div class="text-xs text-stone-400 mt-1">Klik "Tambah Libur" untuk menambahkan.</div></div>';
+      wrap.innerHTML = '<div class="py-16 text-center text-stone-400 bg-white rounded-2xl border border-stone-200 shadow-sm"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2"/><path d="M12 14v2l1 1"/></svg><div class="text-sm">Belum ada hari libur</div></div>';
       document.getElementById('hl-pagination').innerHTML = '';
       return;
     }
@@ -40,13 +37,13 @@ async function loadHariLibur(page) {
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10);
 
-    let html = '<div class="bg-white border border-stone-200 rounded-xl overflow-hidden"><div class="overflow-x-auto"><table class="w-full"><thead class="bg-stone-50"><tr>';
-    html += '<th class="text-left px-4 py-3 text-xs font-semibold text-stone-600 uppercase">Tanggal</th>';
-    html += '<th class="text-left px-4 py-3 text-xs font-semibold text-stone-600 uppercase">Nama</th>';
-    html += '<th class="text-left px-4 py-3 text-xs font-semibold text-stone-600 uppercase">Kategori</th>';
-    html += '<th class="text-left px-4 py-3 text-xs font-semibold text-stone-600 uppercase">Hari</th>';
-    html += '<th class="text-center px-4 py-3 text-xs font-semibold text-stone-600 uppercase">Status</th>';
-    html += '<th class="text-right px-4 py-3 text-xs font-semibold text-stone-600 uppercase">Aksi</th>';
+    let html = '<div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden"><div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-stone-100">';
+    html += '<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Tanggal</th>';
+    html += '<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Nama</th>';
+    html += '<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kategori</th>';
+    html += '<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Hari</th>';
+    html += '<th class="text-center px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Status</th>';
+    html += '<th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th>';
     html += '</tr></thead><tbody>';
 
     for (var i = 0; i < list.length; i++) {
@@ -58,35 +55,35 @@ async function loadHariLibur(page) {
       var isToday = r.tanggal === todayStr;
 
       var badgeKategori = '';
-      if (r.kategori === 'Nasional') badgeKategori = '<span class="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">Nasional</span>';
-      else if (r.kategori === 'Mingguan') badgeKategori = '<span class="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 font-medium">Mingguan</span>';
-      else badgeKategori = '<span class="px-2 py-0.5 rounded-full text-xs bg-stone-100 text-stone-600 font-medium">Perusahaan</span>';
+      if (r.kategori === 'Nasional') badgeKategori = '<span class="inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-red-100 text-red-700">Nasional</span>';
+      else if (r.kategori === 'Mingguan') badgeKategori = '<span class="inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-blue-100 text-blue-700">Mingguan</span>';
+      else badgeKategori = '<span class="inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-stone-100 text-stone-600">Perusahaan</span>';
 
       var statusBadge = isToday
-        ? '<span class="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 font-medium">Hari Ini</span>'
+        ? '<span class="inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-emerald-100 text-emerald-700">Hari Ini</span>'
         : isPast
-          ? '<span class="px-2 py-0.5 rounded-full text-xs bg-stone-100 text-stone-500 font-medium">Terlewat</span>'
-          : '<span class="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 font-medium">Akan Datang</span>';
+          ? '<span class="inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-stone-100 text-stone-500">Terlewat</span>'
+          : '<span class="inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-blue-100 text-blue-700">Akan Datang</span>';
 
-      html += '<tr class="border-t border-stone-100 hover:bg-stone-50/50">';
-      html += '<td class="px-4 py-3 text-sm font-medium text-stone-800 whitespace-nowrap">' + tglStr + '</td>';
-      html += '<td class="px-4 py-3 text-sm text-stone-700">' + escHtml(r.nama) + '</td>';
-      html += '<td class="px-4 py-3">' + badgeKategori + '</td>';
-      html += '<td class="px-4 py-3 text-sm text-stone-500">' + hariNama + '</td>';
-      html += '<td class="px-4 py-3 text-center">' + statusBadge + '</td>';
-      html += '<td class="px-4 py-3 text-right">';
-      html += '<button onclick="hapusHariLibur(' + r.id + ')" class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>';
+      html += '<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">';
+      html += '<td class="px-4 py-3 text-xs font-medium text-stone-700 whitespace-nowrap">' + tglStr + '</td>';
+      html += '<td class="px-4 py-3 text-xs text-stone-700">' + escHtml(r.nama) + '</td>';
+      html += '<td class="px-4 py-3 text-xs">' + badgeKategori + '</td>';
+      html += '<td class="px-4 py-3 text-xs text-stone-500">' + hariNama + '</td>';
+      html += '<td class="px-4 py-3 text-xs text-center">' + statusBadge + '</td>';
+      html += '<td class="px-4 py-3 text-xs text-right">';
+      html += '<button onclick="hapusHariLibur(' + r.id + ')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>';
       html += '</td></tr>';
     }
 
     html += '</tbody></table></div></div>';
     wrap.innerHTML = html;
 
-    var pgHtml = '<span class="text-sm text-stone-500">' + total + ' hari libur</span>';
+    var pgHtml = '<span class="text-sm text-stone-500">' + total + ' data</span>';
     if (totalPages > 1) {
       pgHtml += '<div class="flex gap-2">';
-      if (page > 1) pgHtml += '<button onclick="loadHariLibur(' + (page - 1) + ')" class="px-2 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Prev</button>';
-      if (page < totalPages) pgHtml += '<button onclick="loadHariLibur(' + (page + 1) + ')" class="px-2 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Next</button>';
+      if (page > 1) pgHtml += '<button onclick="loadHariLibur(' + (page - 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Prev</button>';
+      if (page < totalPages) pgHtml += '<button onclick="loadHariLibur(' + (page + 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Next</button>';
       pgHtml += '</div>';
     }
     document.getElementById('hl-pagination').innerHTML = pgHtml;
