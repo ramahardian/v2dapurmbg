@@ -91,6 +91,7 @@ const tabColors = {
       const rows = r.rows || [];
       const bd = r.budget || {};
       const siklusInfo = r.siklus || null;
+      const isRABDraft = siklusInfo && siklusInfo.status === 'Draft';
 
       var periods = [];
       var nowDate = new Date();
@@ -251,7 +252,24 @@ const tabColors = {
       tableContent += '</tbody></table></div></div>';
 
       window._lapData = null;
-      window._lapStatCards = rabFilterBar + statCards + summaryCards + tableContent;
+      if (isRABDraft) {
+        var draftMsg = '<div class="bg-amber-50 border-2 border-amber-200/80 rounded-2xl p-6 sm:p-8 text-center shadow-sm">' +
+          '<div class="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">' +
+            '<svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>' +
+          '</div>' +
+          '<h3 class="text-sm font-bold text-amber-800 mb-2">Siklus Masih Draft</h3>' +
+          '<p class="text-xs text-amber-700/80 max-w-md mx-auto leading-relaxed">Siklus <strong>' + escHtml(siklusInfo.nama) + '</strong> masih berstatus <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-200/60 text-amber-800 font-semibold text-[10px]">DRAFT</span>. Silakan aktifkan siklus terlebih dahulu untuk melihat laporan RAB.</p>' +
+        '</div>' +
+        '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm p-5">' +
+          '<div class="flex items-center gap-3 text-xs text-stone-500">' +
+            '<svg class="w-5 h-5 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>' +
+            '<span>Data laporan RAB baru tersedia setelah siklus diaktifkan dan memiliki data produksi.</span>' +
+          '</div>' +
+        '</div>';
+        window._lapStatCards = rabFilterBar + draftMsg;
+      } else {
+        window._lapStatCards = rabFilterBar + statCards + summaryCards + tableContent;
+      }
     } else if (tab === 'rab-bulanan') {
       var rbBulan = lapState.rb_bulan || '';
       var rbTahun = lapState.rb_tahun || '';
