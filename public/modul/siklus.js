@@ -239,35 +239,30 @@ async function loadSiklusDetail(id) {
   const data = await api.get('/siklus/' + id);
   const wrap = document.getElementById('siklus-detail');
   wrap.innerHTML = `
-    <div class="bg-white border border-stone-200 rounded-lg p-5">
-      <div class="mb-4">
-        <div>
-          <h3 class="font-bold text-lg">${data.nama}</h3>
-          <div class="text-xs text-stone-500 mt-1">Status: <b class="capitalize">${data.status}</b></div>
-          ${data.catatan ? `<div class="text-xs text-stone-400 mt-1">${data.catatan}</div>` : ''}
-        </div>
-        <div class="flex flex-wrap gap-2 mt-3">
-          <button onclick="generateProduksi(${data.id})" class="px-3 py-1.5 text-sm border border-emerald-300 bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Buat Produksi</button>
-          <button onclick="hitungBudgetSiklus(${data.id})" class="px-3 py-1.5 text-sm border border-blue-300 bg-blue-50 text-blue-700 rounded hover:bg-blue-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Buat Budget</button>
-          <button onclick="renderProduksiHarian(${data.id})" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-700 rounded hover:bg-amber-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Produksi Harian</button>
-          <button onclick="renderSiklusLaporan(${data.id})" class="px-3 py-1.5 text-sm border border-purple-300 bg-purple-50 text-purple-700 rounded hover:bg-purple-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Laporan + Banding SP</button>
-          <button onclick="editSiklus(${data.id})" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50">Edit Siklus</button>
-          <button onclick="document.getElementById('siklus-detail').innerHTML=''" class="px-3 py-1.5 text-sm text-stone-500 hover:text-stone-900">Tutup</button>
-        </div>
+    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
+      <div class="flex items-center gap-3 mb-4"><div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center shadow-sm"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div><h2 class="text-sm font-bold text-stone-800">${data.nama}</h2><div class="text-xs text-stone-500">Status: <b class="capitalize">${data.status}</b></div></div></div>
+      ${data.catatan ? `<div class="text-xs text-stone-400 mb-3">${data.catatan}</div>` : ''}
+      <div class="flex flex-wrap gap-1.5 mb-4">
+        <button onclick="generateProduksi(${data.id})" class="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-emerald-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Buat Produksi</button>
+        <button onclick="hitungBudgetSiklus(${data.id})" class="inline-flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-blue-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Buat Budget</button>
+        <button onclick="renderProduksiHarian(${data.id})" class="inline-flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-amber-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Produksi Harian</button>
+        <button onclick="renderSiklusLaporan(${data.id})" class="inline-flex items-center gap-1 bg-violet-50 hover:bg-violet-100 text-violet-700 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-violet-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Laporan + SP</button>
+        <button onclick="editSiklus(${data.id})" class="inline-flex items-center gap-1 bg-white hover:bg-stone-50 text-stone-600 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-stone-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
+        <button onclick="document.getElementById('siklus-detail').innerHTML=''" class="inline-flex items-center gap-1 text-stone-400 hover:text-stone-600 px-3 py-1.5 rounded-lg text-xs transition-colors">Tutup</button>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         ${data.items.map(it => {
           const totalK = Number(it.kalori || 0) + Number(it.protein || 0) + Number(it.karbohidrat || 0) + Number(it.lemak || 0) + Number(it.serat || 0);
-          return `<div class="border border-stone-200 rounded-lg p-4">
-            <div class="text-xs font-semibold uppercase text-stone-500 mb-2">Hari ${it.hari_ke} — ${it.hari_nama}</div>
+          return `<div class="bg-white border border-stone-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-stone-500 mb-2">Hari ${it.hari_ke} — ${it.hari_nama}</div>
             <div class="font-bold text-sm mb-1">${it.menu_nama || (it._has_bahan ? '<span class="text-emerald-600">Manual (grid)</span>' : '<span class="text-stone-400">Belum diisi</span>')}</div>
             <div class="text-xs text-stone-500 mb-2">${fmtNum(it.jumlah_porsi)} porsi</div>
             ${(it.menu_nama || it._has_bahan) ? `<div class="grid grid-cols-3 gap-1 text-[10px] mb-2">
-              <div class="bg-stone-50 rounded p-1 text-center"><div class="text-stone-400">Kal</div><div class=\"mono font-semibold\">${fmtNum(it.kalori)}</div></div>
-              <div class="bg-stone-50 rounded p-1 text-center"><div class="text-stone-400">Prot</div><div class=\"mono font-semibold\">${fmtNum(it.protein)}</div></div>
-              <div class="bg-stone-50 rounded p-1 text-center"><div class="text-stone-400">Karb</div><div class=\"mono font-semibold\">${fmtNum(it.karbohidrat)}</div></div>
-              <div class="bg-stone-50 rounded p-1 text-center"><div class="text-stone-400">Lem</div><div class=\"mono font-semibold\">${fmtNum(it.lemak)}</div></div>
-              <div class="bg-stone-50 rounded p-1 text-center"><div class="text-stone-400">Ser</div><div class=\"mono font-semibold\">${fmtNum(it.serat)}</div></div>
+              <div class="bg-stone-50 rounded-lg p-1 text-center"><div class="text-stone-400">Kal</div><div class="mono font-semibold">${fmtNum(it.kalori)}</div></div>
+              <div class="bg-stone-50 rounded-lg p-1 text-center"><div class="text-stone-400">Prot</div><div class="mono font-semibold">${fmtNum(it.protein)}</div></div>
+              <div class="bg-stone-50 rounded-lg p-1 text-center"><div class="text-stone-400">Karb</div><div class="mono font-semibold">${fmtNum(it.karbohidrat)}</div></div>
+              <div class="bg-stone-50 rounded-lg p-1 text-center"><div class="text-stone-400">Lem</div><div class="mono font-semibold">${fmtNum(it.lemak)}</div></div>
+              <div class="bg-stone-50 rounded-lg p-1 text-center"><div class="text-stone-400">Ser</div><div class="mono font-semibold">${fmtNum(it.serat)}</div></div>
             </div>` : ''}
             <div id="sk-dtl-bd-${it.hari_ke}" class="text-[10px] text-stone-400 animate-pulse">Memuat kategori...</div>
           </div>`;
@@ -318,69 +313,72 @@ async function renderSiklusLaporan(id) {
   const wrap = document.getElementById('siklus-detail');
   wrap.scrollIntoView({ behavior: 'smooth' });
   wrap.innerHTML = `
-    <div class="bg-white border border-stone-200 rounded-lg p-5">
+    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
       <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
-        <div>
-          <h3 class="font-bold text-lg">Laporan: ${siklus.nama}</h3>
-          <div class="text-xs text-stone-500 mt-1">Status: <b class="capitalize">${siklus.status}</b></div>
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center shadow-sm"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <div>
+            <h2 class="text-sm font-bold text-stone-800">Laporan: ${siklus.nama}</h2>
+            <div class="text-xs text-stone-500">Status: <b class="capitalize">${siklus.status}</b></div>
+          </div>
         </div>
-        <div class="flex gap-2">
-          <button onclick="hitungSpSiklus(${id})" class="px-3 py-1.5 text-sm border border-emerald-300 bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Hitung SP</button>
-          <button onclick="exportSiklusLaporan(${id})" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> CSV</button>
-          <button onclick="window.print()" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print</button>
-          <button onclick="loadSiklusDetail(${id})" class="px-3 py-1.5 text-sm text-stone-500 hover:text-stone-900">Kembali</button>
+        <div class="flex gap-1.5">
+          <button onclick="hitungSpSiklus(${id})" class="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-emerald-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Hitung SP</button>
+          <button onclick="exportSiklusLaporan(${id})" class="inline-flex items-center gap-1 bg-white hover:bg-stone-50 text-stone-600 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-stone-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> CSV</button>
+          <button onclick="window.print()" class="inline-flex items-center gap-1 bg-white hover:bg-stone-50 text-stone-600 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-stone-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print</button>
+          <button onclick="loadSiklusDetail(${id})" class="text-stone-400 hover:text-stone-600 px-3 py-1.5 rounded-lg text-xs transition-colors">Kembali</button>
         </div>
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
-        <div class="bg-stone-50 rounded-lg p-4">
-          <div class="text-xs text-stone-500 uppercase">Total Hari</div>
-          <div class="text-2xl font-bold mt-1">${stats.totalDays}</div>
+        <div class="bg-gradient-to-br from-stone-50 to-stone-100/60 rounded-2xl border border-stone-200/60 p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-600">Total Hari</span><svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg></div>
+          <div class="text-2xl font-bold text-stone-800">${stats.totalDays}</div>
         </div>
-        <div class="bg-blue-50 rounded-lg p-4">
-          <div class="text-xs text-blue-700 uppercase">Terisi</div>
-          <div class="text-2xl font-bold text-blue-800 mt-1">${stats.filledDays}</div>
-          <div class="text-xs text-blue-600">${stats.coverage}% coverage</div>
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Terisi</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="text-2xl font-bold text-blue-800">${stats.filledDays}</div>
+          <div class="text-[10px] text-blue-600/70">${stats.coverage}% coverage</div>
         </div>
-        <div class="bg-orange-50 rounded-lg p-4">
-          <div class="text-xs text-orange-700 uppercase">Kosong</div>
-          <div class="text-2xl font-bold text-orange-800 mt-1">${stats.emptyDays}</div>
+        <div class="bg-gradient-to-br from-orange-50 to-orange-100/60 rounded-2xl border border-orange-200/60 p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">Kosong</span><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg></div>
+          <div class="text-2xl font-bold text-orange-800">${stats.emptyDays}</div>
         </div>
-        <div class="bg-sky-50 rounded-lg p-4">
-          <div class="text-xs text-sky-700 uppercase">Menu Unik</div>
-          <div class="text-2xl font-bold text-sky-800 mt-1">${stats.uniqueMenus}</div>
+        <div class="bg-gradient-to-br from-sky-50 to-sky-100/60 rounded-2xl border border-sky-200/60 p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-sky-700">Menu Unik</span><svg class="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div class="text-2xl font-bold text-sky-800">${stats.uniqueMenus}</div>
         </div>
       </div>
 
-      <div class="bg-white border border-stone-200 rounded-lg p-5 mb-4">
-        <div class="font-bold mb-3">Rata-rata Gizi per Orang per Hari</div>
+      <div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-4">
+        <div class="font-bold text-sm text-stone-800 mb-3">Rata-rata Gizi per Orang per Hari</div>
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <div class="text-center">
-            <div class="text-xs text-stone-500">Kalori</div>
-            <div class="mono text-lg font-bold">${fmtNum(Math.round(stats.avg.kalori / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">kkal</span></div>
+          <div class="text-center bg-stone-50 rounded-xl p-3">
+            <div class="text-[10px] text-stone-500">Kalori</div>
+            <div class="mono text-lg font-bold text-stone-800">${fmtNum(Math.round(stats.avg.kalori / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">kkal</span></div>
           </div>
-          <div class="text-center">
-            <div class="text-xs text-stone-500">Protein</div>
-            <div class="mono text-lg font-bold">${fmtNum(Math.round(stats.avg.protein / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
+          <div class="text-center bg-stone-50 rounded-xl p-3">
+            <div class="text-[10px] text-stone-500">Protein</div>
+            <div class="mono text-lg font-bold text-stone-800">${fmtNum(Math.round(stats.avg.protein / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
           </div>
-          <div class="text-center">
-            <div class="text-xs text-stone-500">Karbohidrat</div>
-            <div class="mono text-lg font-bold">${fmtNum(Math.round(stats.avg.karbohidrat / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
+          <div class="text-center bg-stone-50 rounded-xl p-3">
+            <div class="text-[10px] text-stone-500">Karbohidrat</div>
+            <div class="mono text-lg font-bold text-stone-800">${fmtNum(Math.round(stats.avg.karbohidrat / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
           </div>
-          <div class="text-center">
-            <div class="text-xs text-stone-500">Lemak</div>
-            <div class="mono text-lg font-bold">${fmtNum(Math.round(stats.avg.lemak / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
+          <div class="text-center bg-stone-50 rounded-xl p-3">
+            <div class="text-[10px] text-stone-500">Lemak</div>
+            <div class="mono text-lg font-bold text-stone-800">${fmtNum(Math.round(stats.avg.lemak / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
           </div>
-          <div class="text-center">
-            <div class="text-xs text-stone-500">Serat</div>
-            <div class="mono text-lg font-bold">${fmtNum(Math.round(stats.avg.serat / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
+          <div class="text-center bg-stone-50 rounded-xl p-3">
+            <div class="text-[10px] text-stone-500">Serat</div>
+            <div class="mono text-lg font-bold text-stone-800">${fmtNum(Math.round(stats.avg.serat / (siklus.jumlah_porsi || 1)))} <span class="text-xs text-stone-400">g</span></div>
           </div>
         </div>
       </div>
 
       ${data.spComparison && data.spComparison.length ? `
-      <div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">
-        <div class="px-5 py-3 font-bold border-b border-stone-200 flex items-center justify-between">
+      <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">
+        <div class="px-5 py-3 font-semibold text-sm text-stone-800 border-b border-stone-200 flex items-center justify-between">
           <span>SP Target vs Realisasi</span>
           <span class="text-xs font-normal text-stone-400">Rata-rata per hari terisi</span>
         </div>
@@ -428,35 +426,35 @@ async function renderSiklusLaporan(id) {
         </div>
       </div>` : ''}
 
-      <div class="bg-white border border-stone-200 rounded-lg overflow-hidden">
-        <div class="px-5 py-3 font-bold border-b border-stone-200">Rincian per Hari</div>
+      <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 font-semibold text-sm text-stone-800 border-b border-stone-200">Rincian per Hari</div>
         <div class="overflow-x-auto">
-          <table class="w-full">
+          <table class="w-full text-[11px]">
             <thead class="bg-stone-50">
               <tr>
-                <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Hari</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Menu</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Porsi</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Kalori <span class="text-stone-400 font-normal">/org</span></th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Protein <span class="text-stone-400 font-normal">/org</span></th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Karbohidrat <span class="text-stone-400 font-normal">/org</span></th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Lemak <span class="text-stone-400 font-normal">/org</span></th>
-                <th class="text-right px-4 py-3 text-xs font-semibold uppercase whitespace-nowrap">Serat <span class="text-stone-400 font-normal">/org</span></th>
+                <th class="text-left px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider whitespace-nowrap border-r border-stone-200">Hari</th>
+                <th class="text-left px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider whitespace-nowrap border-r border-stone-200">Menu</th>
+                <th class="text-right px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider whitespace-nowrap border-r border-stone-200">Porsi</th>
+                <th class="text-right px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider whitespace-nowrap border-r border-stone-200">Kalori <span class="text-stone-400 font-normal">/org</span></th>
+                <th class="text-right px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider whitespace-nowrap border-r border-stone-200">Protein <span class="text-stone-400 font-normal">/org</span></th>
+                <th class="text-right px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider whitespace-nowrap border-r border-stone-200">Karbohidrat <span class="text-stone-400 font-normal">/org</span></th>
+                <th class="text-right px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider whitespace-nowrap border-r border-stone-200">Lemak <span class="text-stone-400 font-normal">/org</span></th>
+                <th class="text-right px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider whitespace-nowrap">Serat <span class="text-stone-400 font-normal">/org</span></th>
               </tr>
             </thead>
             <tbody>
-              ${items.map(it => `<tr class="border-t border-stone-100">
-                <td class="px-4 py-3 text-sm whitespace-nowrap">Hari ${it.hari_ke} · ${it.hari_nama}</td>
-                <td class="px-4 py-3 text-sm">${it.menu_nama || '<span class="text-stone-400">—</span>'}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(it.jumlah_porsi)}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(Math.round(it.kalori / (it.jumlah_porsi || 1)))}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(Math.round(it.protein / (it.jumlah_porsi || 1)))}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(Math.round(it.karbohidrat / (it.jumlah_porsi || 1)))}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(Math.round(it.lemak / (it.jumlah_porsi || 1)))}</td>
-                <td class="px-4 py-3 text-sm text-right mono whitespace-nowrap">${fmtNum(Math.round(it.serat / (it.jumlah_porsi || 1)))}</td>
+              ${items.map(it => `<tr class="border-t border-stone-100 hover:bg-stone-50/50">
+                <td class="px-3 py-2.5 text-xs whitespace-nowrap border-r border-stone-100">Hari ${it.hari_ke} · ${it.hari_nama}</td>
+                <td class="px-3 py-2.5 text-xs border-r border-stone-100">${it.menu_nama || '<span class="text-stone-400">—</span>'}</td>
+                <td class="px-3 py-2.5 text-xs text-right mono border-r border-stone-100 whitespace-nowrap">${fmtNum(it.jumlah_porsi)}</td>
+                <td class="px-3 py-2.5 text-xs text-right mono border-r border-stone-100 whitespace-nowrap">${fmtNum(Math.round(it.kalori / (it.jumlah_porsi || 1)))}</td>
+                <td class="px-3 py-2.5 text-xs text-right mono border-r border-stone-100 whitespace-nowrap">${fmtNum(Math.round(it.protein / (it.jumlah_porsi || 1)))}</td>
+                <td class="px-3 py-2.5 text-xs text-right mono border-r border-stone-100 whitespace-nowrap">${fmtNum(Math.round(it.karbohidrat / (it.jumlah_porsi || 1)))}</td>
+                <td class="px-3 py-2.5 text-xs text-right mono border-r border-stone-100 whitespace-nowrap">${fmtNum(Math.round(it.lemak / (it.jumlah_porsi || 1)))}</td>
+                <td class="px-3 py-2.5 text-xs text-right mono whitespace-nowrap">${fmtNum(Math.round(it.serat / (it.jumlah_porsi || 1)))}</td>
               </tr>
               ${it.menu_id ? `<tr class="bg-stone-50/50">
-                <td colspan="8" class="px-4 py-2">
+                <td colspan="8" class="px-3 py-2">
                   <div id="sk-lap-bd-${id}-${it.hari_ke}" class="text-[10px] text-stone-400 animate-pulse">Memuat kategori...</div>
                 </td>
               </tr>` : ''}`).join('')}
@@ -515,7 +513,7 @@ async function renderProduksiHarian(id) {
     var data = await api.get('/siklus/' + id + '/laporan/produksi-harian');
     var { siklus, ringkasan, days } = data;
     
-    var html = '<div class="bg-white border border-stone-200 rounded-lg p-5">';
+    var html = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">';
     
     // Header
     html += '<div class="flex flex-wrap justify-between items-center mb-4 gap-2">' +
@@ -577,7 +575,7 @@ async function renderProduksiHarian(id) {
           continue;
         }
         
-        html += '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">';
+        html += '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">';
         
         // Day header
         html += '<div class="px-5 py-3 bg-stone-50 border-b border-stone-200">' +
@@ -638,7 +636,7 @@ async function renderProduksiHarian(id) {
     }
     
     // Grand total footer
-    html += '<div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between mt-2">' +
+    html += '<div class="bg-gradient-to-r from-amber-50 to-amber-100/60 border border-amber-200 rounded-2xl p-4 flex items-center justify-between mt-2 shadow-sm">' +
       '<div class="text-sm text-amber-800">' +
         '<span class="font-semibold">Grand Total Kebutuhan:</span> ' + fmtNum(ringkasan.total_kebutuhan_kg) + ' kg untuk ' + ringkasan.total_hari + ' hari' +
         ' (' + ringkasan.hari_terisi + ' hari terisi)' +
@@ -666,8 +664,8 @@ async function hitungSpSiklus(id) {
       return;
     }
     var totalKg = result.total_kebutuhan_kg || '0.00';
-    var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mt-4">' +
-      '<div class="px-5 py-3 font-bold border-b border-stone-200 flex justify-between items-center">' +
+    var html = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mt-4">' +
+      '<div class="px-5 py-3 font-semibold text-sm text-stone-800 border-b border-stone-200 flex justify-between items-center">' +
         '<span>Perhitungan Kebutuhan Bahan (SP)</span>' +
         '<span class="text-sm font-normal text-stone-500">Total: <span class="mono font-bold text-emerald-700">' + totalKg + ' kg</span></span>' +
       '</div>' +
