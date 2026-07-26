@@ -106,6 +106,10 @@ const tabColors = {
       var fmtIdr = fmtIDR;
       var totalBudget = bd.total_budget || 0;
       var totalBiayaKas = bd.total_biaya_kas || 0;
+      var biayaBahanBaku = bd.biaya_bahan_baku || 0;
+      var biayaOperasional = bd.biaya_operasional || 0;
+      var biayaGaji = bd.biaya_gaji || 0;
+      var biayaLainnya = bd.biaya_lainnya || 0;
       var totalSelisih = totalBudget - totalBiayaKas;
       var serapan = totalBudget > 0 ? (totalBiayaKas / totalBudget * 100) : 0;
 
@@ -170,7 +174,7 @@ const tabColors = {
       '</div>';
 
       // Summary cards
-      var summaryCards = '<div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">' +
+      var summaryCards = '<div class="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-4">' +
         '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
           '<div class="flex items-center gap-3 mb-3"><div class="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div><div class="text-xs font-semibold text-stone-700">Ringkasan Anggaran</div><div class="text-[10px] text-stone-400">' + filterPeriode + '</div></div></div>' +
           '<div class="space-y-2">' +
@@ -193,6 +197,16 @@ const tabColors = {
           '<div class="flex items-end justify-between mb-2"><span class="text-xs text-stone-500">Progress</span><span class="text-xs font-bold text-stone-700">' + serapan.toFixed(1) + '%</span></div>' +
           '<div class="w-full bg-stone-100 rounded-full h-2.5 overflow-hidden"><div class="h-2.5 rounded-full transition-all duration-500 ' + (serapan > 100 ? 'bg-red-500' : serapan > 80 ? 'bg-amber-500' : serapan > 0 ? 'bg-emerald-500' : 'bg-stone-200') + '" style="width:' + Math.min(serapan, 100) + '%"></div></div>' +
           '<div class="flex justify-between mt-1.5 text-[10px] text-stone-400"><span>Budget: ' + fmtIdr(totalBudget) + '</span><span>Realisasi: ' + fmtIdr(totalBiayaKas) + '</span></div>' +
+        '</div>' +
+        '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
+          '<div class="flex items-center gap-3 mb-3"><div class="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-sm"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><div><div class="text-xs font-semibold text-stone-700">Rincian Biaya</div><div class="text-[10px] text-stone-400">Per kategori pengeluaran</div></div></div>' +
+          '<div class="space-y-1.5">' +
+            '<div class="flex justify-between items-center"><span class="text-xs text-stone-500">Biaya Bahan Baku</span><span class="text-xs font-semibold text-teal-600">' + fmtIdr(biayaBahanBaku) + '</span></div>' +
+            '<div class="flex justify-between items-center"><span class="text-xs text-stone-500">Biaya Operasional</span><span class="text-xs font-semibold text-stone-700">' + fmtIdr(biayaOperasional) + '</span></div>' +
+            '<div class="flex justify-between items-center"><span class="text-xs text-stone-500">Biaya Gaji</span><span class="text-xs font-semibold text-amber-600">' + fmtIdr(biayaGaji) + '</span></div>' +
+            (biayaLainnya > 0 ? '<div class="flex justify-between items-center"><span class="text-xs text-stone-500">Biaya Lainnya</span><span class="text-xs font-semibold text-stone-500">' + fmtIdr(biayaLainnya) + '</span></div>' : '') +
+            '<div class="border-t border-stone-100 pt-1.5 flex justify-between items-center"><span class="text-xs font-bold text-stone-700">Total Pengeluaran</span><span class="text-xs font-bold text-red-500">' + fmtIdr(totalBiayaKas) + '</span></div>' +
+          '</div>' +
         '</div>' +
       '</div>';
 

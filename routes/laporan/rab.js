@@ -446,6 +446,20 @@ function registerRabRoutes(router) {
         [t, periode]
       );
 
+      const [pengeluaranByKat] = await db.query(
+        `SELECT kategori, SUM(jumlah) AS total
+         FROM kas_bank WHERE tenant_id=? AND tipe='keluar'
+         AND DATE_FORMAT(tanggal, '%Y-%m')=?
+         GROUP BY kategori`,
+        [t, periode]
+      );
+      const byKat = {};
+      for (const p of pengeluaranByKat) byKat[p.kategori] = Number(p.total);
+      const biaya_bahan_baku = byKat['Pembayaran Supplier'] || 0;
+      const biaya_operasional = byKat['Biaya Operasional'] || 0;
+      const biaya_gaji = byKat['Gaji'] || 0;
+      const biaya_lainnya = byKat['Lainnya'] || 0;
+
       let grandPenerima = 0;
       let grandTotal = 0;
       const POSYANDU_SLICE = [
@@ -508,6 +522,10 @@ function registerRabRoutes(router) {
           total_realisasi_manual: totalRealisasiManual,
           total_realisasi_kas: realisasi_kas,
           total_biaya_kas: total_biaya_kas,
+          biaya_bahan_baku,
+          biaya_operasional,
+          biaya_gaji,
+          biaya_lainnya,
           selisih,
           serapan_persen: serapan,
         },
