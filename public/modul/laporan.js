@@ -314,49 +314,63 @@ const tabColors = {
         menuPerHari.forEach(function(m) {
           if (!dayGroups[m.hari_ke]) dayGroups[m.hari_ke] = { hari_ke: m.hari_ke, hari_nama: m.hari_nama, menus: [] };
           dayGroups[m.hari_ke].menus.push(m);
-          jenjangSet[m.menu_kategori_display || '-'] = true;
+          var kat = m.menu_kategori_display || '-';
+          if (kat !== '-') jenjangSet[kat] = true;
         });
         var jenjangList = Object.keys(jenjangSet).sort();
         var dayKeys = Object.keys(dayGroups).sort(function(a,b) { return Number(a) - Number(b); });
+        var hasJenjang = jenjangList.length > 0;
+        var useColumns = hasJenjang ? jenjangList : ['Menu'];
 
         var menuRows = '';
         dayKeys.forEach(function(hk) {
           var dg = dayGroups[hk];
-          var menuByJenjang = {};
-          jenjangList.forEach(function(j) { menuByJenjang[j] = []; });
+          var menuByCol = {};
+          useColumns.forEach(function(c) { menuByCol[c] = []; });
           dg.menus.forEach(function(m) {
             var kat = m.menu_kategori_display || '-';
-            if (menuByJenjang[kat]) {
-              var menuNama = escHtml(m.menu_nama || (m.menu_id ? 'Menu #' + m.menu_id : '-'));
-              menuByJenjang[kat].push(menuNama);
-            }
+            var menuNama = escHtml(m.menu_nama || (m.menu_id ? 'Menu #' + m.menu_id : '-'));
+            if (hasJenjang && !menuByCol[kat]) return; // skip items without matching jenjang column
+            var col = hasJenjang ? kat : useColumns[0];
+            menuByCol[col].push(menuNama);
           });
-          var jenjangCells = jenjangList.map(function(j) {
-            var names = menuByJenjang[j] || [];
-            var cellHtml = names.length > 0
-              ? names.map(function(n) { return '<div class="text-xs text-stone-700">' + n + '</div>'; }).join('')
-              : '<span class="text-xs text-stone-300">—</span>';
-            return '<td class="px-3 py-2.5 align-top">' + cellHtml + '</td>';
+          var colCells = useColumns.map(function(c) {
+            var names = menuByCol[c] || [];
+            return '<td class="px-3 py-2.5 align-top">' +
+              (names.length > 0
+                ? names.map(function(n) { return '<div class="text-xs text-stone-700 py-0.5">' + n + '</div>'; }).join('')
+                : '<span class="text-xs text-stone-300">—</span>') +
+            '</td>';
           }).join('');
           menuRows += '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
-            '<td class="px-4 py-2.5 font-medium text-xs text-stone-700 whitespace-nowrap">Hari ' + dg.hari_ke + '<br><span class="text-[10px] text-stone-400 font-normal">' + escHtml(dg.hari_nama || '') + '</span></td>' +
-            jenjangCells +
+            '<td class="px-4 py-2.5 font-medium text-xs text-stone-700 whitespace-nowrap w-16 align-top">Hari ' + dg.hari_ke + '<br><span class="text-[10px] text-stone-400 font-normal">' + escHtml(dg.hari_nama || '') + '</span></td>' +
+            colCells +
           '</tr>';
         });
 
-        var jenjangHeaders = jenjangList.map(function(j) {
-          return '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">' + j + '</th>';
+        var headerExtra = useColumns.map(function(c) {
+          return '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">' + c + '</th>';
         }).join('');
+
+        var siklusKat = '';
+        if (siklusInfo && siklusInfo.kategori_penerima) {
+          try {
+            var parsedKat = JSON.parse(siklusInfo.kategori_penerima);
+            if (Array.isArray(parsedKat) && parsedKat.length > 0) {
+              siklusKat = ' — <span class="text-[10px] text-stone-500 font-normal">' + escHtml(parsedKat.join(', ')) + '</span>';
+            }
+          } catch(e) {}
+        }
 
         menuPerHariContent = '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
           '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">' +
-            '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>Daftar Menu per Jenjang — ' + escHtml(siklusInfo ? siklusInfo.nama : '') + '</h3>' +
-            '<span class="text-[10px] text-stone-400">' + dayKeys.length + ' hari, ' + menuPerHari.length + ' menu</span>' +
+            '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2 flex-wrap"><svg class="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>Daftar Menu' + (siklusInfo ? ' — ' + escHtml(siklusInfo.nama) : '') + siklusKat + '</h3>' +
+            '<span class="text-[10px] text-stone-400 shrink-0">' + dayKeys.length + ' hari' + '</span>' +
           '</div>' +
           '<div class="overflow-x-auto"><table class="w-full text-xs">' +
           '<thead><tr class="bg-stone-50">' +
           '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Hari</th>' +
-          jenjangHeaders +
+          headerExtra +
           '</tr></thead><tbody>' +
           menuRows +
           '</tbody></table></div></div>';
