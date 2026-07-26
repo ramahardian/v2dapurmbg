@@ -929,34 +929,49 @@ const tabColors = {
         { kegiatan: 'Total', diajukan: d.total.diajukan, terpakai: d.total.terpakai, sisa: d.total.sisa },
       ], fields: ['kegiatan','diajukan','terpakai','sisa'] };
 
+      var fmtIdr = fmtIDR;
+      var serapanBB = d.bahan_baku.diajukan > 0 ? (d.bahan_baku.terpakai / d.bahan_baku.diajukan * 100) : 0;
+      var serapanOp = d.operasional.diajukan > 0 ? (d.operasional.terpakai / d.operasional.diajukan * 100) : 0;
+      var serapanTotal = d.total.diajukan > 0 ? (d.total.terpakai / d.total.diajukan * 100) : 0;
+
       window._lapStatCards =
-        '<div class="max-w-100 mx-auto">' +
-        '<div class="bg-white border border-stone-200 rounded-lg p-4 sm:p-6 mb-4">' +
-        '<h2 class="text-base font-bold mb-4">Laporan Penggunaan Anggaran</h2>' +
-        '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">' +
-        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Periode</label>' +
-        '<select id="pa-bulan" onchange="paGantiPeriode()" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4 sm:p-5 mb-4">' +
+        '<div class="flex items-center gap-3 mb-4"><div class="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-sm"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></div><div><h2 class="text-sm font-bold text-stone-800">Laporan Penggunaan Anggaran</h2><p class="text-xs text-stone-500">' + periodeLbl + '</p></div></div>' +
+        '<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">' +
+        '<div><label class="block text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-1.5">Periode</label>' +
+        '<div class="flex gap-2"><select id="pa-bulan" onchange="paGantiPeriode()" class="flex-1 text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
         [1,2,3,4,5,6,7,8,9,10,11,12].map(function(b) { return '<option value="' + b + '" ' + (parseInt(bln)===b?'selected':'') + '>' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][b-1] + '</option>'; }).join('') +
         '</select>' +
-        '<select id="pa-tahun" onchange="paGantiPeriode()" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5 mt-1">' +
+        '<select id="pa-tahun" onchange="paGantiPeriode()" class="flex-1 text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
         [2024,2025,2026,2027,2028].map(function(t) { return '<option value="' + t + '" ' + (parseInt(thn)===t?'selected':'') + '>' + t + '</option>'; }).join('') +
-        '</select></div>' +
-        '<div><label class="block text-xs font-medium text-stone-500 mb-1">Tanggal Laporan</label><input id="pa-tanggal" type="date" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" value="' + (baState.pa_tanggal||nowDate.toISOString().slice(0,10)) + '"></div>' +
-        '<div><label class="block text-xs font-medium text-stone-500 mb-1">No. Rekening / VA</label><input id="pa-rekening" type="text" class="w-full text-xs border border-stone-300 rounded px-2 py-1.5" placeholder="-" value="' + escHtml(rekening) + '"></div>' +
+        '</select></div></div>' +
+        '<div><label class="block text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-1.5">Tanggal Laporan</label><input id="pa-tanggal" type="date" class="w-full text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" value="' + (baState.pa_tanggal||nowDate.toISOString().slice(0,10)) + '"></div>' +
+        '<div><label class="block text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-1.5">No. Rekening / VA</label><input id="pa-rekening" type="text" class="w-full text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" placeholder="—" value="' + escHtml(rekening) + '"></div>' +
         '</div>' +
-        '<div class="flex gap-2 mt-4">' +
-        '<button onclick="paSimpan()" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-lg text-sm font-medium">Tampilkan Dokumen</button>' +
-        '<button onclick="paCetak()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-lg text-sm font-medium">Cetak / Print</button>' +
-        '</div></div>';
-
-      var fmtIdr = fmtIDR;
-      var docContent =
-        '<div id="pa-dokumen" class="bg-white border border-stone-200 rounded-lg p-6 sm:p-8 print-area">' +
+        '<div class="flex gap-2">' +
+        '<button onclick="paSimpan()" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors shadow-sm"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Tampilkan Dokumen</button>' +
+        '<button onclick="paCetak()" class="inline-flex items-center gap-1.5 border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-lg text-xs font-medium transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Cetak / Print</button>' +
+        '</div></div>' +
+        // Stat cards
+        '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">' +
+        '<div class="bg-gradient-to-br from-teal-50 to-teal-100/60 rounded-2xl border border-teal-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-teal-700">Diajukan</span><svg class="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="text-lg font-bold text-teal-800">' + fmtIdr(d.total.diajukan) + '</div><div class="text-[10px] text-teal-600/70">Total dana diajukan</div></div>' +
+        '<div class="bg-gradient-to-br from-orange-50 to-orange-100/60 rounded-2xl border border-orange-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">Terpakai</span><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="text-lg font-bold text-orange-800">' + fmtIdr(d.total.terpakai) + '</div><div class="flex items-center gap-1 mt-1"><div class="flex-1 bg-orange-200/60 rounded-full h-1.5 overflow-hidden"><div class="bg-orange-500 h-1.5 rounded-full" style="width:' + Math.min(serapanTotal,100) + '%"></div></div><span class="text-[10px] text-orange-600/70">' + serapanTotal.toFixed(1) + '%</span></div></div>' +
+        '<div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Sisa</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div class="text-lg font-bold text-emerald-800">' + fmtIdr(d.total.sisa) + '</div><div class="text-[10px] text-emerald-600/70">Sisa dana periode ini</div></div>' +
+        '<div class="bg-gradient-to-br from-violet-50 to-violet-100/60 rounded-2xl border border-violet-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-violet-700">Periode</span><svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg></div><div class="text-lg font-bold text-violet-800">' + periodeLbl + '</div><div class="text-[10px] text-violet-600/70">Periode laporan</div></div>' +
+        '</div>' +
+        // Detail cards
+        '<div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">' +
+        '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4"><div class="flex items-center gap-3 mb-3"><div class="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-sm"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><div><div class="text-xs font-semibold text-stone-700">Bahan Baku</div><div class="text-[10px] text-stone-400">Diajukan: ' + fmtIdr(d.bahan_baku.diajukan) + '</div></div></div><div class="space-y-1.5"><div class="flex justify-between text-xs"><span class="text-stone-500">Terpakai</span><span class="font-semibold text-stone-800">' + fmtIdr(d.bahan_baku.terpakai) + '</span></div><div class="flex justify-between text-xs"><span class="text-stone-500">Sisa</span><span class="font-semibold text-' + (d.bahan_baku.sisa >= 0 ? 'emerald' : 'red') + '-600">' + fmtIdr(d.bahan_baku.sisa) + '</span></div><div class="mt-2 w-full bg-stone-100 rounded-full h-1.5 overflow-hidden"><div class="bg-teal-500 h-1.5 rounded-full" style="width:' + Math.min(serapanBB,100) + '%"></div></div><div class="text-[10px] text-stone-400 text-right">' + serapanBB.toFixed(1) + '% terserap</div></div></div>' +
+        '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4"><div class="flex items-center gap-3 mb-3"><div class="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-sm"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/></svg></div><div><div class="text-xs font-semibold text-stone-700">Operasional</div><div class="text-[10px] text-stone-400">Diajukan: ' + fmtIdr(d.operasional.diajukan) + '</div></div></div><div class="space-y-1.5"><div class="flex justify-between text-xs"><span class="text-stone-500">Terpakai</span><span class="font-semibold text-stone-800">' + fmtIdr(d.operasional.terpakai) + '</span></div><div class="flex justify-between text-xs"><span class="text-stone-500">Sisa</span><span class="font-semibold text-' + (d.operasional.sisa >= 0 ? 'emerald' : 'red') + '-600">' + fmtIdr(d.operasional.sisa) + '</span></div><div class="mt-2 w-full bg-stone-100 rounded-full h-1.5 overflow-hidden"><div class="bg-amber-500 h-1.5 rounded-full" style="width:' + Math.min(serapanOp,100) + '%"></div></div><div class="text-[10px] text-stone-400 text-right">' + serapanOp.toFixed(1) + '% terserap</div></div></div>' +
+        '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4"><div class="flex items-center gap-3 mb-3"><div class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center shadow-sm"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div class="text-xs font-semibold text-stone-700">Insentif Fasilitas</div><div class="text-[10px] text-stone-400">Diajukan: ' + fmtIdr(d.insentif.diajukan) + '</div></div></div><div class="space-y-1.5"><div class="flex justify-between text-xs"><span class="text-stone-500">Terpakai</span><span class="font-semibold text-stone-800">' + fmtIdr(d.insentif.terpakai) + '</span></div><div class="flex justify-between text-xs"><span class="text-stone-500">Sisa</span><span class="font-semibold text-stone-800">' + fmtIdr(d.insentif.sisa) + '</span></div></div></div>' +
+        '</div>' +
+        // Document (print area) - tetap dipertahankan untuk cetak
+        '<div id="pa-dokumen" class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 sm:p-8 print-area">' +
 
         '<h1 class="text-base font-bold text-center uppercase mb-4">Laporan Penggunaan Anggaran</h1>' +
 
         '<h2 class="text-sm font-bold mb-3">I. RINCIAN KEGIATAN</h2>' +
-        '<table class="w-full text-xs border-collapse mb-4">' +
+        '<div class="overflow-x-auto mb-4"><table class="w-full text-xs border-collapse">' +
         '<thead><tr class="bg-stone-100">' +
         '<th class="border border-stone-300 px-3 py-2 text-left font-semibold">Nama Kegiatan</th>' +
         '<th class="border border-stone-300 px-3 py-2 text-right font-semibold">Dana Diajukan (Rp)</th>' +
@@ -980,7 +995,7 @@ const tabColors = {
         '<td class="border border-stone-300 px-3 py-2.5 text-right mono">' + fmtIdr(d.total.diajukan) + '</td>' +
         '<td class="border border-stone-300 px-3 py-2.5 text-right mono">' + fmtIdr(d.total.terpakai) + '</td>' +
         '<td class="border border-stone-300 px-3 py-2.5 text-right mono">' + fmtIdr(d.total.sisa) + '</td></tr>' +
-        '</tbody></table>' +
+        '</tbody></table></div>' +
 
         '<h2 class="text-sm font-bold mb-3">II. KETERANGAN</h2>' +
         '<p class="text-xs mb-3 leading-relaxed">Dana yang telah digunakan ini adalah untuk kebutuhan kegiatan yang telah direncanakan, dengan rincian sebagai berikut:</p>' +
@@ -1008,7 +1023,6 @@ const tabColors = {
         '<p class="mt-2 font-semibold">SPPG SUKALUYU</p>' +
         '</div></div></div>';
 
-      window._lapStatCards += docContent;
       window._lapData = null;
     } else if (tab === 'rab-pembelian') {
       const filterPeriode = lapState.rp_periode || new Date().toISOString().slice(0, 7);
