@@ -767,12 +767,14 @@ async function openSiklusPicker() {
     <div class="mb-4">
       <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Pilih Siklus</label>
       <div class="mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-stone-200 p-2">
-        ${siklusList && siklusList.length ? '<div class="space-y-1">' + siklusList.map(s => `
-          <label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-2 rounded-lg">
-            <input type="checkbox" class="siklus-check cb-modern" value="${s.id}">
-            <span class="text-sm text-stone-700">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi)</span>
-          </label>
-        `).join('') + '</div>' : '<div class="flex items-center gap-2 p-4 text-amber-700 bg-amber-50 rounded-lg"><svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-medium">Belum ada siklus menu</div><div class="text-[10px] mt-0.5">Buat siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>'}
+        ${siklusList && siklusList.length ? '<div class="space-y-1">' + siklusList.map(s => {
+          var statusBadge = s.status === 'Aktif' ? '<span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-700">Aktif</span>' : '<span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-amber-100 text-amber-700">Draft</span>';
+          return '<label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-2 rounded-lg">' +
+            '<input type="checkbox" class="siklus-check cb-modern" value="' + s.id + '">' +
+            '<span class="text-sm text-stone-700 flex-1">' + s.nama + ' — ' + (s.kategori_penerima || '-') + ' (' + (s.jumlah_porsi || 0) + ' porsi)</span>' +
+            statusBadge +
+          '</label>';
+        }).join('') + '</div>' : '<div class="flex items-center gap-2 p-4 text-amber-700 bg-amber-50 rounded-lg"><svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-medium">Belum ada siklus menu</div><div class="text-[10px] mt-0.5">Buat siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>'}
       </div>
     </div>
     <div id="po-preview"></div>`;
