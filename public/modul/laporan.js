@@ -304,6 +304,63 @@ const tabColors = {
         '</tr>' +
         '</tbody></table></div></div>';
 
+      // Tabel Daftar Pembelian per Pemasok
+      var supplierPembelian = r.supplier_pembelian || [];
+      var totalPembelianSupplier = r.total_pembelian_supplier || 0;
+      var supplierContent = '';
+      if (supplierPembelian.length > 0) {
+        var grouped = {};
+        supplierPembelian.forEach(function(sp) {
+          var key = sp.supplier || 'Tanpa Supplier';
+          if (!grouped[key]) grouped[key] = { supplier: key, total: 0, items: [] };
+          grouped[key].items.push(sp);
+          grouped[key].total += sp.jumlah;
+        });
+        var supplierRows = '';
+        var supIdx = 0;
+        var supColors = ['#0d9488','#7c3aed','#0891b2','#d97706','#be185d','#059669','#dc2626','#2563eb'];
+        Object.keys(grouped).forEach(function(key) {
+          var g = grouped[key];
+          var color = supColors[supIdx % supColors.length];
+          supIdx++;
+          var detailRows = g.items.map(function(sp) {
+            return '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
+              '<td class="px-4 py-2.5 text-xs text-stone-500 pl-10">' + fmtDate(sp.tanggal) + '</td>' +
+              '<td class="px-4 py-2.5 text-xs text-stone-600">' + escHtml(sp.no_transaksi || '-') + '</td>' +
+              '<td class="px-4 py-2.5 text-xs text-stone-500">' + escHtml(sp.deskripsi || '-') + '</td>' +
+              '<td class="px-4 py-2.5 text-right mono text-xs font-semibold text-stone-700">' + fmtIdr(sp.jumlah) + '</td>' +
+            '</tr>';
+          }).join('');
+          var pct = totalPembelianSupplier > 0 ? (g.total / totalPembelianSupplier * 100).toFixed(1) : 0;
+          supplierRows += '<tr class="border-t border-stone-100">' +
+            '<td class="px-4 py-3 font-medium text-xs" colspan="4"><span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:' + color + '"></span><strong>' + escHtml(g.supplier) + '</strong> <span class="text-stone-400 font-normal">(' + g.items.length + ' transaksi)</span></span></td>' +
+            '<td class="px-4 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtIdr(g.total) + '</td>' +
+            '<td class="px-4 py-3 text-right text-xs text-stone-500">' + pct + '%</td>' +
+          '</tr>' +
+          detailRows;
+        });
+        supplierContent = '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+          '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">' +
+            '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Daftar Pembelian per Pemasok</h3>' +
+            '<span class="text-[10px] text-stone-400">' + supplierPembelian.length + ' transaksi — Total: ' + fmtIdr(totalPembelianSupplier) + '</span>' +
+          '</div>' +
+          '<div class="overflow-x-auto"><table class="w-full text-xs">' +
+          '<thead><tr class="bg-stone-50">' +
+          '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Pemasok / Tanggal</th>' +
+          '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">No. Transaksi</th>' +
+          '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Deskripsi</th>' +
+          '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Nilai</th>' +
+          '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">%</th>' +
+          '</tr></thead><tbody>' +
+          supplierRows +
+          '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-orange-50 to-amber-50">' +
+          '<td class="px-4 py-3.5 font-bold text-xs text-stone-800" colspan="4">Total Pembelian ' + Object.keys(grouped).length + ' Pemasok</td>' +
+          '<td class="px-4 py-3.5 text-right mono font-bold text-xs text-red-600">' + fmtIdr(totalPembelianSupplier) + '</td>' +
+          '<td class="px-4 py-3.5 text-right text-xs font-bold text-stone-700">100%</td>' +
+          '</tr>' +
+          '</tbody></table></div></div>';
+      }
+
       window._lapData = null;
       if (isRABDraft) {
         var draftMsg = '<div class="bg-amber-50 border-2 border-amber-200/80 rounded-2xl p-6 sm:p-8 text-center shadow-sm">' +
@@ -321,7 +378,7 @@ const tabColors = {
         '</div>';
         window._lapStatCards = rabFilterBar + draftMsg;
       } else {
-        window._lapStatCards = rabFilterBar + statCards + summaryCards + tableContent + biayaContent;
+        window._lapStatCards = rabFilterBar + statCards + summaryCards + tableContent + biayaContent + supplierContent;
       }
     } else if (tab === 'rab-bulanan') {
       var rbBulan = lapState.rb_bulan || '';

@@ -460,6 +460,27 @@ function registerRabRoutes(router) {
       const biaya_gaji = byKat['Gaji'] || 0;
       const biaya_lainnya = byKat['Lainnya'] || 0;
 
+      // Supplier purchase details
+      const [supplierPayments] = await db.query(
+        `SELECT k.id, k.tanggal, k.no_transaksi, k.deskripsi, k.jumlah, s.nama as supplier_nama
+         FROM kas_bank k
+         LEFT JOIN purchase_order po ON po.no_po = k.no_transaksi AND po.tenant_id = k.tenant_id
+         LEFT JOIN supplier s ON s.id = po.supplier_id
+         WHERE k.tenant_id=? AND k.tipe='keluar'
+           AND k.kategori='Pembayaran Supplier'
+           AND DATE_FORMAT(k.tanggal, '%Y-%m')=?
+         ORDER BY k.tanggal DESC`,
+        [t, periode]
+      );
+      const supplierRincian = supplierPayments.map(sp => ({
+        id: sp.id,
+        tanggal: sp.tanggal,
+        no_transaksi: sp.no_transaksi,
+        deskripsi: sp.deskripsi,
+        supplier: sp.supplier_nama || '-',
+        jumlah: Number(sp.jumlah),
+      }));
+
       let grandPenerima = 0;
       let grandTotal = 0;
       const POSYANDU_SLICE = [
@@ -529,6 +550,8 @@ function registerRabRoutes(router) {
           selisih,
           serapan_persen: serapan,
         },
+        supplier_pembelian: supplierRincian,
+        total_pembelian_supplier: supplierRincian.reduce((s, sp) => s + sp.jumlah, 0),
       });
     } catch (err) {
       console.error('RAB sinkron error:', err);
