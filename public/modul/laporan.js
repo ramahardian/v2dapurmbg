@@ -919,15 +919,7 @@ const tabColors = {
 
       var rekening = baState.pa_rekening || '';
       var lokasi = 'sukaluyu taman sari';
-      var tglStr = baState.pa_tanggal || nowDate.toISOString().slice(0,10);
-      var tglPanjang = fmtDateIndonesia(tglStr);
-
-      window['_export_penggunaan-anggaran'] = { data: [
-        { kegiatan: 'Bahan Baku', diajukan: d.bahan_baku.diajukan, terpakai: d.bahan_baku.terpakai, sisa: d.bahan_baku.sisa },
-        { kegiatan: 'Operasional', diajukan: d.operasional.diajukan, terpakai: d.operasional.terpakai, sisa: d.operasional.sisa },
-        { kegiatan: 'Insentif Fasilitas', diajukan: d.insentif.diajukan, terpakai: d.insentif.terpakai, sisa: d.insentif.sisa },
-        { kegiatan: 'Total', diajukan: d.total.diajukan, terpakai: d.total.terpakai, sisa: d.total.sisa },
-      ], fields: ['kegiatan','diajukan','terpakai','sisa'] };
+      var tglStr = baState.pa_tanggal || nowDate.toISOString().slice(0,10);      var tglPanjang = fmtDateIndonesia(tglStr);
 
       var fmtIdr = fmtIDR;
       var serapanBB = d.bahan_baku.diajukan > 0 ? (d.bahan_baku.terpakai / d.bahan_baku.diajukan * 100) : 0;
@@ -950,7 +942,7 @@ const tabColors = {
         '</div>' +
         '<div class="flex gap-2">' +
         '<button onclick="paSimpan()" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors shadow-sm"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Tampilkan Dokumen</button>' +
-        '<button onclick="paCetak()" class="inline-flex items-center gap-1.5 border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-lg text-xs font-medium transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Cetak / Print</button>' +
+        '<button onclick="paCetak()" class="inline-flex items-center gap-1.5 border border-stone-300 text-stone-700 hover:bg-stone-50 px-4 py-2 rounded-lg text-xs font-medium transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Export PDF</button>' +
         '</div></div>' +
         // Stat cards
         '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">' +
@@ -1716,12 +1708,21 @@ function paCetak() {
   html += '.grid>div{text-align:center;width:45%}';
   html += 'ul{padding-left:20px}';
   html += '.mt-12{margin-top:80px}';
-  html += '@media print{body{padding:30px 40px}}</style></head><body>';
+  html += '@media print{body{padding:30px 40px}}';
+  html += '@page{size:A4 portrait;margin:15mm 20mm}';
+  html += '</style></head><body>';
+  html += '<div style="text-align:center;margin-bottom:10px;font-size:9pt;color:#666">Dokumen ini diekspor dari sistem — ' + new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) + '</div>';
   html += el.innerHTML;
+  html += '<div style="text-align:center;margin-top:40px;padding-top:20px;border-top:1px solid #ccc;font-size:9pt;color:#666">';
+  html += 'Dicetak melalui sistem manajemen dapur</div>';
   html += '</body></html>';
   win.document.write(html);
   win.document.close();
-  setTimeout(function() { win.print(); }, 500);
+  setTimeout(function() {
+    win.focus();
+    win.print();
+    win.close();
+  }, 500);
 }
 
 function paGantiPeriode() {
@@ -1951,7 +1952,11 @@ function renderLapPersediaan() { renderReportPage('persediaan'); }
 function renderLapDistribusi() { renderReportPage('distribusi'); }
 function renderLapKeuangan() { renderReportPage('keuangan'); }
 function renderLapPengeluaranBulanan() { renderReportPage('pengeluaran-bulanan'); }
-function renderLapPenggunaanAnggaran() { renderReportPage('penggunaan-anggaran'); }
+function renderLapPenggunaanAnggaran() {
+  const c = document.getElementById('content');
+  c.innerHTML = '<div id="lap-content"></div>';
+  showLap('penggunaan-anggaran');
+}
 function renderLapBpKas() { renderReportPage('bp-kas'); }
 function renderLapSiklus() { renderReportPage('siklus'); }
 function renderLapPembelian() { renderReportPage('pembelian'); }
