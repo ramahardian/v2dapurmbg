@@ -95,6 +95,12 @@
     </div>
   </div>
   <script>
+    // Show timeout message if logged out due to inactivity
+    if (new URLSearchParams(window.location.search).has('timeout')) {
+      const err = document.getElementById('err');
+      document.getElementById('err-text').textContent = 'Sesi berakhir karena tidak ada aktivitas selama 5 menit. Silakan login kembali.';
+      err.classList.remove('hidden');
+    }
     // Load hero stats
     fetch('/api/public/stats').then(function(r) { return r.json(); }).then(function(d) {
       document.getElementById('stat-porsi').textContent = d.porsi_per_hari && d.porsi_per_hari > 0 ? d.porsi_per_hari + '+' : '0';

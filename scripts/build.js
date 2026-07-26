@@ -30,6 +30,7 @@ const FILES = [
   'ijin-cuti.js',
   'hari-libur.js',
   'definisi.js',
+  'idle-timeout.js',
   'inti.js',
 ];
 
