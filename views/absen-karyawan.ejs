@@ -68,6 +68,16 @@
     .btn-clock:disabled { opacity: 0.4; cursor: not-allowed; }
     .bar { height: 0.5rem; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
     .bar-fill { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
+    .bell-active {
+      color: #fff !important;
+    }
+    .bell-active svg {
+      animation: bellPulse 2s ease-in-out infinite;
+    }
+    @keyframes bellPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.08); }
+    }
     @media (max-width: 480px) {
       body { padding-bottom: 1rem; }
     }
@@ -890,11 +900,14 @@
         if (!r.ok) return;
         const data = await r.json();
         const badge = document.getElementById('notif-badge');
+        const btn = document.getElementById('btn-notif');
         if (data.count > 0) {
           badge.textContent = data.count > 99 ? '99+' : data.count;
           badge.classList.remove('hidden');
+          btn.classList.add('bell-active');
         } else {
           badge.classList.add('hidden');
+          btn.classList.remove('bell-active');
         }
       } catch(e) {}
     }
@@ -1093,7 +1106,7 @@
 
     // Init
     loadAll();
-    setTimeout(loadNotifUnread, 2000);
+    loadNotifUnread();
 
     // Service Worker (PWA installable)
     if ('serviceWorker' in navigator) {
