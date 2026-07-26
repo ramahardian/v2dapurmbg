@@ -81,9 +81,16 @@ const tabColors = {
       window._lapStatCards = '';
     } else if (tab === 'rab') {
       const filterPeriode = lapState.rab_periode || new Date().toISOString().slice(0, 7);
-      const r = await api.get('/laporan/rab-sinkron?periode=' + filterPeriode);
+      const filterSiklusId = lapState.rab_siklus_id || '';
+
+      const [siklusList, rabRes] = await Promise.all([
+        api.get('/siklus').catch(() => []),
+        api.get('/laporan/rab-sinkron?periode=' + filterPeriode + (filterSiklusId ? '&siklus_id=' + filterSiklusId : '')),
+      ]);
+      const r = rabRes;
       const rows = r.rows || [];
       const bd = r.budget || {};
+      const siklusInfo = r.siklus || null;
 
       // Generate periode list
       var periods = [];
@@ -98,15 +105,28 @@ const tabColors = {
 
       var fmtIdr = fmtIDR;
 
+      var siklusOpts = '<option value="">-- Semua Siklus --</option>';
+      var activeSiklus = (Array.isArray(siklusList) ? siklusList : []).filter(function(s) { return s.status === 'Aktif' || s.status === 'Draft'; });
+      activeSiklus.forEach(function(s) {
+        var sel = String(s.id) === String(filterSiklusId) ? 'selected' : '';
+        siklusOpts += '<option value="' + s.id + '" ' + sel + '>' + escHtml(s.nama) + ' (' + (s.total_hari || '?') + ' hr)' + '</option>';
+      });
+
+      var hariLabel = siklusInfo ? 'hari siklus' : 'hari produksi';
       var rabFilterBar = '<div class="mb-4 flex flex-wrap items-center gap-3"><div class="flex items-center gap-2">' +
         '<label class="text-xs font-medium text-stone-500">Periode:</label>' +
         '<select id="rab-filter-periode" onchange="gantiPeriodeRab()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
         periods.map(function(p) { return '<option value="' + p + '" ' + (filterPeriode===p?'selected':'') + '>' + p + '</option>'; }).join('') +
         '</select></div>' +
+        '<div class="flex items-center gap-2"><label class="text-xs font-medium text-stone-500">Siklus:</label>' +
+        '<select id="rab-filter-siklus" onchange="gantiPeriodeRab()" class="text-xs border border-stone-300 rounded px-2 py-1.5">' +
+        siklusOpts +
+        '</select></div>' +
         '<button onclick="hitungRealisasiRAB()" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1">' +
         '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
         'Auto Realisasi</button>' +
-        '<span class="text-xs text-stone-400">' + (r.total_hari || 0) + ' hari produksi</span></div>';
+        (siklusInfo ? '<span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded">' + escHtml(siklusInfo.nama) + ' — ' + siklusInfo.total_hari + ' ' + hariLabel + '</span>' : '') +
+        '<span class="text-xs text-stone-400">' + (r.total_hari || 0) + ' ' + hariLabel + '</span></div>';
 
       var tableContent = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
         '<thead class="bg-stone-50"><tr>' +
@@ -1554,6 +1574,7 @@ function fmtDateIndonesia(dateStr) {
 }
 function gantiPeriodeRab() {
   lapState.rab_periode = document.getElementById('rab-filter-periode')?.value || '';
+  lapState.rab_siklus_id = document.getElementById('rab-filter-siklus')?.value || '';
   lapState.page = 1;
   showLap('rab');
 }

@@ -340,19 +340,44 @@ function registerRabRoutes(router) {
     try {
       const t = req.user.tenant_id;
       const periode = req.query.periode || new Date().toISOString().slice(0, 7);
+      const siklusId = req.query.siklus_id || '';
 
-      let [[{ total_hari }]] = await db.query(
-        `SELECT COUNT(DISTINCT tanggal_produksi) as total_hari
-         FROM produksi WHERE tenant_id=? AND DATE_FORMAT(tanggal_produksi, '%Y-%m')=?`,
-        [t, periode]
-      );
-      if (!total_hari) {
-        const [[{ siklus_hari }]] = await db.query(
-          `SELECT COALESCE(MAX(total_hari), 0) as siklus_hari
-           FROM siklus_menu WHERE tenant_id=? AND status IN ('Aktif','Draft')`,
-          [t]
+      let siklusInfo = null;
+      let total_hari = 0;
+
+      if (siklusId) {
+        const [[siklus]] = await db.query(
+          `SELECT id, nama, total_hari, kategori_penerima, jumlah_porsi
+           FROM siklus_menu WHERE id=? AND tenant_id=?`,
+          [siklusId, t]
         );
-        total_hari = siklus_hari || 0;
+        if (siklus) {
+          total_hari = Number(siklus.total_hari) || 0;
+          siklusInfo = {
+            id: siklus.id,
+            nama: siklus.nama,
+            total_hari,
+            kategori_penerima: siklus.kategori_penerima,
+            jumlah_porsi: Number(siklus.jumlah_porsi) || 0,
+          };
+        }
+      }
+
+      if (!siklusId || !total_hari) {
+        const [[{ prod_hari }]] = await db.query(
+          `SELECT COUNT(DISTINCT tanggal_produksi) as prod_hari
+           FROM produksi WHERE tenant_id=? AND DATE_FORMAT(tanggal_produksi, '%Y-%m')=?`,
+          [t, periode]
+        );
+        total_hari = prod_hari || 0;
+        if (!total_hari) {
+          const [[{ siklus_hari }]] = await db.query(
+            `SELECT COALESCE(MAX(total_hari), 0) as siklus_hari
+             FROM siklus_menu WHERE tenant_id=? AND status IN ('Aktif','Draft')`,
+            [t]
+          );
+          total_hari = siklus_hari || 0;
+        }
       }
 
       const JENJANG_DISPLAY_ORDER = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
@@ -369,12 +394,33 @@ function registerRabRoutes(router) {
         for (const dv of dbVals) dbToDisplay[dv] = display;
       }
 
-      const [penerima] = await db.query(
-        `SELECT kategori_penerima, SUM(paket_besar + paket_kecil) as total_penerima
-         FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IS NOT NULL
-         GROUP BY kategori_penerima ORDER BY kategori_penerima`,
-        [t]
-      );
+      let penerima;
+      if (siklusInfo && siklusInfo.kategori_penerima) {
+        const katList = siklusInfo.kategori_penerima.split(',').map(s => s.trim()).filter(Boolean);
+        const dbKatList = [];
+        for (const k of katList) {
+          const mapped = JENJANG_DB_MAP[k] || [k];
+          for (const m of mapped) dbKatList.push(m);
+        }
+        if (dbKatList.length) {
+          const ph = dbKatList.map(() => '?').join(',');
+          [penerima] = await db.query(
+            `SELECT kategori_penerima, SUM(paket_besar + paket_kecil) as total_penerima
+             FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})
+             GROUP BY kategori_penerima ORDER BY kategori_penerima`,
+            [t, ...dbKatList]
+          );
+        } else {
+          [penerima] = [[], []];
+        }
+      } else {
+        [penerima] = await db.query(
+          `SELECT kategori_penerima, SUM(paket_besar + paket_kecil) as total_penerima
+           FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IS NOT NULL
+           GROUP BY kategori_penerima ORDER BY kategori_penerima`,
+          [t]
+        );
+      }
 
       const [hargaList] = await db.query(
         `SELECT kategori_penerima, harga_per_porsi, total_budget, realisasi FROM budget
@@ -445,6 +491,7 @@ function registerRabRoutes(router) {
         grand_total: grandTotal,
         total_hari: total_hari || 0,
         periode,
+        siklus: siklusInfo,
         budget: {
           total_budget: totalBudgetAgg,
           total_realisasi_manual: totalRealisasiManual,
