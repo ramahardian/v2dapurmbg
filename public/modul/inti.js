@@ -405,7 +405,7 @@ function renderKaryawanList(filter) {
   }
   container.innerHTML = filtered.map(function(k) {
     return '<label class="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all hover:bg-blue-50 active:bg-blue-100" style="border-bottom:1px solid var(--border)">'
-      + '<input type="checkbox" class="karyawan-checkbox" value="'+k.id+'" onchange="updatePilihSemuaCheckbox()">'
+      + '<input type="checkbox" class="karyawan-checkbox cb-modern" value="'+k.id+'" onchange="updatePilihSemuaCheckbox()">'
       + '<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style="background:var(--border);color:var(--text-body)">'+getInitials(k.nama)+'</div>'
       + '<div class="flex-1 min-w-0">'
       + '<div class="text-sm font-medium" style="color:var(--text-body)">'+escHtml(k.nama)+'</div>'
