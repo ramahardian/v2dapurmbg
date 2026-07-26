@@ -103,7 +103,7 @@
       </div>
       <div class="flex items-center gap-1">
         <div class="relative" id="notif-wrap">
-          <button id="btn-notif" onclick="toggleNotifDropdown()" class="p-2 text-white hover:text-white transition rounded-lg hover:bg-white/20 relative" style="color:#fff;" title="Notifikasi">
+          <button id="btn-notif" onclick="bukaSemuaPesan()" class="p-2 text-white hover:text-white transition rounded-lg hover:bg-white/20 relative" style="color:#fff;" title="Notifikasi">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
             <span id="notif-badge" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 hidden" style="box-shadow:0 0 0 2px #1e293b">0</span>
           </button>
@@ -342,25 +342,7 @@
     </div>
   </div>
 
-  <!-- ─── Notification Dropdown ─── -->
-  <div id="notif-dropdown" class="fixed right-4 top-16 w-80 rounded-xl shadow-lg border z-50 hidden" style="background:#fff;border-color:#e2e8f0">
-    <div class="px-4 py-3 border-b font-bold text-sm flex items-center justify-between" style="border-color:#e2e8f0">
-      <div class="flex items-center gap-2">
-        <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-        Notifikasi
-      </div>
-      <button id="notif-baca-semua" onclick="bacaSemuaNotif()" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Tandai dibaca</button>
-    </div>
-    <div id="notif-list" class="max-h-[310px] overflow-y-auto">
-      <div class="px-4 py-6 text-center text-sm text-slate-400">Memuat...</div>
-    </div>
-    <div class="border-t" style="border-color:#e2e8f0">
-      <button onclick="bukaSemuaPesan()" class="w-full px-4 py-2.5 text-xs font-medium text-center text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition flex items-center justify-center gap-1.5 rounded-b-xl">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        Lihat Semua Pesan
-      </button>
-    </div>
-  </div>
+
 
   <!-- ─── Modal Detail & Balas Pesan ─── -->
   <div id="pesan-modal" class="fixed inset-0 z-50 hidden" style="background:rgba(0,0,0,.55)">
@@ -369,6 +351,7 @@
         <!-- Header -->
         <div class="px-5 py-4 flex items-center justify-between border-b shrink-0" style="border-color:#e2e8f0">
           <h3 id="pesan-modal-title" class="font-bold text-sm truncate flex-1 pr-4">Pesan</h3>
+          <button onclick="bacaSemuaNotif()" class="text-xs text-blue-600 hover:text-blue-800 font-medium mr-3">Tandai dibaca</button>
           <button onclick="tutupPesanModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition text-slate-400 hover:text-slate-600">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
@@ -874,25 +857,6 @@
     document.getElementById('btn-refresh').addEventListener('click',()=>{loadAll();});
 
     // ─── Notifikasi ───
-    let notifDropdownOpen = false;
-    function toggleNotifDropdown() {
-      notifDropdownOpen = !notifDropdownOpen;
-      const dd = document.getElementById('notif-dropdown');
-      if (notifDropdownOpen) {
-        dd.classList.remove('hidden');
-        loadNotifList();
-      } else {
-        dd.classList.add('hidden');
-      }
-    }
-    document.addEventListener('click', function(e) {
-      const wrap = document.getElementById('notif-wrap');
-      const dd = document.getElementById('notif-dropdown');
-      if (notifDropdownOpen && wrap && !wrap.contains(e.target) && !dd.contains(e.target)) {
-        notifDropdownOpen = false;
-        dd.classList.add('hidden');
-      }
-    });
 
     async function loadNotifUnread() {
       try {
@@ -910,54 +874,10 @@
           btn.classList.remove('bell-active');
         }
       } catch(e) {}
-    }
-
-    async function loadNotifList() {
-      const list = document.getElementById('notif-list');
-      list.innerHTML = '<div class="px-4 py-6 text-center text-sm text-slate-400"><div class="spinner mx-auto"></div></div>';
-      try {
-        const r = await fetch('/api/notifikasi/saya?limit=20&_='+Date.now());
-        if (!r.ok) throw new Error('Gagal');
-        const data = await r.json();
-        if (data.data.length === 0) {
-          list.innerHTML = '<div class="px-4 py-8 text-center text-sm text-slate-400"><svg class="w-8 h-8 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>Tidak ada notifikasi</div>';
-          return;
-        }
-        var html = '';
-        data.data.forEach(function(n) {
-          var isNew = !n.is_read;
-          var d = new Date(n.created_at);
-          var timeStr = d.toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-          html += '<div class="px-4 py-3 border-b ' + (isNew ? 'bg-blue-50/50' : '') + ' hover:bg-slate-50/50 cursor-pointer transition" style="border-color:#e2e8f0" onclick="bukaDetailPesan(' + n.id + ')">' +
-            '<div class="flex items-start gap-2.5">' +
-              (isNew ? '<span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1.5"></span>' : '<span class="w-2 h-2 rounded-full bg-transparent shrink-0 mt-1.5"></span>') +
-              '<div class="min-w-0 flex-1">' +
-                '<div class="text-xs font-semibold text-slate-800">' + n.judul + '</div>' +
-                (n.pesan ? '<div class="text-[11px] text-slate-500 mt-0.5 line-clamp-2">' + n.pesan + '</div>' : '') +
-                '<div class="text-[10px] text-slate-400 mt-1">' + (n.pengirim_nama ? 'Dari: ' + n.pengirim_nama + ' · ' : '') + timeStr + '</div>' +
-              '</div>' +
-            '</div></div>';
-        });
-        list.innerHTML = html;
-      } catch(e) {
-        list.innerHTML = '<div class="px-4 py-6 text-center text-sm text-red-500">Gagal memuat notifikasi</div>';
-      }
-      loadNotifUnread();
-    }
-
-    async function bacaNotif(id) {
-      try {
-        await fetch('/api/notifikasi/'+id+'/baca', { method:'PUT' });
-        loadNotifUnread();
-        loadNotifList();
-      } catch(e) {}
-    }
-
-    async function bacaSemuaNotif() {
+    }    async function bacaSemuaNotif() {
       try {
         await fetch('/api/notifikasi/baca-semua', { method:'PUT' });
         loadNotifUnread();
-        loadNotifList();
       } catch(e) {}
     }
 
@@ -1016,9 +936,6 @@
     }
 
     async function bukaSemuaPesan() {
-      // Close dropdown, show full list in modal
-      document.getElementById('notif-dropdown').classList.add('hidden');
-      notifDropdownOpen = false;
 
       const body = document.getElementById('pesan-modal-body');
       const title = document.getElementById('pesan-modal-title');
