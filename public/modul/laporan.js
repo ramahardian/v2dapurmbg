@@ -1865,13 +1865,101 @@ async function bayarPayrollMingguanLap() {
 }
 
 function editSaldoAwal(current) {
-  const amount = prompt('Masukkan Saldo Awal Buku (Rp):', fmtIDR(current).replace(/[^0-9]/g,''));
-  if (amount === null) return;
-  const val = parseFloat(amount.replace(/[^0-9.]/g,''));
-  if (isNaN(val) || val < 0) return showAlert('Nilai tidak valid', 'error');
-  api.put('/keuangan/saldo-awal', { saldo_awal: val }).then(r => {
-    if (r.ok) { showAlert('Saldo awal berhasil disimpan', 'success'); showLap('keuangan'); }
-  }).catch(e => showAlert('Gagal: ' + e.message, 'error'));
+  // Hapus modal lama jika ada
+  var old = document.getElementById('saldo-awal-modal');
+  if (old) old.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'saldo-awal-modal';
+  overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center';
+  overlay.innerHTML =
+    '<div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="tutupModalSaldoAwal()"></div>' +
+    '<div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform transition-all duration-200 animate-in fade-in zoom-in-95">' +
+      // Header
+      '<div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5">' +
+        '<div class="flex items-center gap-3">' +
+          '<div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">' +
+            '<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' +
+          '</div>' +
+          '<div>' +
+            '<h3 class="text-sm font-bold text-white">Edit Saldo Awal</h3>' +
+            '<p class="text-[11px] text-blue-100/80">Atur saldo awal buku kas</p>' +
+          '</div>' +
+        '</div>' +
+        '<button onclick="tutupModalSaldoAwal()" class="absolute top-4 right-4 w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">' +
+          '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+        '</button>' +
+      '</div>' +
+      // Body
+      '<div class="px-6 py-5">' +
+        '<label class="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-2">Saldo Awal (Rp)</label>' +
+        '<div class="relative">' +
+          '<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">' +
+            '<span class="text-stone-400 font-semibold text-sm">Rp</span>' +
+          '</div>' +
+          '<input id="saldo-awal-input" type="text" inputmode="numeric" class="w-full pl-10 pr-4 py-3 text-lg font-bold text-stone-800 bg-stone-50 border-2 border-stone-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none" value="' + fmtIDR(current).replace('Rp', '').trim() + '" onfocus="this.select()" oninput="formatSaldoAwalInput(this)">' +
+        '</div>' +
+        '<p class="text-[11px] text-stone-400 mt-2 flex items-center gap-1.5">' +
+          '<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>' +
+          'Masukkan jumlah saldo awal buku kas tanpa titik atau koma.' +
+        '</p>' +
+      '</div>' +
+      // Footer
+      '<div class="px-6 py-4 bg-stone-50/80 border-t border-stone-100 flex items-center justify-end gap-2.5">' +
+        '<button onclick="tutupModalSaldoAwal()" class="px-4 py-2.5 text-xs font-medium text-stone-600 hover:text-stone-800 hover:bg-stone-100 rounded-lg transition-colors">Batal</button>' +
+        '<button id="saldo-awal-simpan" onclick="simpanSaldoAwal()" class="px-5 py-2.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm flex items-center gap-1.5">' +
+          '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' +
+          'Simpan' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+  // Focus input
+  setTimeout(function() {
+    var inp = document.getElementById('saldo-awal-input');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 100);
+}
+
+function tutupModalSaldoAwal() {
+  var el = document.getElementById('saldo-awal-modal');
+  if (el) el.remove();
+  document.body.style.overflow = '';
+}
+
+function formatSaldoAwalInput(inp) {
+  var raw = inp.value.replace(/[^0-9]/g, '');
+  inp.value = raw === '' ? '' : fmtIDR(parseInt(raw)).replace('Rp', '').trim();
+}
+
+function simpanSaldoAwal() {
+  var inp = document.getElementById('saldo-awal-input');
+  if (!inp) return;
+  var raw = inp.value.replace(/[^0-9]/g, '');
+  var val = parseFloat(raw);
+  if (isNaN(val) || val < 0) {
+    showAlert('Nilai tidak valid', 'error');
+    return;
+  }
+  var btn = document.getElementById('saldo-awal-simpan');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg> Menyimpan...';
+  }
+  api.put('/keuangan/saldo-awal', { saldo_awal: val }).then(function(r) {
+    if (r.ok) {
+      showAlert('Saldo awal berhasil disimpan', 'success');
+      tutupModalSaldoAwal();
+      showLap('keuangan');
+    }
+  }).catch(function(e) {
+    showAlert('Gagal: ' + e.message, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Simpan';
+    }
+  });
 }
 
 function renderDailyMenuTable(menuHarian, kategori_order) {
