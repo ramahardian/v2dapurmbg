@@ -913,16 +913,16 @@ async function openSiklusForm(editing) {
     }
     if (_rawTglMulai.length === 7) _rawTglMulai += '-01';
   }
-  var _tglMulai = _rawTglMulai ? new Date(_rawTglMulai + 'T00:00:00') : new Date();
-  _tglMulai.setHours(0,0,0,0);
   var _totalHariFromData = Math.max(1, s.total_hari || 7);
-  var _tglSelesai = new Date(_tglMulai);
-  _tglSelesai.setDate(_tglSelesai.getDate() + _totalHariFromData - 1);
   function fmtDateInput(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
-  var _tglMulaiStr = fmtDateInput(_tglMulai);
-  var _tglSelesaiStr = fmtDateInput(_tglSelesai);
+  var _tglMulai = _rawTglMulai ? new Date(_rawTglMulai + 'T00:00:00') : null;
+  if (_tglMulai) _tglMulai.setHours(0,0,0,0);
+  var _tglMulaiStr = _tglMulai ? fmtDateInput(_tglMulai) : '';
+  var _tglSelesaiStr = _tglMulai ? (function() { var d = new Date(_tglMulai); d.setDate(d.getDate() + _totalHariFromData - 1); return fmtDateInput(d); })() : '';
+  function getDate(hk) { return _tglMulai ? new Date(_tglMulai.getTime() + (hk - 1) * 86400000) : null; }
 
-  const totalHari = Math.floor((_tglSelesai - _tglMulai) / 86400000) + 1;
+  var hariCount = _tglMulai ? Math.floor((new Date(_tglSelesaiStr) - _tglMulai) / 86400000) + 1 : _totalHariFromData;
+  const totalHari = Math.max(1, hariCount);
   var existingItemsByHk = {};
   if (formData.items) {
     for (var _ei = 0; _ei < formData.items.length; _ei++) {
@@ -932,8 +932,7 @@ async function openSiklusForm(editing) {
   }
   formData.items = [];
   for (let _i = 1; _i <= totalHari; _i++) {
-    var _dt = new Date(_tglMulai.getTime() + (_i - 1) * 86400000);
-    var _dn = HARI_OPTIONS[_dt.getDay() === 0 ? 6 : _dt.getDay() - 1];
+    var _dn = _tglMulai ? (function() { var _dt = new Date(_tglMulai.getTime() + (_i - 1) * 86400000); return HARI_OPTIONS[_dt.getDay() === 0 ? 6 : _dt.getDay() - 1]; })() : (['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'][(_i - 1) % 7]);
     var _existing = existingItemsByHk[_i];
     formData.items.push(_existing || { hari_ke: _i, hari_nama: _dn, menu_nama: '', jumlah_porsi: formData.jumlah_porsi || 0 });
     if (_existing && !_existing.hari_nama) formData.items[formData.items.length - 1].hari_nama = _dn;
@@ -985,8 +984,7 @@ async function openSiklusForm(editing) {
   window._gridData = gridData;
   window._rowKeys = ROW_KEYS;
 
-  function fmtDate(d) { return d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0'); }
-  function getDate(hk) { return new Date(_tglMulai.getTime() + (hk - 1) * 86400000); }
+  function fmtDate(d) { return d ? d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0') : ''; }
 
   c.innerHTML = `
     <div class="max-w-7xl mx-auto">
@@ -1017,7 +1015,7 @@ async function openSiklusForm(editing) {
           <th class="w-[100px] min-w-[100px] px-3 py-3 text-left text-xs font-semibold text-stone-400 bg-stone-50 border-b border-r border-stone-200">Kelompok</th>${formData.items.map(it => {
             const dt = getDate(it.hari_ke);
             var _mn = it.menu_nama || (gridData[it.hari_ke] && gridData[it.hari_ke].menu_nama) || '';
-            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top"><div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div><div class="inline-block my-1 px-2 py-0.5 rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">Menu ' + it.hari_ke + '</div><div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div>' + (_mn ? '<div class="text-[9px] text-stone-500 mt-0.5 truncate max-w-[120px] mx-auto" title="' + escHtml(_mn) + '">' + escHtml(_mn) + '</div>' : '') + '</th>';
+            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top"><div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div><div class="inline-block my-1 px-2 py-0.5 rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">Menu ' + it.hari_ke + '</div>' + (dt ? '<div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div>' : '') + (_mn ? '<div class="text-[9px] text-stone-500 mt-0.5 truncate max-w-[120px] mx-auto" title="' + escHtml(_mn) + '">' + escHtml(_mn) + '</div>' : '') + '</th>';
           }).join('')}
         </tr></thead><tbody>
           ${ROW_KEYS.map(rk => {
@@ -1076,11 +1074,16 @@ async function openSiklusForm(editing) {
     if (!nama) { showAlert('Nama siklus harus diisi', 'warning'); return; }
     var _tglMulaiSave = document.getElementById('sk-tgl-mulai').value;
     var _tglSelesaiSave = document.getElementById('sk-tgl-selesai').value;
-    if (!_tglMulaiSave || !_tglSelesaiSave) { showAlert('Tanggal mulai dan selesai harus diisi', 'warning'); return; }
-    var _d1 = new Date(String(_tglSelesaiSave).replace(/T.*$/g, '') + 'T00:00:00');
-    var _d2 = new Date(String(_tglMulaiSave).replace(/T.*$/g, '') + 'T00:00:00');
-    var totalHari = Math.floor((_d1 - _d2) / 86400000) + 1;
-    if (totalHari < 1) totalHari = 1;
+    var totalHari;
+    if (_tglMulaiSave && _tglSelesaiSave) {
+      var _d1 = new Date(String(_tglSelesaiSave).replace(/T.*$/g, '') + 'T00:00:00');
+      var _d2 = new Date(String(_tglMulaiSave).replace(/T.*$/g, '') + 'T00:00:00');
+      totalHari = Math.floor((_d1 - _d2) / 86400000) + 1;
+      if (totalHari < 1) totalHari = 1;
+    } else {
+      totalHari = Object.keys(window._gridData || {}).length;
+      if (totalHari < 1) totalHari = 7;
+    }
     var meta = window._siklusMeta || {};
     var gd = window._gridData || {};
     var rowKeys = window._rowKeys || [];
