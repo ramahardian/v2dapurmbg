@@ -42,6 +42,7 @@ if (cluster.isMaster && WORKERS > 1) {
 
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
+  app.disable('view cache');
   if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
   // ── MIDDLEWARE ORDER (fast → slow) ─────
@@ -155,7 +156,10 @@ if (cluster.isMaster && WORKERS > 1) {
     res.render('login-karyawan');
   });
   app.get('/absen/dashboard', requireKaryawanAuth, (req, res) => {
-    res.set('Cache-Control', 'no-store');
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.set('Surrogate-Control', 'no-store');
     res.render('absen-karyawan');
   });
 
