@@ -52,6 +52,11 @@ async function renderAbsensi() {
     } else {
       loadAbsensi();
     }
+    // Lightbox close handler
+    const lb = document.getElementById('foto-lightbox');
+    const lbClose = document.getElementById('foto-lightbox-close');
+    if (lb) lb.onclick = function(ev) { if (ev.target === lb) { lb.classList.add('hidden'); lb.classList.remove('flex'); } };
+    if (lbClose) lbClose.onclick = function() { lb.classList.add('hidden'); lb.classList.remove('flex'); };
   } catch (err) {
     console.error('Absensi error:', err);
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat absensi: ${err.message}</div>`;
