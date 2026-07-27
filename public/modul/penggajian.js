@@ -234,6 +234,17 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function openFotoLightbox(src) {
+  const lb = document.getElementById('foto-lightbox');
+  const img = document.getElementById('foto-lightbox-img');
+  if (lb && img) { img.src = src; lb.classList.remove('hidden'); lb.classList.add('flex'); }
+}
+function closeFotoLightbox(ev) {
+  if (ev && ev.target !== ev.currentTarget) return;
+  const lb = document.getElementById('foto-lightbox');
+  if (lb) { lb.classList.add('hidden'); lb.classList.remove('flex'); }
+}
+
 async function loadAbsensi(page = 1) {
   const params = new URLSearchParams();
   const fk = document.getElementById('abs-filter-karyawan').value;
@@ -252,7 +263,7 @@ function renderAbsensiTable(list, pagination) {
   const tb = document.querySelector('#absensi-modal').parentElement.querySelector('tbody');
   function fotoCell(val) {
     if (!val) return '<span class="text-stone-300 text-[10px]">—</span>';
-    return '<img src="'+escapeHtml(val)+'" class="w-9 h-9 rounded-lg object-cover cursor-pointer border border-stone-200 hover:border-blue-400 hover:shadow-md transition-all" onclick="window.open(this.src)" title="Klik untuk lihat penuh">';
+    return '<img src="'+escapeHtml(val)+'" class="w-9 h-9 rounded-lg object-cover cursor-pointer border border-stone-200 hover:border-blue-400 hover:shadow-md transition-all" onclick="openFotoLightbox(this.src)" title="Klik untuk lihat penuh">';
   }
   if (!list.length) { tb.innerHTML = '<tr><td colspan="10" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div>Belum ada data absensi</div></td></tr>'; } else {
     tb.innerHTML = list.map(a => `
