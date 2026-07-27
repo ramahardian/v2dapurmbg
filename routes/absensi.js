@@ -67,7 +67,7 @@ router.get('/absensi', requireRole('admin', 'keuangan'), async (req, res) => {
 
   // Menjalankan query SQL utama untuk mengambil data absensi lengkap dengan data relasi karyawan & jabatan
   const [rows] = await db.query(
-    `SELECT a.id, a.karyawan_id, a.tanggal, a.status, a.jam_masuk, a.jam_keluar, a.keterangan, k.nama as nama_karyawan, j.name as jabatan, k.departemen FROM absensi a
+    `SELECT a.id, a.karyawan_id, a.tanggal, a.status, a.jam_masuk, a.jam_keluar, a.keterangan, a.foto_masuk, a.foto_keluar, k.nama as nama_karyawan, j.name as jabatan, k.departemen FROM absensi a
      JOIN karyawan k ON k.id=a.karyawan_id
      LEFT JOIN jabatan j ON j.id=k.jabatan_id ${where}
      ORDER BY a.tanggal DESC, k.nama ASC LIMIT ? OFFSET ?`,

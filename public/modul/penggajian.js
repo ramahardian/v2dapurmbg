@@ -228,6 +228,12 @@ async function loadKaryawanOptions() {
     karyawanOptions = [];
   }
 }
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
 async function loadAbsensi(page = 1) {
   const params = new URLSearchParams();
   const fk = document.getElementById('abs-filter-karyawan').value;
@@ -244,7 +250,11 @@ async function loadAbsensi(page = 1) {
 }
 function renderAbsensiTable(list, pagination) {
   const tb = document.querySelector('#absensi-modal').parentElement.querySelector('tbody');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div>Belum ada data absensi</div></td></tr>'; } else {
+  function fotoCell(val) {
+    if (!val) return '<span class="text-stone-300 text-[10px]">—</span>';
+    return '<img src="'+escapeHtml(val)+'" class="w-9 h-9 rounded-lg object-cover cursor-pointer border border-stone-200 hover:border-blue-400 hover:shadow-md transition-all" onclick="window.open(this.src)" title="Klik untuk lihat penuh">';
+  }
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="10" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div>Belum ada data absensi</div></td></tr>'; } else {
     tb.innerHTML = list.map(a => `
       <tr class="border-t border-stone-100">
         <td class="px-4 py-3 text-sm whitespace-nowrap">${fmtDate(a.tanggal)}</td>
@@ -253,6 +263,8 @@ function renderAbsensiTable(list, pagination) {
         <td class="px-4 py-3 text-sm text-center"><span class="badge ${a.status==='Hadir'?'badge-hadir':a.status==='Sakit'?'badge-sakit':a.status==='Izin'?'badge-izin':a.status==='Cuti'?'badge-cuti':a.status==='Alpha'?'badge-alpha':a.status==='Terlambat'?'badge-terlambat':'badge-hadir'}">${a.status}</span></td>
         <td class="px-4 py-3 text-sm text-center mono">${a.jam_masuk || '-'}</td>
         <td class="px-4 py-3 text-sm text-center mono">${a.jam_keluar || '-'}</td>
+        <td class="px-4 py-3 text-sm text-center">${fotoCell(a.foto_masuk)}</td>
+        <td class="px-4 py-3 text-sm text-center">${fotoCell(a.foto_keluar)}</td>
         <td class="px-4 py-3 text-sm">${a.keterangan || '-'}</td>
         <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
           <button data-id="${a.id}" class="edit-absensi text-stone-500 hover:text-stone-900 mr-2" title="Edit"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
