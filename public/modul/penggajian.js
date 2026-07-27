@@ -242,23 +242,20 @@ async function loadAbsensi(page = 1) {
   const res = await api.get('/absensi?' + params);
   renderAbsensiTable(res.data, res);
 }
-// Global delegation untuk klik foto absensi (register sekali)
-if (!document._fotoClickInit) {
-  document._fotoClickInit = true;
-  document.addEventListener('click', function(ev) {
-    const t = ev.target.closest('.foto-click');
-    if (!t) return;
-    const lb = document.getElementById('foto-lightbox');
-    const img = document.getElementById('foto-lightbox-img');
-    if (lb && img) { img.src = t.src; lb.classList.remove('hidden'); lb.classList.add('flex'); }
-  });
+function openFoto(src) {
+  const lb = document.getElementById('foto-lightbox');
+  const img = document.getElementById('foto-lightbox-img');
+  if (!lb || !img) return alert('Lightbox tidak ditemukan');
+  img.src = src;
+  lb.style.display = 'flex';
 }
 
 function renderAbsensiTable(list, pagination) {
   const tb = document.querySelector('#absensi-modal').parentElement.querySelector('tbody');
   function fotoCell(val) {
     if (!val) return '<span class="text-stone-300 text-[10px]">—</span>';
-    return '<img src="'+val.replace(/"/g,'&quot;')+'" class="foto-click w-9 h-9 rounded-lg object-cover cursor-pointer border border-stone-200 hover:border-blue-400 hover:shadow-md transition-all" title="Klik untuk lihat penuh">';
+    const s = val.replace(/"/g,'&quot;');
+    return '<img src="'+s+'" onclick="openFoto(\''+s+'\')" class="w-9 h-9 rounded-lg object-cover cursor-pointer border border-stone-200 hover:border-blue-400 hover:shadow-md transition-all" title="Klik untuk lihat penuh">';
   }
   if (!list.length) { tb.innerHTML = '<tr><td colspan="10" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div>Belum ada data absensi</div></td></tr>'; } else {
     tb.innerHTML = list.map(a => `
