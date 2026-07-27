@@ -310,9 +310,6 @@
         <h3 class="font-bold text-lg text-stone-800" id="modal-title">Konfirmasi</h3>
         <p class="text-stone-500 text-sm mt-1" id="modal-desc">Apakah Anda yakin?</p>
       </div>
-      <div id="modal-location" class="hidden text-xs text-stone-500 bg-stone-50 rounded-xl p-3 flex items-center gap-2.5">
-        <div class="spinner shrink-0" style="width:1rem;height:1rem"></div>
-        <span id="modal-location-text">Mendapatkan lokasi...</span>
       </div>
       
       <!-- Photo Upload Section -->
@@ -342,7 +339,7 @@
   <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none" id="toast-container"></div>
 
   <script>
-    let karyawanData = null, absenStatus = null, currentLocation = null, rekapData = null, riwayatExpanded = false;
+    let karyawanData = null, absenStatus = null, rekapData = null, riwayatExpanded = false;
 
     function escapeHtml(str) {
       const div = document.createElement('div');
@@ -393,12 +390,6 @@
       window.addEventListener('online',u); window.addEventListener('offline',u); u();
     }
 
-    // Location
-    function getLocation() {
-      return new Promise(r => {
-        if (!navigator.geolocation) return r(null);
-        navigator.geolocation.getCurrentPosition(p=>r({lat:p.coords.latitude,lng:p.coords.longitude}),()=>r(null),{enableHighAccuracy:true,timeout:8000,maximumAge:30000});
-      });
     }
 
     // Load All
@@ -623,16 +614,12 @@
 
     // Confirm Absen
     async function confirmAbsen(type) {
-      const overlay=document.getElementById('modal-overlay'),icon=document.getElementById('modal-icon'),title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc'),locEl=document.getElementById('modal-location'),locText=document.getElementById('modal-location-text'),locSpin=locEl.querySelector('.spinner'),btnYa=document.getElementById('modal-ya'),photoPreview=document.getElementById('modal-photo-preview'),photoInput=document.getElementById('modal-photo-input'),photoContainer=document.getElementById('modal-photo-container');
+      const overlay=document.getElementById('modal-overlay'),icon=document.getElementById('modal-icon'),title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc'),btnYa=document.getElementById('modal-ya'),photoPreview=document.getElementById('modal-photo-preview'),photoInput=document.getElementById('modal-photo-input'),photoContainer=document.getElementById('modal-photo-container');
       const in_=type==='in';
       icon.className='w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center '+(in_?'bg-amber-100':'bg-blue-100');
       icon.innerHTML=in_?'<svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>':'<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
       title.textContent=in_?'Clock In':'Clock Out'; desc.textContent=in_?'Konfirmasi clock-in untuk memulai hari kerja?':'Konfirmasi clock-out untuk mengakhiri hari kerja?';
       btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!'; btnYa.className='flex-1 h-11 btn btn-primary'; btnYa.disabled=false;
-      locEl.classList.remove('hidden'); if(locSpin)locSpin.classList.remove('hidden'); locText.textContent='Mendapatkan lokasi...';
-      const loc=await getLocation();
-      if(loc){currentLocation=loc;if(locSpin)locSpin.classList.add('hidden');locText.textContent='📍 '+loc.lat.toFixed(4)+', '+loc.lng.toFixed(4);}
-      else{currentLocation=null;if(locSpin)locSpin.classList.add('hidden');locText.textContent='📍 Lokasi tidak tersedia (absen tanpa lokasi)';}
       // Siapkan photo preview
       if (photoPreview) photoPreview.classList.add('hidden');
       if (photoPreview) photoPreview.src = '';
@@ -673,7 +660,7 @@
       }
       
       overlay.classList.remove('hidden');
-      btnYa.onclick=async()=>{btnYa.disabled=true;btnYa.textContent='Memproses...';try{const body={client_time:new Date().toISOString()};if(currentLocation){body.latitude=currentLocation.lat;body.longitude=currentLocation.lng;}
+      btnYa.onclick=async()=>{btnYa.disabled=true;btnYa.textContent='Memproses...';try{const body={client_time:new Date().toISOString()};
         if (photoInput && photoInput.value) {
           const file = photoInput.files[0];
           if (file) {
