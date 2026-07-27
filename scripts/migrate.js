@@ -523,6 +523,14 @@ async function runMigration() {
     log('✓ Migrasi perencanaan_override: tabel dibuat');
   } catch (e) { log('  (skip perencanaan_override): ' + e.message); }
 
+  // Event hapus foto absensi setiap hari Minggu 23:59
+  try {
+    await q(`SET GLOBAL event_scheduler = ON`);
+    await q(`DROP EVENT IF EXISTS hapus_foto_absensi`);
+    await q(`CREATE EVENT hapus_foto_absensi ON SCHEDULE EVERY 1 DAY STARTS (TIMESTAMP(CURRENT_DATE) + INTERVAL 23 HOUR + INTERVAL 59 MINUTE) DO IF DAYOFWEEK(CURRENT_DATE) = 1 THEN UPDATE absensi SET foto_masuk = NULL, foto_keluar = NULL WHERE foto_masuk IS NOT NULL OR foto_keluar IS NOT NULL; END IF`);
+    log('✓ Event hapus_foto_absensi dibuat (setiap Minggu 23:59)');
+  } catch (e) { log('  (skip event hapus foto): ' + e.message); }
+
   log('✓ Migrasi selesai!');
   return logs;
 }
