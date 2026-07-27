@@ -243,11 +243,7 @@ async function loadAbsensi(page = 1) {
   renderAbsensiTable(res.data, res);
 }
 function openFoto(src) {
-  const lb = document.getElementById('foto-lightbox');
-  const img = document.getElementById('foto-lightbox-img');
-  if (!lb || !img) return alert('Lightbox tidak ditemukan');
-  img.src = src;
-  lb.style.display = 'flex';
+  window.open(src, '_blank');
 }
 
 function renderAbsensiTable(list, pagination) {
