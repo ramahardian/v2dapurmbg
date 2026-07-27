@@ -535,6 +535,12 @@ function hitungNutrisi() {
       totalKarbo += jml / 100 * (ref.karbohidrat || 0);
       totalLemak += jml / 100 * (ref.lemak || 0);
       totalSerat += jml / 100 * (ref.serat || 0);
+    } else {
+      totalKalori += jml / 100 * (b.kalori || 0);
+      totalProtein += jml / 100 * (b.protein || 0);
+      totalKarbo += jml / 100 * (b.karbohidrat || 0);
+      totalLemak += jml / 100 * (b.lemak || 0);
+      totalSerat += jml / 100 * (b.serat || 0);
     }
   });
   ['kalori','protein','karbohidrat','lemak','serat'].forEach(function(k) {
