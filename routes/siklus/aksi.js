@@ -287,13 +287,18 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const kebutuhanDenganBuffer = Math.round(v.total * buffer);
       const kg = v.satuan === 'Kg' || v.satuan === 'kg' ? kebutuhanDenganBuffer / 1000 : kebutuhanDenganBuffer;
       const subTotal = kg * v.harga_satuan;
+      const qtyBuffer = Math.round(kg * 100) / 100;
       return {
         bahan_baku_id: Number(id),
         nama: v.nama,
         satuan: v.satuan,
-        kebutuhan: Math.round(kebutuhanDenganBuffer * 100) / 100,
-        kebutuhan_dengan_buffer: Math.round(kg * 100) / 100,
+        total_qty: Math.round(kebutuhanDenganBuffer * 100) / 100,
+        buffer_10: qtyBuffer,
         harga_satuan: v.harga_satuan,
+        subtotal: Math.round(subTotal),
+        // Legacy fields for backward compat
+        kebutuhan: Math.round(kebutuhanDenganBuffer * 100) / 100,
+        kebutuhan_dengan_buffer: qtyBuffer,
         sub_total: Math.round(subTotal),
       };
     })
