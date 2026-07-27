@@ -14,90 +14,48 @@ async function renderNotifikasi() {
   c.innerHTML = `
     <div class="flex flex-col h-full lg:h-[calc(100vh-7rem)] -mx-4 lg:-mx-8 -mb-4 lg:-mb-8">
       <!-- Email UI Container -->
-      <div class="flex flex-1 overflow-hidden bg-white lg:rounded-2xl lg:border lg:border-stone-200 lg:shadow-sm lg:m-4 lg:mx-8">
-        <!-- Left Sidebar (Desktop) -->
-        <div class="hidden md:flex md:flex-col w-56 shrink-0 border-r border-stone-200 bg-stone-50">
-          <div class="p-4">
-            <button onclick="notifSwitchView('compose')" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-xl transition-all duration-150 shadow-sm hover:shadow-md">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Tulis Pesan
-            </button>
-          </div>
-          <nav class="flex-1 px-3 pb-3 space-y-0.5">
-            <button onclick="notifSwitchView('inbox')" class="notif-sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150" data-view="inbox">
-              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-              <span class="flex-1 text-left">Kotak Masuk</span>
-              <span id="notif-inbox-count" class="notif-count-badge hidden text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full"></span>
-            </button>
-            ${isAdmin ? `
-            <button onclick="notifSwitchView('sent')" class="notif-sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150" data-view="sent">
-              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-              <span class="flex-1 text-left">Terkirim</span>
-              <span id="notif-sent-count" class="notif-count-badge hidden text-[10px] font-bold bg-stone-200 text-stone-600 px-2 py-0.5 rounded-full"></span>
-            </button>
-            ` : ''}
-          </nav>
-          <div class="p-3 border-t border-stone-200">
-            <button onclick="notifRefresh()" class="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-stone-500 hover:text-stone-700 hover:bg-stone-200 rounded-xl transition-all duration-150">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-              Segarkan
-            </button>
+      <div class="flex flex-col flex-1 overflow-hidden bg-white lg:rounded-2xl lg:border lg:border-stone-200 lg:shadow-sm lg:m-4 lg:mx-8">
+        <!-- Tab Bar -->
+        <div class="flex items-center gap-0.5 px-3 py-2 border-b border-stone-200 bg-stone-50/80 shrink-0 overflow-x-auto">
+          <button onclick="notifSwitchView('inbox')" class="notif-tab flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap" data-view="inbox">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+            <span>Kotak Masuk</span>
+            <span id="notif-inbox-count" class="notif-count-badge hidden text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full"></span>
+          </button>
+          ${isAdmin ? `
+          <button onclick="notifSwitchView('sent')" class="notif-tab flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap" data-view="sent">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            <span>Terkirim</span>
+            <span id="notif-sent-count" class="notif-count-badge hidden text-[10px] font-bold bg-stone-200 text-stone-600 px-1.5 py-0.5 rounded-full"></span>
+          </button>
+          ` : ''}
+          ${isAdmin ? `
+          <button onclick="notifSwitchView('compose')" class="notif-tab flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap" data-view="compose">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>Tulis Pesan</span>
+          </button>
+          ` : ''}
+          <div class="flex-1"></div>
+          <button onclick="notifRefresh()" class="p-1.5 md:p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-200 rounded-lg transition-all shrink-0" title="Segarkan">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="flex items-center gap-2 px-3 md:px-4 py-2 border-b border-stone-200 bg-white shrink-0">
+          <div class="relative flex-1 max-w-md">
+            <svg class="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 md:w-4 md:h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input id="notif-search" oninput="notifSearch()" class="w-full pl-8 md:pl-9 pr-3 py-1.5 md:py-2 text-[13px] md:text-sm bg-stone-100 border border-transparent focus:border-blue-400 rounded-lg md:rounded-xl outline-none transition-all placeholder:text-stone-400" placeholder="Cari pesan..." />
           </div>
         </div>
 
-        <!-- Mobile Tabs + Search -->
-        <div class="md:hidden flex flex-col shrink-0">
-          <!-- Mobile top bar: tabs + compose + refresh -->
-          <div class="flex items-center gap-1 px-2 py-1.5 border-b border-stone-200 bg-stone-50">
-            <button onclick="notifSwitchView('inbox')" class="notif-mobile-tab flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap" data-view="inbox">
-              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-              <span id="notif-inbox-count-mobile" class="notif-count-badge hidden text-[9px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full ml-0.5"></span>
-            </button>
-            ${isAdmin ? `
-            <button onclick="notifSwitchView('sent')" class="notif-mobile-tab flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap" data-view="sent">
-              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-            </button>
-            ` : ''}
-            <div class="flex-1"></div>
-            ${isAdmin ? `
-            <button onclick="notifSwitchView('compose')" class="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white rounded-lg text-[11px] font-medium transition-all hover:bg-blue-700 shrink-0">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              <span class="hidden sm:inline ml-0.5">Tulis</span>
-            </button>
-            ` : ''}
-            <button onclick="notifRefresh()" class="p-1.5 text-stone-500 hover:text-stone-700 rounded-lg transition-all shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            </button>
-          </div>
-          <!-- Mobile search -->
-          <div class="flex items-center gap-2 px-3 py-2 border-b border-stone-200 bg-white">
-            <div class="relative flex-1">
-              <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-              <input id="notif-search-mobile" oninput="notifSearch()" class="w-full pl-8 pr-2.5 py-1.5 text-[13px] bg-stone-100 border border-transparent focus:border-blue-400 rounded-lg outline-none transition-all placeholder:text-stone-400" placeholder="Cari pesan..." />
-            </div>
-            <span id="notif-mobile-view-label" class="text-[11px] font-medium text-stone-400 shrink-0"></span>
-          </div>
-        </div>
-
-        <!-- Right Content Area -->
-        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <!-- Search Bar (Desktop) -->
-          <div class="hidden md:flex items-center gap-2 px-4 py-2.5 border-b border-stone-200 bg-white">
-            <div class="relative flex-1 max-w-md">
-              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-              <input id="notif-search" oninput="notifSearch()" class="w-full pl-9 pr-3 py-2 text-sm bg-stone-100 border border-transparent focus:border-blue-400 rounded-xl outline-none transition-all duration-150 placeholder:text-stone-400" placeholder="Cari pesan..." />
-            </div>
-            <span id="notif-view-label" class="text-xs font-medium text-stone-400 ml-auto">Kotak Masuk</span>
-          </div>
-
-          <!-- Email List / Compose Area -->
-          <div id="notif-main-area" class="flex-1 overflow-y-auto" style="scroll-behavior:smooth">
-            <div class="flex items-center justify-center py-24">
-              <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-              </svg>
-            </div>
+        <!-- Content Area -->
+        <div id="notif-main-area" class="flex-1 overflow-y-auto" style="scroll-behavior:smooth">
+          <div class="flex items-center justify-center py-24">
+            <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+            </svg>
           </div>
         </div>
       </div>
@@ -119,7 +77,7 @@ async function notifLoadInbox() {
     const data = await api.get('/notifikasi?type=inbox');
     notifAllData.inbox = data || [];
     const count = data.filter(n => !n.is_read).length;
-    ['notif-inbox-count', 'notif-inbox-count-mobile'].forEach(id => {
+    ['notif-inbox-count'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         if (count > 0) {
@@ -168,33 +126,17 @@ function notifSwitchView(view) {
   notifSearchQuery = '';
   const searchInput = document.getElementById('notif-search');
   if (searchInput) searchInput.value = '';
-  const searchInputMobile = document.getElementById('notif-search-mobile');
-  if (searchInputMobile) searchInputMobile.value = '';
 
-  // Update sidebar active state
-  document.querySelectorAll('.notif-sidebar-btn').forEach(b => {
-    const isActive = b.dataset.view === view;
-    b.classList.toggle('bg-blue-50', isActive);
-    b.classList.toggle('text-blue-700', isActive);
-    b.classList.toggle('text-stone-700', !isActive);
-    b.classList.toggle('hover:bg-stone-200', !isActive);
-  });
-
-  // Update mobile tab active state
-  document.querySelectorAll('.notif-mobile-tab').forEach(b => {
+  // Update tab active state
+  document.querySelectorAll('.notif-tab').forEach(b => {
     const isActive = b.dataset.view === view;
     b.classList.toggle('bg-blue-600', isActive);
     b.classList.toggle('text-white', isActive);
+    b.classList.toggle('shadow-sm', isActive);
     b.classList.toggle('text-stone-600', !isActive);
-    b.classList.toggle('bg-stone-200', !isActive);
+    b.classList.toggle('hover:bg-stone-200', !isActive);
+    b.classList.toggle('hover:text-stone-800', !isActive);
   });
-
-  // Update view labels
-  const labels = { inbox: 'Kotak Masuk', sent: 'Terkirim', compose: 'Pesan Baru' };
-  const label = document.getElementById('notif-view-label');
-  if (label) label.textContent = labels[view] || 'Pesan';
-  const mobileLabel = document.getElementById('notif-mobile-view-label');
-  if (mobileLabel) mobileLabel.textContent = labels[view] || 'Pesan';
 
   // Render content
   if (view === 'compose') {
@@ -497,12 +439,8 @@ async function notifMarkRead(id) {
 }
 
 function notifSearch() {
-  // Sync both search inputs
   const searchInput = document.getElementById('notif-search');
-  const searchInputMobile = document.getElementById('notif-search-mobile');
-  const val = searchInput?.value || searchInputMobile?.value || '';
-  if (searchInput) searchInput.value = val;
-  if (searchInputMobile) searchInputMobile.value = val;
+  const val = searchInput?.value || '';
   notifSearchQuery = val;
   if (notifCurrentView !== 'compose') {
     notifRenderList(notifCurrentView);
