@@ -482,9 +482,13 @@ function notifRenderCompose(replyJudul, replyNama) {
             </div>
           </div>
 
-          <!-- Kirim ke Semua -->
-          <label class="flex items-center gap-3 p-3 bg-blue-50/50 rounded-xl cursor-pointer group hover:bg-blue-50 transition-all border border-blue-100">
-            <input type="checkbox" id="notif-semua" onchange="notifToggleAll()" class="w-4 h-4 rounded border-stone-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0">
+          <!-- Kirim ke Semua - Modern Toggle Switch -->
+          <label class="flex items-center gap-3 p-3 bg-blue-50/50 rounded-xl cursor-pointer group hover:bg-blue-50 transition-all border border-blue-100 select-none">
+            <div class="relative w-10 h-6 shrink-0">
+              <input type="checkbox" id="notif-semua" onchange="notifToggleAll()" class="sr-only peer">
+              <div class="block w-10 h-6 rounded-full bg-stone-300 peer-checked:bg-blue-600 transition-colors duration-200"></div>
+              <div class="absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-4"></div>
+            </div>
             <div class="min-w-0">
               <div class="text-sm font-medium text-stone-700 group-hover:text-blue-600 transition-colors">Kirim ke semua karyawan aktif</div>
               <div class="text-xs text-stone-400 mt-0.5">${karyawan.length} karyawan akan menerima notifikasi ini</div>
