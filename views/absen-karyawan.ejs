@@ -173,69 +173,7 @@
       </button>
     </div>
 
-    <!-- ─── Statistik Bulanan ─── -->
-    <div class="card p-4 hidden" id="statistik-card">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-slate-800 font-bold text-sm">Ringkasan Bulan Ini</h2>
-        <span class="text-slate-400 text-[0.6rem] uppercase tracking-wider" id="statistik-periode"></span>
-      </div>
-      <div id="statistik-skeleton" class="space-y-3">
-        <div class="skeleton h-16 w-full"></div>
-        <div class="skeleton h-8 w-full"></div>
-      </div>
-      <div id="statistik-content" class="hidden">
-        <div class="flex items-center justify-between text-[0.6rem] text-slate-400 mb-2 pb-2 border-b border-slate-100">
-          <span>Target hari kerja bulan ini</span>
-          <span class="font-semibold text-slate-600" id="stat-label-expected">—</span>
-        </div>
-        <div class="space-y-2 mb-4">
-          <div class="flex items-center gap-2">
-            <span class="text-emerald-600 text-[0.6rem] font-semibold w-10">Hadir</span>
-            <div class="bar flex-1"><div id="stat-hadir-bar" class="bar-fill bg-emerald-500" style="width:0%"></div></div>
-            <span class="text-slate-600 text-xs font-mono w-8 text-right" id="stat-hadir-val">0</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-orange-600 text-[0.6rem] font-semibold w-10">Telat</span>
-            <div class="bar flex-1"><div id="stat-terlambat-bar" class="bar-fill bg-orange-500" style="width:0%"></div></div>
-            <span class="text-slate-600 text-xs font-mono w-8 text-right" id="stat-terlambat-val">0</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-yellow-600 text-[0.6rem] font-semibold w-10">Sakit</span>
-            <div class="bar flex-1"><div id="stat-sakit-bar" class="bar-fill bg-yellow-500" style="width:0%"></div></div>
-            <span class="text-slate-600 text-xs font-mono w-8 text-right" id="stat-sakit-val">0</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-blue-600 text-[0.6rem] font-semibold w-10">Izin</span>
-            <div class="bar flex-1"><div id="stat-izin-bar" class="bar-fill bg-blue-500" style="width:0%"></div></div>
-            <span class="text-slate-600 text-xs font-mono w-8 text-right" id="stat-izin-val">0</span>
-          </div>
-          <div id="stat-alpha-row" class="flex items-center gap-2">
-            <span class="text-orange-600 text-[0.6rem] font-semibold w-10">Alpha</span>
-            <div class="bar flex-1"><div id="stat-alpha-bar" class="bar-fill bg-orange-500" style="width:0%"></div></div>
-            <span class="text-slate-600 text-xs font-mono w-8 text-right" id="stat-alpha-val">0</span>
-          </div>
-          <div id="stat-bolos-row" class="flex items-center gap-2 hidden">
-            <span class="text-red-600 text-[0.6rem] font-semibold w-10">Bolos</span>
-            <div class="bar flex-1"><div id="stat-bolos-bar" class="bar-fill bg-red-500" style="width:0%"></div></div>
-            <span class="text-slate-600 text-xs font-mono w-8 text-right" id="stat-bolos-val">0</span>
-          </div>
-        </div>
-        <div class="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-3">
-          <div>
-            <div class="text-slate-500 text-[0.6rem] uppercase tracking-wider font-medium">Rata-rata Jam Kerja</div>
-            <div class="text-slate-800 font-bold text-lg" id="stat-rata-jam">0</div>
-          </div>
-          <div class="relative w-14 h-14">
-            <svg class="w-14 h-14 -rotate-90" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e2e8f0" stroke-width="2.5"/>
-              <circle id="stat-ring" cx="18" cy="18" r="15.5" fill="none" stroke="#2563eb" stroke-width="2.5"
-                stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="97.4" style="transition:stroke-dashoffset 0.8s ease;transform:rotate(-90deg);transform-origin:50% 50%"/>
-            </svg>
-            <div class="absolute inset-0 flex items-center justify-center text-slate-500 text-[0.5rem] font-semibold">jam</div>
-          </div>
-        </div>
-      </div>
-    </div>
+
 
     <!-- ─── Riwayat Absen ─── -->
     <div class="card p-4">
@@ -466,7 +404,7 @@
           fetch('/api/mobile/absensi/riwayat?limit=5&_='+Date.now())
         ]);
         if (statusRes.ok) { absenStatus=await statusRes.json(); renderStatus(absenStatus); renderButtons(absenStatus); }
-        if (rekapRes.ok) { rekapData=await rekapRes.json(); renderStatistik(rekapData); }
+        if (rekapRes.ok) { rekapData=await rekapRes.json(); }
         if (shiftRes.ok) { renderShift(await shiftRes.json()); }
         if (riwayatRes.ok) { renderRiwayat(await riwayatRes.json()); }
         else { document.getElementById('riwayat-content').innerHTML='<div class="text-center py-6 text-slate-400 text-sm">Gagal memuat riwayat</div>'; showSkeleton('riwayat',false); }
@@ -641,34 +579,7 @@
       }
     }
 
-    // Render Statistik
-    function renderStatistik(r) {
-      document.getElementById('statistik-periode').textContent=r.periode||(r.bulan+'/'+r.tahun);
-      const st=r.statistik,t=st.total_hari||0,e=st.expected_hari||0,h=st.hadir||0,tl=st.terlambat||0,sk=st.sakit||0,iz=st.izin||0,al=st.alpha||0,bo=st.bolos||0;
-      
-      // Jika belum ada data absensi bulan ini, sembunyikan kartu statistik
-      if (t === 0 && e === 0) {
-        document.getElementById('statistik-card').classList.add('hidden');
-        showSkeleton('statistik',false);
-        return;
-      }
-      
-      document.getElementById('statistik-card').classList.remove('hidden'); showSkeleton('statistik',false);
-      document.getElementById('stat-hadir-val').textContent=h; document.getElementById('stat-terlambat-val').textContent=tl;
-      document.getElementById('stat-sakit-val').textContent=sk; document.getElementById('stat-izin-val').textContent=iz;
-      const base=Math.max(e||1,1); document.getElementById('stat-label-expected').textContent='dari '+(e||t)+' hari';
-      const ar=document.getElementById('stat-alpha-row'), br=document.getElementById('stat-bolos-row');
-      if(bo>0){if(ar)ar.classList.add('hidden');if(br)br.classList.remove('hidden');document.getElementById('stat-bolos-val').textContent=bo;}
-      else{if(ar)ar.classList.remove('hidden');if(br)br.classList.add('hidden');document.getElementById('stat-alpha-val').textContent=al;}
-      setTimeout(()=>{
-        document.getElementById('stat-hadir-bar').style.width=(h/base*100)+'%'; document.getElementById('stat-terlambat-bar').style.width=(tl/base*100)+'%';
-        document.getElementById('stat-sakit-bar').style.width=(sk/base*100)+'%';
-        document.getElementById('stat-izin-bar').style.width=(iz/base*100)+'%';
-        if(bo>0)document.getElementById('stat-bolos-bar').style.width=(bo/base*100)+'%'; else document.getElementById('stat-alpha-bar').style.width=(al/base*100)+'%';
-      },100);
-      const aj=r.rata_rata_jam_kerja||0; document.getElementById('stat-rata-jam').textContent=aj.toFixed(1)+' jam';
-      const ring=document.getElementById('stat-ring'); if(ring){const max=12,pct=Math.min(1,aj/max),off=97.4*(1-pct); ring.style.strokeDashoffset=off;}
-    }
+
 
     // Render Riwayat
     function renderRiwayat(r) {
