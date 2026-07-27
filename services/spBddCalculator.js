@@ -2,7 +2,7 @@ const db = require('../db');
 
 const JENJANG_ORDER = ['Balita', 'TK/PAUD', 'SD 1-3', 'SD 4-6', 'SMP', 'SMA', 'Ibu Hamil', 'Ibu Menyusui'];
 
-const KATEGORI_SP = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu', 'Minyak'];
+const KATEGORI_SP = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Bumbu', 'Susu', 'Minyak'];
 
 const JENJANG_MAP = {
   'TK/PAUD': 'TK/PAUD',

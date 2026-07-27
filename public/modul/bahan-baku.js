@@ -10,7 +10,7 @@ const BAHAN_BAKU_CRUD_BASE = {
     { k: 'kode', l: 'Kode SKU', group: 'info' },
     { k: 'nama', l: 'Nama Bahan', req: true, group: 'info' },
     { k: 'kategori', l: 'Kategori', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Bumbu','Lainnya'], group: 'info' },
-    { k: 'kategori_sp', l: 'Kategori SP', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'], desc: 'Kategori untuk perhitungan Standar Porsi (SP)', group: 'info' },
+    { k: 'kategori_sp', l: 'Kategori SP', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Bumbu','Susu','Minyak'], desc: 'Kategori untuk perhitungan Standar Porsi (SP)', group: 'info' },
     { k: 'satuan', l: 'Satuan (kg/gr/liter)', req: true, group: 'info' },
     { k: 'harga_satuan', l: 'Harga Satuan (IDR)', type: 'number', fmt: 'idr', group: 'harga_stok' },
     { k: 'stok_saat_ini', l: 'Stok Saat Ini', type: 'number', fmt: 'num', group: 'harga_stok' },
@@ -139,7 +139,7 @@ function renderBahanBakuTable(rows) {
       else if (f?.fmt === 'num') cell = fmtNum(v);
       else if (f?.type === 'date') cell = fmtDate(v);
       else if (k === 'kategori_sp' && v) {
-        const colors = { 'Karbohidrat':'bg-amber-100 text-amber-800','Protein Hewani':'bg-red-100 text-red-800','Protein Nabati':'bg-emerald-100 text-emerald-800','Sayur':'bg-green-100 text-green-800','Buah':'bg-orange-100 text-orange-800','Susu':'bg-blue-100 text-blue-800','Minyak':'bg-yellow-100 text-yellow-800' };
+        const colors = { 'Karbohidrat':'bg-amber-100 text-amber-800','Protein Hewani':'bg-red-100 text-red-800','Protein Nabati':'bg-emerald-100 text-emerald-800','Sayur':'bg-green-100 text-green-800','Buah':'bg-orange-100 text-orange-800','Bumbu':'bg-rose-100 text-rose-800','Susu':'bg-blue-100 text-blue-800','Minyak':'bg-yellow-100 text-yellow-800' };
         cell = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[v]||'bg-stone-100 text-stone-700'}">${v}</span>`;
       }
       return `<td class="${align} px-4 py-3 text-xs text-stone-600${width}">${cell}</td>`;

@@ -5,7 +5,7 @@ const CRUD_SP_REF = {
   sync: { endpoint: '/sp_referensi_bahan/sync-bahan-baku', label: 'Sync ke Bahan Baku', confirm: 'Perbarui nutrisi bahan baku dari data SP referensi?' },
   fields: [
     { k: 'nama', l: 'Nama Bahan (SP)', req: true },
-    { k: 'kategori', l: 'Kategori SP', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak'] },
+    { k: 'kategori', l: 'Kategori SP', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Bumbu','Susu','Minyak'] },
     { k: 'berat_bersih', l: 'Berat Bersih (gram)', type: 'number', fmt: 'num', decimals: 1 },
     { k: 'bdd_persen', l: 'BDD (%)', type: 'number', fmt: 'pct', step: '1' },
     { k: 'berat_kotor', l: 'Berat Kotor (gram)', type: 'number', fmt: 'num', decimals: 1, calc: { from: ['berat_bersih', 'bdd_persen'] } },

@@ -10,6 +10,7 @@ const KATEGORI_MAP = {
   'Sayur': ['Wortel', 'Buncis', 'Bayam', 'Kangkung', 'Kol', 'Brokoli', 'Sawi', 'Tomat', 'Timun', 'Labu', 'Pokcoy', 'Kembang Kol', 'Baby Corn', 'Jagung Semi', 'Daun Bawang', 'Daun Seledri', 'Daun Kemangi', 'Selada', 'Bawang Bombay'],
   'Buah': ['Jeruk', 'Pisang', 'Apel', 'Semangka', 'Melon', 'Pepaya', 'Pir', 'Salak', 'Leci', 'Buah Naga', 'Anggur', 'Mangga', 'Alpukat'],
   'Susu': ['Susu', 'SKM', 'Keju', 'Yoghurt', 'kental manis', 'Ultra', 'UHT'],
+  'Bumbu': ['Bawang Putih', 'Bawang Merah', 'Bawang Bombay', 'Garam', 'Gula', 'Kaldu', 'Saus', 'Saos', 'Kecap', 'Lada', 'Merica', 'Ketumbar', 'Kunyit', 'Jahe', 'Lengkuas', 'Sereh', 'Daun Salam', 'Daun Jeruk', 'Cabe', 'Cabai', 'Tepung Bumbu', 'Bumbu', 'Terasi', 'Asam Jawa', 'Pala', 'Kayu Manis', 'Cengkeh', 'Vanili'],
   'Minyak': ['Minyak Goreng', 'Minyak Wijen', 'Mentega', 'Butter', 'Margarin', 'Minyak'],
 };
 
