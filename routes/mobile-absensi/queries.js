@@ -183,6 +183,8 @@ function registerQueryRoutes(router) {
       const tw = tenantWhere('k');
       const { sql: tenantSql, params: tenantParams } = tw(req.user.tenant_id);
 
+      const [[tenant]] = await db.query(`SELECT nama FROM tenants WHERE id=?`, [req.user.tenant_id]);
+
       const [rows] = await db.query(
         `SELECT k.id, k.nama, k.nik, k.departemen, k.email, k.phone, k.photo, k.status,
                 k.tanggal_masuk, k.address, j.name as jabatan
@@ -193,7 +195,7 @@ function registerQueryRoutes(router) {
 
       if (!rows.length) return res.status(404).json({ error: 'Karyawan tidak ditemukan' });
 
-      res.json({ data: rows[0], user: { id: req.user.id, email: req.user.email, nama: req.user.nama, role: req.user.role } });
+      res.json({ data: rows[0], tenant: tenant ? tenant.nama : '', user: { id: req.user.id, email: req.user.email, nama: req.user.nama, role: req.user.role } });
     } catch (err) {
       console.error('Mobile profile error:', err.message);
       res.status(500).json({ error: 'Gagal memuat profil' });
