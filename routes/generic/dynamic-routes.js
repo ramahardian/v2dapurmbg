@@ -301,7 +301,8 @@ function registerDynamicRoutes(router) {
     res.json({
       total: Number(row.total),
       total_paket_besar: Number(row.total_paket_besar),
-      total_paket_kecil: Number(row.total_paket_kecil)
+      total_paket_kecil: Number(row.total_paket_kecil),
+      total_paket: Number(row.total) // total = paket_besar + paket_kecil
     });
   });
 
