@@ -461,7 +461,9 @@ async function openMenuForm(editing) {
     `;
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, keterangan: b.keterangan || '' }));
   // Biarkan nilai tersimpan dari DB — user bisa klik "↺ Reset ke SP" jika ingin reset
-  window._menuPorsi = 0;
+  var savedPorsi = Number(m.jumlah_porsi) || 0;
+  window._menuPorsi = savedPorsi;
+  document.getElementById('m-porsi').value = savedPorsi;
   renderBahanList();
   hitungNutrisi();
   
@@ -509,6 +511,7 @@ async function openMenuForm(editing) {
         karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
         lemak: +document.getElementById('m-lemak').value || 0,
         serat: +document.getElementById('m-serat').value || 0,
+        jumlah_porsi: Number(document.getElementById('m-porsi').value) || 0,
         bahan: window._menuBahan.filter(function(b) { return b.bahan_baku_id || b.nama; }),
       };
       if (editing) await api.put('/menu/' + editing.id, payload);

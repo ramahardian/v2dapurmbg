@@ -490,6 +490,15 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi buffer_persen)'); }
 
+  // jumlah_porsi di menu
+  try {
+    const [jpCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'menu' AND COLUMN_NAME = 'jumlah_porsi'");
+    if (!jpCol.length) {
+      await q("ALTER TABLE menu ADD COLUMN jumlah_porsi INT DEFAULT 0 AFTER serat");
+      log('✓ Migrasi menu: tambah kolom jumlah_porsi');
+    }
+  } catch (e) { log('  (skip migrasi jumlah_porsi menu)'); }
+
   // Multi-jenjang di siklus_menu
   try {
     const [kpCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'siklus_menu' AND COLUMN_NAME = 'kategori_penerima' AND DATA_TYPE = 'text'");

@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS menu (
   karbohidrat DECIMAL(10,2) DEFAULT 0,
   lemak DECIMAL(10,2) DEFAULT 0,
   serat DECIMAL(10,2) DEFAULT 0,
+  jumlah_porsi INT DEFAULT 0,
   foto VARCHAR(255) DEFAULT NULL,
   jenis_porsi ENUM('besar','kecil') DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

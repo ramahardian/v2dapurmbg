@@ -11,7 +11,7 @@ const {
 function registerCrudRoutes(router) {
   // POST /menu — create menu + bahan
   router.post('/menu', async (req, res) => {
-    const { nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, bahan } = req.body;
+    const { nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, jumlah_porsi, bahan } = req.body;
 
     if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama menu wajib diisi' });
 
@@ -29,11 +29,11 @@ function registerCrudRoutes(router) {
 
       // 1. Insert header menu
       const [r] = await conn.query(
-        `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, jumlah_porsi)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [req.user.tenant_id, nama, kategori_penerima || null, deskripsi || null,
          gramasi_total || 0, gramasi_besar || 0, gramasi_kecil || 0,
-         kalori || 0, protein || 0, karbohidrat || 0, lemak || 0, serat || 0]
+         kalori || 0, protein || 0, karbohidrat || 0, lemak || 0, serat || 0, jumlah_porsi || 0]
       );
 
       // 2. Insert bahan
@@ -91,11 +91,11 @@ function registerCrudRoutes(router) {
 
       // 1. Update header
       await conn.query(
-        `UPDATE menu SET nama=?, kategori_penerima=?, deskripsi=?, gramasi_total=?, gramasi_besar=?, gramasi_kecil=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=?
+        `UPDATE menu SET nama=?, kategori_penerima=?, deskripsi=?, gramasi_total=?, gramasi_besar=?, gramasi_kecil=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=?, jumlah_porsi=?
          WHERE id=? AND tenant_id=?`,
         [f.nama, f.kategori_penerima || null, f.deskripsi || null,
          f.gramasi_total || 0, f.gramasi_besar || 0, f.gramasi_kecil || 0,
-         f.kalori || 0, f.protein || 0, f.karbohidrat || 0, f.lemak || 0, f.serat || 0,
+         f.kalori || 0, f.protein || 0, f.karbohidrat || 0, f.lemak || 0, f.serat || 0, f.jumlah_porsi || 0,
          req.params.id, req.user.tenant_id]
       );
 

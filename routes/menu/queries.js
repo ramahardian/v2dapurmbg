@@ -28,7 +28,7 @@ function registerQueryRoutes(router) {
       const totalCount = totalCountResult[0].count;
 
       const [menus] = await db.query(
-        `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat
+        `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.jumlah_porsi
          FROM menu m ${whereClause}
          ORDER BY m.id DESC LIMIT ? OFFSET ?`,
         [...queryParams, Number(limit), Number(offset)]
@@ -77,7 +77,7 @@ function registerQueryRoutes(router) {
   // GET /menu/:id — detail menu + bahan
   router.get('/menu/:id', async (req, res) => {
     const [menus] = await db.query(
-      `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat,
+      `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.jumlah_porsi,
               mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.keterangan
        FROM menu m
        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
@@ -92,7 +92,7 @@ function registerQueryRoutes(router) {
       deskripsi: menus[0].deskripsi, gramasi_total: menus[0].gramasi_total,
       gramasi_besar: menus[0].gramasi_besar, gramasi_kecil: menus[0].gramasi_kecil,
       kalori: menus[0].kalori, protein: menus[0].protein, karbohidrat: menus[0].karbohidrat,
-      lemak: menus[0].lemak, serat: menus[0].serat, bahan: [],
+      lemak: menus[0].lemak, serat: menus[0].serat, jumlah_porsi: menus[0].jumlah_porsi, bahan: [],
     };
     menus.forEach(row => {
       if (row.bahan_baku_id) {
@@ -129,7 +129,7 @@ function registerQueryRoutes(router) {
           deskripsi: row.deskripsi, gramasi_total: row.gramasi_total,
           gramasi_besar: row.gramasi_besar, gramasi_kecil: row.gramasi_kecil,
           kalori: row.kalori, protein: row.protein, karbohidrat: row.karbohidrat,
-          lemak: row.lemak, serat: row.serat, bahan: [],
+          lemak: row.lemak, serat: row.serat, jumlah_porsi: row.jumlah_porsi, bahan: [],
         };
       }
       if (row.bahan_baku_id) {
