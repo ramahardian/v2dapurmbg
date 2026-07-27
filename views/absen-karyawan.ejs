@@ -351,9 +351,13 @@
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span>Foto wajib diambil</span>
           </div>
+          <div id="modal-photo-compressing" class="hidden text-xs text-blue-600 flex items-center gap-1.5">
+            <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            <span>Memproses foto...</span>
+          </div>
           <div id="modal-photo-ok" class="hidden text-xs text-emerald-600 flex items-center gap-1.5">
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <span>Foto berhasil diambil</span>
+            <span id="modal-photo-ok-text">Foto berhasil diambil</span>
           </div>
           <div id="modal-photo-camera-off" class="hidden text-xs text-amber-600 flex items-center gap-1.5">
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -698,12 +702,26 @@
       const active = document.getElementById('modal-camera-active');
       const retake = document.getElementById('modal-camera-retake');
       const btnYa = document.getElementById('modal-ya');
+      const compressing = document.getElementById('modal-photo-compressing');
+      const photoOk = document.getElementById('modal-photo-ok');
+      const photoOkText = document.getElementById('modal-photo-ok-text');
+      const photoError = document.getElementById('modal-photo-error');
 
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
 
+      if (compressing) { compressing.classList.remove('hidden'); }
+      if (photoOk) photoOk.classList.add('hidden');
+      if (photoError) photoError.classList.add('hidden');
+
       _photoBase64 = await compressImage(canvas.toDataURL('image/jpeg'));
+
+      if (compressing) compressing.classList.add('hidden');
+
+      const sizeKB = Math.round(_photoBase64.length * 0.75 / 1024);
+      if (photoOkText) photoOkText.textContent = 'Foto siap (' + sizeKB + ' KB)';
+      if (photoOk) photoOk.classList.remove('hidden');
 
       video.classList.add('hidden');
       active.classList.add('hidden');
@@ -713,8 +731,6 @@
       retake.classList.add('flex');
 
       document.getElementById('modal-camera-area').classList.remove('bg-black');
-      document.getElementById('modal-photo-error')?.classList.add('hidden');
-      document.getElementById('modal-photo-ok')?.classList.remove('hidden');
       btnYa.disabled = false;
 
       stopCamera();
@@ -731,6 +747,8 @@
       preview.classList.add('hidden');
       retake.classList.add('hidden');
       document.getElementById('modal-photo-ok')?.classList.add('hidden');
+      const pt = document.getElementById('modal-photo-ok-text');
+      if (pt) pt.textContent = 'Foto berhasil diambil';
       btnYa.disabled = true;
 
       // Restart camera
@@ -764,7 +782,7 @@
     // Confirm Absen
     async function confirmAbsen(type) {
       stopCamera();
-      const overlay=document.getElementById('modal-overlay'),icon=document.getElementById('modal-icon'),title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc'),btnYa=document.getElementById('modal-ya'),photoContainer=document.getElementById('modal-photo-container'),photoError=document.getElementById('modal-photo-error'),photoOk=document.getElementById('modal-photo-ok'),camOff=document.getElementById('modal-photo-camera-off');
+      const overlay=document.getElementById('modal-overlay'),icon=document.getElementById('modal-icon'),title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc'),btnYa=document.getElementById('modal-ya'),photoContainer=document.getElementById('modal-photo-container'),photoError=document.getElementById('modal-photo-error'),photoOk=document.getElementById('modal-photo-ok'),compressing=document.getElementById('modal-photo-compressing'),photoOkText=document.getElementById('modal-photo-ok-text'),camOff=document.getElementById('modal-photo-camera-off');
       const in_=type==='in';
       icon.className='w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center '+(in_?'bg-amber-100':'bg-blue-100');
       icon.innerHTML=in_?'<svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>':'<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
@@ -787,6 +805,7 @@
       if (photoContainer) photoContainer.classList.remove('hidden');
       if (photoError) photoError.classList.add('hidden');
       if (photoOk) photoOk.classList.add('hidden');
+      if (compressing) compressing.classList.add('hidden');
       if (camOff) camOff.classList.add('hidden');
       if (fileInput) fileInput.value = '';
       btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!'; btnYa.className='flex-1 h-11 btn btn-primary'; btnYa.disabled=true;
@@ -799,12 +818,17 @@
           if (file.size > 10 * 1024 * 1024) { showToast('Ukuran foto maksimal 10MB', 'error'); e.target.value = ''; return; }
           const reader = new FileReader();
           reader.onload = async function(ev) {
+            if (compressing) compressing.classList.remove('hidden');
+            if (photoOk) photoOk.classList.add('hidden');
+            if (photoError) photoError.classList.add('hidden');
             _photoBase64 = await compressImage(ev.target.result);
+            if (compressing) compressing.classList.add('hidden');
+            const sizeKB = Math.round(_photoBase64.length * 0.75 / 1024);
+            if (photoOkText) photoOkText.textContent = 'Foto siap (' + sizeKB + ' KB)';
+            if (photoOk) photoOk.classList.remove('hidden');
             if (img) img.src = _photoBase64;
             if (preview) preview.classList.remove('hidden');
             if (start) start.classList.add('hidden');
-            if (photoError) photoError.classList.add('hidden');
-            if (photoOk) photoOk.classList.remove('hidden');
             if (retake) { retake.classList.remove('hidden'); retake.classList.add('flex'); }
             document.getElementById('modal-camera-area').classList.add('bg-black');
             btnYa.disabled = false;
