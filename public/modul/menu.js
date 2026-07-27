@@ -1133,14 +1133,16 @@ async function createPoFromMenu(menuId) {
     showToast('Membuat PO dari menu...', 'info');
     
     const poRes = await api.post('/purchase_order', {
-      nomor: 'MEN-' + new Date().getTime(),
+      no_po: 'MEN-' + new Date().getTime(),
+      tanggal: new Date().toISOString().slice(0, 10),
       supplier_id: supplierId,
-      notes: notes || `PO otomatis dari menu: ${currentMenu.nama}`,
-      items: poItems,
-      kategori_penerima: currentMenu.kategori_penerima || null
+      total_nilai: totalRp,
+      status: 'Draft',
+      item: JSON.stringify(poItems),
+      catatan: notes || `PO otomatis dari menu: ${currentMenu.nama}`
     });
     
-    showAlert('✅ PO berhasil dibuat: ' + poRes.nomor, 'success');
+    showAlert('✅ PO berhasil dibuat: ' + poRes.no_po, 'success');
     closeModal();
     
     // Refresh purchase order list
@@ -1261,14 +1263,16 @@ async function createPoFromMenu(menuId) {
     showToast('Membuat PO dari menu...', 'info');
     
     const poRes = await api.post('/purchase_order', {
-      nomor: 'MEN-' + new Date().getTime(),
+      no_po: 'MEN-' + new Date().getTime(),
+      tanggal: new Date().toISOString().slice(0, 10),
       supplier_id: supplierId,
-      notes: notes || `PO otomatis dari menu: ${currentMenu.nama}`,
-      items: poItems,
-      kategori_penerima: currentMenu.kategori_penerima || null
+      total_nilai: totalRp,
+      status: 'Draft',
+      item: JSON.stringify(poItems),
+      catatan: notes || `PO otomatis dari menu: ${currentMenu.nama}`
     });
     
-    showAlert('✅ PO berhasil dibuat: ' + poRes.nomor, 'success');
+    showAlert('✅ PO berhasil dibuat: ' + poRes.no_po, 'success');
     closeModal();
     
     // Refresh purchase order list
