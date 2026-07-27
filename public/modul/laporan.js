@@ -217,7 +217,8 @@ const tabColors = {
         '<div class="overflow-x-auto"><table class="w-full text-xs">' +
         '<thead><tr class="bg-stone-50">' +
         '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Kategori</th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Harga/Porsi</th>' +
+        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Porsi Besar</th>' +
+        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Porsi Kecil</th>' +
         '<th class="text-center px-1 py-3 text-[10px] font-bold text-stone-400" style="width:16px"></th>' +
         '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Penerima</th>' +
         '<th class="text-center px-1 py-3 text-[10px] font-bold text-stone-400" style="width:16px"></th>' +
@@ -241,7 +242,8 @@ const tabColors = {
         if (!isSub) catIdx++;
         tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors ' + bgRow + '">' +
           '<td class="px-4 py-3 font-medium text-xs"><span class="inline-block w-2 h-2 rounded-full mr-2" style="background:' + dotColor + '"></span>' + escHtml(b.kategori) + '</td>' +
-          '<td class="px-4 py-3 text-right mono text-xs font-semibold text-stone-700">' + (b.harga_per_porsi > 0 ? fmtIdr(b.harga_per_porsi) : '<span class="text-stone-300">—</span>') + '</td>' +
+          '<td class="px-4 py-3 text-right mono text-xs font-semibold text-amber-700">' + (b.harga_besar > 0 ? fmtIdr(b.harga_besar) : '<span class="text-stone-300">—</span>') + '</td>' +
+          '<td class="px-4 py-3 text-right mono text-xs font-semibold text-rose-600">' + (b.harga_kecil > 0 ? fmtIdr(b.harga_kecil) : '<span class="text-stone-300">—</span>') + '</td>' +
           '<td class="px-1 py-3 text-center text-stone-300 text-[9px]">×</td>' +
           '<td class="px-4 py-3 text-right text-xs font-semibold text-stone-700">' + fmtNum(b.jumlah_penerima) + '</td>' +
           '<td class="px-1 py-3 text-center text-stone-300 text-[9px]">×</td>' +
@@ -255,7 +257,7 @@ const tabColors = {
       catIdx = 0;
       tableContent += '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-stone-100 to-stone-50">' +
         '<td class="px-4 py-3.5 font-bold text-xs text-stone-800">Total ' + rows.length + ' kategori</td>' +
-        '<td class="px-4 py-3.5"></td><td class="px-1 py-3.5"></td>' +
+        '<td class="px-4 py-3.5"></td><td class="px-4 py-3.5"></td><td class="px-1 py-3.5"></td>' +
         '<td class="px-4 py-3.5 text-right font-bold text-xs text-stone-800">' + fmtNum(r.grand_penerima) + '</td>' +
         '<td class="px-1 py-3.5"></td>' +
         '<td class="px-4 py-3.5 text-right font-bold text-xs text-stone-800">' + (r.total_hari || 0) + '</td>' +

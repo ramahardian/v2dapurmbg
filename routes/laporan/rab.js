@@ -526,7 +526,8 @@ function registerRabRoutes(router) {
           grandTotal += total;
           rows.push({
             kategori: 'Posyandu',
-            harga_per_porsi: hargaRata,
+            harga_besar: hargaBesar,
+            harga_kecil: hargaKecil,
             jumlah_penerima: totalPenerima,
             jumlah_hari: total_hari || 0,
             budget: budgetGabung,
@@ -542,7 +543,8 @@ function registerRabRoutes(router) {
           grandTotal += total;
           rows.push({
             kategori,
-            harga_per_porsi: harga,
+            harga_besar: harga,
+            harga_kecil: harga,
             jumlah_penerima: jmlPenerima,
             jumlah_hari: jmlHari,
             budget: budgetMap[kategori] || 0,
