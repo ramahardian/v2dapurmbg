@@ -500,32 +500,39 @@ function registerRabRoutes(router) {
 
       let grandPenerima = 0;
       let grandTotal = 0;
-      const POSYANDU_SLICE = [
-        { display: 'Bumil/Busui', col: 'total_besar' },
-        { display: 'Balita', col: 'total_kecil' },
-      ];
       const rows = [];
       for (const p of penerima) {
         const kategori = dbToDisplay[p.kategori_penerima] || p.kategori_penerima;
         const rawKat = p.kategori_penerima;
         if (rawKat === 'Posyandu') {
-          for (const sl of POSYANDU_SLICE) {
-            const subJml = Number(p[sl.col]) || 0;
-            if (!subJml) continue;
-            const harga = hargaMap[sl.display] || 0;
-            const total = harga * subJml * (total_hari || 0);
-            grandPenerima += subJml;
-            grandTotal += total;
-            rows.push({
-              kategori: 'Posyandu (' + sl.display + ')',
-              harga_per_porsi: harga,
-              jumlah_penerima: subJml,
-              jumlah_hari: total_hari || 0,
-              budget: budgetMap[sl.display] || 0,
-              realisasi: realisasiMap[sl.display] || 0,
-              total,
-            });
-          }
+          // Gabung Posyandu jadi satu baris: hitung rata-rata tertimbang harga besar & kecil
+          const totalBesar = Number(p.total_besar) || 0;
+          const totalKecil = Number(p.total_kecil) || 0;
+          const totalPenerima = totalBesar + totalKecil;
+          if (!totalPenerima) continue;
+
+          const hargaBesar = hargaMap['Bumil/Busui'] || 0;
+          const hargaKecil = hargaMap['Balita'] || 0;
+
+          // Weighted average harga per porsi (pembulatan ke rupiah terdekat)
+          const hargaRata = Math.round((hargaBesar * totalBesar + hargaKecil * totalKecil) / totalPenerima);
+
+          // Gabung budget & realisasi dari kedua sub-kategori
+          const budgetGabung = (budgetMap['Bumil/Busui'] || 0) + (budgetMap['Balita'] || 0);
+          const realisasiGabung = (realisasiMap['Bumil/Busui'] || 0) + (realisasiMap['Balita'] || 0);
+          const total = hargaRata * totalPenerima * (total_hari || 0);
+
+          grandPenerima += totalPenerima;
+          grandTotal += total;
+          rows.push({
+            kategori: 'Posyandu',
+            harga_per_porsi: hargaRata,
+            jumlah_penerima: totalPenerima,
+            jumlah_hari: total_hari || 0,
+            budget: budgetGabung,
+            realisasi: realisasiGabung,
+            total,
+          });
         } else {
           const harga = hargaMap[kategori] || 0;
           const jmlPenerima = Number(p.total_penerima);
