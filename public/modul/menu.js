@@ -443,7 +443,7 @@ async function openMenuForm(editing) {
         <div class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Bahan</div>
         <div class="flex items-center gap-2">
           <button type="button" onclick="addBahanRow()" class="text-xs font-medium border border-stone-200 px-3 py-1.5 rounded-lg hover:bg-stone-50 shadow-sm transition-all">+ Tambah Bahan</button>
-          <button type="button" onclick="openMenuPoModal()" class="text-xs font-medium border border-emerald-300 text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5" title="Buat PO dari Menu">
+          <button type="button" onclick="saveCurrentMenuFromForm(); openMenuPoModal()" class="text-xs font-medium border border-emerald-300 text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5" title="Buat PO dari Menu">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             Buat PO
           </button>
@@ -459,6 +459,7 @@ async function openMenuForm(editing) {
       <div id="bahan-list" class="space-y-2"></div>
     </div>
     `;
+  window._editingMenuData = editing || null;
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, keterangan: b.keterangan || '' }));
   // Biarkan nilai tersimpan dari DB — user bisa klik "↺ Reset ke SP" jika ingin reset
   var savedPorsi = Number(m.jumlah_porsi) || 0;
@@ -989,6 +990,43 @@ function showMenuInfo() {
 }
 
 // Save current menu for PO creation
+function saveCurrentMenuForPO(data) {
+  window._currentMenu = data;
+}
+
+// Save menu data from the form (editing/adding) to _currentMenu
+function saveCurrentMenuFromForm() {
+  var editingData = window._editingMenuData;
+  if (!editingData || !editingData.id) {
+    showAlert('Simpan menu terlebih dahulu sebelum membuat PO.', 'warning');
+    return;
+  }
+  var nama = document.getElementById('m-nama').value || editingData.nama || '';
+  var bahan = (window._menuBahan || []).filter(function(b) { return b.nama; }).map(function(b) {
+    return {
+      bahan_baku_id: b.bahan_baku_id,
+      nama: b.nama,
+      jumlah: b.jumlah,
+      satuan: b.satuan || 'g',
+      keterangan: b.keterangan || ''
+    };
+  });
+  window._currentMenu = {
+    id: editingData.id,
+    nama: nama,
+    kategori_penerima: editingData.kategori_penerima || null,
+    gramasi_total: editingData.gramasi_total || 0,
+    kalori: editingData.kalori || 0,
+    protein: editingData.protein || 0,
+    karbohidrat: editingData.karbohidrat || 0,
+    lemak: editingData.lemak || 0,
+    serat: editingData.serat || 0,
+    jumlah_porsi: Number(document.getElementById('m-porsi').value) || 0,
+    bahan: bahan,
+    status: editingData.status || ''
+  };
+}
+
 async function openMenuPoModal() {
   const currentMenu = window._currentMenu || {};
   if (!currentMenu.id) {
