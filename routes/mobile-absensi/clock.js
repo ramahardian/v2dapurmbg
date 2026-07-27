@@ -4,7 +4,22 @@
  * POST /absensi/clock-out — Absen pulang (dengan validasi shift & deadline)
  */
 const db = require('../../db');
+const fs = require('fs');
+const path = require('path');
 const { localDateStr, tenantWhere, parseTimeToMinutes, verifyClientTime, getEffectiveShift } = require('./helpers');
+
+function saveBase64Photo(base64Data, prefix) {
+  if (!base64Data || !base64Data.startsWith('data:image')) return null;
+  const matches = base64Data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);
+  if (!matches) return null;
+  const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+  const buffer = Buffer.from(matches[2], 'base64');
+  const filename = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const dir = path.join(__dirname, '..', '..', 'public', 'uploads', 'absensi');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  return '/uploads/absensi/' + filename;
+}
 
 function registerClockRoutes(router) {
   // POST /absensi/clock-in
@@ -14,7 +29,7 @@ function registerClockRoutes(router) {
       const timeCheck = verifyClientTime(client_time);
       if (!timeCheck.ok) return res.status(403).json({ error: timeCheck.pesan });
 
-      const { keterangan } = req.body;
+      const { keterangan, foto_masuk } = req.body;
       const tenant_id = req.user.tenant_id;
       const karyawan_id = req.karyawan.id;
       const today = localDateStr(new Date());
@@ -70,11 +85,12 @@ function registerClockRoutes(router) {
       }
 
       const status = terlambat ? 'Terlambat' : 'Hadir';
+      const fotoMasukPath = saveBase64Photo(foto_masuk, 'in');
       const [r] = await db.query(
-        `INSERT INTO absensi (tenant_id, karyawan_id, tanggal, status, jam_masuk, keterangan) VALUES (?,?,?,?,?,?)`,
-        [tenant_id, karyawan_id, today, status, nowTime, keterangan || null]
+        `INSERT INTO absensi (tenant_id, karyawan_id, tanggal, status, jam_masuk, keterangan, foto_masuk) VALUES (?,?,?,?,?,?,?)`,
+        [tenant_id, karyawan_id, today, status, nowTime, keterangan || null, fotoMasukPath]
       );
-      const [rows] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan FROM absensi WHERE id=?`, [r.insertId]);
+      const [rows] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan, foto_masuk FROM absensi WHERE id=?`, [r.insertId]);
       res.json({ ok: true, pesan: 'Clock-in berhasil', data: rows[0] });
     } catch (err) {
       console.error('Mobile clock-in error:', err);
@@ -89,7 +105,7 @@ function registerClockRoutes(router) {
       const timeCheck = verifyClientTime(client_time);
       if (!timeCheck.ok) return res.status(403).json({ error: timeCheck.pesan });
 
-      const { keterangan } = req.body;
+      const { keterangan, foto_keluar } = req.body;
       const tenant_id = req.user.tenant_id;
       const karyawan_id = req.karyawan.id;
       const now = new Date();
@@ -149,19 +165,21 @@ function registerClockRoutes(router) {
           else { if (nowMinutes > 720) butuhKoreksi = true; }
 
           const catatan = butuhKoreksi ? (keterangan ? keterangan + ' | Butuh Koreksi' : 'Butuh Koreksi') : (keterangan || null);
+          const fotoKeluarPath = saveBase64Photo(foto_keluar, 'out');
 
           await db.query(
-            `UPDATE absensi SET jam_keluar=?, keterangan=?, status=? WHERE id=? AND ${tSql}`,
-            [nowTime, catatan, butuhKoreksi ? 'Butuh Koreksi' : 'Hadir', existing[0].id, ...tParams]
+            `UPDATE absensi SET jam_keluar=?, keterangan=?, status=?, foto_keluar=? WHERE id=? AND ${tSql}`,
+            [nowTime, catatan, butuhKoreksi ? 'Butuh Koreksi' : 'Hadir', fotoKeluarPath, existing[0].id, ...tParams]
           );
-          const [updated] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan FROM absensi WHERE id=?`, [existing[0].id]);
+          const [updated] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan, foto_masuk, foto_keluar FROM absensi WHERE id=?`, [existing[0].id]);
           return res.json({ ok: true, pesan: butuhKoreksi ? 'Clock-out berhasil (Butuh Koreksi)' : 'Clock-out berhasil', butuh_koreksi: butuhKoreksi, data: updated[0] });
         }
       }
 
       // Fallback: tidak ada shift
-      await db.query(`UPDATE absensi SET jam_keluar=?, keterangan=? WHERE id=? AND ${tSql}`, [nowTime, keterangan || null, existing[0].id, ...tParams]);
-      const [updated] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan FROM absensi WHERE id=?`, [existing[0].id]);
+      const fotoKeluarPath = saveBase64Photo(foto_keluar, 'out');
+      await db.query(`UPDATE absensi SET jam_keluar=?, keterangan=?, foto_keluar=? WHERE id=? AND ${tSql}`, [nowTime, keterangan || null, fotoKeluarPath, existing[0].id, ...tParams]);
+      const [updated] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan, foto_masuk, foto_keluar FROM absensi WHERE id=?`, [existing[0].id]);
       res.json({ ok: true, pesan: 'Clock-out berhasil', butuh_koreksi: false, data: updated[0] });
     } catch (err) {
       console.error('Mobile clock-out error:', err);

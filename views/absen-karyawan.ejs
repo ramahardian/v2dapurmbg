@@ -352,6 +352,23 @@
         <div class="spinner shrink-0" style="width:1rem;height:1rem"></div>
         <span id="modal-location-text">Mendapatkan lokasi...</span>
       </div>
+      
+      <!-- Photo Upload Section -->
+      <div id="modal-photo-container" class="hidden">
+        <div class="text-xs font-medium text-stone-500 mb-2 mt-2">Bukti Absen (Foto) <span class="text-stone-400 font-normal text-xs ml-1">(opsional, tampilan)</span></div>
+        <div class="relative w-24 h-24 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 flex items-center justify-center cursor-pointer transition-all hover:border-blue-400 hover:bg-blue-50" onclick="document.getElementById('modal-photo-input').click()">
+          <input type="file" id="modal-photo-input" class="hidden" accept="image/*" capture="environment">
+          <div id="modal-photo-preview" class="w-full h-full rounded-xl overflow-hidden hidden">
+            <img id="modal-photo-img" src="" alt="Bukti Absen" class="w-full h-full object-cover">
+          </div>
+          <div id="modal-photo-placeholder" class="flex flex-col items-center gap-1">
+            <svg class="w-6 h-6 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 16.5V16.5M12 9.5V16.5M7 8.5V16.5M17 8.5V16.5M9.5 12.5H14.5M2.5 12.5C2.5 8.63 5.63 5.5 9.5 5.5V5.5C13.37 5.5 16.5 8.63 16.5 12.5V17.5C16.5 18.33 16 19 14.5 19H9.5C8 19 7.5 18.33 7.5 17.5V12.5Z"/></svg>
+            <span class="text-stone-400 text-xs">Klik untuk foto</span>
+          </div>
+        </div>
+        <div class="text-stone-400 text-xs mt-1">Pilih dan upload bukti foto absen (opsional)</div>
+      </div>
+      
       <div class="flex gap-3">
         <button id="modal-batal" class="flex-1 h-11 rounded-xl border border-stone-200 text-sm font-medium text-stone-600 hover:bg-stone-50 shadow-sm transition-all">Batal</button>
         <button id="modal-ya" class="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-all">Ya, Absen!</button>
@@ -669,7 +686,7 @@
 
     // Confirm Absen
     async function confirmAbsen(type) {
-      const overlay=document.getElementById('modal-overlay'),icon=document.getElementById('modal-icon'),title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc'),locEl=document.getElementById('modal-location'),locText=document.getElementById('modal-location-text'),locSpin=locEl.querySelector('.spinner'),btnYa=document.getElementById('modal-ya');
+      const overlay=document.getElementById('modal-overlay'),icon=document.getElementById('modal-icon'),title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc'),locEl=document.getElementById('modal-location'),locText=document.getElementById('modal-location-text'),locSpin=locEl.querySelector('.spinner'),btnYa=document.getElementById('modal-ya'),photoPreview=document.getElementById('modal-photo-preview'),photoInput=document.getElementById('modal-photo-input'),photoContainer=document.getElementById('modal-photo-container');
       const in_=type==='in';
       icon.className='w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center '+(in_?'bg-amber-100':'bg-blue-100');
       icon.innerHTML=in_?'<svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>':'<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
@@ -679,8 +696,64 @@
       const loc=await getLocation();
       if(loc){currentLocation=loc;if(locSpin)locSpin.classList.add('hidden');locText.textContent='📍 '+loc.lat.toFixed(4)+', '+loc.lng.toFixed(4);}
       else{currentLocation=null;if(locSpin)locSpin.classList.add('hidden');locText.textContent='📍 Lokasi tidak tersedia (absen tanpa lokasi)';}
+      // Siapkan photo preview
+      if (photoPreview) photoPreview.classList.add('hidden');
+      if (photoPreview) photoPreview.src = '';
+      if (photoInput) photoInput.value = '';
+      if (photoContainer) photoContainer.classList.remove('hidden');
+      
+      // Setup photo preview
+      if (photoInput) {
+        const oldHandler = photoInput.onclick;
+        photoInput.onclick = function(e) {
+          e.stopPropagation();
+          if (oldHandler) oldHandler.call(this, e);
+        };
+        photoInput.onchange = function(e) {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const maxSize = 2 * 1024 * 1024; // 2MB
+          if (file.size > maxSize) {
+            showToast('Ukuran photo maksimal 2MB', 'error');
+            e.target.value = '';
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = function(ev) {
+            if (photoPreview) {
+              photoPreview.src = ev.target.result;
+              photoPreview.classList.remove('hidden');
+            }
+            if (photoContainer) {
+              photoContainer.classList.remove('hidden');
+              const placeholder = document.getElementById('modal-photo-placeholder');
+              if (placeholder) placeholder.classList.add('hidden');
+            }
+            btnYa.disabled = false;
+          };
+          reader.readAsDataURL(file);
+        };
+      }
+      
       overlay.classList.remove('hidden');
-      btnYa.onclick=async()=>{btnYa.disabled=true;btnYa.textContent='Memproses...';try{const body={client_time:new Date().toISOString()};if(currentLocation){body.latitude=currentLocation.lat;body.longitude=currentLocation.lng;}const r=await fetch(in_?'/api/mobile/absensi/clock-in':'/api/mobile/absensi/clock-out',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Gagal');showToast(in_?'✅ Clock-in berhasil!':'✅ Clock-out berhasil!','success');overlay.classList.add('hidden');loadAll();}catch(ex){showToast('❌ '+ex.message,'error');btnYa.disabled=false;btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!';}};
+      btnYa.onclick=async()=>{btnYa.disabled=true;btnYa.textContent='Memproses...';try{const body={client_time:new Date().toISOString()};if(currentLocation){body.latitude=currentLocation.lat;body.longitude=currentLocation.lng;}
+        if (photoInput && photoInput.value) {
+          const file = photoInput.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              body.foto = e.target.result;
+            };
+            await new Promise(resolve => { reader.onload = () => resolve(); reader.readAsDataURL(file); });
+          }
+        }
+        const r=await fetch(in_?'/api/mobile/absensi/clock-in':'/api/mobile/absensi/clock-out',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const data=await r.json();
+        if(!r.ok)throw new Error(data.error||'Gagal');
+        showToast(in_?'✅ Clock-in berhasil!':'✅ Clock-out berhasil!','success');
+        overlay.classList.add('hidden');
+        loadAll();
+      }catch(ex){showToast('❌ '+ex.message,'error');btnYa.disabled=false;btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!';}};
       document.getElementById('modal-batal').onclick=()=>{overlay.classList.add('hidden');btnYa.disabled=false;};
       overlay.addEventListener('click',e=>{if(e.target===overlay){overlay.classList.add('hidden');btnYa.disabled=false;}});
     }
