@@ -780,6 +780,250 @@ function registerRabRoutes(router) {
     }
   });
 
+  // ===== RAB Harian — kebutuhan bahan per hari dengan harga dari bahan_baku =====
+  router.get('/laporan/rab-harian', roleOps, async (req, res) => {
+    try {
+      const t = req.user.tenant_id;
+      const tanggal = req.query.tanggal || new Date().toISOString().slice(0, 10);
+      const siklusId = req.query.siklus_id || '';
+
+      let siklusInfo = null;
+      let hariKe = 0;
+      let menuItems = [];
+
+      if (siklusId) {
+        const [[siklus]] = await db.query(
+          `SELECT id, nama, total_hari, kategori_penerima, jumlah_porsi, tanggal_mulai
+           FROM siklus_menu WHERE id=? AND tenant_id=?`,
+          [siklusId, t]
+        );
+        if (siklus) {
+          siklusInfo = {
+            id: siklus.id,
+            nama: siklus.nama,
+            total_hari: Number(siklus.total_hari) || 0,
+            kategori_penerima: siklus.kategori_penerima,
+            jumlah_porsi: Number(siklus.jumlah_porsi) || 0,
+            tanggal_mulai: siklus.tanggal_mulai,
+          };
+
+          if (siklus.tanggal_mulai) {
+            const msDiff = new Date(tanggal).getTime() - new Date(siklus.tanggal_mulai).getTime();
+            hariKe = Math.floor(msDiff / (1000 * 60 * 60 * 24)) + 1;
+            if (hariKe < 1 || hariKe > (siklusInfo.total_hari || 99)) hariKe = 0;
+          }
+
+          // Get menu items for this day
+          if (hariKe > 0) {
+            [menuItems] = await db.query(
+              `SELECT si.id, si.hari_ke, si.hari_nama, si.menu_id, si.menu_nama, si.jumlah_porsi
+               FROM siklus_menu_item si
+               WHERE si.siklus_id=? AND si.hari_ke=?
+               ORDER BY si.id ASC`,
+              [siklusId, hariKe]
+            );
+          } else {
+            // If no tanggal_mulai, return all days
+            [menuItems] = await db.query(
+              `SELECT si.id, si.hari_ke, si.hari_nama, si.menu_id, si.menu_nama, si.jumlah_porsi
+               FROM siklus_menu_item si
+               WHERE si.siklus_id=?
+               ORDER BY si.hari_ke ASC`,
+              [siklusId]
+            );
+          }
+        }
+      } else {
+        // Find active siklus
+        const [[siklus]] = await db.query(
+          `SELECT id, nama, total_hari, kategori_penerima, jumlah_porsi, tanggal_mulai
+           FROM siklus_menu WHERE tenant_id=? AND status='Aktif' LIMIT 1`,
+          [t]
+        );
+        if (siklus) {
+          siklusInfo = {
+            id: siklus.id,
+            nama: siklus.nama,
+            total_hari: Number(siklus.total_hari) || 0,
+            kategori_penerima: siklus.kategori_penerima,
+            jumlah_porsi: Number(siklus.jumlah_porsi) || 0,
+            tanggal_mulai: siklus.tanggal_mulai,
+          };
+          if (siklus.tanggal_mulai) {
+            const msDiff = new Date(tanggal).getTime() - new Date(siklus.tanggal_mulai).getTime();
+            hariKe = Math.floor(msDiff / (1000 * 60 * 60 * 24)) + 1;
+          }
+          if (hariKe > 0) {
+            [menuItems] = await db.query(
+              `SELECT si.id, si.hari_ke, si.hari_nama, si.menu_id, si.menu_nama, si.jumlah_porsi
+               FROM siklus_menu_item si
+               WHERE si.siklus_id=? AND si.hari_ke=?
+               ORDER BY si.id ASC`,
+              [siklus.id, hariKe]
+            );
+          }
+        }
+      }
+
+      if (!menuItems.length) {
+        return res.json({
+          tanggal,
+          siklus: siklusInfo,
+          hari_ke: hariKe,
+          menu_harian: '',
+          items: [],
+          total: 0,
+          message: 'Tidak ada menu untuk tanggal ini',
+        });
+      }
+
+      // Load bahan with prices for all menus
+      const menuIds = [...new Set(menuItems.filter(m => m.menu_id).map(m => m.menu_id))];
+      const dbToDisplay = buildDbToDisplay();
+
+      // Get PM counts per jenjang
+      const siklusKat = siklusInfo ? parseKategoriPenerima(siklusInfo.kategori_penerima || '') : [];
+      const allDbVals = expandJenjangToDbValues(siklusKat);
+      const pmMap = {};
+      if (allDbVals.length) {
+        const ph = allDbVals.map(() => '?').join(',');
+        const [pmRows] = await db.query(
+          `SELECT kategori_penerima, COALESCE(SUM(paket_besar + paket_kecil),0) AS total
+           FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})
+           GROUP BY kategori_penerima`,
+          [t, ...allDbVals]
+        );
+        for (const p of pmRows) pmMap[p.kategori_penerima] = Number(p.total);
+      }
+
+      // Load bahan for all menus
+      const bahanByMenu = {};
+      if (menuIds.length) {
+        const mph = menuIds.map(() => '?').join(',');
+        const [bahanRows] = await db.query(
+          `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah, mb.keterangan,
+                  b.nama as bahan_nama, b.satuan, b.harga_satuan, b.berat_per_satuan
+           FROM menu_bahan mb
+           JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+           WHERE mb.menu_id IN (${mph})`,
+          menuIds
+        );
+        for (const br of bahanRows) {
+          if (!bahanByMenu[br.menu_id]) bahanByMenu[br.menu_id] = [];
+          bahanByMenu[br.menu_id].push({
+            bahan_baku_id: br.bahan_baku_id,
+            bahan_nama: br.bahan_nama,
+            satuan: br.satuan || 'g',
+            jumlah_per_porsi: Number(br.jumlah) || 0,
+            harga_satuan: Number(br.harga_satuan) || 0,
+            keterangan: br.keterangan || '',
+          });
+        }
+      }
+
+      // Aggregate bahan across all menus for this day
+      const displayKats = siklusKat.length > 0 ? siklusKat.map(k => dbToDisplay[k] || k) : ['Umum'];
+      let grandTotal = 0;
+      const bahanAgg = {}; // key: bahan_baku_id
+
+      for (const mi of menuItems) {
+        const dbKeys = Object.keys(pmMap).filter(k => (dbToDisplay[k] || k) === displayKats[0]);
+        const totalPm = dbKeys.reduce((s, k) => s + (pmMap[k] || 0), 0) || Number(siklusInfo?.jumlah_porsi || 0) || 1;
+        const porsi = Number(mi.jumlah_porsi) || totalPm;
+
+        const bahanList = bahanByMenu[mi.menu_id] || [];
+        const menuNama = mi.menu_nama || 'Menu #' + mi.menu_id;
+
+        for (const b of bahanList) {
+          const totalGram = b.jumlah_per_porsi * porsi;
+          const totalKg = Math.round((totalGram / 1000) * 1000) / 1000;
+
+          if (!bahanAgg[b.bahan_baku_id]) {
+            bahanAgg[b.bahan_baku_id] = {
+              bahan_baku_id: b.bahan_baku_id,
+              bahan_nama: b.bahan_nama,
+              satuan: b.satuan,
+              total_gram: 0,
+              total_kg: 0,
+              harga_satuan: b.harga_satuan,
+              total_harga: 0,
+              keterangan: b.keterangan || '',
+            };
+          }
+          bahanAgg[b.bahan_baku_id].total_gram += totalGram;
+          bahanAgg[b.bahan_baku_id].total_kg += totalKg;
+        }
+      }
+
+      // Calculate totals with prices and build items array
+      let no = 0;
+      const items = Object.values(bahanAgg)
+        .sort((a, b) => b.total_kg - a.total_kg)
+        .map(b => {
+          no++;
+          // Determine display qty and unit - convert to KG if gram >= 1000, else keep as satuan
+          let displayQty, displaySatuan;
+          if (b.total_gram >= 1000) {
+            displayQty = b.total_kg;
+            displaySatuan = 'KG';
+          } else if (b.total_gram > 0) {
+            displayQty = Math.round(b.total_gram * 100) / 100;
+            displaySatuan = b.satuan === 'g' ? 'GRAM' : b.satuan.toUpperCase();
+          } else {
+            displayQty = 0;
+            displaySatuan = b.satuan.toUpperCase();
+          }
+
+          const jumlah = Math.round(b.harga_satuan * displayQty);
+          grandTotal += jumlah;
+
+          return {
+            no,
+            nama: b.bahan_nama,
+            qty: displayQty,
+            satuan: displaySatuan,
+            harga: b.harga_satuan,
+            jumlah,
+            keterangan: b.keterangan,
+          };
+        });
+
+      // Get anggaran belanja harian from budget table
+      const periode = tanggal.slice(0, 7);
+      const [[{ total_budget_periode, total_hari_periode } = { total_budget_periode: 0, total_hari_periode: 0 }]] = await db.query(
+        `SELECT COALESCE(SUM(total_budget),0) AS total_budget_periode,
+                COALESCE(MAX(sm.total_hari),0) AS total_hari_periode
+         FROM budget b
+         LEFT JOIN siklus_menu sm ON sm.id=? AND sm.tenant_id=?
+         WHERE b.tenant_id=? AND b.periode=?`,
+        [siklusId || 0, t, t, periode]
+      );
+
+      const totalHariBudget = total_hari_periode || siklusInfo?.total_hari || 1;
+      const anggaranBelanjaHarian = Math.round(total_budget_periode / Math.max(totalHariBudget, 1));
+
+      // Build menu description
+      const menuDeskripsi = menuItems.map(m => m.menu_nama).filter(Boolean).join(' + ');
+      const hariNama = menuItems[0]?.hari_nama || '';
+
+      res.json({
+        tanggal,
+        hari: hariNama,
+        siklus: siklusInfo,
+        hari_ke: hariKe,
+        menu_deskripsi: menuDeskripsi,
+        items,
+        total: grandTotal,
+        anggaran_belanja_harian: anggaranBelanjaHarian,
+        sisa: anggaranBelanjaHarian - grandTotal,
+        item_count: items.length,
+      });
+    } catch (err) {
+      console.error('RAB harian error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ===== RAB Pembelian Supplier — rincian biaya pembelian per periode =====
   router.get('/laporan/rab-pembelian-suplier', roleFinance, async (req, res) => {
     try {

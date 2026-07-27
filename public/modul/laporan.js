@@ -17,7 +17,7 @@ async function renderLaporan() {
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
   }
 }
-const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'arus-kas', 'keuangan', 'hpp', 'rab-pembelian', 'jurnal-umum', 'buku-besar', 'neraca'];
+const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-harian', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'arus-kas', 'keuangan', 'hpp', 'rab-pembelian', 'jurnal-umum', 'buku-besar', 'neraca'];
 const LAP_PAGE_SIZE = 10;
 let lapState = { tab: 'siklus', page: 1 };
 
@@ -40,6 +40,7 @@ const tabColors = {
     siklus: { active: 'bg-white text-rose-600 shadow-sm', inactive: 'bg-rose-100 text-rose-700 hover:bg-rose-200' },
     produksi: { active: 'bg-white text-lime-600 shadow-sm', inactive: 'bg-lime-100 text-lime-700 hover:bg-lime-200' },
     rab: { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
+    'rab-harian': { active: 'bg-white text-cyan-600 shadow-sm', inactive: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200' },
     'rab-bulanan': { active: 'bg-white text-emerald-600 shadow-sm', inactive: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
     'pengeluaran-bulanan': { active: 'bg-white text-sky-600 shadow-sm', inactive: 'bg-sky-100 text-sky-700 hover:bg-sky-200' },
     'penggunaan-anggaran': { active: 'bg-white text-teal-600 shadow-sm', inactive: 'bg-teal-100 text-teal-700 hover:bg-teal-200' },
@@ -721,6 +722,128 @@ const tabColors = {
       window['_export_rab-bulanan'] = { data: rows, fields: ['periode','item_count','total_penerima','rata_harga_per_porsi','total_biaya_operasional','total_budget','total_realisasi_budget','total_realisasi_kas'] };
 
       window._lapStatCards = rbFilterBar + statCards + detailHtml + multiPeriodeTabel;
+
+    } else if (tab === 'rab-harian') {
+
+      // ── RAB Harian: filter ──
+      var nowDate = new Date();
+      var rhTanggal = lapState.rh_tanggal || nowDate.toISOString().slice(0, 10);
+      var rhSiklusId = lapState.rh_siklus_id || '';
+
+      var [siklusList, rabHarianRes] = await Promise.all([
+        api.get('/siklus').catch(function() { return []; }),
+        api.get('/laporan/rab-harian?tanggal=' + rhTanggal + (rhSiklusId ? '&siklus_id=' + rhSiklusId : '')),
+      ]);
+
+      var d = rabHarianRes;
+      var items = d.items || [];
+      var siklusInfo = d.siklus || null;
+
+      var siklusOpts = '<option value="">Semua Siklus</option>';
+      (Array.isArray(siklusList) ? siklusList : []).filter(function(s) { return s.status === 'Aktif' || s.status === 'Draft'; }).forEach(function(s) {
+        var sel = String(s.id) === String(rhSiklusId) ? 'selected' : '';
+        siklusOpts += '<option value="' + s.id + '" ' + sel + '>' + escHtml(s.nama) + ' (' + (s.total_hari || '?') + ' hr)' + '</option>';
+      });
+
+      // ── Filter bar ──
+      var filterBar = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">' +
+        '<div class="flex flex-wrap items-center gap-x-4 gap-y-2">' +
+          '<div class="flex items-center gap-2">' +
+            '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>' +
+            '<input type="date" id="rh-tanggal" value="' + rhTanggal + '" onchange="gantiTanggalRabHarian()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400">' +
+          '</div>' +
+          '<div class="flex items-center gap-2">' +
+            '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
+            '<select id="rh-filter-siklus" onchange="gantiTanggalRabHarian()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400">' + siklusOpts + '</select>' +
+          '</div>' +
+          (siklusInfo ? '<span class="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-700 bg-cyan-50 border border-cyan-200 px-3 py-2 rounded-lg"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' + escHtml(siklusInfo.nama) + '</span>' : '') +
+          (d.hari ? '<span class="text-xs text-stone-400 ml-auto">' + escHtml(d.hari) + ', ' + d.tanggal + '</span>' : '') +
+        '</div></div>';
+
+      // ── Header info ──
+      var isDefisit = d.sisa < 0;
+      var ketInfo = '';
+      if (d.menu_deskripsi) {
+        ketInfo = '<div class="mb-4 bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
+          '<div class="flex flex-wrap items-center gap-x-6 gap-y-2">' +
+            '<div><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Menu</span><div class="text-xs font-bold text-stone-700 mt-0.5">' + escHtml(d.menu_deskripsi) + '</div></div>' +
+            (d.hari_ke ? '<div><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Hari Ke-</span><div class="text-xs font-bold text-stone-700 mt-0.5">' + d.hari_ke + '</div></div>' : '') +
+            (siklusInfo ? '<div><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Siklus</span><div class="text-xs font-bold text-stone-700 mt-0.5">' + escHtml(siklusInfo.nama) + '</div></div>' : '') +
+          '</div>' +
+        '</div>';
+      }
+
+      // ── Stat Cards ──
+      var statCards = '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">' +
+        '<div class="bg-gradient-to-br from-cyan-50 to-cyan-100/60 rounded-2xl border border-cyan-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-cyan-700">Total Belanja</span><svg class="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg></div>' +
+          '<div class="text-lg font-bold text-cyan-800">' + fmtIDR(d.total) + '</div>' +
+          '<div class="text-[10px] text-cyan-600/70">' + d.item_count + ' item bahan</div>' +
+        '</div>' +
+        '<div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Anggaran Harian</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg></div>' +
+          '<div class="text-lg font-bold text-blue-800">' + fmtIDR(d.anggaran_belanja_harian) + '</div>' +
+          '<div class="text-[10px] text-blue-600/70">Budget/' + (siklusInfo ? siklusInfo.total_hari : 1) + ' hari</div>' +
+        '</div>' +
+        '<div class="bg-gradient-to-br from-' + (isDefisit ? 'red' : 'emerald') + '-50 to-' + (isDefisit ? 'red' : 'emerald') + '-100/60 rounded-2xl border border-' + (isDefisit ? 'red' : 'emerald') + '-200/60 p-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-' + (isDefisit ? 'red' : 'emerald') + '-700">Sisa</span><svg class="w-4 h-4 text-' + (isDefisit ? 'red' : 'emerald') + '-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 17V9m0 0l-4 4m4-4l4 4"/></svg></div>' +
+          '<div class="text-lg font-bold text-' + (isDefisit ? 'red' : 'emerald') + '-800">' + fmtIDR(Math.abs(d.sisa)) + '</div>' +
+          '<div class="text-[10px] text-' + (isDefisit ? 'red' : 'emerald') + '-600/70">' + (isDefisit ? 'Defisit (melebihi anggaran)' : 'Surplus') + '</div>' +
+        '</div>' +
+      '</div>';
+
+      // ── Tabel ──
+      var no = 0;
+      var tabelHtml = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+        '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between bg-gradient-to-r from-cyan-50 to-blue-50">' +
+          '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider">RENCANA ANGGARAN BELANJA BAHAN BAKU HARIAN</h3>' +
+          '<span class="text-[10px] text-stone-400">' + d.tanggal + '</span>' +
+        '</div>' +
+        '<div class="overflow-x-auto"><table class="w-full text-xs">' +
+        '<thead><tr class="bg-stone-50">' +
+        '<th class="text-center px-2 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider w-8">NO</th>' +
+        '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">URAIAN</th>' +
+        '<th class="text-right px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">QTY</th>' +
+        '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">SATUAN</th>' +
+        '<th class="text-right px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">HARGA</th>' +
+        '<th class="text-right px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">JUMLAH</th>' +
+        '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">KETERANGAN</th>' +
+        '</tr></thead><tbody>';
+
+      items.forEach(function(it) {
+        no++;
+        tabelHtml += '<tr class="border-t border-stone-100 hover:bg-cyan-50/40 transition-colors">' +
+          '<td class="px-2 py-3 text-center text-xs text-stone-500">' + no + '</td>' +
+          '<td class="px-3 py-3 text-xs font-medium text-stone-700">' + escHtml(it.nama) + '</td>' +
+          '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700">' + fmtNum(it.qty) + '</td>' +
+          '<td class="px-3 py-3 text-xs text-stone-500">' + escHtml(it.satuan) + '</td>' +
+          '<td class="px-3 py-3 text-right mono text-xs text-stone-600">' + fmtIDR(it.harga) + '</td>' +
+          '<td class="px-3 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtIDR(it.jumlah) + '</td>' +
+          '<td class="px-3 py-3 text-xs text-stone-400">' + (it.keterangan ? escHtml(it.keterangan) : '') + '</td>' +
+        '</tr>';
+      });
+
+      tabelHtml += '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-cyan-50 to-blue-50 font-bold">' +
+        '<td colspan="5" class="px-4 py-3.5 text-xs text-right text-stone-800 uppercase tracking-wider">TOTAL</td>' +
+        '<td class="px-3 py-3.5 text-right mono text-xs font-bold text-blue-700">' + fmtIDR(d.total) + '</td>' +
+        '<td></td>' +
+      '</tr>' +
+      '<tr class="border-t border-stone-200 bg-white">' +
+        '<td colspan="5" class="px-4 py-3 text-xs text-right text-stone-600">ANGGARAN BELANJA HARIAN</td>' +
+        '<td class="px-3 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtIDR(d.anggaran_belanja_harian) + '</td>' +
+        '<td></td>' +
+      '</tr>' +
+      '<tr class="border-t border-stone-200 ' + (d.sisa >= 0 ? 'bg-emerald-50/50' : 'bg-red-50/50') + '">' +
+        '<td colspan="5" class="px-4 py-3 text-xs text-right font-bold text-' + (isDefisit ? 'red' : 'emerald') + '-700">SISA</td>' +
+        '<td class="px-3 py-3 text-right mono text-xs font-bold text-' + (isDefisit ? 'red' : 'emerald') + '-600">' + fmtIDR(Math.abs(d.sisa)) + '</td>' +
+        '<td class="px-3 py-3 text-xs text-' + (isDefisit ? 'red' : 'emerald') + '-500">' + (isDefisit ? 'DEFISIT' : '') + '</td>' +
+      '</tr>';
+
+      tabelHtml += '</tbody></table></div></div>';
+
+      window._lapStatCards = filterBar + ketInfo + statCards + tabelHtml;
+      window._lapData = null;
+
     } else if (tab === 'siklus') {
       const filterSiklusId = lapState.siklus_id || '';
       const [siklusList, lapRes, menuHarianRes] = await Promise.all([
@@ -1964,6 +2087,12 @@ function fmtDateIndonesia(dateStr) {
   const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   return hari[d.getDay()] + ', ' + d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
 }
+function gantiTanggalRabHarian() {
+  lapState.rh_tanggal = document.getElementById('rh-tanggal')?.value || '';
+  lapState.rh_siklus_id = document.getElementById('rh-filter-siklus')?.value || '';
+  showLap('rab-harian');
+}
+
 function gantiPeriodeRab() {
   lapState.rab_periode = document.getElementById('rab-filter-periode')?.value || '';
   lapState.rab_siklus_id = document.getElementById('rab-filter-siklus')?.value || '';
