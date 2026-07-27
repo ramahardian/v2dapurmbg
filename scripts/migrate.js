@@ -351,6 +351,15 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi mobile absensi)'); }
 
+  // Ubah foto_masuk & foto_keluar VARCHAR(255) → TEXT untuk base64
+  try {
+    const [fkCol] = await q("SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'absensi' AND COLUMN_NAME = 'foto_masuk' AND DATA_TYPE != 'text'");
+    if (fkCol.length) {
+      await q("ALTER TABLE absensi MODIFY foto_masuk TEXT DEFAULT NULL, MODIFY foto_keluar TEXT DEFAULT NULL");
+      log('✓ Migrasi absensi: foto_masuk & foto_keluar VARCHAR → TEXT');
+    }
+  } catch (e) { log('  (skip migrasi foto text)'); }
+
   // distribusi penerima_manfaat_id
   try {
     const [pmCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'distribusi' AND COLUMN_NAME = 'penerima_manfaat_id'");

@@ -4,21 +4,11 @@
  * POST /absensi/clock-out — Absen pulang (dengan validasi shift & deadline)
  */
 const db = require('../../db');
-const fs = require('fs');
-const path = require('path');
 const { localDateStr, tenantWhere, parseTimeToMinutes, verifyClientTime, getEffectiveShift } = require('./helpers');
 
-function saveBase64Photo(base64Data, prefix) {
+function saveBase64Photo(base64Data) {
   if (!base64Data || !base64Data.startsWith('data:image')) return null;
-  const matches = base64Data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);
-  if (!matches) return null;
-  const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-  const buffer = Buffer.from(matches[2], 'base64');
-  const filename = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const dir = path.join(__dirname, '..', '..', 'public', 'uploads', 'absensi');
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, filename), buffer);
-  return '/uploads/absensi/' + filename;
+  return base64Data;
 }
 
 function registerClockRoutes(router) {
@@ -53,11 +43,12 @@ function registerClockRoutes(router) {
         if (existing[0].jam_masuk) {
           return res.status(400).json({ error: 'Anda sudah melakukan clock-in hari ini', data: { id: existing[0].id, jam_masuk: existing[0].jam_masuk } });
         }
+        const fotoMasuk = saveBase64Photo(foto_masuk);
         await db.query(
-          `UPDATE absensi SET jam_masuk=?, keterangan=? WHERE id=? AND ${tSql}`,
-          [nowTime, keterangan || null, existing[0].id, ...tParams]
+          `UPDATE absensi SET jam_masuk=?, keterangan=?, foto_masuk=? WHERE id=? AND ${tSql}`,
+          [nowTime, keterangan || null, fotoMasuk, existing[0].id, ...tParams]
         );
-        const [updated] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan FROM absensi WHERE id=?`, [existing[0].id]);
+        const [updated] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan, foto_masuk FROM absensi WHERE id=?`, [existing[0].id]);
         return res.json({ ok: true, pesan: 'Clock-in berhasil', data: updated[0] });
       }
 
@@ -91,10 +82,10 @@ function registerClockRoutes(router) {
       }
 
       const status = terlambat ? 'Terlambat' : 'Hadir';
-      const fotoMasukPath = saveBase64Photo(foto_masuk, 'in');
+      const fotoMasuk = saveBase64Photo(foto_masuk);
       const [r] = await db.query(
         `INSERT INTO absensi (tenant_id, karyawan_id, tanggal, status, jam_masuk, keterangan, foto_masuk) VALUES (?,?,?,?,?,?,?)`,
-        [tenant_id, karyawan_id, today, status, nowTime, keterangan || null, fotoMasukPath]
+        [tenant_id, karyawan_id, today, status, nowTime, keterangan || null, fotoMasuk]
       );
       const [rows] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan, foto_masuk FROM absensi WHERE id=?`, [r.insertId]);
       res.json({ ok: true, pesan: 'Clock-in berhasil', data: rows[0] });
@@ -177,11 +168,11 @@ function registerClockRoutes(router) {
           else { if (nowMinutes > 720) butuhKoreksi = true; }
 
           const catatan = butuhKoreksi ? (keterangan ? keterangan + ' | Butuh Koreksi' : 'Butuh Koreksi') : (keterangan || null);
-          const fotoKeluarPath = saveBase64Photo(foto_keluar, 'out');
+          const fotoKeluar = saveBase64Photo(foto_keluar);
 
           await db.query(
             `UPDATE absensi SET jam_keluar=?, keterangan=?, status=?, foto_keluar=? WHERE id=? AND ${tSql}`,
-            [nowTime, catatan, butuhKoreksi ? 'Butuh Koreksi' : 'Hadir', fotoKeluarPath, existing[0].id, ...tParams]
+            [nowTime, catatan, butuhKoreksi ? 'Butuh Koreksi' : 'Hadir', fotoKeluar, existing[0].id, ...tParams]
           );
           const [updated] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan, foto_masuk, foto_keluar FROM absensi WHERE id=?`, [existing[0].id]);
           return res.json({ ok: true, pesan: butuhKoreksi ? 'Clock-out berhasil (Butuh Koreksi)' : 'Clock-out berhasil', butuh_koreksi: butuhKoreksi, data: updated[0] });
@@ -189,8 +180,8 @@ function registerClockRoutes(router) {
       }
 
       // Fallback: tidak ada shift
-      const fotoKeluarPath = saveBase64Photo(foto_keluar, 'out');
-      await db.query(`UPDATE absensi SET jam_keluar=?, keterangan=?, foto_keluar=? WHERE id=? AND ${tSql}`, [nowTime, keterangan || null, fotoKeluarPath, existing[0].id, ...tParams]);
+      const fotoKeluar = saveBase64Photo(foto_keluar);
+      await db.query(`UPDATE absensi SET jam_keluar=?, keterangan=?, foto_keluar=? WHERE id=? AND ${tSql}`, [nowTime, keterangan || null, fotoKeluar, existing[0].id, ...tParams]);
       const [updated] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan, foto_masuk, foto_keluar FROM absensi WHERE id=?`, [existing[0].id]);
       res.json({ ok: true, pesan: 'Clock-out berhasil', butuh_koreksi: false, data: updated[0] });
     } catch (err) {

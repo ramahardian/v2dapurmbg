@@ -690,7 +690,7 @@
       }
     }
 
-    function capturePhoto() {
+    async function capturePhoto() {
       const video = document.getElementById('modal-camera-video');
       const canvas = document.getElementById('modal-camera-canvas');
       const preview = document.getElementById('modal-photo-preview');
@@ -701,10 +701,9 @@
 
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
+      canvas.getContext('2d').drawImage(video, 0, 0);
 
-      _photoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+      _photoBase64 = await compressImage(canvas.toDataURL('image/jpeg'));
 
       video.classList.add('hidden');
       active.classList.add('hidden');
@@ -747,6 +746,21 @@
       input.click();
     }
 
+    function compressImage(base64, maxW=480, quality=0.5) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > maxW) { h = h * maxW / w; w = maxW; }
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(c.toDataURL('image/jpeg', quality));
+        };
+        img.src = base64;
+      });
+    }
+
     // Confirm Absen
     async function confirmAbsen(type) {
       stopCamera();
@@ -782,10 +796,10 @@
         fileInput.onchange = function(e) {
           const file = e.target.files?.[0];
           if (!file) return;
-          if (file.size > 2 * 1024 * 1024) { showToast('Ukuran foto maksimal 2MB', 'error'); e.target.value = ''; return; }
+          if (file.size > 10 * 1024 * 1024) { showToast('Ukuran foto maksimal 10MB', 'error'); e.target.value = ''; return; }
           const reader = new FileReader();
-          reader.onload = function(ev) {
-            _photoBase64 = ev.target.result;
+          reader.onload = async function(ev) {
+            _photoBase64 = await compressImage(ev.target.result);
             if (img) img.src = _photoBase64;
             if (preview) preview.classList.remove('hidden');
             if (start) start.classList.add('hidden');
@@ -810,7 +824,7 @@
         }
         btnYa.disabled=true;btnYa.textContent='Memproses...';
         try{
-          const body={client_time:new Date().toISOString(), foto: _photoBase64 };
+          const body={client_time:new Date().toISOString()}; body[in_?'foto_masuk':'foto_keluar'] = _photoBase64;
           const r=await fetch(in_?'/api/mobile/absensi/clock-in':'/api/mobile/absensi/clock-out',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
           const data=await r.json();
           if(!r.ok)throw new Error(data.error||'Gagal');
