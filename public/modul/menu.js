@@ -1132,7 +1132,7 @@ async function createPoFromMenu(menuId) {
   try {
     showToast('Membuat PO dari menu...', 'info');
     
-    const poRes = await api.post('/purchase-order', {
+    const poRes = await api.post('/purchase_order', {
       nomor: 'MEN-' + new Date().getTime(),
       supplier_id: supplierId,
       notes: notes || `PO otomatis dari menu: ${currentMenu.nama}`,
@@ -1260,7 +1260,7 @@ async function createPoFromMenu(menuId) {
   try {
     showToast('Membuat PO dari menu...', 'info');
     
-    const poRes = await api.post('/purchase-order', {
+    const poRes = await api.post('/purchase_order', {
       nomor: 'MEN-' + new Date().getTime(),
       supplier_id: supplierId,
       notes: notes || `PO otomatis dari menu: ${currentMenu.nama}`,
