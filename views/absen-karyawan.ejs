@@ -88,7 +88,8 @@
     .btn-success { background: #16a34a; color: #fff; border-color: #16a34a; }
     .btn-success:hover:not(:disabled) { background: #15803d; border-color: #15803d; }
     .btn-outline { background: transparent; border-color: #e2e8f0; color: #94a3b8; }
-    .btn-outline:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+        .btn-outline:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+        .photo-error { border-color: #ef4444 !important; background: #fef2f2 !important; }
     .bar { height: 0.5rem; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
     .bar-fill { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
 
@@ -312,20 +313,33 @@
       </div>
       </div>
       
-      <!-- Photo Upload Section -->
+      <!-- Photo Upload Section (WAJIB) -->
       <div id="modal-photo-container" class="hidden">
-        <div class="text-xs font-medium text-stone-500 mb-2 mt-2">Bukti Absen (Foto) <span class="text-stone-400 font-normal text-xs ml-1">(opsional, tampilan)</span></div>
-        <div class="relative w-24 h-24 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 flex items-center justify-center cursor-pointer transition-all hover:border-blue-400 hover:bg-blue-50" onclick="document.getElementById('modal-photo-input').click()">
-          <input type="file" id="modal-photo-input" class="hidden" accept="image/*" capture="environment">
-          <div id="modal-photo-preview" class="w-full h-full rounded-xl overflow-hidden hidden">
-            <img id="modal-photo-img" src="" alt="Bukti Absen" class="w-full h-full object-cover">
+        <div class="text-xs font-medium text-stone-500 mb-2 mt-2">Bukti Absen (Foto) <span class="text-red-500 font-bold text-xs ml-1">* Wajib</span></div>
+        <div class="flex items-center gap-3">
+          <div class="relative w-24 h-24 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 flex items-center justify-center cursor-pointer transition-all hover:border-blue-400 hover:bg-blue-50 hover:bg-blue-50/50" onclick="document.getElementById('modal-photo-input').click()">
+            <input type="file" id="modal-photo-input" class="hidden" accept="image/*" capture="environment">
+            <div id="modal-photo-preview" class="w-full h-full rounded-xl overflow-hidden hidden">
+              <img id="modal-photo-img" src="" alt="Bukti Absen" class="w-full h-full object-cover">
+            </div>
+            <div id="modal-photo-placeholder" class="flex flex-col items-center gap-1">
+              <svg class="w-6 h-6 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 16.5V16.5M12 9.5V16.5M7 8.5V16.5M17 8.5V16.5M9.5 12.5H14.5M2.5 12.5C2.5 8.63 5.63 5.5 9.5 5.5V5.5C13.37 5.5 16.5 8.63 16.5 12.5V17.5C16.5 18.33 16 19 14.5 19H9.5C8 19 7.5 18.33 7.5 17.5V12.5Z"/></svg>
+              <span class="text-stone-400 text-xs">Klik untuk foto</span>
+            </div>
           </div>
-          <div id="modal-photo-placeholder" class="flex flex-col items-center gap-1">
-            <svg class="w-6 h-6 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 16.5V16.5M12 9.5V16.5M7 8.5V16.5M17 8.5V16.5M9.5 12.5H14.5M2.5 12.5C2.5 8.63 5.63 5.5 9.5 5.5V5.5C13.37 5.5 16.5 8.63 16.5 12.5V17.5C16.5 18.33 16 19 14.5 19H9.5C8 19 7.5 18.33 7.5 17.5V12.5Z"/></svg>
-            <span class="text-stone-400 text-xs">Klik untuk foto</span>
+          <div id="modal-photo-error" class="hidden text-xs text-red-500 flex items-center gap-1.5">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>Foto wajib diisi</span>
+          </div>
+          <div id="modal-photo-ok" class="hidden text-xs text-emerald-600 flex items-center gap-1.5">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>Foto sudah siap</span>
           </div>
         </div>
-        <div class="text-stone-400 text-xs mt-1">Pilih dan upload bukti foto absen (opsional)</div>
+        <div class="flex items-center gap-1 mt-1">
+          <svg class="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span class="text-stone-400 text-xs">Wajib upload foto sebagai bukti absen</span>
+        </div>
       </div>
       
       <div class="flex gap-3">
@@ -614,47 +628,44 @@
       el.innerHTML=html;
     }
 
+    let _photoBase64 = null;
+
     // Confirm Absen
     async function confirmAbsen(type) {
-      const overlay=document.getElementById('modal-overlay'),icon=document.getElementById('modal-icon'),title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc'),btnYa=document.getElementById('modal-ya'),photoPreview=document.getElementById('modal-photo-preview'),photoInput=document.getElementById('modal-photo-input'),photoContainer=document.getElementById('modal-photo-container');
+      const overlay=document.getElementById('modal-overlay'),icon=document.getElementById('modal-icon'),title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc'),btnYa=document.getElementById('modal-ya'),photoPreview=document.getElementById('modal-photo-preview'),photoInput=document.getElementById('modal-photo-input'),photoContainer=document.getElementById('modal-photo-container'),photoError=document.getElementById('modal-photo-error'),photoOk=document.getElementById('modal-photo-ok');
       const in_=type==='in';
       icon.className='w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center '+(in_?'bg-amber-100':'bg-blue-100');
       icon.innerHTML=in_?'<svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>':'<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
       title.textContent=in_?'Clock In':'Clock Out'; desc.textContent=in_?'Konfirmasi clock-in untuk memulai hari kerja?':'Konfirmasi clock-out untuk mengakhiri hari kerja?';
-      btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!'; btnYa.className='flex-1 h-11 btn btn-primary'; btnYa.disabled=false;
-      // Siapkan photo preview
-      if (photoPreview) photoPreview.classList.add('hidden');
-      if (photoPreview) photoPreview.src = '';
+      // Reset photo state
+      _photoBase64 = null;
+      if (photoPreview) { photoPreview.classList.add('hidden'); photoPreview.src = ''; }
       if (photoInput) photoInput.value = '';
       if (photoContainer) photoContainer.classList.remove('hidden');
+      if (photoError) photoError.classList.add('hidden');
+      if (photoOk) photoOk.classList.add('hidden');
+      const placeholder = document.getElementById('modal-photo-placeholder');
+      if (placeholder) placeholder.classList.remove('hidden');
+      btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!'; btnYa.className='flex-1 h-11 btn btn-primary'; btnYa.disabled=true;
       
       // Setup photo preview
       if (photoInput) {
-        const oldHandler = photoInput.onclick;
-        photoInput.onclick = function(e) {
-          e.stopPropagation();
-          if (oldHandler) oldHandler.call(this, e);
-        };
         photoInput.onchange = function(e) {
           const file = e.target.files?.[0];
           if (!file) return;
-          const maxSize = 2 * 1024 * 1024; // 2MB
+          const maxSize = 2 * 1024 * 1024;
           if (file.size > maxSize) {
-            showToast('Ukuran photo maksimal 2MB', 'error');
+            showToast('Ukuran foto maksimal 2MB', 'error');
             e.target.value = '';
             return;
           }
           const reader = new FileReader();
           reader.onload = function(ev) {
-            if (photoPreview) {
-              photoPreview.src = ev.target.result;
-              photoPreview.classList.remove('hidden');
-            }
-            if (photoContainer) {
-              photoContainer.classList.remove('hidden');
-              const placeholder = document.getElementById('modal-photo-placeholder');
-              if (placeholder) placeholder.classList.add('hidden');
-            }
+            _photoBase64 = ev.target.result;
+            if (photoPreview) { photoPreview.src = _photoBase64; photoPreview.classList.remove('hidden'); }
+            if (photoContainer) { const ph = document.getElementById('modal-photo-placeholder'); if (ph) ph.classList.add('hidden'); }
+            if (photoError) photoError.classList.add('hidden');
+            if (photoOk) photoOk.classList.remove('hidden');
             btnYa.disabled = false;
           };
           reader.readAsDataURL(file);
@@ -662,24 +673,26 @@
       }
       
       overlay.classList.remove('hidden');
-      btnYa.onclick=async()=>{btnYa.disabled=true;btnYa.textContent='Memproses...';try{const body={client_time:new Date().toISOString()};
-        if (photoInput && photoInput.value) {
-          const file = photoInput.files[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-              body.foto = e.target.result;
-            };
-            await new Promise(resolve => { reader.onload = () => resolve(); reader.readAsDataURL(file); });
-          }
+      btnYa.onclick=async()=>{
+        // Validasi foto wajib
+        if (!_photoBase64) {
+          if (photoError) photoError.classList.remove('hidden');
+          const photoBox = photoContainer?.querySelector('.border-2');
+          if (photoBox) { photoBox.classList.add('photo-error'); setTimeout(() => photoBox.classList.remove('photo-error'), 2000); }
+          btnYa.disabled=false;
+          return;
         }
-        const r=await fetch(in_?'/api/mobile/absensi/clock-in':'/api/mobile/absensi/clock-out',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-        const data=await r.json();
-        if(!r.ok)throw new Error(data.error||'Gagal');
-        showToast(in_?'✅ Clock-in berhasil!':'✅ Clock-out berhasil!','success');
-        overlay.classList.add('hidden');
-        loadAll();
-      }catch(ex){showToast('❌ '+ex.message,'error');btnYa.disabled=false;btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!';}};
+        btnYa.disabled=true;btnYa.textContent='Memproses...';
+        try{
+          const body={client_time:new Date().toISOString(), foto: _photoBase64 };
+          const r=await fetch(in_?'/api/mobile/absensi/clock-in':'/api/mobile/absensi/clock-out',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+          const data=await r.json();
+          if(!r.ok)throw new Error(data.error||'Gagal');
+          showToast(in_?'✅ Clock-in berhasil!':'✅ Clock-out berhasil!','success');
+          overlay.classList.add('hidden');
+          loadAll();
+        }catch(ex){showToast('❌ '+ex.message,'error');btnYa.disabled=false;btnYa.textContent=in_?'Ya, Clock In!':'Ya, Clock Out!';}
+      };
       document.getElementById('modal-batal').onclick=()=>{overlay.classList.add('hidden');btnYa.disabled=false;};
       overlay.addEventListener('click',e=>{if(e.target===overlay){overlay.classList.add('hidden');btnYa.disabled=false;}});
     }

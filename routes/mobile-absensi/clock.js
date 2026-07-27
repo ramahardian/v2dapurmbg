@@ -30,6 +30,12 @@ function registerClockRoutes(router) {
       if (!timeCheck.ok) return res.status(403).json({ error: timeCheck.pesan });
 
       const { keterangan, foto_masuk } = req.body;
+
+      // Validasi foto clock-in wajib
+      if (!foto_masuk || !foto_masuk.startsWith('data:image')) {
+        return res.status(400).json({ error: 'Foto clock-in wajib diupload. Silakan ambil foto terlebih dahulu.' });
+      }
+
       const tenant_id = req.user.tenant_id;
       const karyawan_id = req.karyawan.id;
       const today = localDateStr(new Date());
@@ -106,6 +112,12 @@ function registerClockRoutes(router) {
       if (!timeCheck.ok) return res.status(403).json({ error: timeCheck.pesan });
 
       const { keterangan, foto_keluar } = req.body;
+
+      // Validasi foto clock-out wajib
+      if (!foto_keluar || !foto_keluar.startsWith('data:image')) {
+        return res.status(400).json({ error: 'Foto clock-out wajib diupload. Silakan ambil foto terlebih dahulu.' });
+      }
+
       const tenant_id = req.user.tenant_id;
       const karyawan_id = req.karyawan.id;
       const now = new Date();
