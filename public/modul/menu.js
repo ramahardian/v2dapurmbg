@@ -1101,7 +1101,7 @@ async function createPoFromMenu(menuId) {
           const bahanList = Array.isArray(bahanRes) ? bahanRes : (bahanRes.data || []);
           const bahanItem = bahanList.find(function(fb) { return fb.id === b.bahan_baku_id || fb.nama === b.nama; });
           if (bahanItem) {
-            unitPrice = bahanItem.harga || bahanItem.harga_beli || 0;
+            unitPrice = bahanItem.harga_satuan || 0;
           }
         }
         
@@ -1229,7 +1229,7 @@ async function createPoFromMenu(menuId) {
           const bahanList = Array.isArray(bahanRes) ? bahanRes : (bahanRes.data || []);
           const bahanItem = bahanList.find(function(fb) { return fb.id === b.bahan_baku_id || fb.nama === b.nama; });
           if (bahanItem) {
-            unitPrice = bahanItem.harga || bahanItem.harga_beli || 0;
+            unitPrice = bahanItem.harga_satuan || 0;
           }
         }
         
