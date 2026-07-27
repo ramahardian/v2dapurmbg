@@ -641,7 +641,7 @@
     // Render Statistik
     function renderStatistik(r) {
       document.getElementById('statistik-periode').textContent=r.periode||(r.bulan+'/'+r.tahun);
-      const st=r.statistik,t=st.total_hari||0,e=st.expected_hari||0,h=st.hadir||0,sk=st.sakit||0,iz=st.izin||0,al=st.alpha||0,bo=st.bolos||0;
+      const st=r.statistik,t=st.total_hari||0,e=st.expected_hari||0,h=st.hadir||0,tl=st.terlambat||0,sk=st.sakit||0,iz=st.izin||0,al=st.alpha||0,bo=st.bolos||0;
       
       // Jika belum ada data absensi bulan ini, sembunyikan kartu statistik
       if (t === 0 && e === 0) {
@@ -651,13 +651,15 @@
       }
       
       document.getElementById('statistik-card').classList.remove('hidden'); showSkeleton('statistik',false);
-      document.getElementById('stat-hadir-val').textContent=h; document.getElementById('stat-sakit-val').textContent=sk; document.getElementById('stat-izin-val').textContent=iz;
+      document.getElementById('stat-hadir-val').textContent=h; document.getElementById('stat-terlambat-val').textContent=tl;
+      document.getElementById('stat-sakit-val').textContent=sk; document.getElementById('stat-izin-val').textContent=iz;
       const base=Math.max(e||1,1); document.getElementById('stat-label-expected').textContent='dari '+(e||t)+' hari';
       const ar=document.getElementById('stat-alpha-row'), br=document.getElementById('stat-bolos-row');
       if(bo>0){if(ar)ar.classList.add('hidden');if(br)br.classList.remove('hidden');document.getElementById('stat-bolos-val').textContent=bo;}
       else{if(ar)ar.classList.remove('hidden');if(br)br.classList.add('hidden');document.getElementById('stat-alpha-val').textContent=al;}
       setTimeout(()=>{
-        document.getElementById('stat-hadir-bar').style.width=(h/base*100)+'%'; document.getElementById('stat-sakit-bar').style.width=(sk/base*100)+'%';
+        document.getElementById('stat-hadir-bar').style.width=(h/base*100)+'%'; document.getElementById('stat-terlambat-bar').style.width=(tl/base*100)+'%';
+        document.getElementById('stat-sakit-bar').style.width=(sk/base*100)+'%';
         document.getElementById('stat-izin-bar').style.width=(iz/base*100)+'%';
         if(bo>0)document.getElementById('stat-bolos-bar').style.width=(bo/base*100)+'%'; else document.getElementById('stat-alpha-bar').style.width=(al/base*100)+'%';
       },100);
@@ -678,7 +680,7 @@
       let html='';
       if(!full&&t>0)html+='<div class="flex items-center gap-2 text-[0.6rem] text-slate-400 mb-3 pb-3 border-b border-slate-100"><span class="text-emerald-600 font-semibold">'+h+'/'+t+' hadir</span><span class="text-slate-200">·</span><span>'+pct+'% kehadiran</span><div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden ml-1"><div class="h-full rounded-full bg-emerald-500" style="width:'+pct+'%"></div></div></div>';
       data.forEach(a=>{
-        const cls=a.status==='Hadir'?'badge-hadir':a.status==='Sakit'?'badge-sakit':a.status==='Izin'?'badge-izin':a.status==='Cuti'?'badge-cuti':a.status==='Alpha'?'badge-alpha':'badge-hadir';
+        const cls=a.status==='Hadir'?'badge-hadir':a.status==='Terlambat'?'badge-terlambat':a.status==='Sakit'?'badge-sakit':a.status==='Izin'?'badge-izin':a.status==='Cuti'?'badge-cuti':a.status==='Alpha'?'badge-alpha':'badge-hadir';
         html+='<div class="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0"><div class="flex items-center gap-2.5 min-w-0"><span class="text-slate-600 text-xs font-medium w-20 shrink-0">'+escapeHtml(full?fmtDateFull(a.tanggal):fmtDate(a.tanggal))+'</span><span class="badge '+cls+'">'+escapeHtml(a.status)+'</span></div><div class="text-[0.65rem] text-slate-400 font-mono shrink-0 ml-2">'+fmt(a.jam_masuk)+' — '+fmt(a.jam_keluar)+'</div></div>';
       });
       el.innerHTML=html;
