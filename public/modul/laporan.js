@@ -760,35 +760,28 @@ const tabColors = {
           (d.hari ? '<span class="text-xs text-stone-400 ml-auto">' + escHtml(d.hari) + ', ' + d.tanggal + '</span>' : '') +
         '</div></div>';
 
-      // ── Header info ──
+      // ── Defisit flag ──
       var isDefisit = d.sisa < 0;
-      var ketInfo = '';
-      if (d.menu_deskripsi) {
-        ketInfo = '<div class="mb-4 bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
-          '<div class="flex flex-wrap items-center gap-x-6 gap-y-2">' +
-            '<div><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Menu</span><div class="text-xs font-bold text-stone-700 mt-0.5">' + escHtml(d.menu_deskripsi) + '</div></div>' +
-            (d.hari_ke ? '<div><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Hari Ke-</span><div class="text-xs font-bold text-stone-700 mt-0.5">' + d.hari_ke + '</div></div>' : '') +
-            (siklusInfo ? '<div><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Siklus</span><div class="text-xs font-bold text-stone-700 mt-0.5">' + escHtml(siklusInfo.nama) + '</div></div>' : '') +
-          '</div>' +
-        '</div>';
-      }
 
-      // ── Stat Cards ──
-      var statCards = '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">' +
-        '<div class="bg-gradient-to-br from-cyan-50 to-cyan-100/60 rounded-2xl border border-cyan-200/60 p-4 shadow-sm">' +
-          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-cyan-700">Total Belanja</span><svg class="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg></div>' +
-          '<div class="text-lg font-bold text-cyan-800">' + fmtIDR(d.total) + '</div>' +
-          '<div class="text-[10px] text-cyan-600/70">' + d.item_count + ' item bahan</div>' +
+      // ── Report Header ──
+      var hariArr = ['MINGGU','SENIN','SELASA','RABU','KAMIS','JUMAT','SABTU'];
+      var tgl = new Date(d.tanggal + 'T00:00:00');
+      var hariNama = d.hari || hariArr[tgl.getDay()] || '';
+      var tglFormatted = tgl.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      
+      var menuNama = d.menu_deskripsi || '';
+      var reportHeader = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">' +
+        '<div class="px-5 py-4 text-center border-b border-stone-100" style="background:linear-gradient(135deg,#0e7490,#0891b2)">' +
+          '<h1 class="text-sm font-bold text-white uppercase tracking-wider">RENCANA ANGGARAN BELANJA (RAB) BAHAN BAKU HARIAN</h1>' +
+          '<div class="text-[10px] text-cyan-100 mt-1">SPPG BOGOR TAMANSARI SUKALUYU</div>' +
+          '<div class="text-[10px] text-cyan-100">YAYASAN SHAIMA ANAK SHOLEHA</div>' +
         '</div>' +
-        '<div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm">' +
-          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Anggaran Harian</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg></div>' +
-          '<div class="text-lg font-bold text-blue-800">' + fmtIDR(d.anggaran_belanja_harian) + '</div>' +
-          '<div class="text-[10px] text-blue-600/70">Budget/' + (siklusInfo ? siklusInfo.total_hari : 1) + ' hari</div>' +
-        '</div>' +
-        '<div class="bg-gradient-to-br from-' + (isDefisit ? 'red' : 'emerald') + '-50 to-' + (isDefisit ? 'red' : 'emerald') + '-100/60 rounded-2xl border border-' + (isDefisit ? 'red' : 'emerald') + '-200/60 p-4 shadow-sm">' +
-          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-' + (isDefisit ? 'red' : 'emerald') + '-700">Sisa</span><svg class="w-4 h-4 text-' + (isDefisit ? 'red' : 'emerald') + '-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 17V9m0 0l-4 4m4-4l4 4"/></svg></div>' +
-          '<div class="text-lg font-bold text-' + (isDefisit ? 'red' : 'emerald') + '-800">' + fmtIDR(Math.abs(d.sisa)) + '</div>' +
-          '<div class="text-[10px] text-' + (isDefisit ? 'red' : 'emerald') + '-600/70">' + (isDefisit ? 'Defisit (melebihi anggaran)' : 'Surplus') + '</div>' +
+        '<div class="px-5 py-3 bg-stone-50/80 border-b border-stone-100">' +
+          '<div class="flex flex-wrap justify-center gap-x-8 gap-y-1 text-xs">' +
+            (menuNama ? '<div><span class="font-semibold text-stone-700">MENU:</span> <span class="text-stone-600">' + escHtml(menuNama) + '</span></div>' : '') +
+            '<div><span class="font-semibold text-stone-700">Hari :</span> <span class="text-stone-600">' + escHtml(hariNama) + ', ' + tglFormatted + '</span></div>' +
+            (siklusInfo ? '<div><span class="font-semibold text-stone-700">Siklus:</span> <span class="text-stone-600">' + escHtml(siklusInfo.nama) + '</span></div>' : '') +
+          '</div>' +
         '</div>' +
       '</div>';
 
@@ -841,7 +834,7 @@ const tabColors = {
 
       tabelHtml += '</tbody></table></div></div>';
 
-      window._lapStatCards = filterBar + ketInfo + statCards + tabelHtml;
+      window._lapStatCards = filterBar + reportHeader + tabelHtml;
       window._lapData = null;
 
     } else if (tab === 'siklus') {
