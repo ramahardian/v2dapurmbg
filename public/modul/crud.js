@@ -70,15 +70,12 @@ async function reloadCrud(cfg) {
           var cards = '';
           var fmt = cfg.stats.format === 'num' ? fmtNum(totalVal) : totalVal;
           cards += '<div class="flex-1 min-w-[140px] bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">' + cfg.stats.label + '</div><div class="text-xl font-bold text-blue-800">' + fmt + '</div></div>';
-          if (cfg.stats.extra && rows.length) {
-            var sums = {};
-            cfg.stats.extra.forEach(function(x) { sums[x.field] = 0; });
-            rows.forEach(function(r) {
-              cfg.stats.extra.forEach(function(x) { sums[x.field] += Number(r[x.field]) || 0; });
-            });
+          if (cfg.stats.extra) {
             cfg.stats.extra.forEach(function(x) {
               var c = x.color || 'blue';
-              cards += '<div class="flex-1 min-w-[140px] bg-gradient-to-br from-' + c + '-50 to-' + c + '-100/60 rounded-2xl border border-' + c + '-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-' + c + '-700 mb-0.5">' + x.label + '</div><div class="text-xl font-bold text-' + c + '-800">' + fmtNum(sums[x.field]) + '</div></div>';
+              // Gunakan nilai total dari backend (prefixed total_) agar akurat untuk seluruh data
+              var val = statsRes['total_' + x.field] != null ? Number(statsRes['total_' + x.field]) : 0;
+              cards += '<div class="flex-1 min-w-[140px] bg-gradient-to-br from-' + c + '-50 to-' + c + '-100/60 rounded-2xl border border-' + c + '-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-' + c + '-700 mb-0.5">' + x.label + '</div><div class="text-xl font-bold text-' + c + '-800">' + fmtNum(val) + '</div></div>';
             });
           }
           contentEl.innerHTML = cards;
