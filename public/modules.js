@@ -6,6 +6,7 @@ const NAV_GROUPS = [
   { label: 'Akuntansi', items: ['budgeting', 'kas-bank', 'laporan'] },
   { label: 'SDM', items: ['karyawan', 'absensi', 'ijin-cuti', 'payroll'] },
   { label: 'Ahli Gizi', items: ['menu', 'hpp', 'siklus'] },
+  { label: 'Komunikasi', items: ['notifikasi'] },
 ];
 
 // Modules definition
@@ -29,4 +30,5 @@ const MODULES = {
   absensi: { title: 'Absensi', sub: 'Kehadiran karyawan harian', icon: '', render: renderAbsensi },
   'ijin-cuti': { title: 'Ijin/Cuti', sub: 'Izin dan cuti karyawan', icon: '', render: renderIjinCuti },
   payroll: { title: 'Payroll', sub: 'Penggajian karyawan per periode', icon: '', render: renderPayroll },
+  notifikasi: { title: 'Notifikasi', sub: 'Pusat pesan & pengumuman', icon: '', render: renderNotifikasi },
 };

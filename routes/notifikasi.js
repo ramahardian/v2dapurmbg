@@ -9,8 +9,27 @@ router.get('/notifikasi', async (req, res) => {
   try {
     const t = req.user.tenant_id;
     const role = req.user.role;
+    const type = req.query.type || 'sent';
 
-    if (role === 'admin' || role === 'keuangan') {
+    const isAdminOrKeuangan = role === 'admin' || role === 'keuangan';
+
+    // Admin/keuangan: bisa lihat inbox (diterima) atau sent (dikirim)
+    if (isAdminOrKeuangan) {
+      if (type === 'inbox') {
+        // Notifikasi yang diterima admin (lewat relasi karyawan)
+        if (!req.user.karyawan_id) return res.json([]);
+        const [rows] = await db.query(
+          `SELECT n.*, u.nama as nama_pengirim
+           FROM notifikasi n
+           LEFT JOIN users u ON u.id=n.pengirim_id
+           WHERE n.tenant_id=? AND n.penerima_id=?
+           ORDER BY n.created_at DESC`,
+          [t, req.user.karyawan_id]
+        );
+        return res.json(rows);
+      }
+
+      // Sent (dikirim oleh admin)
       const [rows] = await db.query(
         `SELECT n.*, k.nama as nama_penerima
          FROM notifikasi n
@@ -22,6 +41,7 @@ router.get('/notifikasi', async (req, res) => {
       return res.json(rows);
     }
 
+    // Karyawan biasa: inbox
     if (req.user.karyawan_id) {
       const [rows] = await db.query(
         `SELECT n.*, u.nama as nama_pengirim
