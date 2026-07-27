@@ -154,7 +154,10 @@ if (cluster.isMaster && WORKERS > 1) {
     } catch {}
     res.render('login-karyawan');
   });
-  app.get('/absen/dashboard', requireKaryawanAuth, (req, res) => res.render('absen-karyawan'));
+  app.get('/absen/dashboard', requireKaryawanAuth, (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.render('absen-karyawan');
+  });
 
   function requirePageAuth(req, res, next) {
     const token = req.cookies?.access_token;
