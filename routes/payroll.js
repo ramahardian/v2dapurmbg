@@ -159,7 +159,7 @@ router.get('/payroll/mingguan', requireRole('admin', 'keuangan'), async (req, re
       let totalHadir = 0;
       const harian = dates.map(tgl => {
         const rec = absenKaryawan[tgl];
-        if (rec && rec.status === 'Hadir') totalHadir++;
+        if (rec && (rec.status === 'Hadir' || rec.status === 'Terlambat')) totalHadir++;
         return rec ? { masuk: rec.masuk, keluar: rec.keluar, status: rec.status } : null;
       });
 
@@ -273,7 +273,7 @@ router.post('/payroll/mingguan/bayar', requireRole('admin', 'keuangan'), async (
 
     for (const k of karyawan) {
       const absen = absensiByKaryawan[k.id] || [];
-      const hadir = absen.filter(s => s === 'Hadir').length;
+      const hadir = absen.filter(s => s === 'Hadir' || s === 'Terlambat').length;
       const gajiPokok = Number(k.gaji_pokok) || 0;
       const gaji = hadir * gajiPokok;
       if (hadir > 0) {

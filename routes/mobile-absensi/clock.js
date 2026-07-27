@@ -181,7 +181,7 @@ function registerClockRoutes(router) {
 
       // Fallback: tidak ada shift
       const fotoKeluar = saveBase64Photo(foto_keluar);
-      await db.query(`UPDATE absensi SET jam_keluar=?, keterangan=?, foto_keluar=? WHERE id=? AND ${tSql}`, [nowTime, keterangan || null, fotoKeluar, existing[0].id, ...tParams]);
+      await db.query(`UPDATE absensi SET jam_keluar=?, keterangan=?, status=?, foto_keluar=? WHERE id=? AND ${tSql}`, [nowTime, keterangan || null, 'Hadir', fotoKeluar, existing[0].id, ...tParams]);
       const [updated] = await db.query(`SELECT id, tanggal, status, jam_masuk, jam_keluar, keterangan, foto_masuk, foto_keluar FROM absensi WHERE id=?`, [existing[0].id]);
       res.json({ ok: true, pesan: 'Clock-out berhasil', butuh_koreksi: false, data: updated[0] });
     } catch (err) {
