@@ -245,7 +245,8 @@ function renderField(f, editing) {
   }
   const label = `<label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>`;
   const header = f.action ? `<div class="flex items-center justify-between">${label}${actionHtml}</div>` : label;
-  return `<div class="${f.type === 'hidden' ? '' : 'mb-4'}">${header}${input}</div>`;
+  const info = f.info ? `<div class="text-[10px] text-stone-400 mt-1 leading-relaxed">${f.info}</div>` : '';
+  return `<div class="${f.type === 'hidden' ? '' : 'mb-4'}">${header}${input}${info}</div>`;
 }
 
 function openForm(cfg, editing) {
