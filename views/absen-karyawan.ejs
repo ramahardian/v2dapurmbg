@@ -1138,6 +1138,7 @@
         + '<div class="flex items-center gap-2 mb-1"><button onclick="loadNotifList()" class="p-1 text-stone-400 hover:text-stone-600 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button><span class="text-xs font-medium text-stone-500">' + (replyToPengirimId ? 'Balas Pesan' : 'Pesan Baru') + '</span></div>'
         + '<input id="notif-form-judul" type="text" placeholder="Judul" class="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">'
         + '<textarea id="notif-form-pesan" rows="3" placeholder="Isi pesan..." class="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"></textarea>'
+        + '<input id="notif-form-reply-to" type="hidden" value="' + (replyToPengirimId || '') + '">'
         + '<button onclick="kirimPesanDariKaryawan()" class="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm flex items-center justify-center gap-2 transition-all">'
         + '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Kirim</button>'
         + '</div>';
@@ -1145,15 +1146,16 @@
     async function kirimPesanDariKaryawan() {
       var judul = document.getElementById('notif-form-judul').value.trim();
       var pesan = document.getElementById('notif-form-pesan').value.trim();
+      var replyTo = document.getElementById('notif-form-reply-to').value;
       if (!judul) { showToast('Judul wajib diisi', 'error'); return; }
       var btn = document.querySelector('#notif-list button:last-child');
       btn.disabled = true;
       btn.innerHTML = '<svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Mengirim...';
       try {
-        var r = await fetch('/api/notifikasi/kirim-dari-karyawan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ judul: judul, pesan: pesan }), credentials: 'include' });
+        var r = await fetch('/api/notifikasi/kirim-dari-karyawan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ judul: judul, pesan: pesan, reply_to: replyTo || null }), credentials: 'include' });
         var d = await r.json();
         if (d.error) { showToast(d.error, 'error'); btn.disabled = false; btn.innerHTML = 'Kirim'; return; }
-        showToast('Pesan terkirim ke admin', 'success');
+        showToast('Pesan terkirim', 'success');
         loadNotifList();
       } catch(e) {
         showToast('Gagal mengirim', 'error');

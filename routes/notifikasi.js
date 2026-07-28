@@ -186,13 +186,33 @@ router.get('/notifikasi/belum-dibaca', async (req, res) => {
 // Kirim pesan dari karyawan ke admin/keuangan
 router.post('/notifikasi/kirim-dari-karyawan', async (req, res) => {
   try {
-    const { judul, pesan } = req.body;
+    const { judul, pesan, reply_to } = req.body;
     if (!judul) return res.status(400).json({ error: 'Judul wajib diisi' });
     if (!req.user.karyawan_id && !req.user.email) return res.status(400).json({ error: 'Akun tidak terhubung ke karyawan' });
 
     const t = req.user.tenant_id;
 
-    // Cari admin/keuangan yang jadi penerima — dapatkan karyawan_id mereka
+    if (reply_to) {
+      // Balas ke pengirim tertentu
+      const [target] = await db.query(
+        `SELECT u.id as uid, u.karyawan_id, k.id as kid
+         FROM users u
+         LEFT JOIN karyawan k ON (k.id=u.karyawan_id OR k.email=u.email)
+         WHERE u.tenant_id=? AND u.id=?
+         LIMIT 1`,
+        [t, reply_to]
+      );
+      if (!target.length) return res.status(400).json({ error: 'Penerima tidak ditemukan' });
+      const penerimaKaryawanId = target[0].karyawan_id || target[0].kid;
+      if (!penerimaKaryawanId) return res.status(400).json({ error: 'Penerima tidak memiliki data karyawan' });
+      await db.query(
+        `INSERT INTO notifikasi (tenant_id, pengirim_id, penerima_id, judul, pesan) VALUES (?,?,?,?,?)`,
+        [t, req.user.id, penerimaKaryawanId, judul, pesan || null]
+      );
+      return res.json({ ok: true, pesan: 'Balasan terkirim' });
+    }
+
+    // Kirim ke semua admin/keuangan — dapatkan karyawan_id mereka
     const [admins] = await db.query(
       `SELECT u.id as uid, u.karyawan_id, k.id as kid
        FROM users u
