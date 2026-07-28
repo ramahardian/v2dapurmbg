@@ -99,14 +99,14 @@ distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', ic
   },
   'bp-operasional': { title: 'Buku Pembantu Operasional', sub: 'Laporan detail transaksi operasional per akun', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>', render: renderBpOperasional },
   'kas-bank': { title: 'Kas & Bank', sub: 'Penerimaan dana, pembayaran supplier & biaya operasional', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
-    crud: { endpoint: '/kas_bank', fields: [
-      { k: 'tanggal', l: 'Tanggal', type: 'date', req: true },
-      { k: 'no_transaksi', l: 'No Transaksi' },
-      { k: 'tipe', l: 'Tipe', type: 'select', opts: ['masuk','keluar'], req: true },
-      { k: 'kategori', l: 'Kategori', type: 'select', opts: ['Penerimaan Dana','Pembayaran Supplier','Biaya Operasional','Gaji','Lainnya'] },
-      { k: 'akun_id', l: 'Akun (BP Kas)', type: 'select-api', source: '/akun?bp=BP Kas', valueField: 'id', labelField: 'nama' },
-      { k: 'deskripsi', l: 'Deskripsi', type: 'textarea' },
-      { k: 'jumlah', l: 'Jumlah (IDR)', type: 'number', fmt: 'idr', req: true },
+    crud: { endpoint: '/kas_bank', formHelp: '<strong>Masuk</strong> = penerimaan dana (donasi, BP). <strong>Keluar</strong> = pembayaran (supplier, gaji, operasional). Transaksi <strong>keluar</strong> otomatis mengurangi realisasi budget di RAB berdasarkan kategori.', fields: [
+      { k: 'tanggal', l: 'Tanggal', type: 'date', req: true, info: 'Tanggal transaksi terjadi' },
+      { k: 'no_transaksi', l: 'No Transaksi', info: 'Nomor referensi: INV-xxx, BPK-xxxx, dll' },
+      { k: 'tipe', l: 'Tipe', type: 'select', opts: ['masuk','keluar'], req: true, info: 'Masuk = uang masuk, Keluar = uang keluar' },
+      { k: 'kategori', l: 'Kategori', type: 'select', opts: ['Penerimaan Dana','Pembayaran Supplier','Biaya Operasional','Gaji','Lainnya'], info: 'Menentukan mapping jurnal & realisasi budget' },
+      { k: 'akun_id', l: 'Akun (BP Kas)', type: 'select-api', source: '/akun?bp=BP Kas', valueField: 'id', labelField: 'nama', info: 'Pilih akun kas atau bank yang sesuai' },
+      { k: 'deskripsi', l: 'Deskripsi', type: 'textarea', info: 'Detail transaksi: untuk apa, kepada siapa' },
+      { k: 'jumlah', l: 'Jumlah (IDR)', type: 'number', fmt: 'idr', req: true, info: 'Nominal transaksi dalam Rupiah' },
     ], cols: ['tanggal','no_transaksi','tipe','kategori','akun','jumlah'] }
   },
   'laporan-rab': { title: 'RAB', sub: 'Laporan anggaran vs realisasi', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="4" width="4" height="16"/><rect x="17" y="8" width="4" height="12"/><path d="M3 2v20M21 2v20"/></svg>', render: renderLapRab },
