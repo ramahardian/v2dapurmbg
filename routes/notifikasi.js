@@ -129,6 +129,26 @@ router.put('/notifikasi/baca-semua', async (req, res) => {
   }
 });
 
+router.delete('/notifikasi/:id', async (req, res) => {
+  try {
+    const t = req.user.tenant_id;
+    const id = req.params.id;
+
+    // Bisa dihapus oleh pengirim (admin/keuangan) atau penerima (karyawan)
+    const [rows] = await db.query(
+      `SELECT id, pengirim_id FROM notifikasi WHERE id=? AND tenant_id=? AND (pengirim_id=? OR penerima_id=?)`,
+      [id, t, req.user.id, req.user.karyawan_id || null]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Notifikasi tidak ditemukan atau tidak bisa dihapus' });
+
+    await db.query('DELETE FROM notifikasi WHERE id=?', [id]);
+    res.json({ ok: true, pesan: 'Pesan berhasil dihapus' });
+  } catch (err) {
+    console.error('DELETE /notifikasi/:id error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/notifikasi/belum-dibaca', async (req, res) => {
   try {
     const t = req.user.tenant_id;

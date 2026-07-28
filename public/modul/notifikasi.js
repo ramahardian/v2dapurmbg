@@ -309,8 +309,18 @@ function notifRenderList(type) {
                 <span class="text-sm md:text-sm font-semibold truncate ${isUnread ? 'text-stone-900' : 'text-stone-600'}">${escHtml(name)}</span>
                 <span class="text-[11px] md:text-xs whitespace-nowrap shrink-0 ${isUnread ? 'text-blue-600 font-medium' : 'text-stone-400'}">${dateStr}</span>
               </div>
-              <div class="text-sm md:text-sm mb-0.5 font-medium truncate ${isUnread ? 'text-stone-800' : 'text-stone-600'}">${escHtml(n.judul)}</div>
-              <div class="text-[13px] md:text-xs truncate text-stone-400 leading-relaxed">${escHtml(preview)}</div>
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm md:text-sm mb-0.5 font-medium truncate ${isUnread ? 'text-stone-800' : 'text-stone-600'}">${escHtml(n.judul)}</div>
+                  <div class="text-[13px] md:text-xs truncate text-stone-400 leading-relaxed">${escHtml(preview)}</div>
+                </div>
+                <!-- Delete button -->
+                <button onclick="event.stopPropagation();notifHapus(${n.id},'${type}')" 
+                        class="opacity-0 group-hover:opacity-100 shrink-0 p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" 
+                        title="Hapus pesan">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
             </div>
             ${isUnread ? '<div class="w-2 h-2 rounded-full bg-blue-500 mt-2 shrink-0"></div>' : ''}
           </div>
@@ -404,6 +414,12 @@ function notifShowDetail(type, id) {
             Balas
           </button>
           ` : ''}
+          <button onclick="notifHapus(${n.id},'${type}')" 
+                  class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 active:bg-red-100 rounded-xl transition-all"
+                  title="Hapus pesan">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            Hapus
+          </button>
           <button onclick="notifSwitchView('${type}')" 
                   class="px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-xl transition-all">
             Kembali
@@ -638,6 +654,25 @@ function notifUpdateClearBtn() {
   const clearBtn = document.getElementById('notif-search-clear');
   if (clearBtn) {
     clearBtn.classList.toggle('hidden', !val);
+  }
+}
+
+async function notifHapus(id, type) {
+  if (!confirm('Hapus pesan ini?')) return;
+
+  try {
+    await api.del('/notifikasi/' + id);
+    // Remove from local data
+    if (notifAllData[type]) {
+      notifAllData[type] = notifAllData[type].filter(n => n.id !== id);
+    }
+    // Re-render current view
+    if (notifCurrentView === type) {
+      notifRenderList(type);
+    }
+    showToast('Pesan berhasil dihapus', 'success');
+  } catch (err) {
+    showAlert('Gagal menghapus: ' + err.message);
   }
 }
 
