@@ -106,6 +106,15 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi foto users)'); }
 
+  // Users foto VARCHAR(255) → LONGTEXT (base64)
+  try {
+    const [ftCol] = await q("SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'foto' AND DATA_TYPE != 'longtext'");
+    if (ftCol.length) {
+      await q("ALTER TABLE users MODIFY foto LONGTEXT DEFAULT NULL");
+      log('✓ Migrasi users: foto VARCHAR(255) → LONGTEXT untuk base64');
+    }
+  } catch (e) { log('  (skip migrasi foto longtext)'); }
+
   // harga_sebelumnya
   try {
     const [hs] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'harga_sebelumnya'");

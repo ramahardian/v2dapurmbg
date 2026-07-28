@@ -1,22 +1,13 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
-const fs = require('fs');
-const path = require('path');
 const db = require('../db');
 const { sign, requireAuth } = require('../middleware/auth');
-//rama
 function saveBase64Foto(base64Data) {
   if (!base64Data || !base64Data.startsWith('data:image')) return null;
   const matches = base64Data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);
   if (!matches) return null;
-  const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-  const buffer = Buffer.from(matches[2], 'base64');
-  const filename = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
-  const dir = path.join(__dirname, '..', 'public', 'uploads', 'users');
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, filename), buffer);
-  return '/uploads/users/' + filename;
+  return base64Data;
 }
 
 const router = express.Router();
