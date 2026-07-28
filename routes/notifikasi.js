@@ -26,7 +26,7 @@ router.get('/notifikasi', async (req, res) => {
           `SELECT n.*, u.nama as nama_pengirim
            FROM notifikasi n
            LEFT JOIN users u ON u.id=n.pengirim_id
-           WHERE n.tenant_id=? AND n.penerima_id=?
+           WHERE n.tenant_id=? AND n.penerima_id=? AND n.deleted_by_penerima=0
            ORDER BY n.created_at DESC`,
           [t, karyawanId]
         );
@@ -37,7 +37,7 @@ router.get('/notifikasi', async (req, res) => {
         `SELECT n.*, k.nama as nama_penerima
          FROM notifikasi n
          LEFT JOIN karyawan k ON k.id=n.penerima_id
-         WHERE n.tenant_id=? AND n.pengirim_id=?
+         WHERE n.tenant_id=? AND n.pengirim_id=? AND n.deleted_by_pengirim=0
          ORDER BY n.created_at DESC`,
         [t, req.user.id]
       );
@@ -49,7 +49,7 @@ router.get('/notifikasi', async (req, res) => {
         `SELECT n.*, u.nama as nama_pengirim
          FROM notifikasi n
          LEFT JOIN users u ON u.id=n.pengirim_id
-         WHERE n.tenant_id=? AND n.penerima_id=?
+         WHERE n.tenant_id=? AND n.penerima_id=? AND n.deleted_by_penerima=0
          ORDER BY n.created_at DESC`,
         [t, karyawanId]
       );
@@ -149,12 +149,27 @@ router.delete('/notifikasi/:id', async (req, res) => {
     const id = req.params.id;
 
     const [rows] = await db.query(
-      `SELECT id, pengirim_id FROM notifikasi WHERE id=? AND tenant_id=? AND (pengirim_id=? OR penerima_id=?)`,
+      `SELECT id, pengirim_id, penerima_id, deleted_by_pengirim, deleted_by_penerima FROM notifikasi WHERE id=? AND tenant_id=? AND (pengirim_id=? OR penerima_id=?)`,
       [id, t, req.user.id, req.user.karyawan_id || null]
     );
     if (!rows.length) return res.status(404).json({ error: 'Notifikasi tidak ditemukan atau tidak bisa dihapus' });
 
-    await db.query('DELETE FROM notifikasi WHERE id=?', [id]);
+    const row = rows[0];
+
+    if (Number(row.pengirim_id) === Number(req.user.id)) {
+      if (row.deleted_by_penerima) {
+        await db.query('DELETE FROM notifikasi WHERE id=?', [id]);
+      } else {
+        await db.query('UPDATE notifikasi SET deleted_by_pengirim=1 WHERE id=?', [id]);
+      }
+    } else {
+      if (row.deleted_by_pengirim) {
+        await db.query('DELETE FROM notifikasi WHERE id=?', [id]);
+      } else {
+        await db.query('UPDATE notifikasi SET deleted_by_penerima=1 WHERE id=?', [id]);
+      }
+    }
+
     res.json({ ok: true, pesan: 'Pesan berhasil dihapus' });
   } catch (err) {
     console.error('DELETE /notifikasi/:id error:', err);
@@ -173,7 +188,7 @@ router.get('/notifikasi/belum-dibaca', async (req, res) => {
     if (!karyawanId) return res.json({ count: 0 });
 
     const [[{ count }]] = await db.query(
-      'SELECT COUNT(*) as count FROM notifikasi WHERE tenant_id=? AND penerima_id=? AND is_read=0',
+      'SELECT COUNT(*) as count FROM notifikasi WHERE tenant_id=? AND penerima_id=? AND is_read=0 AND deleted_by_penerima=0',
       [t, karyawanId]
     );
     res.json({ count });

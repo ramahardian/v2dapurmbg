@@ -550,6 +550,15 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi porsi_besar/harga_kecil budget)'); }
 
+  // Soft-delete untuk notifikasi (deleted_by_pengirim / deleted_by_penerima)
+  try {
+    const [dpCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notifikasi' AND COLUMN_NAME = 'deleted_by_pengirim'");
+    if (!dpCol.length) {
+      await q("ALTER TABLE notifikasi ADD COLUMN deleted_by_pengirim TINYINT(1) DEFAULT 0 AFTER is_read, ADD COLUMN deleted_by_penerima TINYINT(1) DEFAULT 0 AFTER deleted_by_pengirim, ADD INDEX idx_notif_pengirim (pengirim_id), ADD INDEX idx_notif_delete_sender (pengirim_id, deleted_by_pengirim), ADD INDEX idx_notif_delete_receiver (penerima_id, deleted_by_penerima)");
+      log('✓ Migrasi notifikasi: tambah kolom deleted_by_pengirim & deleted_by_penerima');
+    }
+  } catch (e) { log('  (skip migrasi soft-delete notifikasi): ' + e.message); }
+
   // Event hapus foto absensi setiap hari Minggu 23:59
   try {
     await q(`SET GLOBAL event_scheduler = ON`);
