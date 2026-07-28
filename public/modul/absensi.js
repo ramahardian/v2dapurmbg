@@ -52,7 +52,17 @@ async function renderAbsensi() {
     } else {
       loadAbsensi();
     }
-    // Load notification count
+    // Add notification bell with badge
+    var filterBar = document.querySelector('#content > div:first-child > div');
+    if (filterBar && !document.getElementById('abs-notif-badge')) {
+      var a = document.createElement('a');
+      a.id = 'abs-notif-badge';
+      a.href = '/notifikasi';
+      a.className = 'relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors';
+      a.onclick = function(e) { e.preventDefault(); navigate('notifikasi'); };
+      a.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Notifikasi</span><span id="abs-notif-count" class="hidden text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full min-w-[18px] text-center">0</span>';
+      filterBar.appendChild(a);
+    }
     api.get('/notifikasi/belum-dibaca').then(function(res) {
       var count = res && res.count;
       var badge = document.getElementById('abs-notif-count');
