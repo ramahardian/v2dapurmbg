@@ -57,7 +57,24 @@ function registerQueryRoutes(router) {
         });
       }
 
-      const menuList = menus.map(m => ({ ...m, bahan: bahanMap[m.id] || [] }));
+      // Batch-fetch siklus usage
+      const siklusMap = {};
+      if (menuIds.length > 0) {
+        const [siklusRows] = await db.query(
+          `SELECT si.menu_id, si.siklus_id, si.hari_ke, sm.nama AS siklus_nama
+           FROM siklus_menu_item si
+           JOIN siklus_menu sm ON sm.id = si.siklus_id
+           WHERE si.menu_id IN (${menuIds.map(() => '?').join(',')}) AND sm.tenant_id=?
+           ORDER BY si.siklus_id, si.hari_ke`,
+          [...menuIds, req.user.tenant_id]
+        );
+        siklusRows.forEach(row => {
+          if (!siklusMap[row.menu_id]) siklusMap[row.menu_id] = [];
+          siklusMap[row.menu_id].push({ siklus: row.siklus_nama, hari: row.hari_ke });
+        });
+      }
+
+      const menuList = menus.map(m => ({ ...m, bahan: bahanMap[m.id] || [], siklus_usage: siklusMap[m.id] || [] }));
 
       res.json({
         data: menuList,

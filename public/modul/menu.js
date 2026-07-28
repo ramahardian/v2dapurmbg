@@ -308,6 +308,19 @@ function renderGramasiCell(gramasiTotal, bahan) {
   return '<span' + title + '>' + rounded + 'g</span>';
 }
 
+function renderSiklusBadges(usage) {
+  if (!usage || !usage.length) return '<span class="text-stone-300">—</span>';
+  var groups = {};
+  usage.forEach(function(u) {
+    if (!groups[u.siklus]) groups[u.siklus] = [];
+    groups[u.siklus].push(u.hari);
+  });
+  return Object.keys(groups).map(function(s) {
+    var label = 'H' + groups[s].join(', H');
+    return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-700 border border-sky-200 mr-1 mb-0.5 whitespace-nowrap">' + escHtml(s) + ' ' + label + '</span>';
+  }).join('');
+}
+
 function renderMenuHtml(menus) {
   return `<div class="flex flex-wrap justify-between gap-2 mb-4">
     <div class="flex flex-wrap items-center gap-2">
@@ -335,7 +348,7 @@ function renderMenuHtml(menus) {
       <table class="w-full">
         <thead>
           <tr class="border-b border-stone-100">
-            <th class="text-center px-2 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500 w-10">No</th>
+            <th class="text-left px-3 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Siklus</th>
             <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500 w-10">
               <input type="checkbox" id="menu-select-all" onchange="toggleSelectAllMenu(this)" class="cb-modern">
             </th>
@@ -348,9 +361,9 @@ function renderMenuHtml(menus) {
           </tr>
         </thead>
         <tbody id="menu-table-body">
-            ${menus.length > 0 ? menus.map((m, i) => `
+            ${menus.length > 0 ? menus.map((m) => `
             <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-              <td class="px-2 py-3 text-xs text-center text-stone-400 font-mono">${(menuState.page - 1) * menuState.limit + i + 1}</td>
+              <td class="px-3 py-3 text-xs">${renderSiklusBadges(m.siklus_usage)}</td>
               <td class="px-4 py-3 text-xs">
                 <input type="checkbox" value="${m.id}" onchange="updateSelectedMenuCount()" class="menu-checkbox cb-modern">
               </td>
