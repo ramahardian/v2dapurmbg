@@ -1049,14 +1049,18 @@ async function openMenuPoModal() {
     return;
   }
   
-  document.getElementById('modal-title').textContent = 'Buat PO dari Menu (' + currentMenu.nama + ')';
+  var shortName = currentMenu.nama && currentMenu.nama.length > 50 ? currentMenu.nama.slice(0, 47) + '...' : currentMenu.nama;
+  document.getElementById('modal-title').innerHTML = 'Buat PO <span class="text-stone-400 font-normal">dari Menu</span>';
   document.getElementById('modal-save').style.display = 'block';
   document.getElementById('modal-save').textContent = 'Buat PO';
   document.getElementById('modal-save').onclick = function() { createPoFromMenu(currentMenu.id); };
   document.getElementById('modal-body').innerHTML = `
-    <div class="text-sm text-stone-600 mb-4">
-      Membuat Purchase Order dari seluruh bahan yang digunakan dalam menu "${currentMenu.nama}".
-      Pilih supplier dan klik "Buat PO" untuk melanjutkan.
+    <div class="flex items-start gap-2.5 p-3 mb-4 bg-stone-50 border border-stone-200 rounded-xl">
+      <svg class="w-4 h-4 mt-0.5 shrink-0 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+      <div class="text-xs text-stone-600 leading-relaxed">
+        <span class="font-semibold text-stone-700 block truncate" title="${escHtml(currentMenu.nama || '')}">${escHtml(shortName || '')}</span>
+        <span>Buat Purchase Order dari seluruh bahan menu ini.</span>
+      </div>
     </div>
     <div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Supplier *</label>
       <select id="po-supplier" class="w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
@@ -1179,14 +1183,18 @@ function openAIDialog() {
     return;
   }
   
-  document.getElementById('modal-title').textContent = 'Buat PO dari Menu (' + currentMenu.nama + ')';
+  var shortName = currentMenu.nama && currentMenu.nama.length > 50 ? currentMenu.nama.slice(0, 47) + '...' : currentMenu.nama;
+  document.getElementById('modal-title').innerHTML = 'Buat PO <span class="text-stone-400 font-normal">dari Menu</span>';
   document.getElementById('modal-save').style.display = 'block';
   document.getElementById('modal-save').textContent = 'Buat PO';
   document.getElementById('modal-save').onclick = function() { createPoFromMenu(currentMenu.id); };
   document.getElementById('modal-body').innerHTML = `
-    <div class="text-sm text-stone-600 mb-4">
-      Membuat Purchase Order dari seluruh bahan yang digunakan dalam menu "${currentMenu.nama}".
-      Pilih supplier dan klik "Buat PO" untuk melanjutkan.
+    <div class="flex items-start gap-2.5 p-3 mb-4 bg-stone-50 border border-stone-200 rounded-xl">
+      <svg class="w-4 h-4 mt-0.5 shrink-0 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+      <div class="text-xs text-stone-600 leading-relaxed">
+        <span class="font-semibold text-stone-700 block truncate" title="${escHtml(currentMenu.nama || '')}">${escHtml(shortName || '')}</span>
+        <span>Buat Purchase Order dari seluruh bahan menu ini.</span>
+      </div>
     </div>
     <div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Supplier *</label>
       <select id="po-supplier" class="w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
