@@ -21,14 +21,14 @@ router.get('/notifikasi', async (req, res) => {
 
     if (isAdminOrKeuangan) {
       if (type === 'inbox') {
-        // Inbox: terima dari admin (penerima_id=karyawanId) ATAU dari karyawan (penerima_id=users.id)
+        if (!karyawanId) return res.json([]);
         const [rows] = await db.query(
           `SELECT n.*, u.nama as nama_pengirim
            FROM notifikasi n
            LEFT JOIN users u ON u.id=n.pengirim_id
-           WHERE n.tenant_id=? AND (n.penerima_id=? OR n.penerima_id=?)
+           WHERE n.tenant_id=? AND n.penerima_id=?
            ORDER BY n.created_at DESC`,
-          [t, karyawanId || 0, req.user.id]
+          [t, karyawanId]
         );
         return res.json(rows);
       }
@@ -130,10 +130,12 @@ router.put('/notifikasi/baca-semua', async (req, res) => {
       const [k] = await db.query('SELECT id FROM karyawan WHERE tenant_id=? AND email=? LIMIT 1', [t, req.user.email]);
       if (k.length) karyawanId = k[0].id;
     }
-    await db.query(
-      'UPDATE notifikasi SET is_read=1 WHERE tenant_id=? AND is_read=0 AND (penerima_id=? OR penerima_id=?)',
-      [t, karyawanId || 0, req.user.id]
-    );
+    if (karyawanId) {
+      await db.query(
+        'UPDATE notifikasi SET is_read=1 WHERE tenant_id=? AND penerima_id=? AND is_read=0',
+        [t, karyawanId]
+      );
+    }
     res.json({ ok: true });
   } catch (err) {
     console.error('PUT /notifikasi/baca-semua error:', err);
@@ -146,14 +148,9 @@ router.delete('/notifikasi/:id', async (req, res) => {
     const t = req.user.tenant_id;
     const id = req.params.id;
 
-    let karyawanId = req.user.karyawan_id;
-    if (!karyawanId) {
-      const [k] = await db.query('SELECT id FROM karyawan WHERE tenant_id=? AND email=? LIMIT 1', [t, req.user.email]);
-      if (k.length) karyawanId = k[0].id;
-    }
     const [rows] = await db.query(
-      `SELECT id, pengirim_id FROM notifikasi WHERE id=? AND tenant_id=? AND (pengirim_id=? OR penerima_id=? OR penerima_id=?)`,
-      [id, t, req.user.id, karyawanId || null, req.user.id]
+      `SELECT id, pengirim_id FROM notifikasi WHERE id=? AND tenant_id=? AND (pengirim_id=? OR penerima_id=?)`,
+      [id, t, req.user.id, req.user.karyawan_id || null]
     );
     if (!rows.length) return res.status(404).json({ error: 'Notifikasi tidak ditemukan atau tidak bisa dihapus' });
 
@@ -173,10 +170,11 @@ router.get('/notifikasi/belum-dibaca', async (req, res) => {
       const [k] = await db.query('SELECT id FROM karyawan WHERE tenant_id=? AND email=? LIMIT 1', [t, req.user.email]);
       if (k.length) karyawanId = k[0].id;
     }
+    if (!karyawanId) return res.json({ count: 0 });
 
     const [[{ count }]] = await db.query(
-      'SELECT COUNT(*) as count FROM notifikasi WHERE tenant_id=? AND is_read=0 AND (penerima_id=? OR penerima_id=?)',
-      [t, karyawanId || 0, req.user.id]
+      'SELECT COUNT(*) as count FROM notifikasi WHERE tenant_id=? AND penerima_id=? AND is_read=0',
+      [t, karyawanId]
     );
     res.json({ count });
   } catch (err) {
@@ -194,19 +192,24 @@ router.post('/notifikasi/kirim-dari-karyawan', async (req, res) => {
 
     const t = req.user.tenant_id;
 
-    // Cari admin/keuangan yang jadi penerima
+    // Cari admin/keuangan yang jadi penerima — dapatkan karyawan_id mereka
     const [admins] = await db.query(
-      `SELECT u.id FROM users u
-       WHERE u.tenant_id=? AND (u.role='admin' OR u.role='keuangan') AND u.id!=?`,
+      `SELECT u.id as uid, u.karyawan_id, k.id as kid
+       FROM users u
+       LEFT JOIN karyawan k ON (k.id=u.karyawan_id OR k.email=u.email)
+       WHERE u.tenant_id=? AND (u.role='admin' OR u.role='keuangan') AND u.id!=?
+       GROUP BY u.id`,
       [t, req.user.id]
     );
 
     if (!admins.length) return res.status(400).json({ error: 'Tidak ada admin/keuangan yang bisa dikirimi pesan' });
 
     for (const a of admins) {
+      const penerimaKaryawanId = a.karyawan_id || a.kid;
+      if (!penerimaKaryawanId) continue;
       await db.query(
         `INSERT INTO notifikasi (tenant_id, pengirim_id, penerima_id, judul, pesan) VALUES (?,?,?,?,?)`,
-        [t, req.user.id, a.id, judul, pesan || null]
+        [t, req.user.id, penerimaKaryawanId, judul, pesan || null]
       );
     }
     res.json({ ok: true, pesan: 'Pesan terkirim ke admin/keuangan' });
