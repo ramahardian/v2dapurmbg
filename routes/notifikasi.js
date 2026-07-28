@@ -13,23 +13,27 @@ router.get('/notifikasi', async (req, res) => {
 
     const isAdminOrKeuangan = role === 'admin' || role === 'keuangan';
 
-    // Admin/keuangan: bisa lihat inbox (diterima) atau sent (dikirim)
+    // Dapatkan karyawan_id — fallback cari via email jika NULL
+    let karyawanId = req.user.karyawan_id;
+    if (!karyawanId) {
+      const [k] = await db.query('SELECT id FROM karyawan WHERE tenant_id=? AND email=? LIMIT 1', [t, req.user.email]);
+      if (k.length) karyawanId = k[0].id;
+    }
+
     if (isAdminOrKeuangan) {
       if (type === 'inbox') {
-        // Notifikasi yang diterima admin (lewat relasi karyawan)
-        if (!req.user.karyawan_id) return res.json([]);
+        if (!karyawanId) return res.json([]);
         const [rows] = await db.query(
           `SELECT n.*, u.nama as nama_pengirim
            FROM notifikasi n
            LEFT JOIN users u ON u.id=n.pengirim_id
            WHERE n.tenant_id=? AND n.penerima_id=?
            ORDER BY n.created_at DESC`,
-          [t, req.user.karyawan_id]
+          [t, karyawanId]
         );
         return res.json(rows);
       }
 
-      // Sent (dikirim oleh admin)
       const [rows] = await db.query(
         `SELECT n.*, k.nama as nama_penerima
          FROM notifikasi n
@@ -42,14 +46,14 @@ router.get('/notifikasi', async (req, res) => {
     }
 
     // Karyawan biasa: inbox
-    if (req.user.karyawan_id) {
+    if (karyawanId) {
       const [rows] = await db.query(
         `SELECT n.*, u.nama as nama_pengirim
          FROM notifikasi n
          LEFT JOIN users u ON u.id=n.pengirim_id
          WHERE n.tenant_id=? AND n.penerima_id=?
          ORDER BY n.created_at DESC`,
-        [t, req.user.karyawan_id]
+        [t, karyawanId]
       );
       return res.json(rows);
     }
@@ -101,9 +105,14 @@ router.post('/notifikasi/kirim', requireRole('admin', 'keuangan'), async (req, r
 router.put('/notifikasi/:id/baca', async (req, res) => {
   try {
     const t = req.user.tenant_id;
+    let karyawanId = req.user.karyawan_id;
+    if (!karyawanId) {
+      const [k] = await db.query('SELECT id FROM karyawan WHERE tenant_id=? AND email=? LIMIT 1', [t, req.user.email]);
+      if (k.length) karyawanId = k[0].id;
+    }
     const [rows] = await db.query(
       'SELECT id FROM notifikasi WHERE id=? AND tenant_id=? AND penerima_id=?',
-      [req.params.id, t, req.user.karyawan_id]
+      [req.params.id, t, karyawanId]
     );
     if (!rows.length) return res.status(404).json({ error: 'Notifikasi tidak ditemukan' });
 
@@ -118,10 +127,17 @@ router.put('/notifikasi/:id/baca', async (req, res) => {
 router.put('/notifikasi/baca-semua', async (req, res) => {
   try {
     const t = req.user.tenant_id;
-    await db.query(
-      'UPDATE notifikasi SET is_read=1 WHERE tenant_id=? AND penerima_id=? AND is_read=0',
-      [t, req.user.karyawan_id]
-    );
+    let karyawanId = req.user.karyawan_id;
+    if (!karyawanId) {
+      const [k] = await db.query('SELECT id FROM karyawan WHERE tenant_id=? AND email=? LIMIT 1', [t, req.user.email]);
+      if (k.length) karyawanId = k[0].id;
+    }
+    if (karyawanId) {
+      await db.query(
+        'UPDATE notifikasi SET is_read=1 WHERE tenant_id=? AND penerima_id=? AND is_read=0',
+        [t, karyawanId]
+      );
+    }
     res.json({ ok: true });
   } catch (err) {
     console.error('PUT /notifikasi/baca-semua error:', err);
@@ -152,11 +168,16 @@ router.delete('/notifikasi/:id', async (req, res) => {
 router.get('/notifikasi/belum-dibaca', async (req, res) => {
   try {
     const t = req.user.tenant_id;
-    if (!req.user.karyawan_id) return res.json({ count: 0 });
+    let karyawanId = req.user.karyawan_id;
+    if (!karyawanId) {
+      const [k] = await db.query('SELECT id FROM karyawan WHERE tenant_id=? AND email=? LIMIT 1', [t, req.user.email]);
+      if (k.length) karyawanId = k[0].id;
+    }
+    if (!karyawanId) return res.json({ count: 0 });
 
     const [[{ count }]] = await db.query(
       'SELECT COUNT(*) as count FROM notifikasi WHERE tenant_id=? AND penerima_id=? AND is_read=0',
-      [t, req.user.karyawan_id]
+      [t, karyawanId]
     );
     res.json({ count });
   } catch (err) {
