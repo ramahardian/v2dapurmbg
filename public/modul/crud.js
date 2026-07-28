@@ -321,7 +321,7 @@ function openForm(cfg, editing) {
     });
   });
 
-  // Auto-calc fields (e.g. berat_kotor = berat_bersih / bdd_persen)
+  // Auto-calc fields (e.g. jumlah_penerima = porsi_besar + porsi_kecil, berat_kotor = berat_bersih / bdd_persen)
   cfg.fields.filter(function(f) { return f.calc; }).forEach(function(f) {
     var target = document.getElementById('f-' + f.k);
     if (!target) return;
@@ -331,12 +331,20 @@ function openForm(cfg, editing) {
       return { el: el, isPct: def && def.fmt === 'pct' };
     }).filter(function(s) { return s.el; });
     if (srcDefs.length < 2) return;
-    var dec = f.decimals != null ? f.decimals : 2;
+    var dec = f.decimals != null ? f.decimals : 0;
     function updateCalc() {
-      var a = parseFloat(srcDefs[0].el.value) || 0;
-      var b = parseFloat(srcDefs[1].el.value) || 0;
-      if (srcDefs[1].isPct) b = b / 100;
-      target.value = b !== 0 ? (a / b).toFixed(dec) : '0';
+      var vals = srcDefs.map(function(s) {
+        var v = parseFloat(s.el.value) || 0;
+        return s.isPct ? v / 100 : v;
+      });
+      var result;
+      if (f.calc.op === 'add') {
+        result = vals.reduce(function(a, b) { return a + b; }, 0);
+      } else {
+        var a = vals[0], b = vals[1];
+        result = b !== 0 ? a / b : 0;
+      }
+      target.value = result.toFixed(dec);
     }
     srcDefs.forEach(function(s) { s.el.addEventListener('input', updateCalc); });
     updateCalc();

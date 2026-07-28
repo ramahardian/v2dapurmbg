@@ -70,12 +70,14 @@ distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', ic
   budgeting: { title: 'Budgeting', sub: 'Anggaran per periode & kategori', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
     crud: { endpoint: '/budget', fields: [
       { k: 'periode', l: 'Periode', req: true }, { k: 'kategori_penerima', l: 'Kategori' },
-      { k: 'jumlah_penerima', l: 'Jumlah Penerima', type: 'number', fmt: 'num' },
+      { k: 'porsi_besar', l: 'Porsi Besar', type: 'number', fmt: 'num' },
+      { k: 'porsi_kecil', l: 'Porsi Kecil', type: 'number', fmt: 'num' },
+      { k: 'jumlah_penerima', l: 'Jml Penerima', type: 'number', fmt: 'num', readOnly: true, calc: { from: ['porsi_besar','porsi_kecil'], op: 'add' } },
       { k: 'harga_per_porsi', l: 'Harga per Porsi (IDR)', type: 'number', fmt: 'idr' },
       { k: 'biaya_operasional', l: 'Biaya Operasional (IDR)', type: 'number', fmt: 'idr' },
       { k: 'total_budget', l: 'Total Budget (IDR)', type: 'number', fmt: 'idr', req: true },
       { k: 'realisasi', l: 'Realisasi (IDR)', type: 'number', fmt: 'idr' },
-    ], cols: ['periode','kategori_penerima','jumlah_penerima','harga_per_porsi','total_budget','realisasi'] },
+    ], cols: ['periode','kategori_penerima','porsi_besar','porsi_kecil','jumlah_penerima','harga_per_porsi','total_budget','realisasi'] },
     extraButtons: [
       { label: 'Hitung Ulang Realisasi', onclick: 'recalculateRealisasi()', cls: 'border border-blue-400 text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-md text-sm font-medium' },
       { label: 'Backfill Jurnal', onclick: 'backfillJournal()', cls: 'border border-amber-400 text-amber-700 hover:bg-amber-50 px-4 py-2 rounded-md text-sm font-medium' },

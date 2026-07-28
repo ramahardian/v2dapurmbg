@@ -143,13 +143,13 @@ router.post('/siklus/hitung-budget', async (req, res) => {
 
   if (existingBudget.length) {
     await db.query(
-      'UPDATE budget SET jumlah_penerima=?, harga_per_porsi=?, total_budget=? WHERE id=? AND tenant_id=?',
-      [jumlahPorsi, hargaPerPorsi, totalBudget, existingBudget[0].id, req.user.tenant_id]
+      'UPDATE budget SET porsi_besar=?, porsi_kecil=?, jumlah_penerima=?, harga_per_porsi=?, total_budget=? WHERE id=? AND tenant_id=?',
+      [jumlahPorsi, 0, jumlahPorsi, hargaPerPorsi, totalBudget, existingBudget[0].id, req.user.tenant_id]
     );
   } else {
     await db.query(
-      'INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_per_porsi, total_budget) VALUES (?,?,?,?,?,?)',
-      [req.user.tenant_id, periode, siklus.kategori_penerima || '-', jumlahPorsi, hargaPerPorsi, totalBudget]
+      'INSERT INTO budget (tenant_id, periode, kategori_penerima, porsi_besar, porsi_kecil, jumlah_penerima, harga_per_porsi, total_budget) VALUES (?,?,?,?,?,?,?,?)',
+      [req.user.tenant_id, periode, siklus.kategori_penerima || '-', jumlahPorsi, 0, jumlahPorsi, hargaPerPorsi, totalBudget]
     );
   }
 
@@ -197,9 +197,9 @@ router.post('/siklus/hitung-budget-semua', async (req, res) => {
     const totalBudget = workingDays * jumlahPorsi * hargaPerPorsi;
 
     if (budgetMap[kat]) {
-      await db.query('UPDATE budget SET jumlah_penerima=?, harga_per_porsi=?, total_budget=? WHERE id=?', [jumlahPorsi, hargaPerPorsi, totalBudget, budgetMap[kat].id]);
+      await db.query('UPDATE budget SET porsi_besar=?, porsi_kecil=?, jumlah_penerima=?, harga_per_porsi=?, total_budget=? WHERE id=?', [jumlahPorsi, 0, jumlahPorsi, hargaPerPorsi, totalBudget, budgetMap[kat].id]);
     } else {
-      await db.query('INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_per_porsi, total_budget) VALUES (?,?,?,?,?,?)', [req.user.tenant_id, periode, kat, jumlahPorsi, hargaPerPorsi, totalBudget]);
+      await db.query('INSERT INTO budget (tenant_id, periode, kategori_penerima, porsi_besar, porsi_kecil, jumlah_penerima, harga_per_porsi, total_budget) VALUES (?,?,?,?,?,?,?,?)', [req.user.tenant_id, periode, kat, jumlahPorsi, 0, jumlahPorsi, hargaPerPorsi, totalBudget]);
     }
     updated++;
   }
