@@ -1151,13 +1151,35 @@
         el.innerHTML = '<div class="text-center py-8 text-red-400 text-sm">Gagal memuat notifikasi</div>';
       }
     }
-    function showNotifForm(replyToPengirimId) {
+    async function showNotifForm(replyToPengirimId) {
       document.getElementById('notif-modal-header-inbox').classList.add('hidden');
       document.getElementById('notif-modal-header-compose').classList.remove('hidden');
       var h3 = document.querySelector('#notif-modal-header-compose h3');
       if (h3) h3.textContent = replyToPengirimId ? 'Balas Pesan' : 'Pesan Baru';
+
+      var penerimaHtml = '';
+      if (!replyToPengirimId) {
+        // Ambil daftar admin/keuangan untuk dropdown
+        try {
+          var r = await fetch('/api/notifikasi/daftar-admin', { credentials: 'include' });
+          if (r.ok) {
+            var admins = await r.json();
+            if (admins.length) {
+              penerimaHtml = '<div>'
+                + '<label class="text-xs font-semibold text-stone-500 uppercase tracking-wider">Tujuan</label>'
+                + '<select id="notif-form-penerima" class="mt-1.5 w-full px-4 py-3 rounded-xl border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white">'
+                + '<option value="">— Pilih penerima —</option>'
+                + admins.map(function(a) { return '<option value="' + a.id + '">' + escapeHtml(a.nama) + ' (' + escapeHtml(a.role.toUpperCase()) + ')</option>'; }).join('')
+                + '<option value="semua">Kirim ke semua admin/keuangan</option>'
+                + '</select></div>';
+            }
+          }
+        } catch(e) {}
+      }
+
       var el = document.getElementById('notif-list');
       el.innerHTML = '<div class="p-6 space-y-6">'
+        + penerimaHtml
         + '<div>'
         + '<label class="text-xs font-semibold text-stone-500 uppercase tracking-wider">Subjek</label>'
         + '<input id="notif-form-judul" type="text" placeholder="Judul pesan..." class="mt-1.5 w-full px-4 py-3 rounded-xl border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white">'
@@ -1175,12 +1197,19 @@
       var judul = document.getElementById('notif-form-judul').value.trim();
       var pesan = document.getElementById('notif-form-pesan').value.trim();
       var replyTo = document.getElementById('notif-form-reply-to').value;
+      var penerimaSel = document.getElementById('notif-form-penerima');
+      var penerima = penerimaSel ? penerimaSel.value : '';
       if (!judul) { showToast('Judul wajib diisi', 'error'); return; }
+      if (!replyTo && !penerima) { showToast('Pilih penerima', 'error'); return; }
       var btn = document.querySelector('#notif-list button:last-child');
       btn.disabled = true;
       btn.innerHTML = '<svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Mengirim...';
       try {
-        var r = await fetch('/api/notifikasi/kirim-dari-karyawan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ judul: judul, pesan: pesan, reply_to: replyTo || null }), credentials: 'include' });
+        var body = { judul: judul, pesan: pesan };
+        if (replyTo) body.reply_to = replyTo;
+        else if (penerima === 'semua') body.kirim_ke_semua = true;
+        else body.penerima_id = penerima;
+        var r = await fetch('/api/notifikasi/kirim-dari-karyawan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'include' });
         var d = await r.json();
         if (d.error) { showToast(d.error, 'error'); btn.disabled = false; btn.innerHTML = 'Kirim'; return; }
         showToast('Pesan terkirim', 'success');

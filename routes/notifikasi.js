@@ -183,17 +183,33 @@ router.get('/notifikasi/belum-dibaca', async (req, res) => {
   }
 });
 
+// Daftar admin/keuangan untuk pemilih penerima di halaman karyawan
+router.get('/notifikasi/daftar-admin', async (req, res) => {
+  try {
+    const t = req.user.tenant_id;
+    const [rows] = await db.query(
+      `SELECT u.id, u.nama, u.role FROM users u
+       WHERE u.tenant_id=? AND (u.role='admin' OR u.role='keuangan') AND u.id!=?
+       ORDER BY u.role, u.nama`,
+      [t, req.user.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /notifikasi/daftar-admin error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Kirim pesan dari karyawan ke admin/keuangan
 router.post('/notifikasi/kirim-dari-karyawan', async (req, res) => {
   try {
-    const { judul, pesan, reply_to } = req.body;
+    const { judul, pesan, reply_to, penerima_id, kirim_ke_semua } = req.body;
     if (!judul) return res.status(400).json({ error: 'Judul wajib diisi' });
     if (!req.user.karyawan_id && !req.user.email) return res.status(400).json({ error: 'Akun tidak terhubung ke karyawan' });
 
     const t = req.user.tenant_id;
 
     if (reply_to) {
-      // Balas ke pengirim tertentu
       const [target] = await db.query(
         `SELECT u.id as uid, u.karyawan_id, k.id as kid
          FROM users u
@@ -212,7 +228,27 @@ router.post('/notifikasi/kirim-dari-karyawan', async (req, res) => {
       return res.json({ ok: true, pesan: 'Balasan terkirim' });
     }
 
-    // Kirim ke semua admin/keuangan — dapatkan karyawan_id mereka
+    if (penerima_id && penerima_id !== 'semua') {
+      // Kirim ke admin/keuangan tertentu
+      const [target] = await db.query(
+        `SELECT u.id as uid, u.karyawan_id, k.id as kid
+         FROM users u
+         LEFT JOIN karyawan k ON (k.id=u.karyawan_id OR k.email=u.email)
+         WHERE u.tenant_id=? AND u.id=? AND (u.role='admin' OR u.role='keuangan')
+         LIMIT 1`,
+        [t, penerima_id]
+      );
+      if (!target.length) return res.status(400).json({ error: 'Penerima tidak ditemukan' });
+      const penerimaKaryawanId = target[0].karyawan_id || target[0].kid;
+      if (!penerimaKaryawanId) return res.status(400).json({ error: 'Penerima tidak memiliki data karyawan' });
+      await db.query(
+        `INSERT INTO notifikasi (tenant_id, pengirim_id, penerima_id, judul, pesan) VALUES (?,?,?,?,?)`,
+        [t, req.user.id, penerimaKaryawanId, judul, pesan || null]
+      );
+      return res.json({ ok: true, pesan: 'Pesan terkirim' });
+    }
+
+    // Kirim ke semua admin/keuangan
     const [admins] = await db.query(
       `SELECT u.id as uid, u.karyawan_id, k.id as kid
        FROM users u
