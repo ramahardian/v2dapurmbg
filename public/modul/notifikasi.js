@@ -675,10 +675,8 @@ async function executenotifHapus(id, type) {
       notifRenderList(type);
     }
     showToast('Pesan berhasil dihapus', 'success');
-    hideConfirm();
   } catch (err) {
     showAlert('Gagal menghapus: ' + err.message);
-    hideConfirm();
   }
 }
 
