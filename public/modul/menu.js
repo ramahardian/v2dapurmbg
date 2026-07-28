@@ -348,10 +348,10 @@ function renderMenuHtml(menus) {
       <table class="w-full">
         <thead>
           <tr class="border-b border-stone-100">
-            <th class="text-left px-3 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Siklus</th>
             <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500 w-10">
               <input type="checkbox" id="menu-select-all" onchange="toggleSelectAllMenu(this)" class="cb-modern">
             </th>
+            <th class="text-left px-3 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Siklus</th>
             <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Nama</th>
             <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kategori</th>
             <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Gramasi <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-stone-200 text-stone-500 text-[9px] cursor-help font-bold" title="Gramasi total = jumlah seluruh bahan (g). 0 = belum ada bahan/ jumlah. Default terisi otomatis dari SP Referensi saat pilih bahan.">?</span></th>
@@ -363,10 +363,10 @@ function renderMenuHtml(menus) {
         <tbody id="menu-table-body">
             ${menus.length > 0 ? menus.map((m) => `
             <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-              <td class="px-3 py-3 text-xs">${renderSiklusBadges(m.siklus_usage)}</td>
               <td class="px-4 py-3 text-xs">
                 <input type="checkbox" value="${m.id}" onchange="updateSelectedMenuCount()" class="menu-checkbox cb-modern">
               </td>
+              <td class="px-3 py-3 text-xs">${renderSiklusBadges(m.siklus_usage)}</td>
               <td class="px-4 py-3 text-xs font-medium text-stone-700 truncate max-w-[180px]" title="${m.nama}">${m.nama}</td>
               <td class="px-4 py-3 text-xs whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
               <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
