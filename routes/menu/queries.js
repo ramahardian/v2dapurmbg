@@ -57,20 +57,30 @@ function registerQueryRoutes(router) {
         });
       }
 
-      // Batch-fetch siklus usage
+      // Batch-fetch siklus usage (by menu_id or by menu_nama for grid-based items)
       const siklusMap = {};
       if (menuIds.length > 0) {
+        const menuNames = menus.map(m => m.nama).filter(Boolean);
         const [siklusRows] = await db.query(
-          `SELECT si.menu_id, si.siklus_id, si.hari_ke, sm.nama AS siklus_nama
+          `SELECT si.menu_id, si.menu_nama, si.siklus_id, si.hari_ke, sm.nama AS siklus_nama
            FROM siklus_menu_item si
            JOIN siklus_menu sm ON sm.id = si.siklus_id
-           WHERE si.menu_id IN (${menuIds.map(() => '?').join(',')}) AND sm.tenant_id=?
+           WHERE (si.menu_id IN (${menuIds.map(() => '?').join(',')}) OR si.menu_nama IN (${menuNames.map(() => '?').join(',')}))
+           AND sm.tenant_id=?
            ORDER BY si.siklus_id, si.hari_ke`,
-          [...menuIds, req.user.tenant_id]
+          [...menuIds, ...menuNames, req.user.tenant_id]
         );
         siklusRows.forEach(row => {
-          if (!siklusMap[row.menu_id]) siklusMap[row.menu_id] = [];
-          siklusMap[row.menu_id].push({ siklus: row.siklus_nama, hari: row.hari_ke });
+          var ids = [];
+          if (row.menu_id) ids.push(row.menu_id);
+          if (row.menu_nama) {
+            menus.forEach(m => { if (m.nama === row.menu_nama) ids.push(m.id); });
+          }
+          ids = [...new Set(ids)];
+          ids.forEach(function(id) {
+            if (!siklusMap[id]) siklusMap[id] = [];
+            siklusMap[id].push({ siklus: row.siklus_nama, hari: row.hari_ke });
+          });
         });
       }
 
