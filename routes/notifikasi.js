@@ -13,7 +13,6 @@ router.get('/notifikasi', async (req, res) => {
 
     const isAdminOrKeuangan = role === 'admin' || role === 'keuangan';
 
-    // Dapatkan karyawan_id — fallback cari via email jika NULL
     let karyawanId = req.user.karyawan_id;
     if (!karyawanId) {
       const [k] = await db.query('SELECT id FROM karyawan WHERE tenant_id=? AND email=? LIMIT 1', [t, req.user.email]);
@@ -22,14 +21,14 @@ router.get('/notifikasi', async (req, res) => {
 
     if (isAdminOrKeuangan) {
       if (type === 'inbox') {
-        if (!karyawanId) return res.json([]);
+        // Inbox: terima dari admin (penerima_id=karyawanId) ATAU dari karyawan (penerima_id=users.id)
         const [rows] = await db.query(
           `SELECT n.*, u.nama as nama_pengirim
            FROM notifikasi n
            LEFT JOIN users u ON u.id=n.pengirim_id
-           WHERE n.tenant_id=? AND n.penerima_id=?
+           WHERE n.tenant_id=? AND (n.penerima_id=? OR n.penerima_id=?)
            ORDER BY n.created_at DESC`,
-          [t, karyawanId]
+          [t, karyawanId || 0, req.user.id]
         );
         return res.json(rows);
       }
@@ -45,7 +44,6 @@ router.get('/notifikasi', async (req, res) => {
       return res.json(rows);
     }
 
-    // Karyawan biasa: inbox
     if (karyawanId) {
       const [rows] = await db.query(
         `SELECT n.*, u.nama as nama_pengirim
@@ -132,12 +130,10 @@ router.put('/notifikasi/baca-semua', async (req, res) => {
       const [k] = await db.query('SELECT id FROM karyawan WHERE tenant_id=? AND email=? LIMIT 1', [t, req.user.email]);
       if (k.length) karyawanId = k[0].id;
     }
-    if (karyawanId) {
-      await db.query(
-        'UPDATE notifikasi SET is_read=1 WHERE tenant_id=? AND penerima_id=? AND is_read=0',
-        [t, karyawanId]
-      );
-    }
+    await db.query(
+      'UPDATE notifikasi SET is_read=1 WHERE tenant_id=? AND is_read=0 AND (penerima_id=? OR penerima_id=?)',
+      [t, karyawanId || 0, req.user.id]
+    );
     res.json({ ok: true });
   } catch (err) {
     console.error('PUT /notifikasi/baca-semua error:', err);
@@ -150,10 +146,14 @@ router.delete('/notifikasi/:id', async (req, res) => {
     const t = req.user.tenant_id;
     const id = req.params.id;
 
-    // Bisa dihapus oleh pengirim (admin/keuangan) atau penerima (karyawan)
+    let karyawanId = req.user.karyawan_id;
+    if (!karyawanId) {
+      const [k] = await db.query('SELECT id FROM karyawan WHERE tenant_id=? AND email=? LIMIT 1', [t, req.user.email]);
+      if (k.length) karyawanId = k[0].id;
+    }
     const [rows] = await db.query(
-      `SELECT id, pengirim_id FROM notifikasi WHERE id=? AND tenant_id=? AND (pengirim_id=? OR penerima_id=?)`,
-      [id, t, req.user.id, req.user.karyawan_id || null]
+      `SELECT id, pengirim_id FROM notifikasi WHERE id=? AND tenant_id=? AND (pengirim_id=? OR penerima_id=? OR penerima_id=?)`,
+      [id, t, req.user.id, karyawanId || null, req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Notifikasi tidak ditemukan atau tidak bisa dihapus' });
 
@@ -173,15 +173,45 @@ router.get('/notifikasi/belum-dibaca', async (req, res) => {
       const [k] = await db.query('SELECT id FROM karyawan WHERE tenant_id=? AND email=? LIMIT 1', [t, req.user.email]);
       if (k.length) karyawanId = k[0].id;
     }
-    if (!karyawanId) return res.json({ count: 0 });
 
     const [[{ count }]] = await db.query(
-      'SELECT COUNT(*) as count FROM notifikasi WHERE tenant_id=? AND penerima_id=? AND is_read=0',
-      [t, karyawanId]
+      'SELECT COUNT(*) as count FROM notifikasi WHERE tenant_id=? AND is_read=0 AND (penerima_id=? OR penerima_id=?)',
+      [t, karyawanId || 0, req.user.id]
     );
     res.json({ count });
   } catch (err) {
     console.error('GET /notifikasi/belum-dibaca error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Kirim pesan dari karyawan ke admin/keuangan
+router.post('/notifikasi/kirim-dari-karyawan', async (req, res) => {
+  try {
+    const { judul, pesan } = req.body;
+    if (!judul) return res.status(400).json({ error: 'Judul wajib diisi' });
+    if (!req.user.karyawan_id && !req.user.email) return res.status(400).json({ error: 'Akun tidak terhubung ke karyawan' });
+
+    const t = req.user.tenant_id;
+
+    // Cari admin/keuangan yang jadi penerima
+    const [admins] = await db.query(
+      `SELECT u.id FROM users u
+       WHERE u.tenant_id=? AND (u.role='admin' OR u.role='keuangan') AND u.id!=?`,
+      [t, req.user.id]
+    );
+
+    if (!admins.length) return res.status(400).json({ error: 'Tidak ada admin/keuangan yang bisa dikirimi pesan' });
+
+    for (const a of admins) {
+      await db.query(
+        `INSERT INTO notifikasi (tenant_id, pengirim_id, penerima_id, judul, pesan) VALUES (?,?,?,?,?)`,
+        [t, req.user.id, a.id, judul, pesan || null]
+      );
+    }
+    res.json({ ok: true, pesan: 'Pesan terkirim ke admin/keuangan' });
+  } catch (err) {
+    console.error('POST /notifikasi/kirim-dari-karyawan error:', err);
     res.status(500).json({ error: err.message });
   }
 });

@@ -1100,6 +1100,9 @@
     // ─── Notifikasi Modal ───
     async function openNotifModal() {
       document.getElementById('notif-modal').classList.remove('hidden');
+      await loadNotifList();
+    }
+    async function loadNotifList() {
       const el = document.getElementById('notif-list');
       el.innerHTML = '<div class="text-center py-8 text-stone-400 text-sm">Memuat...</div>';
       try {
@@ -1107,23 +1110,55 @@
         if (!r.ok) { el.innerHTML = '<div class="text-center py-8 text-red-400 text-sm">Gagal memuat notifikasi</div>'; return; }
         const data = await r.json();
         if (!data || !data.length) {
-          el.innerHTML = '<div class="text-center py-8 text-stone-400 text-sm">Belum ada notifikasi</div>';
+          el.innerHTML = '<div class="text-center py-8 text-stone-400 text-sm">Belum ada notifikasi</div>'
+            + '<button onclick="showNotifForm()" class="mt-2 mx-auto block text-xs font-medium text-blue-600 bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition">Kirim Pesan ke Admin</button>';
           return;
         }
-        el.innerHTML = data.map(function(n) {
-          const cls = n.is_read ? 'opacity-60' : 'bg-blue-50 border-l-4 border-l-blue-500';
-          return '<div class="rounded-xl border border-stone-200 p-3 text-sm ' + cls + '">'
-            + '<div class="font-semibold text-stone-800">' + escapeHtml(n.judul || '(tanpa judul)') + '</div>'
-            + '<div class="text-stone-500 text-xs mt-0.5">' + escapeHtml(n.pesan || '') + '</div>'
-            + '<div class="text-stone-400 text-[10px] mt-1">' + escapeHtml(n.nama_pengirim || 'Sistem') + ' · ' + fmtDateFull(n.created_at) + '</div>'
-            + '</div>';
-        }).join('');
-        // Tandai sudah dibaca
+        el.innerHTML = '<div class="flex justify-end mb-2"><button onclick="showNotifForm()" class="text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition">+ Kirim Pesan</button></div>'
+          + data.map(function(n) {
+            const cls = n.is_read ? 'opacity-60' : 'bg-blue-50 border-l-4 border-l-blue-500';
+            return '<div class="rounded-xl border border-stone-200 p-3 text-sm ' + cls + '">'
+              + '<div class="font-semibold text-stone-800">' + escapeHtml(n.judul || '(tanpa judul)') + '</div>'
+              + '<div class="text-stone-500 text-xs mt-0.5">' + escapeHtml(n.pesan || '') + '</div>'
+              + '<div class="flex items-center justify-between mt-1">'
+              + '<div class="text-stone-400 text-[10px]">' + escapeHtml(n.nama_pengirim || 'Sistem') + ' · ' + fmtDateFull(n.created_at) + '</div>'
+              + '<button onclick="showNotifForm(\'' + escapeHtml(n.pengirim_id || '') + '\')" class="text-[10px] font-medium text-blue-600 hover:text-blue-800">Balas</button>'
+              + '</div></div>';
+          }).join('');
         fetch('/api/notifikasi/baca-semua', { method: 'PUT', credentials: 'include' }).catch(function(){});
         var badge = document.getElementById('notif-count-mobile');
         if (badge) badge.classList.add('hidden');
       } catch(e) {
         el.innerHTML = '<div class="text-center py-8 text-red-400 text-sm">Gagal memuat notifikasi</div>';
+      }
+    }
+    function showNotifForm(replyToPengirimId) {
+      var el = document.getElementById('notif-list');
+      el.innerHTML = '<div class="p-2 space-y-3">'
+        + '<div class="flex items-center gap-2 mb-1"><button onclick="loadNotifList()" class="p-1 text-stone-400 hover:text-stone-600 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button><span class="text-xs font-medium text-stone-500">' + (replyToPengirimId ? 'Balas Pesan' : 'Pesan Baru') + '</span></div>'
+        + '<input id="notif-form-judul" type="text" placeholder="Judul" class="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">'
+        + '<textarea id="notif-form-pesan" rows="3" placeholder="Isi pesan..." class="w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"></textarea>'
+        + '<button onclick="kirimPesanDariKaryawan()" class="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm flex items-center justify-center gap-2 transition-all">'
+        + '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Kirim</button>'
+        + '</div>';
+    }
+    async function kirimPesanDariKaryawan() {
+      var judul = document.getElementById('notif-form-judul').value.trim();
+      var pesan = document.getElementById('notif-form-pesan').value.trim();
+      if (!judul) { showToast('Judul wajib diisi', 'error'); return; }
+      var btn = document.querySelector('#notif-list button:last-child');
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Mengirim...';
+      try {
+        var r = await fetch('/api/notifikasi/kirim-dari-karyawan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ judul: judul, pesan: pesan }), credentials: 'include' });
+        var d = await r.json();
+        if (d.error) { showToast(d.error, 'error'); btn.disabled = false; btn.innerHTML = 'Kirim'; return; }
+        showToast('Pesan terkirim ke admin', 'success');
+        loadNotifList();
+      } catch(e) {
+        showToast('Gagal mengirim', 'error');
+        btn.disabled = false;
+        btn.innerHTML = 'Kirim';
       }
     }
     function closeNotifModal() {
