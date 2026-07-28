@@ -2384,6 +2384,7 @@ function renderReportPage(tab) {
   showLap(tab);
 }
 function renderLapRab() { renderReportPage('rab'); }
+function renderLapRabHarian() { renderReportPage('rab-harian'); }
 function renderLapRabBulanan() { renderReportPage('rab-bulanan'); }
 function renderLapPersediaan() { renderReportPage('persediaan'); }
 function renderLapDistribusi() { renderReportPage('distribusi'); }
