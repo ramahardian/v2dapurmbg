@@ -78,7 +78,7 @@ distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', ic
       { k: 'biaya_operasional', l: 'Biaya Operasional (IDR)', type: 'number', fmt: 'idr' },
       { k: 'total_budget', l: 'Total Budget (IDR)', type: 'number', fmt: 'idr', req: true },
       { k: 'realisasi', l: 'Realisasi (IDR)', type: 'number', fmt: 'idr' },
-    ], cols: ['periode','kategori_penerima','porsi_besar','porsi_kecil','jumlah_penerima','harga_per_porsi','total_budget','realisasi'] },
+    ], cols: ['periode','kategori_penerima','porsi_besar','porsi_kecil','jumlah_penerima','harga_besar','harga_kecil','total_budget','realisasi'] },
     extraButtons: [
       { label: 'Hitung Ulang Realisasi', onclick: 'recalculateRealisasi()', cls: 'border border-blue-400 text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-md text-sm font-medium' },
       { label: 'Backfill Jurnal', onclick: 'backfillJournal()', cls: 'border border-amber-400 text-amber-700 hover:bg-amber-50 px-4 py-2 rounded-md text-sm font-medium' },
