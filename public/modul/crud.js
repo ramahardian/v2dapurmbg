@@ -256,8 +256,10 @@ function openForm(cfg, editing) {
 
   const apiSelects = cfg.fields.filter(f => f.type === 'select-api');
 
+  var formHelp = cfg.formHelp ? '<div class="flex items-start gap-2.5 p-3 mb-4 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800 leading-relaxed"><svg class="w-4 h-4 mt-0.5 shrink-0 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><div>' + cfg.formHelp + '</div></div>' : '';
+
   if (cfg.groups && Array.isArray(cfg.groups)) {
-    let html = '';
+    let html = formHelp;
     cfg.groups.forEach(g => {
       const gFields = cfg.fields.filter(f => f.group === g.key && f.type !== 'hidden');
       if (!gFields.length) return;
@@ -270,7 +272,7 @@ function openForm(cfg, editing) {
     cfg.fields.filter(f => f.type === 'hidden').forEach(f => { html += renderField(f, editing); });
     body.innerHTML = html;
   } else {
-    body.innerHTML = cfg.fields.map(f => renderField(f, editing)).join('');
+    body.innerHTML = formHelp + cfg.fields.map(f => renderField(f, editing)).join('');
   }
 
   // AI button for nutrition fields (sp-referensi) — disabled temporarily

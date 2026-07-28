@@ -68,7 +68,7 @@ distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', ic
     ], cols: ['no_dokumen','tanggal_terima','supplier_nama','ref_po','total_nilai','status_qc'] }
   },
   budgeting: { title: 'Budgeting', sub: 'Anggaran per periode & kategori', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
-    crud: { endpoint: '/budget', fields: [
+    crud: { endpoint: '/budget', formHelp: 'Untuk biaya <strong>non-PM</strong> (gas, listrik, transport): kosongkan Jml Penerima & Harga Porsi (isi 0), lalu isi Biaya Operasional saja. Kategori bisa "Operasional Dapur".', fields: [
       { k: 'periode', l: 'Periode', req: true, info: 'Bulan & tahun anggaran, contoh: 2026-07' },
       { k: 'kategori_penerima', l: 'Kategori', info: 'Jenis penerima manfaat (Balita, Bumil, Lansia, dll)' },
       { k: 'jumlah_penerima', l: 'Jml Penerima', type: 'number', fmt: 'num', info: 'Total penerima manfaat untuk kategori ini' },
