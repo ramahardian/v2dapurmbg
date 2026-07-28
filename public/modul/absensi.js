@@ -52,6 +52,15 @@ async function renderAbsensi() {
     } else {
       loadAbsensi();
     }
+    // Load notification count
+    api.get('/notifikasi/belum-dibaca').then(function(res) {
+      var count = res && res.count;
+      var badge = document.getElementById('abs-notif-count');
+      if (badge && count > 0) {
+        badge.textContent = count;
+        badge.classList.remove('hidden');
+      }
+    }).catch(function() {});
   } catch (err) {
     console.error('Absensi error:', err);
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat absensi: ${err.message}</div>`;
