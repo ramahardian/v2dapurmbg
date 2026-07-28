@@ -217,8 +217,8 @@ const tabColors = {
         '<div class="overflow-x-auto"><table class="w-full text-xs">' +
         '<thead><tr class="bg-stone-50">' +
         '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Kategori</th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Porsi Besar</th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Porsi Kecil</th>' +
+        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Harga Besar</th>' +
+        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Harga Kecil</th>' +
         '<th class="text-center px-1 py-3 text-[10px] font-bold text-stone-400" style="width:16px"></th>' +
         '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Penerima</th>' +
         '<th class="text-center px-1 py-3 text-[10px] font-bold text-stone-400" style="width:16px"></th>' +
