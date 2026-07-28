@@ -762,19 +762,25 @@ async function openSiklusPicker() {
     return;
   }
 
-  document.getElementById('modal-title').textContent = 'Buat PO dari Siklus Menu';
+  document.getElementById('modal-title').innerHTML = 'Buat PO <span class="text-stone-400 font-normal">dari Siklus Menu</span>';
   document.getElementById('modal-body').innerHTML = `
     <div class="mb-4">
-      <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Pilih Siklus</label>
-      <div class="mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-stone-200 p-2">
-        ${siklusList && siklusList.length ? '<div class="space-y-1">' + siklusList.map(s => {
+      <label class="flex items-center gap-1.5 text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Pilih Siklus Menu
+      </label>
+      <div class="max-h-48 overflow-y-auto rounded-xl border border-stone-200">
+        ${siklusList && siklusList.length ? '<div class="divide-y divide-stone-100">' + siklusList.map(s => {
           var statusBadge = s.status === 'Aktif' ? '<span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-700">Aktif</span>' : '<span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-amber-100 text-amber-700">Draft</span>';
-          return '<label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-2 rounded-lg">' +
+          return '<label class="flex items-center gap-3 cursor-pointer hover:bg-blue-50/50 transition-colors px-3 py-2.5">' +
             '<input type="checkbox" class="siklus-check cb-modern" value="' + s.id + '" data-status="' + (s.status || 'Draft') + '">' +
-            '<span class="text-sm text-stone-700 flex-1">' + s.nama + ' — ' + (s.kategori_penerima || '-') + ' (' + (s.jumlah_porsi || 0) + ' porsi)</span>' +
+            '<div class="flex-1 min-w-0">' +
+              '<div class="text-sm font-medium text-stone-700 truncate">' + escHtml(s.nama) + '</div>' +
+              '<div class="text-[11px] text-stone-400 mt-0.5">' + (s.kategori_penerima || '-') + ' &middot; ' + (s.jumlah_porsi || 0) + ' porsi</div>' +
+            '</div>' +
             statusBadge +
           '</label>';
-        }).join('') + '</div>' : '<div class="flex items-center gap-2 p-4 text-amber-700 bg-amber-50 rounded-lg"><svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-medium">Belum ada siklus menu</div><div class="text-[10px] mt-0.5">Buat siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>'}
+        }).join('') + '</div>' : '<div class="flex items-center gap-3 p-4 text-amber-700 bg-amber-50 rounded-xl m-2"><svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-medium">Belum ada siklus menu</div><div class="text-[10px] mt-0.5">Buat siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>'}
       </div>
     </div>
     <div id="po-preview"></div>`;
@@ -796,8 +802,8 @@ async function generatePOFromSiklus() {
   // Cek apakah ada siklus yang masih Draft
   var draftSiklus = Array.from(checked).filter(function(cb) { return cb.getAttribute('data-status') === 'Draft'; });
   if (draftSiklus.length) {
-    var draftNames = draftSiklus.map(function(cb) { return cb.closest('label')?.querySelector('span.text-stone-700')?.textContent?.split(' — ')[0] || '#' + cb.value; }).join(', ');
-    document.getElementById('po-preview').innerHTML = '<div class="flex items-start gap-2 p-4 text-amber-700 bg-amber-50 rounded-lg border border-amber-200"><svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-medium">Siklus masih Draft</div><div class="text-[10px] mt-0.5">Siklus berikut belum Aktif dan tidak bisa di-generate: <strong>' + draftNames + '</strong>. Aktifkan siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>';
+    var draftNames = draftSiklus.map(function(cb) { return cb.closest('label')?.querySelector('.font-medium')?.textContent?.trim() || '#' + cb.value; }).join(', ');
+    document.getElementById('po-preview').innerHTML = '<div class="flex items-start gap-3 p-4 text-amber-700 bg-amber-50 rounded-xl border border-amber-200"><svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-semibold">Siklus masih Draft</div><div class="text-xs mt-0.5 text-amber-600">Siklus berikut belum Aktif dan tidak bisa di-generate: <strong>' + draftNames + '</strong>. Aktifkan siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>';
     return;
   }
 
