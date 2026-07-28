@@ -175,7 +175,7 @@ const tabColors = {
       '</div>';
 
       // Summary cards
-      var summaryCards = '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">' +
+      var summaryCards = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">' +
         '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
           '<div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div><div class="text-xs font-semibold text-stone-700">Ringkasan Anggaran</div></div></div>' +
           '<div class="space-y-1.5">' +
