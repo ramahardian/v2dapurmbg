@@ -73,7 +73,8 @@ distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', ic
       { k: 'porsi_besar', l: 'Porsi Besar', type: 'number', fmt: 'num' },
       { k: 'porsi_kecil', l: 'Porsi Kecil', type: 'number', fmt: 'num' },
       { k: 'jumlah_penerima', l: 'Jml Penerima', type: 'number', fmt: 'num', readOnly: true, calc: { from: ['porsi_besar','porsi_kecil'], op: 'add' } },
-      { k: 'harga_per_porsi', l: 'Harga per Porsi (IDR)', type: 'number', fmt: 'idr' },
+      { k: 'harga_besar', l: 'Harga Porsi Besar (IDR)', type: 'number', fmt: 'idr' },
+      { k: 'harga_kecil', l: 'Harga Porsi Kecil (IDR)', type: 'number', fmt: 'idr' },
       { k: 'biaya_operasional', l: 'Biaya Operasional (IDR)', type: 'number', fmt: 'idr' },
       { k: 'total_budget', l: 'Total Budget (IDR)', type: 'number', fmt: 'idr', req: true },
       { k: 'realisasi', l: 'Realisasi (IDR)', type: 'number', fmt: 'idr' },
@@ -84,7 +85,7 @@ distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', ic
     ],
     helpContent: [
       { title: 'Apa itu Budgeting?', text: 'Budgeting (Anggaran) adalah rencana keuangan per periode untuk biaya program MBG. Mencakup biaya bahan pangan (dari harga per porsi x jumlah penerima) dan biaya operasional dapur.' },
-      { title: 'Cara Mengisi', text: 'Klik <strong>Tambah</strong> untuk membuat entri baru per periode. Isi periode (YYYY-MM), kategori penerima, jumlah penerima, harga per porsi, dan biaya operasional. Total budget akan terhitung otomatis.' },
+      { title: 'Cara Mengisi', text: 'Klik <strong>Tambah</strong> untuk membuat entri baru per periode. Isi periode (YYYY-MM), kategori penerima, porsi besar, porsi kecil, harga per porsi (besar & kecil), dan biaya operasional. Total budget akan terhitung otomatis.' },
       { title: 'Realisasi & Laporan', text: 'Gunakan tombol <strong>Hitung Ulang Realisasi</strong> untuk update realisasi dari transaksi kas bank yang sudah tercatat. Cek laporan <strong>RAB</strong> untuk perbandingan budget vs realisasi per periode.' },
     ],
   },

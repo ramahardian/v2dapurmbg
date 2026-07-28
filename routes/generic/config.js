@@ -12,7 +12,7 @@ const TABLES = {
   penerimaan_barang: ['no_dokumen', 'tanggal_terima', 'supplier_id', 'ref_po', 'item', 'total_nilai', 'status_qc', 'catatan'],
   produksi: ['tanggal_produksi', 'menu_id', 'menu_nama', 'kategori_penerima', 'jumlah_porsi', 'status', 'catatan'],
   distribusi: ['tanggal_distribusi', 'titik_distribusi', 'penerima_manfaat_id', 'kategori_penerima', 'jumlah_porsi', 'kurir', 'status', 'catatan'],
-  budget: ['periode', 'kategori_penerima', 'porsi_besar', 'porsi_kecil', 'jumlah_penerima', 'harga_per_porsi', 'biaya_operasional', 'total_budget', 'realisasi', 'catatan'],
+  budget: ['periode', 'kategori_penerima', 'porsi_besar', 'porsi_kecil', 'jumlah_penerima', 'harga_per_porsi', 'harga_besar', 'harga_kecil', 'biaya_operasional', 'total_budget', 'realisasi', 'catatan'],
   kas_bank: ['tanggal', 'no_transaksi', 'tipe', 'kategori', 'akun', 'akun_id', 'deskripsi', 'jumlah'],
   divisi: ['nama'],
   sp_referensi_bahan: ['nama', 'kategori', 'berat_bersih', 'bdd_persen', 'berat_kotor', 'energi', 'protein', 'lemak', 'karbohidrat', 'serat'],

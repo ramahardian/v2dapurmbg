@@ -541,14 +541,14 @@ async function runMigration() {
     log('✓ Migrasi perencanaan_override: tabel dibuat');
   } catch (e) { log('  (skip perencanaan_override): ' + e.message); }
 
-  // Budget: porsi_besar & porsi_kecil
+  // Budget: porsi_besar, porsi_kecil, harga_besar, harga_kecil
   try {
     const [pb] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'budget' AND COLUMN_NAME = 'porsi_besar'");
     if (!pb.length) {
-      await q("ALTER TABLE budget ADD COLUMN porsi_besar INT DEFAULT 0 AFTER kategori_penerima, ADD COLUMN porsi_kecil INT DEFAULT 0 AFTER porsi_besar");
-      log('✓ Migrasi budget: tambah kolom porsi_besar & porsi_kecil');
+      await q("ALTER TABLE budget ADD COLUMN porsi_besar INT DEFAULT 0 AFTER kategori_penerima, ADD COLUMN porsi_kecil INT DEFAULT 0 AFTER porsi_besar, ADD COLUMN harga_besar DECIMAL(15,2) DEFAULT 0 AFTER harga_per_porsi, ADD COLUMN harga_kecil DECIMAL(15,2) DEFAULT 0 AFTER harga_besar");
+      log('✓ Migrasi budget: tambah kolom porsi_besar, porsi_kecil, harga_besar, harga_kecil');
     }
-  } catch (e) { log('  (skip migrasi porsi_besar/porsi_kecil budget)'); }
+  } catch (e) { log('  (skip migrasi porsi_besar/harga_kecil budget)'); }
 
   // Event hapus foto absensi setiap hari Minggu 23:59
   try {
