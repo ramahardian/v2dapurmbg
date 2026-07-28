@@ -4,6 +4,25 @@
       <h3 class="font-bold text-base">Profil Saya</h3>
     </div>
     <div class="p-6 space-y-4">
+      <!-- Foto -->
+      <div class="flex items-center gap-5">
+        <div id="akun-foto-preview" class="w-16 h-16 rounded-full overflow-hidden bg-stone-100 flex items-center justify-center text-lg font-bold text-stone-500 shrink-0 ring-2 ring-stone-200" style="background-size:cover;background-position:center">
+          <% if (user.foto) { %>
+            <img src="<%= user.foto %>" class="w-full h-full object-cover" id="akun-foto-img">
+          <% } else { %>
+            <span id="akun-foto-initial"><%= user.nama ? user.nama.charAt(0).toUpperCase() : '?' %></span>
+          <% } %>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="cursor-pointer inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Unggah Foto
+            <input type="file" id="akun-foto-input" accept="image/png,image/jpeg,image/jpg,image/webp" class="hidden">
+          </label>
+          <button id="akun-foto-hapus" class="text-xs text-red-600 hover:text-red-700 text-left <%= user.foto ? '' : 'hidden' %> transition-colors">Hapus foto</button>
+          <span class="text-[10px] text-stone-400">Format: JPG, PNG, WEBP. Maks 2MB</span>
+        </div>
+      </div>
       <div>
         <label class="text-sm font-medium text-stone-700">Nama Lengkap</label>
         <input id="akun-nama" value="<%= user.nama %>" class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm" />
