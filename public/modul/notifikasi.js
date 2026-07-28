@@ -658,8 +658,12 @@ function notifUpdateClearBtn() {
 }
 
 async function notifHapus(id, type) {
-  if (!confirm('Hapus pesan ini?')) return;
+  const ok = await showConfirm('Hapus pesan ini?', 'Apakah Anda yakin ingin menghapus pesan ini?');
+  if (!ok) return;
+  await executenotifHapus(id, type);
+}
 
+async function executenotifHapus(id, type) {
   try {
     await api.del('/notifikasi/' + id);
     // Remove from local data
@@ -671,8 +675,10 @@ async function notifHapus(id, type) {
       notifRenderList(type);
     }
     showToast('Pesan berhasil dihapus', 'success');
+    hideConfirm();
   } catch (err) {
     showAlert('Gagal menghapus: ' + err.message);
+    hideConfirm();
   }
 }
 
