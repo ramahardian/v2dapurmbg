@@ -335,6 +335,7 @@ function renderMenuHtml(menus) {
       <table class="w-full">
         <thead>
           <tr class="border-b border-stone-100">
+            <th class="text-center px-2 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500 w-10">No</th>
             <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500 w-10">
               <input type="checkbox" id="menu-select-all" onchange="toggleSelectAllMenu(this)" class="cb-modern">
             </th>
@@ -347,8 +348,9 @@ function renderMenuHtml(menus) {
           </tr>
         </thead>
         <tbody id="menu-table-body">
-            ${menus.length > 0 ? menus.map(m => `
+            ${menus.length > 0 ? menus.map((m, i) => `
             <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+              <td class="px-2 py-3 text-xs text-center text-stone-400 font-mono">${(menuState.page - 1) * menuState.limit + i + 1}</td>
               <td class="px-4 py-3 text-xs">
                 <input type="checkbox" value="${m.id}" onchange="updateSelectedMenuCount()" class="menu-checkbox cb-modern">
               </td>
@@ -361,7 +363,7 @@ function renderMenuHtml(menus) {
                 <button data-menu-id="${m.id}" class="edit-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                 <button data-menu-id="${m.id}" class="delete-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
               </td>
-            </tr>`).join('') : '<tr><td colspan="7" class="text-center py-16 text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><div class="text-sm">Belum ada menu</div></td></tr>'}
+            </tr>`).join('') : '<tr><td colspan="8" class="text-center py-16 text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><div class="text-sm">Belum ada menu</div></td></tr>'}
         </tbody>
       </table>
     </div>
