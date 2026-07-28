@@ -949,6 +949,46 @@ CREATE TABLE menu_bahan (
     }
   });
 
+  // Endpoint migrasi: users.foto VARCHAR(255) → LONGTEXT untuk base64
+  app.get('/api/migrate/foto-longtext', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [ftCol] = await db.query(
+        "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'foto'"
+      );
+      if (!ftCol.length) {
+        return res.send(`
+          <div style="font-family:sans-serif;padding:2rem;text-align:center;background:#f5f5f4;min-height:100vh">
+            <h2 style="color:#dc2626">❌ Kolom foto tidak ditemukan</h2>
+            <p style="color:#6b7280;margin-top:0.5rem">Tabel users belum memiliki kolom foto.</p>
+            <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a>
+          </div>`);
+      }
+      if (ftCol[0].DATA_TYPE === 'longtext') {
+        return res.send(`
+          <div style="font-family:sans-serif;padding:2rem;text-align:center;background:#f5f5f4;min-height:100vh">
+            <h2 style="color:#16a34a">✅ Kolom foto sudah LONGTEXT</h2>
+            <p style="color:#6b7280;margin-top:0.5rem">Tidak perlu diubah.</p>
+            <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a>
+          </div>`);
+      }
+      await db.query('ALTER TABLE users MODIFY foto LONGTEXT DEFAULT NULL');
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center;background:#f5f5f4;min-height:100vh">
+          <h2 style="color:#16a34a">✅ ALTER TABLE BERHASIL!</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">Kolom <code>users.foto</code> telah diubah dari <code>VARCHAR(255)</code> → <code>LONGTEXT</code>.</p>
+          <p style="color:#6b7280;margin-top:0.25rem;font-size:0.875rem">Sekarang bisa menyimpan foto base64 tanpa terpotong.</p>
+          <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali ke Dashboard</a>
+        </div>`);
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center;background:#f5f5f4;min-height:100vh">
+          <h2 style="color:#dc2626">❌ Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+          <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a>
+        </div>`);
+    }
+  });
+
   // ── ERROR HANDLING ──────────────────────
   process.on('unhandledRejection', (err) => console.error('Unhandled Rejection:', err));
   app.use((err, req, res, next) => {
