@@ -652,7 +652,16 @@ function notifUpdateClearBtn() {
 }
 
 async function notifHapus(id, type) {
-  const ok = await showConfirm('Hapus pesan ini?', 'Apakah Anda yakin ingin menghapus pesan ini?');
+  const items = notifAllData[type] || [];
+  const item = items.find(function(n) { return n.id === id; });
+  const judul = item ? (item.judul || '(tanpa judul)') : '';
+  const ok = await showConfirm(
+    'Hapus pesan: "' + judul + '"?',
+    'Ya, hapus',
+    'Batal',
+    'bg-red-600 hover:bg-red-700',
+    'danger'
+  );
   if (!ok) return;
   await executenotifHapus(id, type);
 }
