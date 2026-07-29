@@ -149,7 +149,7 @@ router.delete('/notifikasi/:id', async (req, res) => {
     const id = req.params.id;
 
     const [rows] = await db.query(
-      `SELECT id, pengirim_id, penerima_id, deleted_by_pengirim, deleted_by_penerima FROM notifikasi WHERE id=? AND tenant_id=? AND (pengirim_id=? OR penerima_id=?)`,
+      `SELECT id, pengirim_id, penerima_id FROM notifikasi WHERE id=? AND tenant_id=? AND (pengirim_id=? OR penerima_id=?)`,
       [id, t, req.user.id, req.user.karyawan_id || null]
     );
     if (!rows.length) return res.status(404).json({ error: 'Notifikasi tidak ditemukan atau tidak bisa dihapus' });
@@ -157,17 +157,11 @@ router.delete('/notifikasi/:id', async (req, res) => {
     const row = rows[0];
 
     if (Number(row.pengirim_id) === Number(req.user.id)) {
-      if (row.deleted_by_penerima) {
-        await db.query('DELETE FROM notifikasi WHERE id=?', [id]);
-      } else {
-        await db.query('UPDATE notifikasi SET deleted_by_pengirim=1 WHERE id=?', [id]);
-      }
+      // Pengirim: soft delete — hanya disembunyikan dari pengirim
+      await db.query('UPDATE notifikasi SET deleted_by_pengirim=1 WHERE id=?', [id]);
     } else {
-      if (row.deleted_by_pengirim) {
-        await db.query('DELETE FROM notifikasi WHERE id=?', [id]);
-      } else {
-        await db.query('UPDATE notifikasi SET deleted_by_penerima=1 WHERE id=?', [id]);
-      }
+      // Penerima: soft delete — hanya disembunyikan dari penerima
+      await db.query('UPDATE notifikasi SET deleted_by_penerima=1 WHERE id=?', [id]);
     }
 
     res.json({ ok: true, pesan: 'Pesan berhasil dihapus' });
