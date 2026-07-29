@@ -145,10 +145,15 @@ function shuffle(a) {
         });
       }
 
+      // Set tanggal_mulai so that today falls within the siklus period
+      var tglMulai = new Date();
+      tglMulai.setDate(tglMulai.getDate() - Math.floor((plan.total_hari - 1) / 2));
+      var tanggalMulaiStr = tglMulai.toISOString().slice(0, 10);
+
       const [r] = await db.query(
-        `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan)
-         VALUES (?,?,?,?,?,?,?)`,
-        [tenantId, plan.nama, plan.kategori_penerima, plan.jumlah_porsi, plan.total_hari, plan.status, plan.catatan]
+        `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai)
+         VALUES (?,?,?,?,?,?,?,?)`,
+        [tenantId, plan.nama, plan.kategori_penerima, plan.jumlah_porsi, plan.total_hari, plan.status, plan.catatan, tanggalMulaiStr]
       );
 
       for (const item of dayMenus) {

@@ -419,13 +419,16 @@ async function runSeed(tenantId = 1) {
     if (!pool.length) {
       log(`  Skip ${plan.nama} (no menus for ${plan.kategori})`);
       continue;
-    }
+    }      // Set tanggal_mulai = now - (total_hari - 1) so that today falls within the siklus
+      var tglMulai = new Date();
+      tglMulai.setDate(tglMulai.getDate() - (plan.hari - 1));
+      var tanggalMulaiStr = tglMulai.toISOString().slice(0, 10);
 
-    const [r] = await db.query(
-      `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan)
-       VALUES (?,?,?,?,?,?,?)`,
-      [tenantId, plan.nama, plan.kategori, plan.porsi, plan.hari, plan.status, '']
-    );
+      const [r] = await db.query(
+        `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai)
+         VALUES (?,?,?,?,?,?,?,?)`,
+        [tenantId, plan.nama, plan.kategori, plan.porsi, plan.hari, plan.status, '', tanggalMulaiStr]
+      );
     const siklusId = r.insertId;
 
     for (let d = 0; d < plan.hari; d++) {
