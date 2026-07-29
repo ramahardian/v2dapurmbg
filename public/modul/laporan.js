@@ -404,7 +404,7 @@ const tabColors = {
       // ── Tambah RAB Harian (lengkap) di bawah ──
       try {
         var rhTanggal = nowDate.toISOString().slice(0, 10);
-        var rabHarianRes = await api.get('/laporan/rab-harian?tanggal=' + rhTanggal);
+        var rabHarianRes = await api.get('/laporan/rab-harian?tanggal=' + rhTanggal + (filterSiklusId ? '&siklus_id=' + filterSiklusId : ''));
         var d = rabHarianRes;
         var items = d.items || [];
         if (items.length > 0) {
@@ -474,8 +474,10 @@ const tabColors = {
           tabelHtml += '</tbody></table></div></div>';
 
           window._lapStatCards += reportHeader + tabelHtml;
+        } else {
+          window._lapStatCards += '<div class="mt-6 bg-white rounded-2xl border border-stone-200 shadow-sm p-6 text-center"><p class="text-xs text-stone-400">Tidak ada data RAB harian untuk hari ini. Silakan pilih tanggal dengan data produksi.</p></div>';
         }
-      } catch(e) {}
+      } catch(e) { console.error('RAB Harian error:', e); }
 
     } else if (tab === 'rab-bulanan') {
       var rbBulan = lapState.rb_bulan || '';
