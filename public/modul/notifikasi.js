@@ -609,6 +609,7 @@ async function notifMarkRead(id) {
       if (n) n.is_read = 1;
     }
     notifLoadInbox();
+    if (typeof updateNotifSidebarBadge === 'function') updateNotifSidebarBadge();
   } catch (err) {
     console.error('Mark read error:', err);
   }
@@ -625,6 +626,7 @@ async function notifMarkAllRead() {
       notifRenderList('inbox');
     }
     showToast('Semua pesan ditandai sudah dibaca', 'success');
+    if (typeof updateNotifSidebarBadge === 'function') updateNotifSidebarBadge();
   } catch (err) {
     console.error('Mark all read error:', err);
   }
@@ -675,6 +677,7 @@ async function executenotifHapus(id, type) {
       notifRenderList(type);
     }
     showToast('Pesan berhasil dihapus', 'success');
+    if (typeof updateNotifSidebarBadge === 'function') updateNotifSidebarBadge();
   } catch (err) {
     showAlert('Gagal menghapus: ' + err.message);
   }
