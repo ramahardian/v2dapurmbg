@@ -348,7 +348,7 @@ function registerRabRoutes(router) {
 
       if (siklusId) {
         const [[siklus]] = await db.query(
-          `SELECT id, nama, total_hari, kategori_penerima, jumlah_porsi
+          `SELECT id, nama, total_hari, kategori_penerima, jumlah_porsi, tanggal_mulai
            FROM siklus_menu WHERE id=? AND tenant_id=?`,
           [siklusId, t]
         );
@@ -360,6 +360,7 @@ function registerRabRoutes(router) {
             total_hari,
             kategori_penerima: siklus.kategori_penerima,
             jumlah_porsi: Number(siklus.jumlah_porsi) || 0,
+            tanggal_mulai: siklus.tanggal_mulai || null,
           };
         }
       }
