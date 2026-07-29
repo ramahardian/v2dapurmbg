@@ -18,29 +18,25 @@ function notifAvatarColor(name) {
   return NOTIF_AVATAR_COLORS[Math.abs(hash) % NOTIF_AVATAR_COLORS.length];
 }
 
-// ── Helper: Format date smartly ──
+// ── Helper: Format date smartly (dayjs) ──
 function notifFormatDate(dateStr) {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now - d;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+  const d = dayjs(dateStr);
+  const now = dayjs();
+  const diffMins = now.diff(d, 'minute');
+  const diffHours = now.diff(d, 'hour');
+  const diffDays = now.diff(d, 'day');
 
   if (diffMins < 1) return 'Baru saja';
   if (diffMins < 60) return diffMins + 'm';
-  if (diffHours < 24 && d.getDate() === now.getDate()) return diffHours + 'j';
+  if (diffHours < 24 && d.isSame(now, 'day')) return diffHours + 'j';
   if (diffDays === 1) return 'Kemarin';
   if (diffDays < 7) return diffDays + ' hari lalu';
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+  return d.locale('id').format('D MMM' + (d.year() !== now.year() ? ' YYYY' : ''));
 }
 
 // ── Helper: Relative time (full format) ──
 function notifFullDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('id-ID', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  });
+  return dayjs(dateStr).locale('id').format('dddd, D MMMM YYYY [pukul] HH.mm');
 }
 
 // ── Helper: Rich empty state icons ──
