@@ -481,9 +481,12 @@ function notifRenderList(type) {
     <div class="flex flex-col h-full">
       <!-- Select-all bar (compact, shown on hover) -->
       <div class="hidden md:flex items-center gap-1.5 px-4 md:px-5 py-1.5 border-b border-stone-100 bg-stone-50/60 ${filtered.length > 0 ? '' : 'hidden'}">
-        <label class="flex items-center gap-2 cursor-pointer text-xs text-stone-500 hover:text-stone-700 select-none">
-          <input type="checkbox" onchange="notifSelectAll('${type}')" class="notif-cb-main w-4 h-4 rounded border-stone-300 text-blue-600 focus:ring-blue-500 cursor-pointer" ${notifSelectedIds.size === filtered.length && filtered.length > 0 ? 'checked' : ''}>
-          <span>Pilih semua</span>
+        <label class="flex items-center gap-2 cursor-pointer select-none notif-cb-main-wrap" onclick="event.stopPropagation()">
+          <input type="checkbox" onchange="notifSelectAll('${type}')" class="notif-cb-main sr-only peer" ${notifSelectedIds.size === filtered.length && filtered.length > 0 ? 'checked' : ''}>
+          <span class="check-modern w-[18px] h-[18px] rounded-[5px] border-2 border-stone-300 peer-checked:border-blue-600 peer-checked:bg-blue-600 flex items-center justify-center transition-all duration-150 shadow-sm peer-checked:shadow-md hover:border-stone-400">
+            <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-150" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          </span>
+          <span class="text-xs text-stone-500 hover:text-stone-700">Pilih semua</span>
         </label>
         <span class="text-stone-300 mx-1">|</span>
         <span class="text-xs text-stone-400">${filtered.length} ${type === 'inbox' ? 'pesan' : 'terkirim'}${search ? ' (hasil pencarian)' : ''}</span>
@@ -510,10 +513,15 @@ function notifRenderList(type) {
 
                 <!-- Checkbox (show on hover, always if in select mode) -->
                 <div class="shrink-0 flex items-start pt-1 md:pt-1.5 ${notifSelectMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-150" onclick="event.stopPropagation()">
-                  <input type="checkbox" 
-                         onchange="notifToggleSelect(${n.id})" 
-                         class="notif-row-cb notif-cb-${n.id} w-4 h-4 rounded border-stone-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
-                         ${isSelected ? 'checked' : ''}>
+                  <label class="block cursor-pointer">
+                    <input type="checkbox" 
+                           onchange="notifToggleSelect(${n.id})" 
+                           class="notif-row-cb notif-cb-${n.id} sr-only peer" 
+                           ${isSelected ? 'checked' : ''}>
+                    <span class="check-modern block w-[18px] h-[18px] rounded-[5px] border-2 border-stone-300 peer-checked:border-blue-600 peer-checked:bg-blue-600 flex items-center justify-center transition-all duration-150 shadow-sm peer-checked:shadow-md hover:border-stone-400">
+                      <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </span>
+                  </label>
                 </div>
 
                 <!-- Avatar -->
