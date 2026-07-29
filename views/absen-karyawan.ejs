@@ -1357,7 +1357,8 @@
     }
 
     loadAll();
-
+    // Poll notification count every 30 seconds
+    setInterval(loadNotifCount, 30000);
 
   </script>
 </body>
