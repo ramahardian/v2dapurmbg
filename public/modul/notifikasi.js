@@ -621,7 +621,7 @@ function notifShowDetail(type, id) {
 
       <!-- Content -->
       <div class="flex-1 overflow-y-auto px-3 md:px-6 py-4 md:py-8 lg:px-10">
-        <div class="max-w-3xl mx-auto">
+        <div class="max-w-100 mx-auto">
           <!-- Subject -->
           <h2 class="text-xl md:text-2xl lg:text-3xl font-bold text-stone-800 mb-5 md:mb-6 leading-snug">${escHtml(n.judul)}</h2>
           
