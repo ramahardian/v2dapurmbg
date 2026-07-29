@@ -70,6 +70,84 @@
   </style>
 </head>
 <body>
+  <!-- ═══ SPLASH / LOADING SCREEN ═══ -->
+  <div id="splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center" style="background:linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #06b6d4 100%);background-size:200% 200%;animation:splashGradient 6s ease-in-out infinite alternate">
+    <style>
+      @keyframes splashGradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      @keyframes splashPulse {
+        0%, 100% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.06); opacity: 1; }
+      }
+      @keyframes splashFadeOut {
+        to { opacity: 0; transform: scale(1.02); pointer-events: none; }
+      }
+      @keyframes splashDot {
+        0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+        40% { opacity: 1; transform: translateY(-4px); }
+      }
+      @keyframes splashBar {
+        0% { width: 0%; }
+        25% { width: 30%; }
+        50% { width: 55%; }
+        75% { width: 78%; }
+        100% { width: 98%; }
+      }
+      .splash-logo {
+        animation: splashPulse 2s ease-in-out infinite;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      }
+      .splash-dot {
+        animation: splashDot 1.4s ease-in-out infinite;
+      }
+      .splash-dot:nth-child(2) { animation-delay: 0.2s; }
+      .splash-dot:nth-child(3) { animation-delay: 0.4s; }
+      .splash-bar-track {
+        background: rgba(255,255,255,0.15);
+        border-radius: 99px;
+        height: 4px;
+        width: 160px;
+        overflow: hidden;
+      }
+      .splash-bar-fill {
+        height: 100%;
+        border-radius: 99px;
+        background: white;
+        animation: splashBar 2.5s ease-out forwards;
+      }
+      .splash-hidden {
+        animation: splashFadeOut 0.4s ease-out forwards !important;
+      }
+    </style>
+    <div class="flex flex-col items-center gap-5">
+      <!-- Logo -->
+      <div class="splash-logo w-20 h-20 rounded-2xl bg-white flex items-center justify-center overflow-hidden p-1.5">
+        <img src="/asset/logo.png" alt="Dapur Sukaluyu" class="w-full h-full object-contain" />
+      </div>
+      <!-- Title -->
+      <div class="text-center">
+        <h1 class="text-2xl font-bold text-white tracking-tight">Dapur Sukaluyu</h1>
+        <p class="text-white/60 text-sm mt-1 font-medium">Makan Bergizi Gratis</p>
+      </div>
+      <!-- Progress bar -->
+      <div class="splash-bar-track mt-2">
+        <div class="splash-bar-fill"></div>
+      </div>
+      <!-- Loading dots -->
+      <div class="flex items-center gap-1.5 mt-1">
+        <span id="splash-step" class="text-white/70 text-xs font-medium">Memuat...</span>
+        <div class="flex items-center gap-1 ml-1">
+          <div class="splash-dot w-1.5 h-1.5 rounded-full bg-white/80"></div>
+          <div class="splash-dot w-1.5 h-1.5 rounded-full bg-white/80" style="animation-delay:0.2s"></div>
+          <div class="splash-dot w-1.5 h-1.5 rounded-full bg-white/80" style="animation-delay:0.4s"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Mobile Header -->
   <header class="lg:hidden sticky top-0 z-30 px-4 py-3 flex items-center gap-3" style="background:var(--bg-header);border-bottom:1px solid var(--border)">
     <button onclick="toggleSidebar()" class="p-2 -ml-2 rounded-md" style="color:var(--text-body)">
