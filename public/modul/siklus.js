@@ -218,7 +218,7 @@ async function reloadSiklusList() {
       </div>
       <div class="font-semibold text-sm text-stone-800 group-hover:text-[#1e40af] transition-colors cursor-pointer mb-3" onclick="loadSiklusDetail(${s.id})">${s.nama}</div>
       <div class="flex items-center gap-4 text-xs text-stone-500 mb-3 min-w-0">
-        <span class="flex items-center gap-1 overflow-hidden min-w-0"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="truncate block">${fmtJenjang(s.kategori_penerima)}</span></span>
+        <span class="flex items-center gap-1 overflow-hidden min-w-0"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="truncate block">${fmtJenjangBadge(s.kategori_penerima)}</span></span>
         <span class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${s.total_hari} hari</span>
       </div>
       ${s.catatan ? `<div class="text-xs text-stone-400 italic mb-3 line-clamp-1">${s.catatan}</div>` : ''}
@@ -964,6 +964,15 @@ function bukaKebutuhanPangan(id) {
 function fmtJenjang(kp) {
   if (!kp) return 'Semua';
   try { var p = JSON.parse(kp); if (Array.isArray(p)) return p.join(' + '); } catch {}
+  return kp;
+}
+function fmtJenjangBadge(kp) {
+  if (!kp) return 'Semua';
+  try { var p = JSON.parse(kp); if (Array.isArray(p)) {
+    if (p.length === 1) return p[0];
+    if (p.length === 2) return p.join(' & ');
+    return '<span class="inline-flex items-center gap-0.5"><span class="truncate max-w-[80px]">' + p[0] + '</span><span class="bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none shrink-0">+' + (p.length - 1) + '</span></span>';
+  }} catch {}
   return kp;
 }
 function getJenjangChecked(kategoriPenerima, val) {
