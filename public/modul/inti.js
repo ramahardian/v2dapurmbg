@@ -341,11 +341,11 @@ preloadMenus();
 
 // Start periodic notification checks
 if (stockNotifTimer) clearInterval(stockNotifTimer);
-stockNotifTimer = setInterval(fetchNotif, 60000);
+stockNotifTimer = setInterval(fetchNotif, 120000);
 setTimeout(fetchNotif, 3000); // first check after 3s
 
 // Sidebar unread badge: update every 30s, first check immediately
 setTimeout(updateNotifSidebarBadge, 1000);
-setInterval(updateNotifSidebarBadge, 30000);
+setInterval(updateNotifSidebarBadge, 60000);
 
 // ===== Dashboard =====

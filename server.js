@@ -42,7 +42,8 @@ if (cluster.isMaster && WORKERS > 1) {
 
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
-  app.disable('view cache');
+  // Cache template hanya di production — matikan di dev agar hot-reload works
+  if (process.env.NODE_ENV !== 'production') app.disable('view cache');
   if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
   // ── MIDDLEWARE ORDER (fast → slow) ─────
