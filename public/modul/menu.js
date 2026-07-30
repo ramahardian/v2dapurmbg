@@ -475,6 +475,9 @@ async function openMenuForm(editing) {
     </div>
     `;
   window._editingMenuData = editing || null;
+  window._menuKategoriPenerima = null; // reset kategori dari siklus
+  var badgeEl = document.getElementById('m-kategori-badge');
+  if (badgeEl) badgeEl.remove();
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, keterangan: b.keterangan || '' }));
   // Biarkan nilai tersimpan dari DB — user bisa klik "↺ Reset ke SP" jika ingin reset
   var savedPorsi = Number(m.jumlah_porsi) || 0;
@@ -519,7 +522,7 @@ async function openMenuForm(editing) {
       if (checkDuplicateName()) return showAlert('Nama menu sudah ada. Ganti nama terlebih dahulu.', 'warning');
       const payload = {
         nama: document.getElementById('m-nama').value,
-        kategori_penerima: editing ? editing.kategori_penerima : null,
+        kategori_penerima: window._menuKategoriPenerima || (editing ? editing.kategori_penerima : null),
         deskripsi: document.getElementById('m-deskripsi').value,
         gramasi_total: Math.round((window._menuBahan || []).reduce(function(s,b){ return s + (Number(b.jumlah)||0); }, 0) * 100) / 100,
         kalori: +document.getElementById('m-kalori').value || 0,
@@ -880,7 +883,8 @@ async function openSiklusMenuPicker() {
         if (n.source === 'menu') {
           // Menu items — clickable, untuk import bahan
           var bahanJson = escHtml(JSON.stringify(n.bahan || []));
-    html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + "', '" + bahanJson + "', " + (Number(s.jumlah_porsi) || 0) + ")\" class=\"w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors\">" +
+          var katPenerima = escHtml(s.kategori_penerima || '');
+    html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + "', '" + bahanJson + "', " + (Number(s.jumlah_porsi) || 0) + ", '" + katPenerima + "')\" class=\"w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors\">" +
             '<div class="flex items-center gap-2">' +
             '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
             '<span class="text-xs text-stone-500 shrink-0 w-14">' + n.hari_nama + '</span>' +
@@ -927,8 +931,24 @@ async function openSiklusMenuPicker() {
     showAlert('Gagal memuat data siklus: ' + e.message, 'error');
   }
 }
-async function selectSiklusMenuName(nama, bahanJson, siklusPorsi) {
+async function selectSiklusMenuName(nama, bahanJson, siklusPorsi, kategoriPenerima) {
   document.getElementById('m-nama').value = nama;
+  
+  // Auto-fill kategori_penerima dari siklus
+  if (kategoriPenerima) {
+    // Parse jika JSON array (siklus bisa multiple jenjang), ambil yang pertama
+    try { var parsed = JSON.parse(kategoriPenerima); if (Array.isArray(parsed)) kategoriPenerima = parsed[0]; } catch(e) {}
+    window._menuKategoriPenerima = kategoriPenerima;
+    // Tampilkan indikator kategori yang terisi dari siklus
+    var badgeContainer = document.getElementById('m-kategori-badge');
+    if (!badgeContainer) {
+      badgeContainer = document.createElement('div');
+      badgeContainer.id = 'm-kategori-badge';
+      badgeContainer.className = 'text-xs mt-1';
+      document.getElementById('m-nama').parentNode.appendChild(badgeContainer);
+    }
+    badgeContainer.innerHTML = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">📋 ' + kategoriPenerima + '</span>';
+  }
   
   // Auto-fill jumlah porsi jika > 0
   if (siklusPorsi > 0) {
