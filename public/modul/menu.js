@@ -944,23 +944,22 @@ async function openSiklusMenuPicker() {
   }
 }
 async function selectSiklusMenuName(nama, bahanJson, siklusPorsi, kategoriPenerima) {
-  document.getElementById('m-nama').value = nama;
-  
-  // Auto-fill kategori_penerima dari siklus
-  if (kategoriPenerima) {
-    // Parse jika JSON array (siklus bisa multiple jenjang), ambil yang pertama
-    try { var parsed = JSON.parse(kategoriPenerima); if (Array.isArray(parsed)) kategoriPenerima = parsed[0]; } catch(e) {}
-    window._menuKategoriPenerima = kategoriPenerima;
-    // Tampilkan indikator kategori yang terisi dari siklus
-    var badgeContainer = document.getElementById('m-kategori-badge');
-    if (!badgeContainer) {
-      badgeContainer = document.createElement('div');
-      badgeContainer.id = 'm-kategori-badge';
-      badgeContainer.className = 'text-xs mt-1';
-      document.getElementById('m-nama').parentNode.appendChild(badgeContainer);
+  document.getElementById('m-nama').value = nama;    // Auto-fill kategori_penerima dari siklus
+    if (kategoriPenerima) {
+      // Parse jika JSON array (siklus bisa multiple jenjang), simpan array lengkap
+      // agar kategoriBadge() bisa menampilkan count seperti "TK/PAUD 3+"
+      try { var parsed = JSON.parse(kategoriPenerima); if (Array.isArray(parsed)) kategoriPenerima = JSON.stringify(parsed); } catch(e) {}
+      window._menuKategoriPenerima = kategoriPenerima;
+      // Tampilkan indikator kategori yang terisi dari siklus
+      var badgeContainer = document.getElementById('m-kategori-badge');
+      if (!badgeContainer) {
+        badgeContainer = document.createElement('div');
+        badgeContainer.id = 'm-kategori-badge';
+        badgeContainer.className = 'text-xs mt-1';
+        document.getElementById('m-nama').parentNode.appendChild(badgeContainer);
+      }
+      badgeContainer.innerHTML = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">📋 ' + kategoriBadge(kategoriPenerima) + '</span>';
     }
-    badgeContainer.innerHTML = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">📋 ' + kategoriPenerima + '</span>';
-  }
   
   // Auto-fill jumlah porsi jika > 0
   if (siklusPorsi > 0) {
