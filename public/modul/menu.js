@@ -274,7 +274,7 @@ function kategoriBadge(kat) {
       return `<span class="inline-flex items-center gap-1"><span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style="background:${c1.bg};">${p[0]}</span><span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style="background:${c2.bg};">${p[1]}</span></span>`;
     }
     var c0 = KATEGORI_COLORS[p[0]] || { bg: '#78716c' };
-    return `<span class="inline-flex items-center gap-1"><span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style="background:${c0.bg};">${p[0]}</span><span class="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white" style="background:#3b82f6;">+${p.length - 1}</span></span>`;
+    return `<span class="inline-flex items-center gap-1"><span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style="background:${c0.bg};">${p[0]}</span><span class="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white" style="background:#3b82f6;">${p.length}+</span></span>`;
   }} catch {}
   // Single kategori
   const c = KATEGORI_COLORS[kat] || { bg: '#78716c' };
