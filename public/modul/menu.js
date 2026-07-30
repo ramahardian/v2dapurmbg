@@ -120,7 +120,7 @@ function renderMenuBySiklusHtml(data) {
               <span class="text-[10px] px-2.5 py-1 rounded-full font-medium ${statusColor} capitalize">${s.status}</span>
             </div>
             <div class="flex flex-wrap items-center gap-3 mt-1 text-xs text-stone-500">
-              <span>${s.kategori_penerima || 'Semua'}</span>
+              <span>${s.kategori_penerima ? kategoriBadge(s.kategori_penerima) : 'Semua'}</span>
               <span>${s.jumlah_porsi} porsi/hari</span>
               <span>${s.total_hari} hari</span>
               <span class="${coverage >= 100 ? 'text-emerald-600 font-semibold' : coverage > 0 ? 'text-amber-600' : 'text-stone-400'}">${coverage}% terisi</span>
@@ -265,6 +265,18 @@ const KATEGORI_COLORS = {
 };
 
 function kategoriBadge(kat) {
+  // Handle multi-kategori (JSON array string, e.g. '["TK/PAUD","SD","SMP"]')
+  try { var p = JSON.parse(kat); if (Array.isArray(p)) {
+    if (p.length === 1) return kategoriBadge(p[0]);
+    if (p.length === 2) {
+      var c1 = KATEGORI_COLORS[p[0]] || { bg: '#78716c' };
+      var c2 = KATEGORI_COLORS[p[1]] || { bg: '#78716c' };
+      return `<span class="inline-flex items-center gap-1"><span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style="background:${c1.bg};">${p[0]}</span><span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style="background:${c2.bg};">${p[1]}</span></span>`;
+    }
+    var c0 = KATEGORI_COLORS[p[0]] || { bg: '#78716c' };
+    return `<span class="inline-flex items-center gap-1"><span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style="background:${c0.bg};">${p[0]}</span><span class="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white" style="background:#3b82f6;">+${p.length - 1}</span></span>`;
+  }} catch {}
+  // Single kategori
   const c = KATEGORI_COLORS[kat] || { bg: '#78716c' };
   return `<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style="background:${c.bg};">${kat}</span>`;
 }
