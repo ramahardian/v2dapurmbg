@@ -186,8 +186,13 @@ if (cluster.isMaster && WORKERS > 1) {
     }
   }
 
+  // Cache-buster berbasis hash konten (bukan mtime) — akurat antar environment
+  // dan tidak terpengaruh cara deploy (git pull / rsync / tar yang preserve timestamp).
   const distVer = (() => {
-    try { return require('fs').statSync(path.join(__dirname, 'public', 'dist', 'app.min.js')).mtimeMs; } catch { return Date.now(); }
+    try {
+      const buf = require('fs').readFileSync(path.join(__dirname, 'public', 'dist', 'app.min.js'));
+      return require('crypto').createHash('md5').update(buf).digest('hex').slice(0, 8);
+    } catch { return Date.now(); }
   })();
   app.get('/', requirePageAuth, (req, res) => res.render('app', { distVer }));
   app.get(/^\/(?!api).*/, requirePageAuth, (req, res) => res.render('app', { distVer }));
