@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../../db');
 const { hitungBDD } = require('../../services/spBddCalculator');
-const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName } = require('./helpers');
+const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName, resolveGridBeratPerSiswa } = require('./helpers');
 
 const router = express.Router();
 
@@ -176,11 +176,10 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
         const bahanRows = (it.menu_id ? menuBahanMap : menuBahanByNameMap)[matchedMenuId] || [];
         for (const br of bahanRows) coveredBahan.add(it.hari_ke + '::' + (br.bahan_baku_id || ''));
         const bahanItems = bahanRows.map(br => {
-          const ref = spRefMap[br.nama] || {};
-          const persenBdd = ref.bdd_persen || Number(br.persen_bdd) || 100;
-          const beratBersih = Number(br.jumlah) * jmlPm;
-          const beratKotor = hitungBDD(beratBersih, persenBdd);
-          return { bahan_baku_id: br.bahan_baku_id, nama: br.nama, nama_display: br.nama, satuan: br.satuan, kategori_sp: br.kategori_sp, persen_bdd: persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 };
+          const resolved = resolveGridBeratPerSiswa(br, spRefMap);
+          const beratBersih = resolved.beratPerSiswa * jmlPm;
+          const beratKotor = hitungBDD(beratBersih, resolved.persenBdd);
+          return { bahan_baku_id: br.bahan_baku_id, nama: br.nama, nama_display: br.nama, satuan: br.satuan, kategori_sp: br.kategori_sp, persen_bdd: resolved.persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 };
         });
         dayData.push({ hari_ke: it.hari_ke, hari_nama: it.hari_nama, menu_nama: it.menu_nama || '-', menu_label: 'Menu', bahan: bahanItems });
       }
@@ -191,8 +190,8 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
         const gridItem = gridItems.find(it => it.hari_ke === hk);
         const hariNama = gridItem ? gridItem.hari_nama : 'Hari ' + hk;
         const menuNama = gridItem ? (gridItem.menu_nama || '-') : '-';
-        const persenBdd = Number(g.persen_bdd || 100);
-        const beratBersih = Number(g.berat_1_sp || 0) * jmlPm;
+        const { beratPerSiswa: berat1sp, persenBdd } = resolveGridBeratPerSiswa(g, spRefMap);
+        const beratBersih = berat1sp * jmlPm;
         const beratKotor = hitungBDD(beratBersih, persenBdd);
         const label = processedDays.has(hk) ? 'Bahan Tambahan' : 'Menu';
 
@@ -471,9 +470,9 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
                 beratPerSiswa = Number(ov.jumlah);
                 namaDisplay = ov.new_nama || br.nama;
               } else {
-                const ref = spRefMap[br.nama] || {};
-                persenBdd = ref.bdd_persen || Number(br.persen_bdd) || 100;
-                beratPerSiswa = Number(br.jumlah);
+                const resolved = resolveGridBeratPerSiswa(br, spRefMap);
+                persenBdd = resolved.persenBdd;
+                beratPerSiswa = resolved.beratPerSiswa;
                 namaDisplay = br.nama;
               }
 
@@ -515,9 +514,9 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
             beratPerSiswa = Number(ov.jumlah);
             namaDisplay = ov.new_nama || g.nama;
           } else {
-            const ref = spRefMap[g.nama] || {};
-            persenBdd = ref.bdd_persen || Number(g.persen_bdd || 100);
-            beratPerSiswa = Number(g.berat_1_sp || 0);
+            const resolved = resolveGridBeratPerSiswa(g, spRefMap);
+            persenBdd = resolved.persenBdd;
+            beratPerSiswa = resolved.beratPerSiswa;
             namaDisplay = g.nama;
           }
 
