@@ -614,6 +614,87 @@ function updateBahan(i, k, v) {
   hitungNutrisi();
   renderBahanList();
 }
+function openBahanKalkulator(i) {
+  var b = window._menuBahan[i];
+  if (!b) return;
+  var existing = document.getElementById('bahan-kalkulator-modal');
+  if (existing) existing.remove();
+  var satuan = b.satuan || 'g';
+  var porsi = Number(window._menuPorsi) || 0;
+  var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+  // Nilai yang tampil di kolom jumlah (total untuk porsi, dalam satuan tampilan)
+  var displayJumlah = Number(b.jumlah) || 0;
+  if (perUnit > 0 && (satuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(satuan))) {
+    displayJumlah = displayJumlah / perUnit;
+  }
+  var totalJumlah = porsi > 0 ? displayJumlah * porsi : displayJumlah;
+  // Konversi ke gram
+  var curGram;
+  if (satuan.toLowerCase() === 'kg') curGram = totalJumlah * 1000;
+  else if (satuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(satuan)) curGram = totalJumlah * perUnit;
+  else curGram = totalJumlah;
+
+  var m = document.createElement('div');
+  m.id = 'bahan-kalkulator-modal';
+  m.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-black/40';
+  m.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-5" onclick="event.stopPropagation()">' +
+    '<div class="flex items-center justify-between mb-4">' +
+      '<h3 class="font-bold text-stone-700">Kalkulator Gram ↔ Kg</h3>' +
+      '<button onclick="document.getElementById(\'bahan-kalkulator-modal\').remove()" class="text-stone-400 hover:text-stone-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+    '</div>' +
+    '<div class="text-xs text-stone-500 mb-3">Bahan: <span class="font-semibold text-stone-700">' + escHtml(b.nama || '') + '</span> · Satuan: <span class="font-semibold text-stone-700">' + escHtml(satuan) + '</span>' + (porsi > 0 ? ' · Total ' + porsi + ' porsi' : '') + '</div>' +
+    '<div class="space-y-3">' +
+      '<div><label class="text-xs font-medium text-stone-600">Gram</label>' +
+        '<input id="bk-gram" type="number" step="any" value="' + (Math.round(curGram * 100) / 100) + '" oninput="bkSyncKg()" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>' +
+      '<div><label class="text-xs font-medium text-stone-600">Kilogram</label>' +
+        '<input id="bk-kg" type="number" step="any" value="' + (Math.round((curGram / 1000) * 10000) / 10000) + '" oninput="bkSyncGram()" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>' +
+    '</div>' +
+    '<div class="mt-4 pt-3 border-t border-stone-100 flex justify-end gap-2">' +
+      '<button onclick="document.getElementById(\'bahan-kalkulator-modal\').remove()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Tutup</button>' +
+      '<button onclick="applyBahanKalkulator(' + i + ')" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">Terapkan</button>' +
+    '</div>' +
+  '</div>';
+  m.onclick = function() { m.remove(); };
+  document.body.appendChild(m);
+  document.getElementById('bk-gram').focus();
+}
+
+function bkSyncKg() {
+  var g = document.getElementById('bk-gram');
+  var k = document.getElementById('bk-kg');
+  if (!g || !k) return;
+  var v = Number(g.value);
+  k.value = v ? Math.round((v / 1000) * 10000) / 10000 : '';
+}
+function bkSyncGram() {
+  var g = document.getElementById('bk-gram');
+  var k = document.getElementById('bk-kg');
+  if (!g || !k) return;
+  var v = Number(k.value);
+  g.value = v ? Math.round(v * 1000 * 100) / 100 : '';
+}
+
+function applyBahanKalkulator(i) {
+  var b = window._menuBahan[i];
+  if (!b) return;
+  var g = document.getElementById('bk-gram');
+  var k = document.getElementById('bk-kg');
+  var gram = Number(g && g.value) || 0;
+  var kg = Number(k && k.value) || 0;
+  if (gram <= 0 && kg <= 0) { showAlert('Isi nilai gram atau kg terlebih dahulu', 'warning'); return; }
+  if (gram <= 0 && kg > 0) gram = kg * 1000;
+  // Kembalikan ke satuan tampilan kolom jumlah (total untuk porsi), lalu serahkan ke updateBahan
+  var satuan = b.satuan || 'g';
+  var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+  var displayVal;
+  if (satuan.toLowerCase() === 'kg') displayVal = gram / 1000;
+  else if (satuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(satuan)) displayVal = gram / perUnit;
+  else displayVal = gram;
+  var m = document.getElementById('bahan-kalkulator-modal');
+  if (m) m.remove();
+  updateBahan(i, 'jumlah', Math.round(displayVal * 100) / 100);
+}
+
 function resetAllToSP() {
   (window._menuBahan || []).forEach(function(b, i) {
     resetBahanToSP(i);
@@ -652,7 +733,8 @@ function renderBahanList() {
           '</div>' +
           '<div class="col-span-3 flex">' +
             '<input type="number" step="' + inputStep + '" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-10 px-3 border border-stone-200 rounded-l-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" title="' + inputTitle + '" />' +
-            '<span class="inline-flex items-center px-2.5 h-10 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-lg whitespace-nowrap">' + displaySatuan + '</span>' +
+            '<span class="inline-flex items-center px-2.5 h-10 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 whitespace-nowrap">' + displaySatuan + '</span>' +
+            '<button type="button" onclick="openBahanKalkulator(' + i + ')" class="shrink-0 inline-flex items-center justify-center w-8 h-10 text-blue-500 hover:bg-blue-50 border border-l-0 border-stone-200 rounded-r-lg transition-all" title="Kalkulator Gram ↔ Kg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 8h.01M15 8h.01M9 12h.01M15 12h.01M9 16h.01M15 16h.01"/></svg></button>' +
           '</div>' +
           '<div class="col-span-4">' +
             '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
