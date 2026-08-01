@@ -248,7 +248,15 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     return t === 'pcs' || t === 'btl' || t === 'renceng' || t === 'ctn' || t === 'karton' || t === 'kardus' || t === 'dus' || t === 'pack' || t === 'ikat' || t === 'ekor' || t === 'butir' || t === 'bungkus';
   }
 
-  function autoQty(satuan, totalKg, jumlahSiswa, beratPerSatuan) {
+  // Berat isi per satuan efektif — bila kosong, minyak dikarton diasumsikan 6x2L / 12x1L ≈ 12 L ≈ 11 kg
+  function beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) {
+    var b = Number(beratPerSatuan) || 0;
+    if (b > 0) return b;
+    if (String(kategoriSp || '').toLowerCase() === 'minyak' && String(satuan || '').toLowerCase() === 'karton') return 11000;
+    return 0;
+  }
+
+  function autoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
     var s = String(satuan || 'kg').toLowerCase();
     if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
       // Bahan berat → dibulatkan ke atas agar aman untuk belanja
@@ -257,8 +265,9 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     }
     if (isSatuanHitung(s)) {
       // Bahan kemasan besar (karton/kardus/dus/ctn) wajib punya berat_per_satuan — tanpa itu biarkan kosong agar diisi manual
-      if (beratPerSatuan > 0 && totalKg > 0) {
-        return Math.ceil((totalKg * 1000) / beratPerSatuan) + ' ' + s;
+      var bps = beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
+      if (bps > 0 && totalKg > 0) {
+        return Math.ceil((totalKg * 1000) / bps) + ' ' + s;
       }
       if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') return '';
       // Bahan satuan lain → pakai jumlah siswa (porsi)
@@ -269,7 +278,7 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
 
   // Nilai Kebutuhan dalam satuan alami bahan (kg untuk bahan berat, pcs/btl untuk bahan satuan)
   // supaya konsisten dgn kolom Kg/pcs/btl. Kosong jika belum ada nilai.
-  function kebutuhanSatuan(satuan, bufferKg, jumlahSiswa, beratPerSatuan) {
+  function kebutuhanSatuan(satuan, bufferKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
     if (!bufferKg || bufferKg <= 0) return '';
     var s = String(satuan || 'kg').toLowerCase();
     if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
@@ -282,8 +291,9 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
         return fmtTkNum(Math.round(bufferKg * 100) / 100);
       }
       // Bahan dengan berat per satuan → konversi ke jumlah satuan
-      if (beratPerSatuan > 0 && bufferKg > 0) {
-        var n = (bufferKg * 1000) / beratPerSatuan;
+      var bps = beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
+      if (bps > 0 && bufferKg > 0) {
+        var n = (bufferKg * 1000) / bps;
         return fmtTkNum(Math.round(n * 100) / 100) + ' ' + s;
       }
       // Bahan satuan (pcs/btl/renceng/dll) → jumlah per porsi
@@ -342,8 +352,9 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       grandTotalKg += bufferKg;
 
       var satuan = b.satuan || 'kg';
-      var qty = autoQty(satuan, bufferKg, rowSiswa, Number(b.berat_per_satuan) || 0);
-      var kebutuhan = kebutuhanSatuan(satuan, bufferKg, rowSiswa, Number(b.berat_per_satuan) || 0);
+      var kategoriSp = b.kategori_sp || '';
+      var qty = autoQty(satuan, bufferKg, rowSiswa, kategoriSp, Number(b.berat_per_satuan) || 0);
+      var kebutuhan = kebutuhanSatuan(satuan, bufferKg, rowSiswa, kategoriSp, Number(b.berat_per_satuan) || 0);
       var ket = b.keterangan || '';
 
       html += '<tr class="border-b border-stone-100 hover:bg-emerald-50/30 transition-colors">';
