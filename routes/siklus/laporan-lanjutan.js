@@ -515,7 +515,8 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
             beratPerSiswa = Number(ov.jumlah);
             namaDisplay = ov.new_nama || g.nama;
           } else {
-            persenBdd = Number(g.persen_bdd || 100);
+            const ref = spRefMap[g.nama] || {};
+            persenBdd = ref.bdd_persen || Number(g.persen_bdd || 100);
             beratPerSiswa = Number(g.berat_1_sp || 0);
             namaDisplay = g.nama;
           }
