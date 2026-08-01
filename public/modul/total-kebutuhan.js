@@ -242,10 +242,10 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     return (hariNama || '') + ', ' + dd + ' ' + tkBulan[mm] + ' ' + p[0];
   }
 
-  // Satuan yang dihitung per satuan (pcs/btl/renceng/ctn) vs per berat (kg/g)
+  // Satuan yang dihitung per satuan (pcs/btl/renceng/ctn/karton) vs per berat (kg/g)
   function isSatuanHitung(s) {
     var t = String(s || '').toLowerCase();
-    return t === 'pcs' || t === 'btl' || t === 'renceng' || t === 'ctn' || t === 'pack' || t === 'ikat' || t === 'ekor' || t === 'butir' || t === 'bungkus';
+    return t === 'pcs' || t === 'btl' || t === 'renceng' || t === 'ctn' || t === 'karton' || t === 'kardus' || t === 'dus' || t === 'pack' || t === 'ikat' || t === 'ekor' || t === 'butir' || t === 'bungkus';
   }
 
   function autoQty(satuan, totalKg, jumlahSiswa, beratPerSatuan) {
@@ -256,11 +256,12 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       return Math.ceil(totalKg * 1000) + ' g'; // satuan gram
     }
     if (isSatuanHitung(s)) {
-      // Bahan satuan → pakai jumlah siswa (porsi) atau konversi dari berat_per_satuan
+      // Bahan kemasan besar (karton/kardus/dus/ctn) wajib punya berat_per_satuan — tanpa itu biarkan kosong agar diisi manual
       if (beratPerSatuan > 0 && totalKg > 0) {
-        var n = Math.ceil((totalKg * 1000) / beratPerSatuan);
-        return n + ' ' + s;
+        return Math.ceil((totalKg * 1000) / beratPerSatuan) + ' ' + s;
       }
+      if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') return '';
+      // Bahan satuan lain → pakai jumlah siswa (porsi)
       return (Math.ceil(jumlahSiswa) || 0) + ' ' + s;
     }
     return '';
