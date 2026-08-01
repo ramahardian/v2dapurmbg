@@ -267,6 +267,31 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     return '';
   }
 
+  // Nilai Kebutuhan dalam satuan alami bahan (kg untuk bahan berat, pcs/btl untuk bahan satuan)
+  // supaya konsisten dgn kolom Kg/pcs/btl. Kosong jika belum ada nilai.
+  function kebutuhanSatuan(satuan, bufferKg, jumlahSiswa, beratPerSatuan) {
+    if (!bufferKg || bufferKg <= 0) return '';
+    var s = String(satuan || 'kg').toLowerCase();
+    if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
+      if (s === 'kg') return fmtTkNum(Math.round(bufferKg * 100) / 100);
+      return fmtTkNum(Math.round(bufferKg * 1000 * 100) / 100) + ' g';
+    }
+    if (isSatuanHitung(s)) {
+      // Kemasan besar (ctn/karton/dus) diukur per berat → tampilkan kg (nilai pasti)
+      if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') {
+        return fmtTkNum(Math.round(bufferKg * 100) / 100);
+      }
+      // Bahan dengan berat per satuan → konversi ke jumlah satuan
+      if (beratPerSatuan > 0 && bufferKg > 0) {
+        var n = (bufferKg * 1000) / beratPerSatuan;
+        return fmtTkNum(Math.round(n * 100) / 100) + ' ' + s;
+      }
+      // Bahan satuan (pcs/btl/renceng/dll) → jumlah per porsi
+      return (Math.ceil(jumlahSiswa) || 0) + ' ' + s;
+    }
+    return fmtTkNum(Math.round(bufferKg * 100) / 100);
+  }
+
   var html = '';
   var totalPorsiDay = totalSiswaSemuaJenjang > 0 ? totalSiswaSemuaJenjang : (Number(hari[0] && hari[0].total_porsi) || 0);
 
@@ -318,6 +343,7 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
 
       var satuan = b.satuan || 'kg';
       var qty = autoQty(satuan, bufferKg, rowSiswa, Number(b.berat_per_satuan) || 0);
+      var kebutuhan = kebutuhanSatuan(satuan, bufferKg, rowSiswa, Number(b.berat_per_satuan) || 0);
       var ket = b.keterangan || '';
 
       html += '<tr class="border-b border-stone-100 hover:bg-emerald-50/30 transition-colors">';
@@ -326,7 +352,7 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       html += '<td class="px-3 py-1.5"><input type="text" value="' + escHtmlTk(qty) + '" placeholder="isi jumlah" data-bahan="' + escHtmlTk(b.nama_display || b.nama) + '" class="tk-qty-input w-full min-w-[90px] px-2 py-1 text-sm rounded-lg border border-stone-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 bg-white" title="Jumlah belanja — otomatis terisi, bisa diedit"></td>';
       // Input keterangan — terisi dari resep menu, bisa diedit manual
       html += '<td class="px-3 py-1.5"><input type="text" value="' + escHtmlTk(ket) + '" placeholder="keterangan" data-bahan="' + escHtmlTk(b.nama_display || b.nama) + '" class="tk-ket-input w-full min-w-[110px] px-2 py-1 text-sm rounded-lg border border-stone-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 bg-white" title="Keterangan — terisi dari resep, bisa diedit"></td>';
-      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtTkNum(bufferKg) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700 whitespace-nowrap">' + (kebutuhan ? escHtmlTk(kebutuhan) : '<span class="text-stone-300">—</span>') + '</td>';
       html += '</tr>';
     }
 
@@ -350,7 +376,7 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     html += '<ul class="space-y-1 list-disc list-inside">';
     html += '<li><strong>Kg/pcs/btl</strong> = jumlah belanja per bahan — terisi otomatis dari perhitungan (bahan berat → kg; bahan satuan → pcs/btl/dll.), bisa diedit langsung di kolom.</li>';
     html += '<li><strong>Ket</strong> = keterangan/instruksi bahan (mis. Potong 10, Fillet) — terisi dari resep menu, bisa diedit langsung di kolom.</li>';
-    html += '<li><strong>Kebutuhan</strong> = total kebutuhan (kg) semua jenjang, sudah termasuk <em>buffer</em> 1-10% (jika ada).</li>';
+    html += '<li><strong>Kebutuhan</strong> = total kebutuhan semua jenjang sesuai satuan bahan (kg untuk bahan berat; pcs/btl untuk bahan satuan), sudah termasuk <em>buffer</em> 1-10% (jika ada).</li>';
     html += '<li>Angka otomatis memakai pembulatan ke atas agar aman untuk pembelian.</li>';
     html += '</ul></div>';
   }
