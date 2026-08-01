@@ -937,7 +937,8 @@ async function selectSiklusMenuName(nama, bahanJson, siklusPorsi, kategoriPeneri
         badgeContainer = document.createElement('div');
         badgeContainer.id = 'm-kategori-badge';
         badgeContainer.className = 'text-xs mt-1';
-        document.getElementById('m-nama').parentNode.appendChild(badgeContainer);
+        // Tampilkan di bawah baris input (bukan di samping tombol Siklus)
+        document.getElementById('m-nama').parentNode.insertAdjacentElement('afterend', badgeContainer);
       }
       badgeContainer.innerHTML = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">📋 ' + kategoriBadge(kategoriPenerima) + '</span>';
     }
