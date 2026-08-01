@@ -340,7 +340,6 @@ function renderMenuHtml(menus) {
       </button>
     </div>
     <div class="flex gap-2">
-      <button id="recalc-nutrisi-btn" onclick="recalcNutrisiMenu()" class="h-11 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-sm font-medium shadow-sm transition-all">Hitung Ulang Nutrisi</button>
       <div class="relative">
         <input type="text" id="search-menu-input" placeholder="Cari nama menu..." value="${menuState.search}"
           class="w-56 h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
@@ -839,17 +838,6 @@ async function deleteSelectedMenu() {
     renderMenu();
   } catch (e) {
     showToast('Gagal menghapus: ' + (e.message || 'Unknown error'), 'error');
-  }
-}
-
-async function recalcNutrisiMenu() {
-  if (!await showConfirm('Hitung ulang nutrisi semua menu berdasarkan bahan baku terkini?', 'Ya, Hitung')) return;
-  try {
-    var res = await api.post('/menu/recalculate-nutrisi', {});
-    showToast(res.recalculated + ' menu diperbarui dari ' + res.total, 'success');
-    renderMenu();
-  } catch (e) {
-    showAlert(e.message || 'Gagal', 'error');
   }
 }
 
