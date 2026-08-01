@@ -5,6 +5,45 @@ const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, pars
 
 const router = express.Router();
 
+// ── Helper: sinkronkan total porsi dgn jumlah_porsi tersimpan di siklus ──
+// /menu menampilkan siklus.jumlah_porsi (tersimpan). Agar /total-kebutuhan dan
+// /perencanaan konsisten, total porsi live (dari penerima_manfaat) diskala
+// proporsional per jenjang sehingga total = SUM(jumlah_porsi) siklus terpilih/aktif.
+function syncPorsiDenganSiklus(siklusList, activeJenjang, pmByDisplay, pmBesar, pmKecil) {
+  const storedTotal = siklusList.reduce((sum, s) => sum + (Number(s.jumlah_porsi) || 0), 0);
+  if (storedTotal <= 0) return; // tidak ada acuan tersimpan → pakai live PM
+  const liveTotal = activeJenjang.reduce((sum, j) => sum + (Number(pmByDisplay[j]) || 0), 0);
+  if (liveTotal <= 0) return;
+  const factor = storedTotal / liveTotal;
+  const scaled = {};
+  let acc = 0;
+  for (const j of activeJenjang) {
+    if (pmByDisplay[j] === undefined || pmByDisplay[j] === null) continue;
+    scaled[j] = Math.round(Number(pmByDisplay[j]) * factor);
+    acc += scaled[j];
+  }
+  // Koreksi selisih pembulatan pada jenjang pertama agar total selalu pas
+  const diff = storedTotal - acc;
+  for (const j of activeJenjang) {
+    if (scaled[j] === undefined) continue;
+    scaled[j] += diff;
+    break;
+  }
+  for (const j of activeJenjang) {
+    if (scaled[j] === undefined) continue;
+    const oldVal = Number(pmByDisplay[j]) || 0;
+    pmByDisplay[j] = scaled[j];
+    // Ikutkan skala ke pecahan besar/kecil agar jumlah_besar + jumlah_kecil = jumlah_siswa
+    if (pmBesar && pmKecil && oldVal > 0) {
+      const bf = scaled[j] / oldVal;
+      const nb = Math.round((Number(pmBesar[j]) || 0) * bf);
+      const nk = Math.round((Number(pmKecil[j]) || 0) * bf);
+      pmBesar[j] = nb;
+      pmKecil[j] = nk + (scaled[j] - (nb + nk)); // jaga besar+kecil = total
+    }
+  }
+}
+
 /**
  * GET /siklus/laporan/kebutuhan-per-menu
  * Calculate required ingredients per menu for different beneficiary groups.
@@ -88,6 +127,9 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
       }
     });
   }
+
+  // Sinkronkan total porsi dgn jumlah_porsi tersimpan siklus (konsisten dgn /menu)
+  syncPorsiDenganSiklus(siklusList, activeJenjang, pmByDisplay, pmByDisplayBesar, pmByDisplayKecil);
 
   // SP referensi
   let spRefMap = {};
@@ -312,6 +354,9 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     }
     activeJenjang = targetArr;
   }
+
+  // Sinkronkan total porsi dgn jumlah_porsi tersimpan siklus (konsisten dgn /menu)
+  syncPorsiDenganSiklus(siklusList, activeJenjang, pmByDisplay);
 
   // SP referensi
   let spRefMap = {};
