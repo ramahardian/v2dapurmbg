@@ -135,7 +135,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   let spRefMap = {};
   try {
     const [refs] = await db.query('SELECT nama, bdd_persen, berat_bersih FROM sp_referensi_bahan WHERE tenant_id=?', [req.user.tenant_id]);
-    for (const r of refs) spRefMap[r.nama] = { bdd_persen: Number(r.bdd_persen) || 100, berat_bersih: Number(r.berat_bersih) || 0 };
+    for (const r of refs) spRefMap[r.nama] = { bdd_persen: Math.round(Number(r.bdd_persen) * 100) || 100, berat_bersih: Number(r.berat_bersih) || 0 };
   } catch (e) { /* table optional */ }
 
   // Standar SP
@@ -362,7 +362,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
   let spRefMap = {};
   try {
     const [refs] = await db.query('SELECT nama, bdd_persen, berat_bersih FROM sp_referensi_bahan WHERE tenant_id=?', [req.user.tenant_id]);
-    for (const r of refs) spRefMap[r.nama] = { bdd_persen: Number(r.bdd_persen) || 100, berat_bersih: Number(r.berat_bersih) || 0 };
+    for (const r of refs) spRefMap[r.nama] = { bdd_persen: Math.round(Number(r.bdd_persen) * 100) || 100, berat_bersih: Number(r.berat_bersih) || 0 };
   } catch (e) { /* table optional */ }
 
   // Standar SP
