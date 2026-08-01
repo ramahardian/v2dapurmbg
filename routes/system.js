@@ -241,6 +241,108 @@ router.get('/system/koreksi-menu-bahan', requireRole('admin'), (req, res) => {
 </html>`);
 });
 
+// POST /system/koreksi-menu-bahan-jumlah — perbaiki menu_bahan.jumlah yang tidak wajar (terlalu besar)
+router.post('/system/koreksi-menu-bahan-jumlah', requireRole('admin'), async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const log = (msg) => { res.write(msg + '\n'); };
+  const { apply } = req.body || {};
+  log('Memulai koreksi data menu_bahan.jumlah...\n');
+
+  try {
+    const { runKoreksiMenuBahanJumlah } = require('../scripts/koreksi-menu-bahan-jumlah');
+    const result = await runKoreksiMenuBahanJumlah(!!apply, false, req.user.tenant_id);
+    for (const line of result.logs) {
+      log(line);
+    }
+    log('');
+    if (apply) {
+      log(`✓ ${result.corrected} dari ${result.total} baris menu_bahan diperbaiki`);
+      if (result.corrected > 0) log('✓ Nutrisi menu telah diperbarui');
+    } else {
+      log(`✓ Dry-run selesai: ${result.total - result.skipped} baris akan diperbaiki, ${result.skipped} di-skip`);
+    }
+    log('');
+    log('✓ Koreksi selesai!');
+  } catch (err) {
+    log('\n✗ Gagal: ' + err.message);
+  }
+  res.end();
+});
+
+// GET /system/koreksi-menu-bahan-jumlah — halaman trigger koreksi via URL (web UI)
+router.get('/system/koreksi-menu-bahan-jumlah', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Koreksi Jumlah Menu Bahan</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-3xl w-full">
+    <h1 class="text-2xl font-bold text-stone-800 mb-2">Koreksi Jumlah Menu Bahan</h1>
+    <p class="text-sm text-stone-500 mb-6">
+      Memperbaiki data <code class="bg-stone-100 px-1 rounded">menu_bahan.jumlah</code> yang tersimpan terlalu besar
+      (gram per porsi, mis. Beras 8.800g — seharusnya ~50g) sehingga kebutuhan di /total-kebutuhan jadi berlipat.
+      Nilai benar diambil dari <code class="bg-stone-100 px-1 rounded">berat_1_sp</code> master Bahan Baku (fallback: SP Referensi).
+    </p>
+
+    <div class="bg-sky-50 border border-sky-200 rounded-lg p-3 mb-4 text-xs text-sky-800">
+      <strong>Urutan yang benar:</strong> jalankan <strong>1. Dry Run</strong> dulu untuk melihat preview,
+      periksa hasilnya, lalu <strong>2. Jalankan Koreksi</strong> untuk memperbaiki data + hitung ulang nutrisi.
+      Backup otomatis dibuat ke tabel <code class="bg-sky-100 px-1 rounded">backup_menu_bahan_sebelum_koreksi_&lt;tenant_id&gt;</code>
+      (nama tabel akan tampil di log hasil koreksi).
+    </div>
+
+    <div class="flex gap-3 mb-6">
+      <button onclick="runKoreksi(false)" id="btn-dry" class="flex-1 bg-sky-600 hover:bg-sky-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        1. Dry Run (Preview)
+      </button>
+      <button onclick="runKoreksi(true)" id="btn-apply" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        2. Jalankan Koreksi
+      </button>
+    </div>
+
+    <pre id="output" class="bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-96 hidden"></pre>
+  </div>
+  <script>
+    async function runKoreksi(apply) {
+      const btn = apply ? document.getElementById('btn-apply') : document.getElementById('btn-dry');
+      if (apply && !confirm('Perbaiki data menu_bahan.jumlah sekarang? Backup otomatis akan dibuat terlebih dahulu.')) return;
+      const out = document.getElementById('output');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      out.classList.remove('hidden');
+      out.textContent = '';
+
+      try {
+        const r = await fetch('/api/system/koreksi-menu-bahan-jumlah', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apply }),
+          credentials: 'include'
+        });
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          out.textContent += decoder.decode(value);
+          out.scrollTop = out.scrollHeight;
+        }
+      } catch (e) {
+        out.textContent += '\\nGagal: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = apply ? '2. Jalankan Koreksi' : '1. Dry Run (Preview)';
+    }
+  </script>
+</body>
+</html>`);
+});
+
 // GET /system/cek-budget — debug: lihat data budget
 router.get('/system/cek-budget', requireRole('admin'), async (req, res) => {
   try {
