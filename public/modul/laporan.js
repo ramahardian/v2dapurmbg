@@ -1663,6 +1663,7 @@ const tabColors = {
         ])
       };
       window['_export_hpp'] = { data: rows, fields: ['menu_nama','kategori_penerima','jumlah_bahan','total_hpp'] };
+      window._lapData = null;
 
       // Build stat cards
       let statHtml = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
