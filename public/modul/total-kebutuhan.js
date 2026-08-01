@@ -35,7 +35,7 @@ async function loadTotalKebutuhan() {
     if (tglSelesai) params.set('tanggal_selesai', tglSelesai);
     const qs = params.toString() ? '?' + params.toString() : '';
     const res = await api.get('/siklus/laporan/perencanaan' + qs);
-    const { jenjang_list, hari, pm_map, tanggal_mulai, tanggal_selesai, _validation } = res;
+    const { hari, pm_map, tanggal_mulai, tanggal_selesai, _validation } = res;
 
     // Hitung total jumlah_siswa semua jenjang
     var totalSiswaSemuaJenjang = 0;
@@ -91,99 +91,98 @@ async function loadTotalKebutuhan() {
       return;
     }
 
-    // ── Render per day — per jenjang ──
-    var tkColors = ['border-l-sky-500', 'border-l-emerald-500', 'border-l-amber-500', 'border-l-violet-500', 'border-l-rose-500', 'border-l-cyan-500'];
+    // ── Render per day — format matriks (kolom jenjang + buffer 1-10%) ──
+    var tkJenjangOrder = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
+    var tkBulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+    function tkFmtTanggal(headerTanggal, hariNama) {
+      var p = String(headerTanggal || '').split('-');
+      var dd = parseInt(p[2], 10);
+      var mm = parseInt(p[1], 10) - 1;
+      if (p.length !== 3 || isNaN(dd) || isNaN(mm) || !tkBulan[mm]) return headerTanggal || (hariNama || '');
+      return (hariNama || '') + ', ' + dd + ' ' + tkBulan[mm] + ' ' + p[0];
+    }
+
+    var totalPorsiDay = totalSiswaSemuaJenjang > 0 ? totalSiswaSemuaJenjang : (Number(hari[0] && hari[0].total_porsi) || 0);
 
     for (var d = 0; d < hari.length; d++) {
       var day = hari[d];
       if (!day.bahan || !day.bahan.length) continue;
 
-      // Group bahan by jenjang
-      var jnBahan = {};
-      for (var i = 0; i < day.bahan.length; i++) {
-        var b = day.bahan[i];
-        if (!b.per_jenjang) continue;
-        for (var ji = 0; ji < jenjang_list.length; ji++) {
-          var jn = jenjang_list[ji];
-          var pj = b.per_jenjang[jn];
-          if (pj && pj.kebutuhan_kg > 0) {
-            if (!jnBahan[jn]) jnBahan[jn] = [];
-            jnBahan[jn].push({
-              nama: b.nama,
-              nama_display: b.nama_display || b.nama,
-              berat_bersih: Math.round(pj.berat_bersih * 100) / 100,
-              persen_bdd: pj.persen_bdd,
-              berat_kotor: Math.round(pj.berat_kotor * 100) / 100,
-              jumlah_siswa: pj.jumlah_siswa || 0,
-              kebutuhan_kg: Math.round(pj.kebutuhan_kg * 100) / 100
-            });
-          }
-        }
-      }
-
-      var jnKeys = Object.keys(jnBahan);
-      if (!jnKeys.length) continue;
-
       // Day card
       html += '<div class="bg-white border border-stone-200 rounded-xl overflow-hidden mb-4 shadow-sm">';
 
       // Day header
-      html += '<div class="px-5 py-3 bg-gradient-to-r from-emerald-50 to-green-50 border-b border-stone-200 flex items-center gap-3">';
+      html += '<div class="px-5 py-3 bg-gradient-to-r from-emerald-50 to-green-50 border-b border-stone-200 flex items-center gap-3 flex-wrap">';
       html += '<span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-sm">M' + (d + 1) + '</span>';
       html += '<div>';
-      html += '<div class="font-semibold text-sm text-emerald-800">' + day.header_tanggal + '</div>';
+      html += '<div class="font-semibold text-sm text-emerald-800">' + tkFmtTanggal(day.header_tanggal, day.hari_nama) + '</div>';
       if (day.menu_names && day.menu_names.length) {
         html += '<div class="text-xs text-stone-500 mt-0.5">' + day.menu_names.join(' + ') + '</div>';
       }
       html += '</div>';
-      html += '<div class="ml-auto text-xs text-stone-400">' + jnKeys.length + ' jenjang</div>';
+      html += '<div class="ml-auto text-xs text-stone-500">Total Porsi: <strong class="text-emerald-700">' + fmtTkNum(totalPorsiDay) + '</strong></div>';
       html += '</div>';
 
-      // Per jenjang table
-      for (var jnIdx = 0; jnIdx < jnKeys.length; jnIdx++) {
-        var jn = jnKeys[jnIdx];
-        var bahanList = jnBahan[jn];
-        var colorIdx = jnIdx % tkColors.length;
+      // ── Matriks: baris = bahan, kolom = jenjang ──
+      html += '<div class="overflow-x-auto p-4"><table class="w-full text-xs border-collapse">';
+      html += '<thead><tr class="border-b border-stone-200 bg-stone-50">';
+      html += '<th class="px-3 py-2 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
+      for (var jc = 0; jc < tkJenjangOrder.length; jc++) {
+        html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">' + tkJenjangOrder[jc] + '</th>';
+      }
+      html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Total Porsi</th>';
+      html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan Pangan (kg)</th>';
+      html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap" title="Kebutuhan + buffer per bahan (1-10%)">1-10%</th>';
+      html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Rincian</th>';
+      html += '</tr></thead><tbody>';
 
-        html += '<div class="border-l-4 ' + tkColors[colorIdx] + ' mx-4 my-3 pl-3">';
-        html += '<div class="font-bold text-sm text-stone-700 mb-2">&#9654; ' + jn + ' (' + fmtTkNum(bahanList[0].jumlah_siswa) + ' siswa)</div>';
+      var colTotal = {};
+      for (var jc2 = 0; jc2 < tkJenjangOrder.length; jc2++) colTotal[tkJenjangOrder[jc2]] = 0;
+      var grandTotalKg = 0;
+      var grandBufferKg = 0;
 
-        html += '<div class="overflow-x-auto"><table class="w-full text-xs border-collapse">';
-        html += '<thead><tr class="border-b border-stone-200 bg-stone-50">';
-        html += '<th class="px-3 py-1.5 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
-        html += '<th class="px-3 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Bersih (g)</th>';
-        html += '<th class="px-3 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">BDD (%)</th>';
-        html += '<th class="px-3 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Kotor (g)</th>';
-        html += '<th class="px-3 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Jumlah Siswa</th>';
-        html += '<th class="px-3 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan (kg)</th>';
-        html += '</tr></thead><tbody>';
-
-        var totalKg = 0;
-        for (var bi = 0; bi < bahanList.length; bi++) {
-          var b = bahanList[bi];
-          totalKg += b.kebutuhan_kg;
-          var isRef = b.persen_bdd !== 100;
-          html += '<tr class="border-b border-stone-100 hover:bg-emerald-50/30 transition-colors">';
-          html += '<td class="px-3 py-1.5 text-sm font-medium text-stone-800">' + b.nama_display + '</td>';
-          html += '<td class="px-3 py-1.5 text-sm text-right mono">' + fmtTkNum(b.berat_bersih) + '</td>';
-          html += '<td class="px-3 py-1.5 text-sm text-right mono ' + (isRef ? 'text-emerald-600 font-semibold' : '') + '">' + b.persen_bdd + '%</td>';
-          html += '<td class="px-3 py-1.5 text-sm text-right mono">' + fmtTkNum(b.berat_kotor) + '</td>';
-          html += '<td class="px-3 py-1.5 text-sm text-right mono text-stone-600">' + fmtTkNum(b.jumlah_siswa) + '</td>';
-          html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtTkNum(b.kebutuhan_kg) + '</td>';
-          html += '</tr>';
+      for (var bi = 0; bi < day.bahan.length; bi++) {
+        var b = day.bahan[bi];
+        if (!b.per_jenjang) continue;
+        var rowKg = 0;
+        var bufferPersen = Number(b.buffer_persen) || 0;
+        var cells = '';
+        for (var jc3 = 0; jc3 < tkJenjangOrder.length; jc3++) {
+          var jn = tkJenjangOrder[jc3];
+          var pj = b.per_jenjang[jn];
+          var v = pj ? (Number(pj.kebutuhan_kg) || 0) : 0;
+          rowKg += v;
+          colTotal[jn] += v;
+          cells += '<td class="px-3 py-1.5 text-sm text-right mono">' + (v ? fmtTkNum(v) : '-') + '</td>';
         }
+        var bufferKg = Math.round(rowKg * (1 + bufferPersen / 100) * 100) / 100;
+        grandTotalKg += rowKg;
+        grandBufferKg += bufferKg;
 
-        // Total row per jenjang
-        html += '<tr class="bg-stone-50 border-t-2 border-stone-200">';
-        html += '<td class="px-3 py-1.5 text-sm font-semibold text-stone-700">Total ' + jn + '</td>';
-        html += '<td colspan="4"></td>';
-        html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtTkNum(totalKg) + '</td>';
+        html += '<tr class="border-b border-stone-100 hover:bg-emerald-50/30 transition-colors">';
+        html += '<td class="px-3 py-1.5 text-sm font-medium text-stone-800">' + (b.nama_display || b.nama) + '</td>';
+        html += cells;
+        html += '<td class="px-3 py-1.5 text-sm text-right mono text-stone-600">' + fmtTkNum(totalPorsiDay) + '</td>';
+        html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtTkNum(rowKg) + '</td>';
+        html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold ' + (bufferPersen > 0 ? 'text-sky-700' : 'text-stone-500') + '" title="Buffer ' + bufferPersen + '%">' + fmtTkNum(bufferKg) + '</td>';
+        html += '<td class="px-3 py-1.5 text-sm text-right text-stone-400"></td>';
         html += '</tr>';
-
-        html += '</tbody></table></div></div>';
       }
 
-      html += '</div>';
+      // Total row
+      html += '<tr class="bg-stone-50 border-t-2 border-stone-200 font-bold">';
+      html += '<td class="px-3 py-2 text-sm font-semibold text-stone-700">Total</td>';
+      for (var jc4 = 0; jc4 < tkJenjangOrder.length; jc4++) {
+        html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtTkNum(colTotal[tkJenjangOrder[jc4]]) + '</td>';
+      }
+      html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtTkNum(totalPorsiDay) + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-emerald-700">' + fmtTkNum(Math.round(grandTotalKg * 100) / 100) + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-sky-700">' + fmtTkNum(Math.round(grandBufferKg * 100) / 100) + '</td>';
+      html += '<td class="px-3 py-2"></td>';
+      html += '</tr>';
+
+      html += '</tbody></table></div></div>';
     }
 
     if (!html) {
@@ -194,11 +193,11 @@ async function loadTotalKebutuhan() {
     html += '<div class="bg-white border border-stone-200 rounded-lg p-4 mt-4 text-xs text-stone-500">';
     html += '<div class="font-semibold text-stone-700 mb-2">Keterangan:</div>';
     html += '<ul class="space-y-1 list-disc list-inside">';
-    html += '<li><strong>Berat Bersih</strong> = Jumlah bahan per porsi (gram) — dihitung dari SP × Berat 1 SP</li>';
-    html += '<li><strong>BDD%</strong> = <em>Bahan Dapat Dimakan</em> — persentase bagian yang dapat dikonsumsi.</li>';
-    html += '<li><strong>Berat Kotor</strong> = Berat Bersih ÷ (BDD ÷ 100)</li>';
-    html += '<li><strong>Kebutuhan (kg)</strong> = Berat Kotor × Jumlah Siswa ÷ 1000</li>';
-    html += '<li>Data ditampilkan <strong>per jenjang</strong> sesuai target penerima manfaat.</li>';
+    html += '<li><strong>Kolom jenjang</strong> = kebutuhan bahan (kg) per kategori penerima manfaat (TK/PAUD, SD, SMP/SMA, Bumil/Busui, Balita).</li>';
+    html += '<li><strong>Total Porsi</strong> = total penerima manfaat (porsi) semua jenjang pada hari tersebut.</li>';
+    html += '<li><strong>Kebutuhan Pangan (kg)</strong> = jumlah kebutuhan seluruh jenjang (Berat Kotor × Jumlah Penerima ÷ 1000).</li>';
+    html += '<li><strong>1-10%</strong> = Kebutuhan Pangan + <em>buffer</em> per bahan — diambil dari <em>buffer_persen</em> master Bahan Baku (jika kosong = 0%).</li>';
+    html += '<li><strong>Rincian</strong> = kolom untuk catatan/penjelasan tambahan.</li>';
     html += '</ul></div>';
 
     wrap.innerHTML = html;
