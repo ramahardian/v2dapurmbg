@@ -32,6 +32,7 @@ const FILES = [
   'hari-libur.js',
   'definisi.js',
   'idle-timeout.js',
+  'ticker.js',
   'inti.js',
 ];
 
