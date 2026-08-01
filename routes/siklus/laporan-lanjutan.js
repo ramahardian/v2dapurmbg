@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../../db');
 const { hitungBDD } = require('../../services/spBddCalculator');
-const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus } = require('./helpers');
+const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName } = require('./helpers');
 
 const router = express.Router();
 
@@ -109,14 +109,16 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   const allMenuIds = [...new Set(Object.values(itemsBySiklus).flatMap(arr => arr.filter(it => it.menu_id).map(it => it.menu_id)))];
   const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
   const gridBahanBySiklus = await batchLoadGridBahanBySiklus(siklusIds);
+  // Item tanpa menu_id tapi menu_nama cocok dgn menu → ikuti resep menu (live)
+  const { menuIdByName, menuBahanByNameMap } = await loadMenuBahanByName(itemsBySiklus, req.user.tenant_id);
 
   // Helper: build siklus data for a given PM count
   function buildSiklusData(jmlPm) {
     const siklusData = [];
     for (const s of siklusList) {
       const allItems = itemsBySiklus[s.id] || [];
-      const menuItems = allItems.filter(it => it.menu_id);
-      const gridItems = allItems.filter(it => !it.menu_id);
+      const menuItems = allItems.filter(it => lookupMenuIdByName(menuIdByName, it));
+      const gridItems = allItems.filter(it => !lookupMenuIdByName(menuIdByName, it));
       const gridBahan = gridBahanBySiklus[s.id] || [];
       const hasMenuItems = menuItems.length > 0;
       const hasGridItems = gridBahan.length > 0;
@@ -125,9 +127,12 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
       const dayData = [];
       const processedDays = new Set();
 
+      const coveredBahan = new Set();
       for (const it of menuItems) {
         processedDays.add(it.hari_ke);
-        const bahanRows = menuBahanMap[it.menu_id] || [];
+        const matchedMenuId = lookupMenuIdByName(menuIdByName, it);
+        const bahanRows = (it.menu_id ? menuBahanMap : menuBahanByNameMap)[matchedMenuId] || [];
+        for (const br of bahanRows) coveredBahan.add(it.hari_ke + '::' + (br.bahan_baku_id || ''));
         const bahanItems = bahanRows.map(br => {
           const ref = spRefMap[br.nama] || {};
           const persenBdd = ref.bdd_persen || Number(br.persen_bdd) || 100;
@@ -140,6 +145,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
 
       for (const g of gridBahan) {
         const hk = g.hari_ke;
+        if (coveredBahan.has(hk + '::' + (g.bahan_baku_id || ''))) continue; // sudah dihitung dari resep menu
         const gridItem = gridItems.find(it => it.hari_ke === hk);
         const hariNama = gridItem ? gridItem.hari_nama : 'Hari ' + hk;
         const menuNama = gridItem ? (gridItem.menu_nama || '-') : '-';
@@ -327,6 +333,8 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
   const allMenuIds = [...new Set(Object.values(itemsBySiklus).flatMap(arr => arr.filter(it => it.menu_id).map(it => it.menu_id)))];
   const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
   const gridBahanBySiklus = await batchLoadGridBahanBySiklus(siklusIds);
+  // Item tanpa menu_id tapi menu_nama cocok dgn menu → ikuti resep menu (live)
+  const { menuIdByName, menuBahanByNameMap } = await loadMenuBahanByName(itemsBySiklus, req.user.tenant_id);
 
   // ── Load overrides for perencanaan ──
   let ovIndex = {};
@@ -397,10 +405,13 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       const items = (itemsBySiklus[s.id] || []).filter(it => it.hari_ke === hariKe);
       if (!items.length) continue;
 
+      const coveredBahan = new Set();
       for (const it of items) {
-        if (it.menu_id) {
-          const bahanRows = menuBahanMap[it.menu_id] || [];
+        const matchedMenuId = lookupMenuIdByName(menuIdByName, it);
+        if (matchedMenuId) {
+          const bahanRows = (it.menu_id ? menuBahanMap : menuBahanByNameMap)[matchedMenuId] || [];
           for (const br of bahanRows) {
+            coveredBahan.add(String(br.bahan_baku_id));
             for (const b of activeJenjang) {
               const jmlPm = pmByDisplay[b] || Number(s.jumlah_porsi) || 0;
               if (!jmlPm) continue;
@@ -444,6 +455,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
       const gridDay = gridBahan.filter(g => g.hari_ke === hariKe);
 
       for (const g of gridDay) {
+        if (coveredBahan.has(String(g.bahan_baku_id))) continue; // sudah dihitung dari resep menu
         for (const b of activeJenjang) {
           const jmlPm = pmByDisplay[b] || Number(s.jumlah_porsi) || 0;
           if (!jmlPm) continue;

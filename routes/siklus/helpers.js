@@ -104,6 +104,30 @@ async function batchLoadGridBahanBySiklus(siklusIds) {
   return bySiklus;
 }
 
+async function batchLoadMenuIdByName(menuNames, tenantId) {
+  if (!menuNames || !menuNames.length) return {};
+  const uniq = [...new Set(menuNames.map(n => String(n || '').trim()).filter(Boolean))];
+  if (!uniq.length) return {};
+  const ph = uniq.map(() => '?').join(',');
+  const [rows] = await db.query(
+    `SELECT id, nama FROM menu WHERE tenant_id=? AND nama IN (${ph})`,
+    [tenantId, ...uniq]
+  );
+  const map = {};
+  for (const r of rows) {
+    const key = String(r.nama || '').trim().toLowerCase();
+    if (key && !map[key]) map[key] = r.id; // first match wins
+  }
+  return map;
+}
+
+// Normalize lookup: menu_id dulu, lalu cocokkan menu_nama (case-insensitive, trim) ke map by-name
+function lookupMenuIdByName(menuIdByName, it) {
+  if (it.menu_id) return it.menu_id;
+  const key = String(it.menu_nama || '').trim().toLowerCase();
+  return key ? (menuIdByName[key] || null) : null;
+}
+
 async function batchLoadMenuBahan(menuIds) {
   if (!menuIds.length) return {};
   const ph = menuIds.map(() => '?').join(',');
@@ -125,6 +149,20 @@ async function batchLoadMenuBahan(menuIds) {
     map[r.menu_id].push(r);
   }
   return map;
+}
+
+// Load live recipe for siklus items that have menu_nama but no menu_id (match by name)
+async function loadMenuBahanByName(itemsBySiklus, tenantId) {
+  const unmatchedNames = [];
+  for (const arr of Object.values(itemsBySiklus)) {
+    for (const it of arr) {
+      if (!it.menu_id && it.menu_nama) unmatchedNames.push(it.menu_nama);
+    }
+  }
+  const menuIdByName = await batchLoadMenuIdByName(unmatchedNames, tenantId);
+  const matchedMenuIds = [...new Set(Object.values(menuIdByName))];
+  const menuBahanByNameMap = await batchLoadMenuBahan(matchedMenuIds);
+  return { menuIdByName, menuBahanByNameMap };
 }
 
 async function autoHitungPorsi(tenantId, kategori_penerima, jumlah_porsi) {
@@ -224,7 +262,10 @@ module.exports = {
   batchLoadItems,
   batchLoadBahanCounts,
   batchLoadGridBahanBySiklus,
+  batchLoadMenuIdByName,
+  lookupMenuIdByName,
   batchLoadMenuBahan,
+  loadMenuBahanByName,
   autoHitungPorsi,
   hitungEstimasiGiziManual,
   buildGridNamaFromData,
