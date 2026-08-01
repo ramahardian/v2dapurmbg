@@ -125,12 +125,64 @@ async function loadPerencanaanData(siklusId) {
     // ── Rekap Porsi Besar & Kecil (aggregate across all jenjang) ──
     html += renderPncRekapPorsi(data);
 
+    // Container untuk tabel Perencanaan Final (matriks) — diisi async
+    html += '<div id="pnc-matriks-container"></div>';
+
     wrap.innerHTML = html;
+
+    // Muat tabel matriks Perencanaan Final di bawah Rekap Porsi Besar & Kecil
+    loadPncMatriksPerencanaan(siklusId);
 
     // Adjust export button visibility based on data availability
     setTimeout(adjustExportVisibilityForEmptyData, 100);
   } catch (err) {
     wrap.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal: ' + err.message + '</div>';
+  }
+}
+
+// ── Tabel Perencanaan Final (format matriks, sama seperti halaman Total Kebutuhan) ──
+var _pncMatriksReq = 0;
+async function loadPncMatriksPerencanaan(siklusId) {
+  const container = document.getElementById('pnc-matriks-container');
+  if (!container) return;
+
+  // Request token: abaikan respons lama jika user cepat berpindah filter
+  const reqId = ++_pncMatriksReq;
+
+  const params = new URLSearchParams();
+  if (siklusId) params.set('siklus_id', siklusId);
+  const qs = params.toString() ? '?' + params.toString() : '';
+
+  container.innerHTML = '<div class="flex items-center justify-center py-10"><svg class="animate-spin h-6 w-6 text-sky-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
+
+  try {
+    const res = await api.get('/siklus/laporan/perencanaan' + qs);
+    if (reqId !== _pncMatriksReq) return; // respons basi, ada filter baru
+    const { hari, pm_map, _validation } = res;
+
+    if (_validation || !hari || !hari.length) {
+      container.innerHTML = '';
+      return;
+    }
+
+    // Hitung total siswa semua jenjang
+    var totalSiswaSemuaJenjang = 0;
+    if (pm_map) {
+      for (var key in pm_map) totalSiswaSemuaJenjang += Number(pm_map[key]) || 0;
+    }
+
+    let html = '';
+    html += '<div class="mt-6 mb-3 flex items-center gap-2">';
+    html += '<svg class="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="13" width="3" height="4"/><rect x="13" y="11" width="3" height="6"/></svg>';
+    html += '<span class="text-sm font-bold text-stone-700">Perencanaan Final — Kebutuhan Bahan per Hari</span>';
+    html += '<span class="text-xs text-stone-400">(format matriks, sesuai contoh)</span>';
+    html += '</div>';
+    html += renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang);
+
+    container.innerHTML = html;
+  } catch (err) {
+    if (reqId !== _pncMatriksReq) return;
+    container.innerHTML = '';
   }
 }
 

@@ -250,12 +250,21 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
  */
 router.get('/siklus/laporan/perencanaan', async (req, res) => {
   const dbToDisplay = buildDbToDisplay();
-  const { tanggal_mulai, tanggal_selesai } = req.query;
+  const { tanggal_mulai, tanggal_selesai, siklus_id } = req.query;
 
-  const [siklusList] = await db.query(
-    'SELECT * FROM siklus_menu WHERE tenant_id=? AND status="Aktif" ORDER BY id',
-    [req.user.tenant_id]
-  );
+  // Optional filter by siklus (dipakai halaman /perencanaan agar sinkron dgn filter siklus).
+  // Konsisten dgn route kebutuhan-per-menu: saat siklus_id diberikan, abaikan status agar
+  // siklus non-Aktif yg dipilih user tetap bisa dirender rekap + matriksnya.
+  let siklusSql = 'SELECT * FROM siklus_menu WHERE tenant_id=?';
+  const siklusParams = [req.user.tenant_id];
+  if (siklus_id) {
+    siklusSql += ' AND id=?';
+    siklusParams.push(parseInt(siklus_id, 10));
+  } else {
+    siklusSql += ' AND status="Aktif"';
+  }
+  siklusSql += ' ORDER BY id';
+  const [siklusList] = await db.query(siklusSql, siklusParams);
 
   if (!siklusList.length) {
     return res.json({
