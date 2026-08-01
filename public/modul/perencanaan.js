@@ -5,9 +5,6 @@ var _pncSelectedPorsi = 'TOTAL';
 var _pncSiklusId = '';
 var _pncAllJenjangData = null;
 
-// Color sequence for jenjang headers
-var _pncJenjangColors = ['bg-blue-50 text-blue-800', 'bg-emerald-50 text-emerald-800', 'bg-amber-50 text-amber-800', 'bg-violet-50 text-violet-800', 'bg-cyan-50 text-cyan-800', 'bg-rose-50 text-rose-800'];
-var _pncJenjangOrder = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
 
 function escHtml(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -20,8 +17,6 @@ async function renderPerencanaan() {
     const r = await fetch('/api/template/perencanaan', { credentials: 'include' });
     if (!r.ok) throw new Error((await r.json()).error || 'Gagal memuat');
     c.innerHTML = await r.text();
-    // Preload bahan list untuk edit override
-    await pncPreloadBahan();
     await loadPerencanaanData();
   } catch (err) {
     c.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat: ' + err.message + '</div>';
@@ -64,11 +59,6 @@ async function loadPerencanaanData(siklusId) {
     _pncAllJenjangData = data;
     _pncData = { jenjang_list, data };
 
-    var activeJl = jenjang_list || [];
-    if (_pncSelectedJenjang !== 'SEMUA' && activeJl.indexOf(_pncSelectedJenjang) === -1) {
-      _pncSelectedJenjang = 'SEMUA';
-    }
-
     let html = '';
 
     // Filter bar
@@ -86,35 +76,7 @@ async function loadPerencanaanData(siklusId) {
     html += '</select>';
 
     // View indicator
-    html += '<div class="text-xs font-medium text-stone-500 bg-stone-100 px-3 py-1.5 rounded-lg">Per Menu</div>';
-
-    // Porsi filter toggle
-    html += '<div class="flex items-center gap-1">';
-    var porsiTabs = [
-      { key: 'TOTAL', label: 'Semua Porsi', color: 'bg-sky-600 text-white' },
-      { key: 'BESAR', label: 'Porsi Besar', color: 'bg-amber-600 text-white' },
-      { key: 'KECIL', label: 'Porsi Kecil', color: 'bg-emerald-600 text-white' }
-    ];
-    for (var pi = 0; pi < porsiTabs.length; pi++) {
-      var pt = porsiTabs[pi];
-      var isActiveP = _pncSelectedPorsi === pt.key;
-      html += '<button data-pnc-porsi="' + pt.key + '" onclick="pncFilterPorsi(\'' + pt.key + '\')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ' + (isActiveP ? pt.color + ' shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200') + '">' + pt.label + '</button>';
-    }
-    html += '</div>';
-
-    // Jenjang tabs
-    html += '<div class="flex items-center gap-1.5 flex-wrap">';
-    html += '<button data-pnc-tab="SEMUA" onclick="pncFilterJenjang(\'SEMUA\')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ' + (_pncSelectedJenjang === 'SEMUA' ? 'bg-sky-600 text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200') + '">Semua</button>';
-    for (var ji = 0; ji < activeJl.length; ji++) {
-      var jn = activeJl[ji];
-      var pmVal = 0;
-      for (var d = 0; d < data.length; d++) {
-        if (data[d].jenjang === jn) { pmVal = data[d].jumlah_siswa; break; }
-      }
-      var isActive = _pncSelectedJenjang === jn;
-      html += '<button data-pnc-tab="' + jn.replace(/"/g, '&quot;') + '" onclick="pncFilterJenjang(\'' + jn.replace(/'/g, "\\'") + '\')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ' + (isActive ? 'bg-sky-600 text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200') + '">' + jn + ' <span class="' + (isActive ? 'text-sky-200' : 'text-stone-400') + '">(' + fmtPncNum(pmVal) + ')</span></button>';
-    }
-    html += '</div>';
+    html += '<div class="text-xs font-medium text-stone-500 bg-stone-100 px-3 py-1.5 rounded-lg">Rekap Porsi</div>';
 
     html += '<button onclick="exportPncExcel()" class="px-2.5 py-1.5 rounded bg-stone-600 text-white hover:bg-stone-700 transition-colors flex items-center gap-1 text-xs" title="Export All Excel"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export All XLSX</button>';
     html += '<div class="text-xs text-stone-400">' + data.length + ' jenjang</div>';
@@ -163,84 +125,12 @@ async function loadPerencanaanData(siklusId) {
     // ── Rekap Porsi Besar & Kecil (aggregate across all jenjang) ──
     html += renderPncRekapPorsi(data);
 
-    // Content: per jenjang sections
-    html += '<div id="pnc-view-container">';
-    for (var j = 0; j < data.length; j++) {
-      html += renderPncJenjangSection(data[j], j);
-    }
-    html += '</div>';
-
     wrap.innerHTML = html;
 
-    // Apply initial filter
-    if (_pncSelectedJenjang !== 'SEMUA') {
-      applyPncSectionVisibility();
-    }
-    
     // Adjust export button visibility based on data availability
     setTimeout(adjustExportVisibilityForEmptyData, 100);
   } catch (err) {
     wrap.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal: ' + err.message + '</div>';
-  }
-}
-
-function pncFilterPorsi(porsi) {
-  _pncSelectedPorsi = porsi;
-  // Re-render sections with new porsi filter
-  var wrap = document.getElementById('perencanaan-content');
-  if (!wrap) return;
-
-  // Update porsi tab styles
-  var porsiBtns = wrap.parentElement.querySelectorAll('[data-pnc-porsi]');
-  if (porsiBtns) {
-    var porsiStyles = { 'TOTAL': 'bg-sky-600 text-white', 'BESAR': 'bg-amber-600 text-white', 'KECIL': 'bg-emerald-600 text-white' };
-    for (var pi = 0; pi < porsiBtns.length; pi++) {
-      var btn = porsiBtns[pi];
-      var key = btn.getAttribute('data-pnc-porsi');
-      var style = porsiStyles[key] || 'bg-sky-600 text-white';
-      btn.className = 'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ' + (key === porsi ? style + ' shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200');
-    }
-  }
-
-  // Re-render the content sections
-  var container = document.getElementById('pnc-view-container');
-  if (container && _pncAllJenjangData) {
-    var newHtml = '';
-    for (var j = 0; j < _pncAllJenjangData.length; j++) {
-      newHtml += renderPncJenjangSection(_pncAllJenjangData[j], j);
-    }
-    container.innerHTML = newHtml;
-    applyPncSectionVisibility();
-  }
-}
-
-function pncFilterJenjang(jenjang) {
-  _pncSelectedJenjang = jenjang;
-  var wrap = document.getElementById('perencanaan-content');
-  if (!wrap) return;
-
-  // Update tab button styles
-  var tabs = wrap.parentElement.querySelectorAll('[data-pnc-tab]');
-  if (tabs) {
-    for (var ti = 0; ti < tabs.length; ti++) {
-      var tab = tabs[ti];
-      var jVal = tab.getAttribute('data-pnc-tab');
-      var isActive = (jVal === jenjang) || (jVal === 'SEMUA' && jenjang === 'SEMUA');
-      tab.className = 'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ' + (isActive ? 'bg-sky-600 text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200');
-    }
-  }
-
-  applyPncSectionVisibility();
-}
-
-function applyPncSectionVisibility() {
-  var sections = document.querySelectorAll('[data-pnc-section]');
-  if (!sections) return;
-  for (var si = 0; si < sections.length; si++) {
-    var section = sections[si];
-    var jn = section.getAttribute('data-pnc-section');
-    var show = _pncSelectedJenjang === 'SEMUA' || jn === _pncSelectedJenjang;
-    section.style.display = show ? '' : 'none';
   }
 }
 
@@ -369,233 +259,6 @@ function renderPncRekapPorsi(allData) {
   html += '</div>';
   html += '</div>';
 
-  return html;
-}
-
-function renderPncJenjangSection(jd, idx) {
-  var jIdx = _pncJenjangOrder.indexOf(jd.jenjang);
-  if (jIdx < 0) jIdx = idx % _pncJenjangColors.length;
-  var visible = _pncSelectedJenjang === 'SEMUA' || _pncSelectedJenjang === jd.jenjang;
-
-  // Determine active student count based on porsi filter
-  var activeSiswa = _pncSelectedPorsi === 'BESAR' ? (jd.jumlah_besar || 0)
-    : _pncSelectedPorsi === 'KECIL' ? (jd.jumlah_kecil || 0)
-    : jd.jumlah_siswa;
-  var scaleFactor = jd.jumlah_siswa > 0 ? activeSiswa / jd.jumlah_siswa : 0;
-
-  var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6" data-pnc-section="' + jd.jenjang.replace(/"/g, '&quot;') + '" style="' + (visible ? '' : 'display:none') + '">';
-
-  // Jenjang header with porsi breakdown
-  var porsiBadge = '';
-  if (_pncSelectedPorsi === 'BESAR') {
-    porsiBadge = '<span class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 10l7-7 7 7"/><path d="M12 3v18"/></svg> Porsi Besar</span>';
-  } else if (_pncSelectedPorsi === 'KECIL') {
-    porsiBadge = '<span class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14l-7 7-7-7"/><path d="M12 21V3"/></svg> Porsi Kecil</span>';
-  }
-  // Check if there's data for this jenjang to enable exports
-  var dataForJenjang = _pncAllJenjangData ? _pncAllJenjangData.filter(function(item) { return item.jenjang === jd.jenjang; }) : [];
-  var canExport = dataForJenjang && dataForJenjang.length > 0 && dataForJenjang.every(function(item) { return item.bahan && item.bahan.length > 0; });
-
-  html += '<div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between ' + _pncJenjangColors[jIdx % _pncJenjangColors.length] + '">';
-  html += '<div><span class="font-bold text-base">' + jd.jenjang + '</span>' + porsiBadge;
-  html += '<span class="ml-3 text-sm font-normal">Jumlah Siswa: <strong>' + fmtPncNum(activeSiswa) + '</strong> orang</span></div>';
-  html += '<div class="flex items-center gap-2 text-xs">';
-  html += '<span>' + jd.siklus.length + ' siklus</span>';
-
-  // Export buttons - only visible if there's data
-  if (canExport) {
-    html += '<button onclick="exportPncExcel(\'' + jd.jenjang.replace(/\'/g, "\\\\\'") + '\')" class="px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1 text-xs" title="Export Excel"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> XLSX</button>';
-    html += '<button onclick="exportPncPdf(\'' + jd.jenjang.replace(/\'/g, "\\\\\'") + '\')" class="px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-1 text-xs" title="Export PDF"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> PDF</button>';
-  } else {
-    html += '<span class="px-2 py-1 rounded bg-stone-100 text-stone-400 text-xs flex items-center gap-1" title="Tidak ada data untuk di-export"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export Tidak Tersedia</span>';
-  }
-  html += '</div>';
-  html += '</div>';
-  html += '</div>';
-
-  // Per siklus
-  for (var s = 0; s < jd.siklus.length; s++) {
-    var sk = jd.siklus[s];
-
-    // Siklus sub-header
-    html += '<div class="px-5 py-2 bg-stone-50 border-b border-stone-200 text-sm font-semibold text-stone-600 flex items-center gap-2">';
-    html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
-    html += sk.siklus_nama;
-    html += '</div>';
-
-    // Day tabs (only if more than 1 day)
-    if (sk.hari.length > 1) {
-      html += '<div class="px-5 py-2 border-b border-stone-100">';
-      html += '<div class="flex gap-1 bg-stone-100 rounded-lg p-0.5 overflow-x-auto siklus-tab-bar" role="tablist">';
-      for (var h = 0; h < sk.hari.length; h++) {
-        var day = sk.hari[h];
-        var isFirst = h === 0;
-        html += '<button onclick="pncSwitchDayTab(event, this)" class="px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all ' + (isFirst ? 'bg-white shadow-sm font-bold text-sky-700' : 'text-stone-500 hover:text-stone-700 hover:bg-stone-200/50') + '" role="tab" aria-selected="' + (isFirst ? 'true' : 'false') + '">' + day.hari_nama + '</button>';
-      }
-      html += '</div></div>';
-    }
-
-    // Per hari — only active day visible
-    for (var h = 0; h < sk.hari.length; h++) {
-      var day = sk.hari[h];
-      html += '<div class="pnc-day-content' + (h > 0 ? ' hidden' : '') + '" role="tabpanel">';
-      html += renderPncMenuTable(day, activeSiswa, sk.siklus_id, jd.jenjang, scaleFactor);
-      html += '</div>';
-    }
-  }
-
-  html += '</div>';
-  return html;
-}
-
-// ── Override: preload bahan baku ──
-var _pncBahanList = [];
-
-async function pncPreloadBahan() {
-  try {
-    const res = await api.get('/bahan/by-sp');
-    var list = [];
-    if (res && res.byKat) {
-      for (var kat in res.byKat) {
-        var items = res.byKat[kat];
-        for (var i = 0; i < items.length; i++) {
-          list.push({ id: items[i].id, nama: items[i].nama, kategori_sp: kat, satuan: items[i].satuan, berat_1_sp: items[i].berat_1_sp, persen_bdd: items[i].persen_bdd });
-        }
-      }
-    }
-    _pncBahanList = list.sort(function(a, b) { return a.nama.localeCompare(b.nama); });
-  } catch (e) {
-    console.error('Gagal preload bahan:', e);
-    _pncBahanList = [];
-  }
-}
-
-// ── Override: edit bahan ──
-async function pncEditBahan(btn) {
-  var siklusId = parseInt(btn.getAttribute('data-si')) || 0;
-  var hariKe = parseInt(btn.getAttribute('data-hk')) || 0;
-  var jenjang = btn.getAttribute('data-jn') || '';
-  var origBahanId = parseInt(btn.getAttribute('data-bi')) || 0;
-  var origNama = btn.getAttribute('data-bn') || '';
-  var curJenjangSection = btn.closest('[data-pnc-section]');
-
-  // Build dropdown options
-  var optionsHtml = '<div class="mb-4">';
-  optionsHtml += '<label class="block text-sm font-semibold text-stone-700 mb-2">Ganti <strong>' + escHtml(origNama) + '</strong> dengan:</label>';
-  optionsHtml += '<input type="text" id="pnc-cari-bahan" placeholder="Cari bahan..." class="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm mb-2 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400" oninput="pncFilterBahanDropdown(this.value)">';
-  optionsHtml += '<div id="pnc-bahan-dropdown" class="max-h-48 overflow-y-auto border border-stone-200 rounded-lg">';
-  for (var i = 0; i < _pncBahanList.length; i++) {
-    var b = _pncBahanList[i];
-    optionsHtml += '<div class="pnc-bahan-item px-3 py-2 cursor-pointer hover:bg-sky-50 border-b border-stone-100 last:border-0 text-sm" data-id="' + b.id + '" data-berat="' + (b.berat_1_sp || 0) + '" data-bdd="' + (b.persen_bdd || 100) + '" onclick="pncPilihBahan(' + siklusId + ',' + hariKe + ',\'' + jenjang.replace(/'/g, "\\'") + '\',' + origBahanId + ',' + b.id + ')">' + escHtml(b.nama) + ' <span class="text-[10px] text-stone-400">(' + (b.kategori_sp || '-') + ', ' + (b.berat_1_sp || 0) + 'g, BDD ' + (b.persen_bdd || 100) + '%)</span></div>';
-  }
-  optionsHtml += '</div></div>';
-
-  document.getElementById('modal-title').textContent = 'Override Bahan: ' + escHtml(origNama);
-  document.getElementById('modal-body').innerHTML = optionsHtml;
-  document.getElementById('modal-save').textContent = 'Batal';
-  document.getElementById('modal-save').onclick = function() { closeModal(); };
-
-  var modal = document.getElementById('modal');
-  if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
-}
-
-function pncFilterBahanDropdown(q) {
-  var items = document.querySelectorAll('.pnc-bahan-item');
-  q = (q || '').toLowerCase();
-  for (var i = 0; i < items.length; i++) {
-    var nama = (items[i].textContent || '').toLowerCase();
-    items[i].style.display = nama.indexOf(q) > -1 ? '' : 'none';
-  }
-}
-
-async function pncPilihBahan(siklusId, hariKe, jenjang, origBahanId, newBahanId) {
-  closeModal();
-  try {
-    var res = await api.post('/siklus/laporan/override', {
-      siklus_id: siklusId,
-      hari_ke: hariKe,
-      jenjang: jenjang,
-      original_bahan_baku_id: origBahanId || null,
-      new_bahan_baku_id: newBahanId
-    });
-    if (res.ok) {
-      showAlert('✅ Berhasil mengganti bahan. Memuat ulang...', 'success');
-      setTimeout(function() { window.location.reload(); }, 800);
-    } else {
-      showAlert('Gagal: ' + (res.error || 'Unknown'), 'error');
-    }
-  } catch (err) {
-    showAlert('Gagal: ' + err.message, 'error');
-  }
-}
-
-// ── Override: hapus override ──
-async function pncHapusOverride(overrideId) {
-  if (!confirm('Hapus override ini? Bahan akan kembali ke asal.')) return;
-  try {
-    await api.del('/siklus/laporan/override/' + overrideId);
-    showAlert('✅ Override dihapus. Memuat ulang...', 'success');
-    setTimeout(function() { window.location.reload(); }, 800);
-  } catch (err) {
-    showAlert('Gagal: ' + err.message, 'error');
-  }
-}
-
-function renderPncMenuTable(day, jumlahSiswa, siklusId, jenjang, scaleFactor) {
-  scaleFactor = scaleFactor || 1;
-  var html = '<div class="px-5 py-3 border-b border-stone-100 bg-stone-50/30">';
-
-  // Menu header
-  html += '<div class="flex items-center gap-3 mb-2">';
-  html += '<span class="inline-block px-3 py-1 rounded-lg bg-sky-100 text-sky-800 text-sm font-bold">' + day.menu_label + '</span>';
-  html += '<span class="text-sm font-semibold text-stone-700">' + day.hari_nama + '</span>';
-  html += '<span class="text-xs text-stone-400">' + (day.menu_nama || '') + '</span>';
-  html += '</div>';
-
-  if (!day.bahan || !day.bahan.length) {
-    html += '<div class="text-xs text-stone-400 italic px-2 pb-2">Tidak ada bahan</div></div>';
-    return html;
-  }
-
-  // Table
-  html += '<div class="overflow-x-auto pb-2"><table class="w-full text-xs border-collapse">';
-  html += '<thead><tr class="border-b border-stone-200">';
-  html += '<th class="px-2 py-1.5 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
-  html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Bersih (g)</th>';
-  html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">BDD (%)</th>';
-  html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Kotor (g)</th>';
-  html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Jumlah Siswa</th>';
-  html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan (kg)</th>';
-  html += '</tr></thead><tbody>';
-
-  for (var i = 0; i < day.bahan.length; i++) {
-    var b = day.bahan[i];
-    var sumberBdd = b.sumber_bdd === 'sp_referensi';
-    var isOverridden = b.overridden === true;
-    var overClass = isOverridden ? 'bg-amber-50/40' : '';
-    html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50 ' + overClass + '">';
-    // Nama bahan + edit button
-    html += '<td class="px-2 py-1.5 text-sm font-medium flex items-center gap-1.5">';
-    if (isOverridden) {
-      html += '<span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Override"></span>';
-    }
-    html += '<span class="' + (isOverridden ? 'text-amber-800' : '') + '">' + b.nama_display + '</span>';
-    // Edit button
-    html += '<button onclick="pncEditBahan(this)" data-si="' + siklusId + '" data-hk="' + (day.hari_ke || '') + '" data-jn="' + (jenjang || '').replace(/"/g, '&quot;') + '" data-bi="' + (b.bahan_baku_id || 0) + '" data-bn="' + escHtml(b.nama_display || b.nama) + '" class="ml-1 p-0.5 rounded text-stone-300 hover:text-sky-600 hover:bg-sky-50 transition-colors" title="Ganti bahan"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
-    // Delete override button (only for overridden items)
-    if (isOverridden && b.override_id) {
-      html += '<button onclick="pncHapusOverride(' + b.override_id + ')" class="p-0.5 rounded text-stone-300 hover:text-red-600 hover:bg-red-50 transition-colors" title="Kembalikan ke asal"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>';
-    }
-    html += '</td>';
-    html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(b.berat_bersih) + '</td>';
-    html += '<td class="px-2 py-1.5 text-sm text-right mono ' + (sumberBdd ? 'text-emerald-600 font-semibold' : '') + '">' + b.persen_bdd + '%</td>';
-    html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(b.berat_kotor) + '</td>';
-    html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(jumlahSiswa) + '</td>';
-    html += '<td class="px-2 py-1.5 text-sm text-right mono font-bold text-sky-700">' + fmtPncNum(b.kebutuhan_kg * scaleFactor) + '</td>';
-    html += '</tr>';
-  }
-
-  html += '</tbody></table></div></div>';
   return html;
 }
 
