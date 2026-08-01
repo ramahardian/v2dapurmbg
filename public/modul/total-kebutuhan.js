@@ -91,8 +91,8 @@ async function loadTotalKebutuhan() {
       return;
     }
 
-    // ── Render per day — format matriks (kolom jenjang + buffer 1-10%) ──
-    html += renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang);
+    // ── Render per day — daftar belanja (Bahan | Kg/pcs/btl | Ket | Kebutuhan) ──
+    html += renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang);
 
     wrap.innerHTML = html;
   } catch (err) {
@@ -223,6 +223,133 @@ function renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang) {
     html += '<li><strong>Kebutuhan Pangan (kg)</strong> = jumlah kebutuhan seluruh jenjang (Berat Kotor × Jumlah Penerima ÷ 1000).</li>';
     html += '<li><strong>1-10%</strong> = Kebutuhan Pangan + <em>buffer</em> per bahan — diambil dari <em>buffer_persen</em> master Bahan Baku (jika kosong = 0%).</li>';
     html += '<li><strong>Rincian</strong> = kolom untuk catatan/penjelasan tambahan.</li>';
+    html += '</ul></div>';
+  }
+
+  return html;
+}
+
+// ── Render daftar belanja per hari (format: Bahan | Kg/pcs/btl | Ket | Kebutuhan) ──
+// Kolom jumlah (Kg/pcs/btl) terisi otomatis dari perhitungan dan bisa diedit manual.
+function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
+  var tkBulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+  function tkFmtTanggal(headerTanggal, hariNama) {
+    var p = String(headerTanggal || '').split('-');
+    var dd = parseInt(p[2], 10);
+    var mm = parseInt(p[1], 10) - 1;
+    if (p.length !== 3 || isNaN(dd) || isNaN(mm) || !tkBulan[mm]) return headerTanggal || (hariNama || '');
+    return (hariNama || '') + ', ' + dd + ' ' + tkBulan[mm] + ' ' + p[0];
+  }
+
+  // Satuan yang dihitung per satuan (pcs/btl/renceng/ctn) vs per berat (kg/g)
+  function isSatuanHitung(s) {
+    var t = String(s || '').toLowerCase();
+    return t === 'pcs' || t === 'btl' || t === 'renceng' || t === 'ctn' || t === 'pack' || t === 'ikat' || t === 'ekor' || t === 'butir' || t === 'bungkus';
+  }
+
+  function autoQty(satuan, totalKg, jumlahSiswa, beratPerSatuan) {
+    var s = String(satuan || 'kg').toLowerCase();
+    if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
+      // Bahan berat → dibulatkan ke atas agar aman untuk belanja
+      if (s === 'kg') return Math.ceil(totalKg) + ' kg';
+      return Math.ceil(totalKg * 1000) + ' g'; // satuan gram
+    }
+    if (isSatuanHitung(s)) {
+      // Bahan satuan → pakai jumlah siswa (porsi) atau konversi dari berat_per_satuan
+      if (beratPerSatuan > 0 && totalKg > 0) {
+        var n = Math.ceil((totalKg * 1000) / beratPerSatuan);
+        return n + ' ' + s;
+      }
+      return (Math.ceil(jumlahSiswa) || 0) + ' ' + s;
+    }
+    return '';
+  }
+
+  var html = '';
+  var totalPorsiDay = totalSiswaSemuaJenjang > 0 ? totalSiswaSemuaJenjang : (Number(hari[0] && hari[0].total_porsi) || 0);
+
+  for (var d = 0; d < hari.length; d++) {
+    var day = hari[d];
+    if (!day.bahan || !day.bahan.length) continue;
+
+    // Day card
+    html += '<div class="bg-white border border-stone-200 rounded-xl overflow-hidden mb-4 shadow-sm">';
+
+    // Day header: tanggal + menu
+    html += '<div class="px-5 py-3 bg-gradient-to-r from-emerald-50 to-green-50 border-b border-stone-200 flex items-center gap-3 flex-wrap">';
+    html += '<span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-sm">M' + (d + 1) + '</span>';
+    html += '<div>';
+    html += '<div class="font-semibold text-sm text-emerald-800">' + tkFmtTanggal(day.header_tanggal, day.hari_nama) + '</div>';
+    if (day.menu_names && day.menu_names.length) {
+      html += '<div class="text-xs text-stone-500 mt-0.5">' + day.menu_names.join(' + ') + '</div>';
+    }
+    html += '</div>';
+    html += '<div class="ml-auto text-xs text-stone-500">Total Porsi: <strong class="text-emerald-700">' + fmtTkNum(totalPorsiDay) + '</strong></div>';
+    html += '</div>';
+
+    // ── Daftar belanja: Bahan | Kg/pcs/btl | Ket | Kebutuhan ──
+    html += '<div class="overflow-x-auto p-4"><table class="w-full text-xs border-collapse">';
+    html += '<thead><tr class="border-b border-stone-200 bg-stone-50">';
+    html += '<th class="px-3 py-2 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
+    html += '<th class="px-3 py-2 text-left font-semibold text-stone-600 whitespace-nowrap min-w-[110px]">Kg/pcs/btl</th>';
+    html += '<th class="px-3 py-2 text-left font-semibold text-stone-600 whitespace-nowrap">Ket</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan</th>';
+    html += '</tr></thead><tbody>';
+
+    var grandTotalKg = 0;
+
+    for (var bi = 0; bi < day.bahan.length; bi++) {
+      var b = day.bahan[bi];
+      if (!b.per_jenjang) continue;
+
+      // Total kg + jumlah siswa semua jenjang
+      var rowKg = 0;
+      var rowSiswa = 0;
+      for (var jn in b.per_jenjang) {
+        var pj = b.per_jenjang[jn];
+        rowKg += Number(pj.kebutuhan_kg) || 0;
+        rowSiswa += Number(pj.jumlah_siswa) || 0;
+      }
+      var bufferPersen = Number(b.buffer_persen) || 0;
+      var bufferKg = Math.round(rowKg * (1 + bufferPersen / 100) * 100) / 100;
+      grandTotalKg += bufferKg;
+
+      var satuan = b.satuan || 'kg';
+      var qty = autoQty(satuan, bufferKg, rowSiswa, Number(b.berat_per_satuan) || 0);
+      var ket = b.keterangan || '';
+
+      html += '<tr class="border-b border-stone-100 hover:bg-emerald-50/30 transition-colors">';
+      html += '<td class="px-3 py-1.5 text-sm font-medium text-stone-800">' + (b.nama_display || b.nama) + '</td>';
+      // Input jumlah — otomatis terisi, bisa diedit manual
+      html += '<td class="px-3 py-1.5"><input type="text" value="' + escHtmlTk(qty) + '" placeholder="isi jumlah" data-bahan="' + escHtmlTk(b.nama_display || b.nama) + '" class="tk-qty-input w-full min-w-[90px] px-2 py-1 text-sm rounded-lg border border-stone-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 bg-white" title="Jumlah belanja — otomatis terisi, bisa diedit"></td>';
+      html += '<td class="px-3 py-1.5 text-sm text-stone-500">' + (ket ? escHtmlTk(ket) : '') + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtTkNum(bufferKg) + '</td>';
+      html += '</tr>';
+    }
+
+    // Total row
+    html += '<tr class="bg-stone-50 border-t-2 border-stone-200 font-bold">';
+    html += '<td class="px-3 py-2 text-sm font-semibold text-stone-700">Total</td>';
+    html += '<td class="px-3 py-2"></td>';
+    html += '<td class="px-3 py-2"></td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-emerald-700">' + fmtTkNum(Math.round(grandTotalKg * 100) / 100) + '</td>';
+    html += '</tr>';
+
+    html += '</tbody></table></div></div>';
+  }
+
+  if (!html) {
+    html = '<div class="text-center py-16 text-stone-400 bg-white border border-stone-200 rounded-lg"><div class="text-sm">Tidak ada data untuk ditampilkan</div></div>';
+  } else {
+    // ── Legenda ──
+    html += '<div class="bg-white border border-stone-200 rounded-lg p-4 mt-4 text-xs text-stone-500">';
+    html += '<div class="font-semibold text-stone-700 mb-2">Keterangan:</div>';
+    html += '<ul class="space-y-1 list-disc list-inside">';
+    html += '<li><strong>Kg/pcs/btl</strong> = jumlah belanja per bahan — terisi otomatis dari perhitungan (bahan berat → kg; bahan satuan → pcs/btl/dll.), bisa diedit langsung di kolom.</li>';
+    html += '<li><strong>Ket</strong> = keterangan/instruksi bahan (mis. Potong 10, Fillet) dari resep menu.</li>';
+    html += '<li><strong>Kebutuhan</strong> = total kebutuhan (kg) semua jenjang, sudah termasuk <em>buffer</em> 1-10% (jika ada).</li>';
+    html += '<li>Angka otomatis memakai pembulatan ke atas agar aman untuk pembelian.</li>';
     html += '</ul></div>';
   }
 

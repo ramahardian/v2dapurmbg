@@ -90,7 +90,7 @@ async function batchLoadGridBahanBySiklus(siklusIds) {
     `SELECT sb.siklus_id, sb.hari_ke, sb.kategori_sp, sb.bahan_baku_id,
             COALESCE(b.nama, '(bahan dihapus)') AS nama, b.kalori, b.protein,
             b.karbohidrat, b.lemak, b.serat, b.berat_1_sp, b.persen_bdd,
-            b.satuan, b.buffer_persen
+            b.satuan, b.buffer_persen, b.berat_per_satuan
      FROM siklus_menu_item_bahan sb
      LEFT JOIN bahan_baku b ON b.id = sb.bahan_baku_id
      WHERE sb.siklus_id IN (${ph})`,
