@@ -940,7 +940,7 @@ async function selectSiklusMenuName(nama, bahanJson, siklusPorsi, kategoriPeneri
         // Tampilkan di bawah baris input (bukan di samping tombol Siklus)
         document.getElementById('m-nama').parentNode.insertAdjacentElement('afterend', badgeContainer);
       }
-      badgeContainer.innerHTML = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">📋 ' + kategoriBadge(kategoriPenerima) + '</span>';
+      badgeContainer.innerHTML = '<span class="inline-flex items-center gap-1 text-xs font-medium text-stone-600">' + kategoriBadge(kategoriPenerima) + '</span>';
     }
   
   // Auto-fill jumlah porsi jika > 0
