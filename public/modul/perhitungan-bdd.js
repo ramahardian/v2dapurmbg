@@ -213,6 +213,7 @@ function switchPbdTab(event, btn) {
   btn.setAttribute('aria-selected', 'true');
 
   var section = tabBar.closest('.bg-white');
+  if (!section) return;
   var contents = section.querySelectorAll('.pbd-day-content');
   for (var i = 0; i < contents.length; i++) {
     contents[i].classList.add('hidden');
