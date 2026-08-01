@@ -323,7 +323,8 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       html += '<td class="px-3 py-1.5 text-sm font-medium text-stone-800">' + (b.nama_display || b.nama) + '</td>';
       // Input jumlah — otomatis terisi, bisa diedit manual
       html += '<td class="px-3 py-1.5"><input type="text" value="' + escHtmlTk(qty) + '" placeholder="isi jumlah" data-bahan="' + escHtmlTk(b.nama_display || b.nama) + '" class="tk-qty-input w-full min-w-[90px] px-2 py-1 text-sm rounded-lg border border-stone-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 bg-white" title="Jumlah belanja — otomatis terisi, bisa diedit"></td>';
-      html += '<td class="px-3 py-1.5 text-sm text-stone-500">' + (ket ? escHtmlTk(ket) : '') + '</td>';
+      // Input keterangan — terisi dari resep menu, bisa diedit manual
+      html += '<td class="px-3 py-1.5"><input type="text" value="' + escHtmlTk(ket) + '" placeholder="keterangan" data-bahan="' + escHtmlTk(b.nama_display || b.nama) + '" class="tk-ket-input w-full min-w-[110px] px-2 py-1 text-sm rounded-lg border border-stone-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 bg-white" title="Keterangan — terisi dari resep, bisa diedit"></td>';
       html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtTkNum(bufferKg) + '</td>';
       html += '</tr>';
     }
@@ -347,7 +348,7 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     html += '<div class="font-semibold text-stone-700 mb-2">Keterangan:</div>';
     html += '<ul class="space-y-1 list-disc list-inside">';
     html += '<li><strong>Kg/pcs/btl</strong> = jumlah belanja per bahan — terisi otomatis dari perhitungan (bahan berat → kg; bahan satuan → pcs/btl/dll.), bisa diedit langsung di kolom.</li>';
-    html += '<li><strong>Ket</strong> = keterangan/instruksi bahan (mis. Potong 10, Fillet) dari resep menu.</li>';
+    html += '<li><strong>Ket</strong> = keterangan/instruksi bahan (mis. Potong 10, Fillet) — terisi dari resep menu, bisa diedit langsung di kolom.</li>';
     html += '<li><strong>Kebutuhan</strong> = total kebutuhan (kg) semua jenjang, sudah termasuk <em>buffer</em> 1-10% (jika ada).</li>';
     html += '<li>Angka otomatis memakai pembulatan ke atas agar aman untuk pembelian.</li>';
     html += '</ul></div>';
