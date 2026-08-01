@@ -251,13 +251,23 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
   // Berat isi per satuan efektif — bila kosong, minyak dikarton diasumsikan 6x2L / 12x1L ≈ 12 L ≈ 11 kg
   function beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) {
     var b = Number(beratPerSatuan) || 0;
+    if (String(kategoriSp || '').toLowerCase() === 'minyak') {
+      var s = String(satuan || '').toLowerCase();
+      if ((s === 'karton' || s === 'ctn' || s === 'kardus' || s === 'dus') && b > 0) return b;
+      return 11000;
+    }
     if (b > 0) return b;
-    if (String(kategoriSp || '').toLowerCase() === 'minyak' && String(satuan || '').toLowerCase() === 'karton') return 11000;
     return 0;
   }
 
   function autoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
     var s = String(satuan || 'kg').toLowerCase();
+    // Minyak selalu dinyatakan per karton untuk kebutuhan PR/PO ke supplier
+    if (String(kategoriSp || '').toLowerCase() === 'minyak') {
+      if (!totalKg || totalKg <= 0) return '';
+      var bps = beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
+      return Math.ceil((totalKg * 1000) / bps) + ' karton';
+    }
     if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
       // Bahan berat → dibulatkan ke atas agar aman untuk belanja
       if (s === 'kg') return Math.ceil(totalKg) + ' kg';
@@ -281,6 +291,12 @@ function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
   function kebutuhanSatuan(satuan, bufferKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
     if (!bufferKg || bufferKg <= 0) return '';
     var s = String(satuan || 'kg').toLowerCase();
+    // Minyak selalu dinyatakan per karton untuk kebutuhan PR/PO ke supplier
+    if (String(kategoriSp || '').toLowerCase() === 'minyak') {
+      var bpsM = beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
+      var nKarton = (bufferKg * 1000) / bpsM;
+      return fmtTkNum(Math.round(nKarton * 100) / 100) + ' karton';
+    }
     if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
       if (s === 'kg') return fmtTkNum(Math.round(bufferKg * 100) / 100);
       return fmtTkNum(Math.round(bufferKg * 1000 * 100) / 100) + ' g';
