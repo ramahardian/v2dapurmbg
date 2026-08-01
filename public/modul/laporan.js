@@ -29,6 +29,22 @@ function getLapTabsForRole() {
   return LAP_TABS;
 }
 
+// Format kategori penerima: tampilkan kategori pertama + badge "+N" jika lebih dari satu.
+// Misal ["TK/PAUD","SD 1-3","SMP/MTs, SMA/SMK"] → "TK/PAUD +2"
+function fmtKategoriHpp(kp) {
+  if (!kp) return '<span class="text-stone-400">-</span>';
+  let p;
+  try { p = JSON.parse(kp); if (!Array.isArray(p)) p = null; } catch { p = null; }
+  if (p && p.length > 1) {
+    return '<span class="inline-flex items-center gap-1">' +
+      '<span class="max-w-[110px] truncate" title="' + escHtml(p.join(', ')) + '">' + escHtml(p[0]) + '</span>' +
+      '<span class="bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none shrink-0">+' + (p.length - 1) + '</span>' +
+      '</span>';
+  }
+  const v = p && p.length === 1 ? p[0] : kp;
+  return escHtml(v);
+}
+
 async function showLap(tab) {
   const tabs = getLapTabsForRole();
   if (!tabs.includes(tab)) tab = tabs[0];
@@ -1688,7 +1704,7 @@ const tabColors = {
           '<span class="inline-flex items-center gap-1.5">' +
           '<span id="arrow-hpp-' + m.menu_id + '" class="text-stone-400 transition-transform duration-150">▶</span> ' +
           escHtml(m.menu_nama) + '</span></td>' +
-          '<td class="px-2 py-2.5 sm:py-3 text-xs text-stone-500">' + (m.kategori_penerima || '-') + '</td>' +
+          '<td class="px-2 py-2.5 sm:py-3 text-xs text-stone-500">' + fmtKategoriHpp(m.kategori_penerima) + '</td>' +
           '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right">' + fmtNum(m.jumlah_bahan) + '</td>' +
           '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono font-bold text-[#1e40af]">' + fmtIDR(m.total_hpp) + '</td>' +
           '</tr>' + detailRow;
