@@ -15,10 +15,30 @@ function bahanKalkulatorSatuan(b) {
   var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 0;
   if (perUnit > 0) {
     var master = (window._bahanBaku || []).find(function(x) { return x.id === b.bahan_baku_id; });
+    // Fallback by nama — bahan_baku_id bisa kosong utk bahan diketik manual / data lama
+    if (!master && b.nama) {
+      var namaQ = String(b.nama).toLowerCase().trim();
+      master = (window._bahanBaku || []).find(function(x) {
+        return x.nama && String(x.nama).toLowerCase().trim() === namaQ;
+      });
+    }
     var ms = (master && master.satuan) ? master.satuan : (b.satuan || 'g');
-    if (ms !== 'g' && ms !== 'gram' && ms !== 'Gram') return ms;
+    var low = String(ms).toLowerCase();
+    if (low !== 'g' && low !== 'gram') return ms;
   }
   return 'g';
+}
+
+// Satuan "unit" (bukan berat murni g/gram) — dipakai kalkulator & kolom jumlah.
+// Case-insensitive supaya 'karton'/'Karton'/'Liter'/'Dus' dst ikut terdeteksi.
+function isSatuanUnit(s) {
+  if (!s) return false;
+  var low = String(s).toLowerCase();
+  return low !== 'g' && low !== 'gram';
+}
+function isKgSatuan(s) {
+  var low = String(s || '').toLowerCase();
+  return low === 'kg' || low === 'kilogram';
 }
 
 async function ensureBahanBakuLoaded() {
@@ -604,7 +624,7 @@ function updateBahan(i, k, v) {
     // Input shows total when porsi>0; convert back to grams per-porsi for storage
     var valPerPorsi = Number(v) / porsi;
     var newJumlah;
-    if (perUnit > 0 && (satuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(satuan))) {
+    if (perUnit > 0 && isSatuanUnit(satuan)) {
       newJumlah = valPerPorsi * perUnit;
     } else {
       newJumlah = valPerPorsi;
@@ -613,7 +633,7 @@ function updateBahan(i, k, v) {
     var sp = window._spRefMap && window._spRefMap[b.nama];
     var defaultGram = (sp ? Number(sp.berat_bersih) : 0) || Number(b.berat_1_sp) || 0;
     if (defaultGram > 0 && newJumlah > defaultGram * 10) {
-      var spDisplay = satuan === 'g' ? defaultGram : (defaultGram / perUnit);
+      var spDisplay = isSatuanUnit(satuan) ? (defaultGram / perUnit) : defaultGram;
       showConfirm('Nilai ' + v + ' ' + satuan + ' jauh dari standar SP (' + Math.round(spDisplay * 100) / 100 + ' ' + satuan + '). Lanjutkan?', 'Lanjutkan', 'Batalkan', '', 'question').then(function(ok) {
         if (ok) {
           b.jumlah = newJumlah;
@@ -643,7 +663,7 @@ function openBahanKalkulator(i) {
   var porsi = Number(window._menuPorsi) || 0;
   var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
   window._bkPerUnit = perUnit;
-  var isUnitSatuan = satuan === 'Kg' || satuan === 'kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(satuan);
+  var isUnitSatuan = isSatuanUnit(satuan);
   // Nilai yang tampil di kolom jumlah (total untuk porsi, dalam satuan tampilan)
   var displayJumlah = Number(b.jumlah) || 0;
   if (perUnit > 0 && isUnitSatuan) {
@@ -724,7 +744,7 @@ function applyBahanKalkulator(i) {
   var u = document.getElementById('bk-unit');
   var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
   var satuan = bahanKalkulatorSatuan(b);
-  var isUnitSatuan = satuan === 'Kg' || satuan === 'kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(satuan);
+  var isUnitSatuan = isSatuanUnit(satuan);
   var gram = 0;
   if (u && u.value && isUnitSatuan) {
     gram = (Number(u.value) || 0) * perUnit;
@@ -737,8 +757,8 @@ function applyBahanKalkulator(i) {
   // updateBahan memakai menuSatuanTampil (minyak = 'g'), jadi konversi ulang ke satuan itu.
   var displaySatuan = menuSatuanTampil(b);
   var displayVal;
-  if (displaySatuan === 'Kg' || displaySatuan === 'kg') displayVal = gram / 1000;
-  else if (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan)) displayVal = gram / perUnit;
+  if (isKgSatuan(displaySatuan)) displayVal = gram / 1000;
+  else if (isSatuanUnit(displaySatuan)) displayVal = gram / perUnit;
   else displayVal = gram;
   var m = document.getElementById('bahan-kalkulator-modal');
   if (m) m.remove();
@@ -768,13 +788,15 @@ function renderBahanList() {
     var displaySatuan = menuSatuanTampil(b);
       var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
       var displayJumlah = b.jumlah || 0;
-      if (perUnit > 0 && (displaySatuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan))) {
+      if (perUnit > 0 && isSatuanUnit(displaySatuan)) {
         displayJumlah = displayJumlah / perUnit;
       }
       var totalJumlah = porsi > 0 ? displayJumlah * porsi : 0;
-      var inputStep = displaySatuan === 'Kg' ? '0.01' : (['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan) ? '1' : '0.01');
+      var inputStep = isKgSatuan(displaySatuan) ? '0.01' : (isSatuanUnit(displaySatuan) ? '1' : '0.01');
       var inputValue = porsi > 0 ? (totalJumlah ? Math.round(totalJumlah * 100) / 100 : '0') : (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0');
       var inputTitle = porsi > 0 ? 'Total untuk ' + porsi + ' porsi (' + displaySatuan + ')' : (displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')');
+      var calcSatuan = bahanKalkulatorSatuan(b);
+      var kalkTitle = isSatuanUnit(calcSatuan) ? 'Kalkulator ' + escHtml(calcSatuan) + ' ↔ Gram' : 'Kalkulator Gram ↔ Kg';
       return '<div class="mb-1.5">' +
         '<div class="grid grid-cols-12 gap-1.5 items-center">' +
           '<div class="col-span-4 relative">' +
@@ -784,7 +806,7 @@ function renderBahanList() {
           '<div class="col-span-3 flex">' +
             '<input type="number" step="' + inputStep + '" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 h-10 px-3 border border-stone-200 rounded-l-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" title="' + inputTitle + '" />' +
             '<span class="inline-flex items-center px-2.5 h-10 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 whitespace-nowrap">' + displaySatuan + '</span>' +
-            '<button type="button" onclick="openBahanKalkulator(' + i + ')" class="shrink-0 inline-flex items-center justify-center w-8 h-10 text-blue-500 hover:bg-blue-50 border border-l-0 border-stone-200 rounded-r-lg transition-all" title="Kalkulator Gram ↔ Kg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 8h.01M15 8h.01M9 12h.01M15 12h.01M9 16h.01M15 16h.01"/></svg></button>' +
+            '<button type="button" onclick="openBahanKalkulator(' + i + ')" class="shrink-0 inline-flex items-center justify-center w-8 h-10 text-blue-500 hover:bg-blue-50 border border-l-0 border-stone-200 rounded-r-lg transition-all" title="' + kalkTitle + '"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 8h.01M15 8h.01M9 12h.01M15 12h.01M9 16h.01M15 16h.01"/></svg></button>' +
           '</div>' +
           '<div class="col-span-4">' +
             '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
