@@ -31,12 +31,6 @@ function renderPanduanKeuangan() {
       desc: 'Semua transaksi otomatis masuk ke laporan: Laba/Rugi, Pengeluaran Bulanan, Penggunaan Anggaran, RAB Bulanan, Buku Pembantu, dan Laporan Keuangan. Cukup buka tab laporan — data selalu terbaru.',
       link: { label: 'Buka Laporan', action: 'renderLaporan' }
     },
-    {
-      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10.01"/><line x1="12" y1="10" x2="12" y2="10.01"/><line x1="16" y1="10" x2="16" y2="10.01"/><line x1="8" y1="14" x2="8" y2="14.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="16" y1="14" x2="16" y2="14.01"/></svg>',
-      title: '6. HPP per Porsi',
-      desc: 'Harga Pokok Produksi dihitung dari total biaya bahan + tenaga kerja + overhead dibagi jumlah porsi. Biaya bahan bersumber dari harga satuan bahan baku, bukan dari PO.',
-      link: { label: 'Buka HPP', action: 'renderHPP' }
-    },
   ];
 
   const alurHtml = `

@@ -17,7 +17,7 @@ async function renderLaporan() {
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
   }
 }
-const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-harian', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'arus-kas', 'keuangan', 'hpp', 'rab-pembelian', 'jurnal-umum', 'buku-besar', 'neraca'];
+const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-harian', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'arus-kas', 'keuangan', 'rab-pembelian', 'jurnal-umum', 'buku-besar', 'neraca'];
 const LAP_PAGE_SIZE = 10;
 let lapState = { tab: 'siklus', page: 1 };
 
@@ -1630,70 +1630,6 @@ const tabColors = {
         '</tbody></table></div></div>' + listBadge;
 
       window._lapData = null;
-    } else if (tab === 'hpp') {
-      const r = await api.get('/laporan/hpp');
-      const rows = r.rows || [];
-      const stats = r.stats || {};
-      const detailBahan = r.detail_bahan || {};
-
-      window._lapData = { tab: 'hpp', rows,
-        headers: ['Menu','Jumlah Bahan','Total HPP'],
-        fields: ['menu_nama','jumlah_bahan','total_hpp'],
-        fmt: rows.map(m => [
-          escHtml(m.menu_nama),
-          fmtNum(m.jumlah_bahan) + ' bahan',
-          fmtIDR(m.total_hpp),
-        ])
-      };
-      window['_export_hpp'] = { data: rows, fields: ['menu_nama','jumlah_bahan','total_hpp'] };
-      window._lapData = null;
-
-      // Build stat cards
-      let statHtml = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-        <div class="bg-gradient-to-br from-amber-50 to-amber-100/60 rounded-2xl border border-amber-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Menu</span><svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div><div class="text-lg font-bold text-amber-800">${fmtNum(stats.total_menu || 0)}</div><div class="text-[10px] text-amber-600/70">Total menu</div></div>
-        <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Bahan</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><div class="text-lg font-bold text-blue-800">${fmtNum(stats.total_bahan || 0)}</div><div class="text-[10px] text-blue-600/70">Semua menu</div></div>
-        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Total HPP</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="text-lg font-bold text-emerald-800">${fmtIDR(stats.total_hpp_all || 0)}</div><div class="text-[10px] text-emerald-600/70">Seluruh menu</div></div>
-        <div class="bg-gradient-to-br from-violet-50 to-violet-100/60 rounded-2xl border border-violet-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-violet-700">Rata HPP</span><svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="text-lg font-bold text-violet-800">${fmtIDR(stats.rata_hpp || 0)}</div><div class="text-[10px] text-violet-600/70">Per menu</div></div>
-        <div class="bg-gradient-to-br from-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-50 to-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-100/60 rounded-2xl border border-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-700">Tanpa Bahan</span><svg class="w-4 h-4 text-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><div class="text-lg font-bold text-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-800">${fmtNum(stats.menu_tanpa_bahan || 0)}</div><div class="text-[10px] text-${stats.menu_tanpa_bahan > 0 ? 'red' : 'emerald'}-600/70">${stats.menu_tanpa_bahan > 0 ? 'Belum diisi' : 'Lengkap'}</div></div>
-      </div>`;
-
-      // Build table with expandable detail
-      var hppTable = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
-        '<thead class="bg-stone-50"><tr>' +
-        '<th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Menu</th>' +
-        '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Bahan</th>' +
-        '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Total HPP</th>' +
-        '</tr></thead><tbody>';
-
-      rows.forEach(function(m) {
-        var detailRow = '';
-        var bahanList = detailBahan[m.menu_id] || [];
-        if (bahanList.length) {
-          var detailHtml = bahanList.map(function(b) {
-            return '<tr class="bg-stone-50/50">' +
-              '<td class="px-6 py-1.5 text-[11px] text-stone-500">↳ ' + escHtml(b.bahan_nama) + '</td>' +
-              '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500">' + fmtNum(b.jumlah) + ' ' + (b.satuan||'') + '</td>' +
-              '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500 mono">@' + fmtIDR(b.harga) + '</td>' +
-              '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500 mono">' + fmtIDR(b.subtotal) + '</td>' +
-              '</tr>';
-          }).join('');
-          detailRow = '<tr class="detail-hpp-' + m.menu_id + '" style="display:none">' +
-            '<td colspan="3" class="p-0"><div class="overflow-hidden"><table class="w-full text-xs">' +
-            '<thead><tr class="bg-stone-100"><th class="px-6 py-1.5 text-[10px] font-medium text-left">Bahan Baku</th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Jumlah</th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Harga</th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Subtotal</th></tr></thead><tbody>' +
-            detailHtml + '</tbody></table></div></td></tr>';
-        }        hppTable += '<tr class="border-t border-stone-100 hover:bg-stone-50 cursor-pointer" onclick="toggleHppDetail(' + m.menu_id + ')">' +
-          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 font-medium">' +
-          '<span class="inline-flex items-center gap-1.5">' +
-          '<span id="arrow-hpp-' + m.menu_id + '" class="text-stone-400 transition-transform duration-150">▶</span> ' +
-          escHtml(m.menu_nama) + '</span></td>' +
-          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right">' + fmtNum(m.jumlah_bahan) + '</td>' +
-          '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono font-bold text-[#1e40af]">' + fmtIDR(m.total_hpp) + '</td>' +
-          '</tr>' + detailRow;
-      });
-
-      hppTable += '</tbody></table></div></div>';
-
-      window._lapStatCards = statHtml + hppTable;
     } else if (tab === 'arus-kas') {
       const now = new Date();
       const blnVal = lapState.ak_bulan || String(now.getMonth() + 1).padStart(2, '0');
@@ -2418,7 +2354,6 @@ function renderLapProduksi() { renderReportPage('produksi'); }
 function renderLapPayroll() { renderReportPage('payroll'); }
 function renderLapPayrollMingguan() { renderReportPage('payroll-mingguan'); }
 function renderLapLabaRugi() { renderReportPage('laba-rugi'); }
-function renderLapHpp() { renderReportPage('hpp'); }
 function renderLapJurnalUmum() { renderReportPage('jurnal-umum'); }
 function renderLapBukuBesar() { renderReportPage('buku-besar'); }
 function renderLapNeraca() { renderReportPage('neraca'); }
@@ -2521,14 +2456,6 @@ function gantiPeriodeAK() {
   lapState.ak_bulan = document.getElementById('ak-bulan')?.value;
   lapState.ak_tahun = document.getElementById('ak-tahun')?.value;
   showLap('arus-kas');
-}
-function toggleHppDetail(menuId) {
-  const row = document.querySelector('.detail-hpp-' + menuId);
-  const arrow = document.getElementById('arrow-hpp-' + menuId);
-  if (!row || !arrow) return;
-  const isHidden = row.style.display === 'none' || !row.style.display;
-  row.style.display = isHidden ? 'table-row' : 'none';
-  arrow.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
 }
 
 // ===== RAB Bulanan Helper Functions =====
