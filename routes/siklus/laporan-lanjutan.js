@@ -481,7 +481,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
 
               // Use namaDisplay as key so overridden items don't mix with originals in the same day
               const keyNama = ov ? (namaDisplay + '__ov') : br.nama;
-              if (!bahanMap[keyNama]) bahanMap[keyNama] = { nama: namaDisplay, nama_display: namaDisplay, per_jenjang: {}, buffer_persen: Number(br.buffer_persen) || 0, satuan: br.satuan || '', kategori_sp: br.kategori_sp || '', keterangan: br.keterangan || '', berat_per_satuan: Number(br.berat_per_satuan) || 0 };
+              if (!bahanMap[keyNama]) bahanMap[keyNama] = { nama: namaDisplay, nama_display: namaDisplay, per_jenjang: {}, buffer_persen: Number(br.buffer_persen) || 0, satuan: br.satuan || '', kategori_sp: br.kategori_sp || '', keterangan: br.keterangan || '', berat_per_satuan: Number(br.berat_per_satuan) || 0, harga_satuan: Number(br.harga_satuan) || 0 };
               if (!bahanMap[keyNama].per_jenjang[b]) {
                 bahanMap[keyNama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100 };
               }
@@ -524,7 +524,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
           const kebutuhanKg = Math.round((beratKotorPerSiswa * jmlPm / 1000) * 100) / 100;
 
           const keyNama = ov ? (namaDisplay + '__ov') : g.nama;
-          if (!bahanMap[keyNama]) bahanMap[keyNama] = { nama: namaDisplay, nama_display: namaDisplay, per_jenjang: {}, buffer_persen: Number(g.buffer_persen) || 0, satuan: g.satuan || '', kategori_sp: g.kategori_sp || '', keterangan: '', berat_per_satuan: Number(g.berat_per_satuan) || 0 };
+          if (!bahanMap[keyNama]) bahanMap[keyNama] = { nama: namaDisplay, nama_display: namaDisplay, per_jenjang: {}, buffer_persen: Number(g.buffer_persen) || 0, satuan: g.satuan || '', kategori_sp: g.kategori_sp || '', keterangan: '', berat_per_satuan: Number(g.berat_per_satuan) || 0, harga_satuan: Number(g.harga_satuan) || 0 };
           if (!bahanMap[keyNama].per_jenjang[b]) {
             bahanMap[keyNama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100 };
           }

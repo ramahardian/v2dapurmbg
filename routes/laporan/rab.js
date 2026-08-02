@@ -885,6 +885,19 @@ function registerRabRoutes(router) {
       }
 
       if (!menuItems.length) {
+        // Anggaran belanja harian tetap dihitung dari budget periode agar
+        // fallback "Total Kebutuhan" bisa menampilkan ANGGARAN & SISA.
+        const periode = tanggal.slice(0, 7);
+        const [[{ total_budget_periode, total_hari_periode } = { total_budget_periode: 0, total_hari_periode: 0 }]] = await db.query(
+          `SELECT COALESCE(SUM(total_budget),0) AS total_budget_periode,
+                  COALESCE(MAX(sm.total_hari),0) AS total_hari_periode
+           FROM budget b
+           LEFT JOIN siklus_menu sm ON sm.id=? AND sm.tenant_id=?
+           WHERE b.tenant_id=? AND b.periode=?`,
+          [siklusId || 0, t, t, periode]
+        );
+        const totalHariBudget = total_hari_periode || siklusInfo?.total_hari || 1;
+        const anggaranBelanjaHarian = Math.round(total_budget_periode / Math.max(totalHariBudget, 1));
         return res.json({
           tanggal,
           siklus: siklusInfo,
@@ -892,6 +905,7 @@ function registerRabRoutes(router) {
           menu_harian: '',
           items: [],
           total: 0,
+          anggaran_belanja_harian: anggaranBelanjaHarian,
           message: 'Tidak ada menu untuk tanggal ini',
         });
       }
