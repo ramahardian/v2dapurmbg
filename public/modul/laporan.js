@@ -1673,7 +1673,7 @@ const tabColors = {
             return '<tr class="bg-stone-50/50">' +
               '<td class="px-6 py-1.5 text-[11px] text-stone-500">↳ ' + escHtml(b.bahan_nama) + '</td>' +
               '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500">' + fmtNum(b.jumlah) + ' ' + (b.satuan||'') + '</td>' +
-              '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500 mono">@' + fmtIDR(b.harga_satuan) + '</td>' +
+              '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500 mono">@' + fmtIDR(b.harga) + '</td>' +
               '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500 mono">' + fmtIDR(b.subtotal) + '</td>' +
               '</tr>';
           }).join('');
