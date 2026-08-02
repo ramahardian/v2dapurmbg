@@ -436,10 +436,10 @@ const tabColors = {
               '<div class="text-[10px] text-cyan-100 mt-1">SPPG BOGOR TAMANSARI SUKALUYU</div>' +
               '<div class="text-[10px] text-cyan-100">YAYASAN SHAIMA ANAK SHOLEHA</div>' +
             '</div>' +
-            '<div class="px-5 py-3 bg-stone-50/80 border-b border-stone-100">' +
-              '<div class="flex flex-wrap justify-center gap-x-8 gap-y-1 text-xs">' +
-                (menuNama ? '<div><span class="font-semibold text-stone-700">MENU:</span> <span class="text-stone-600">' + escHtml(menuNama) + '</span></div>' : '') +
-                '<div><span class="font-semibold text-stone-700">Hari :</span> <span class="text-stone-600">' + escHtml(hariNama) + ', ' + tglFormatted + '</span></div>' +
+            '<div class="px-5 py-3 bg-white border-b border-stone-100">' +
+              '<div class="flex flex-wrap items-center justify-center gap-2">' +
+                (menuNama ? '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>MENU: ' + escHtml(menuNama) + '</span>' : '') +
+                '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-50 border border-cyan-200 text-cyan-700 text-xs font-semibold"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>HARI: ' + escHtml(hariNama) + ' ' + tglFormatted + '</span>' +
               '</div>' +
             '</div>' +
           '</div>';
@@ -883,11 +883,11 @@ const tabColors = {
           '<div class="text-[10px] text-cyan-100 mt-1">SPPG BOGOR TAMANSARI SUKALUYU</div>' +
           '<div class="text-[10px] text-cyan-100">YAYASAN SHAIMA ANAK SHOLEHA</div>' +
         '</div>' +
-        '<div class="px-5 py-3 bg-stone-50/80 border-b border-stone-100">' +
-          '<div class="flex flex-wrap justify-center gap-x-8 gap-y-1 text-xs">' +
-            (menuNama ? '<div><span class="font-semibold text-stone-700">MENU:</span> <span class="text-stone-600">' + escHtml(menuNama) + '</span></div>' : '') +
-            '<div><span class="font-semibold text-stone-700">Hari :</span> <span class="text-stone-600">' + escHtml(hariNama) + ', ' + tglFormatted + '</span></div>' +
-            (siklusInfo ? '<div><span class="font-semibold text-stone-700">Siklus:</span> <span class="text-stone-600">' + escHtml(siklusInfo.nama) + '</span></div>' : '') +
+        '<div class="px-5 py-3 bg-white border-b border-stone-100">' +
+          '<div class="flex flex-wrap items-center justify-center gap-2">' +
+            (menuNama ? '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>MENU: ' + escHtml(menuNama) + '</span>' : '') +
+            '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-50 border border-cyan-200 text-cyan-700 text-xs font-semibold"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>HARI: ' + escHtml(hariNama) + ' ' + tglFormatted + '</span>' +
+            (siklusInfo ? '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>SIKLUS: ' + escHtml(siklusInfo.nama) + '</span>' : '') +
           '</div>' +
         '</div>' +
       '</div>';

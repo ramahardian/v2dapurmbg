@@ -378,12 +378,35 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
   var menuNama = (day.menu_names || []).join(' + ');
   var tglFormatted = fmtTkTanggalPanjang(tanggal, hariNama);
 
-  // ── Header (hanya menu + hari; judul instansi dihilangkan di total-kebutuhan) ──
+  // ── Header (hero: hari pelaksanaan + menu; judul instansi dihilangkan di total-kebutuhan) ──
   var html = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">';
-  html += '<div class="px-5 py-3 bg-stone-50/80 border-b border-stone-100">';
-  html += '<div class="flex flex-wrap justify-center gap-x-8 gap-y-1 text-xs">';
-  if (menuNama) html += '<div><span class="font-semibold text-stone-700">MENU:</span> <span class="text-stone-600">' + escHtmlTk(menuNama) + '</span></div>';
-  if (tglFormatted) html += '<div><span class="font-semibold text-stone-700">Hari :</span> <span class="text-stone-600">' + escHtmlTk(tglFormatted) + '</span></div>';
+  html += '<div class="px-5 py-4 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 text-white">';
+  html += '<div class="flex flex-wrap items-center gap-x-6 gap-y-3">';
+
+  // Kiri: ikon kalender + tanggal besar
+  if (tglFormatted) {
+    html += '<div class="flex items-center gap-3 min-w-0">';
+    html += '<div class="w-11 h-11 shrink-0 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center shadow-sm">';
+    html += '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+    html += '</div>';
+    html += '<div class="min-w-0">';
+    html += '<div class="text-[10px] font-bold uppercase tracking-widest text-emerald-100/90">Hari Pelaksanaan</div>';
+    html += '<div class="text-base sm:text-lg font-bold leading-tight truncate">' + escHtmlTk(tglFormatted) + '</div>';
+    html += '</div>';
+    html += '</div>';
+  }
+
+  // Kanan: menu hari ini (pill putih)
+  if (menuNama) {
+    html += '<div class="lg:ml-auto min-w-0">';
+    html += '<div class="text-[10px] font-bold uppercase tracking-widest text-emerald-100/90 mb-1">Menu Hari Ini</div>';
+    html += '<div class="inline-flex items-center gap-2 bg-white text-emerald-700 px-3.5 py-1.5 rounded-xl text-sm font-bold shadow-sm max-w-[min(100%,26rem)]">';
+    html += '<svg class="w-4 h-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>';
+    html += '<span class="truncate">' + escHtmlTk(menuNama) + '</span>';
+    html += '</div>';
+    html += '</div>';
+  }
+
   html += '</div></div>';
 
   // ── Tabel ──
