@@ -1118,6 +1118,90 @@ function registerRabRoutes(router) {
       res.status(500).json({ error: err.message });
     }
   });
+
+  // 9. RAB per titik (sekolah/posyandu) - Operasional/Produksi/Admin
+  router.get('/laporan/rab-per-titik', roleOps, async (req, res) => {
+    const t = req.user.tenant_id;
+    const periodeFilter = req.query.periode || '';
+    try {
+      const [pmRows] = await db.query(
+        `SELECT id, nama_kelompok, paket_besar, paket_kecil, kategori_penerima, lokasi
+         FROM penerima_manfaat
+         WHERE tenant_id=?
+         ORDER BY nama_kelompok ASC`,
+        [t]
+      );
+
+      const [budgetRows] = await db.query(
+        `SELECT periode, kategori_penerima, harga_besar, harga_kecil
+         FROM budget
+         WHERE tenant_id=?
+         ORDER BY periode DESC, id ASC`,
+        [t]
+      );
+
+      const byPeriode = {};
+      for (const b of budgetRows) {
+        if (!byPeriode[b.periode]) byPeriode[b.periode] = [];
+        byPeriode[b.periode].push(b);
+      }
+      const periodeKeys = Object.keys(byPeriode).sort().reverse();
+      const usePeriode = periodeKeys.find(p => !periodeFilter || p === periodeFilter) || periodeKeys[0] || '';
+      const useBudget = usePeriode ? byPeriode[usePeriode] : [];
+
+      const budgetByKategori = {};
+      for (const b of useBudget) {
+        if (!budgetByKategori[b.kategori_penerima]) {
+          budgetByKategori[b.kategori_penerima] = {
+            harga_besar: Number(b.harga_besar) || 0,
+            harga_kecil: Number(b.harga_kecil) || 0,
+          };
+        }
+      }
+
+      const POSYANDU_KAT = ['Ibu Hamil', 'Ibu Menyusui', 'Balita', 'Bumil/Busui', 'Bumil', 'Busui'];
+
+      function isPosyandu(pm) {
+        if (/posyandu/i.test(pm.nama_kelompok || '')) return true;
+        return parseKategoriPenerima(pm.kategori_penerima).some(k => POSYANDU_KAT.includes(k));
+      }
+
+      function buildTitik(pm) {
+        const kat = (parseKategoriPenerima(pm.kategori_penerima)[0] || '').trim();
+        const pagu = budgetByKategori[kat] || { harga_besar: 0, harga_kecil: 0 };
+        const kecil = Number(pm.paket_kecil) || 0;
+        const besar = Number(pm.paket_besar) || 0;
+        const rows = [
+          { klasifikasi: 'Paud & Kelas 1-3', jumlah: kecil, pagu: pagu.harga_kecil, total: kecil * pagu.harga_kecil },
+          { klasifikasi: 'Kelas 4-12 + Guru', jumlah: besar, pagu: pagu.harga_besar, total: besar * pagu.harga_besar },
+        ];
+        const sub_total = rows.reduce((s, r) => s + r.total, 0);
+        return { id: pm.id, nama: pm.nama_kelompok, kategori: kat, lokasi: pm.lokasi || '', rows, sub_total };
+      }
+
+      const sekolah = [];
+      const posyandu = [];
+      for (const pm of pmRows) {
+        const titik = buildTitik(pm);
+        if (isPosyandu(pm)) posyandu.push(titik);
+        else sekolah.push(titik);
+      }
+
+      const sum = arr => arr.reduce((s, it) => s + (it.sub_total || 0), 0);
+
+      res.json({
+        periode: usePeriode || periodeFilter,
+        sekolah,
+        posyandu,
+        total_sekolah: sum(sekolah),
+        total_posyandu: sum(posyandu),
+        grand_total: sum(sekolah) + sum(posyandu),
+      });
+    } catch (err) {
+      console.error('RAB per titik error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
 }
 
 module.exports = { registerRabRoutes };

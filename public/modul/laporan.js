@@ -82,415 +82,97 @@ const tabColors = {
       window._lapStatCards = '';
     } else if (tab === 'rab') {
       const filterPeriode = lapState.rab_periode || new Date().toISOString().slice(0, 7);
-      const filterSiklusId = lapState.rab_siklus_id || '';
 
-      const [siklusList, rabRes] = await Promise.all([
-        api.get('/siklus').catch(() => []),
-        api.get('/laporan/rab-sinkron?periode=' + filterPeriode + (filterSiklusId ? '&siklus_id=' + filterSiklusId : '')),
-      ]);
-      const r = rabRes;
-      const rows = r.rows || [];
-      const bd = r.budget || {};
-      const siklusInfo = r.siklus || null;
-      const isRABDraft = siklusInfo && siklusInfo.status === 'Draft';
+      const rabRes = await api.get('/laporan/rab-per-titik?periode=' + filterPeriode);
 
-      var periods = [];
       var nowDate = new Date();
+      var periods = [];
       for (var y = nowDate.getFullYear() - 2; y <= nowDate.getFullYear(); y++) {
         for (var m = 1; m <= 12; m++) {
           var mm = String(m).padStart(2, '0');
-          periods.push(y + '-' + mm);
+          var pp = y + '-' + mm;
+          if (pp <= nowDate.toISOString().slice(0, 7)) periods.push(pp);
         }
       }
-      periods = periods.filter(function(p) { return p <= nowDate.toISOString().slice(0, 7); }).reverse();
+      periods = periods.reverse();
 
-      var fmtIdr = fmtIDR;
-      var totalBudget = bd.total_budget || 0;
-      var totalBiayaKas = bd.total_biaya_kas || 0;
-      var biayaBahanBaku = bd.biaya_bahan_baku || 0;
-      var biayaOperasional = bd.biaya_operasional || 0;
-      var biayaGaji = bd.biaya_gaji || 0;
-      var biayaLainnya = bd.biaya_lainnya || 0;
-      var totalSelisih = totalBudget - totalBiayaKas;
-      var serapan = totalBudget > 0 ? (totalBiayaKas / totalBudget * 100) : 0;
-
-      var siklusOpts = '<option value="">Semua Siklus</option>';
-      var activeSiklus = (Array.isArray(siklusList) ? siklusList : []).filter(function(s) { return s.status === 'Aktif' || s.status === 'Draft'; });
-      activeSiklus.forEach(function(s) {
-        var sel = String(s.id) === String(filterSiklusId) ? 'selected' : '';
-        siklusOpts += '<option value="' + s.id + '" ' + sel + '>' + escHtml(s.nama) + ' (' + (s.total_hari || '?') + ' hr)' + '</option>';
-      });
-
-      var hariLabel = siklusInfo ? 'hari siklus' : 'hari produksi';
       var rabFilterBar = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">' +
         '<div class="flex flex-wrap items-center gap-x-4 gap-y-2">' +
           '<div class="flex items-center gap-2">' +
             '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>' +
             '<select id="rab-filter-periode" onchange="gantiPeriodeRab()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
-            periods.map(function(p) { return '<option value="' + p + '" ' + (filterPeriode===p?'selected':'') + '>' + p + '</option>'; }).join('') +
+            periods.map(function(p) { return '<option value="' + p + '" ' + (filterPeriode === p ? 'selected' : '') + '>' + p + '</option>'; }).join('') +
             '</select>' +
           '</div>' +
-          '<div class="flex items-center gap-2">' +
-            '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
-            '<select id="rab-filter-siklus" onchange="gantiPeriodeRab()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
-            siklusOpts +
-            '</select>' +
-          '</div>' +
-          '<button onclick="hitungRealisasiRAB()" class="inline-flex items-center gap-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors shadow-sm">' +
-            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
-            'Hitung Realisasi' +
-          '</button>' +
-          (siklusInfo ? '<span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' + escHtml(siklusInfo.nama) + ' — ' + siklusInfo.total_hari + ' hari</span>' : '') +
-          '<span class="text-xs text-stone-400 ml-auto">' + (r.total_hari || 0) + ' ' + hariLabel + '</span>' +
+          '<span class="text-xs text-stone-400 ml-auto">Pagu dari modul Budgeting per kategori</span>' +
         '</div></div>';
 
-      // Stat Cards
-      var statCards = '<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">' +
+      var rabCards = '<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">' +
         '<div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm">' +
-          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Anggaran</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg></div>' +
-          '<div class="text-lg font-bold text-emerald-800">' + fmtIDR(r.grand_total) + '</div>' +
-          '<div class="text-[10px] text-emerald-600/70">Total RAB sinkron</div>' +
-        '</div>' +
-        '<div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm">' +
-          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Budget</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg></div>' +
-          '<div class="text-lg font-bold text-blue-800">' + fmtIDR(totalBudget) + '</div>' +
-          '<div class="text-[10px] text-blue-600/70">Dari tabel budget</div>' +
-        '</div>' +
-        '<div class="bg-gradient-to-br from-orange-50 to-orange-100/60 rounded-2xl border border-orange-200/60 p-4 shadow-sm">' +
-          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">Realisasi</span><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>' +
-          '<div class="text-lg font-bold text-orange-800">' + fmtIDR(totalBiayaKas) + '</div>' +
-          '<div class="mt-1.5 w-full bg-orange-200/60 rounded-full h-1.5 overflow-hidden"><div class="bg-orange-500 h-1.5 rounded-full transition-all" style="width:' + Math.min(serapan, 100) + '%"></div></div>' +
-          '<div class="text-[10px] text-orange-600/70 mt-0.5">' + serapan.toFixed(1) + '% terserap</div>' +
-        '</div>' +
-        '<div class="bg-gradient-to-br from-' + (totalSelisih >= 0 ? 'emerald' : 'red') + '-50 to-' + (totalSelisih >= 0 ? 'emerald' : 'red') + '-100/60 rounded-2xl border border-' + (totalSelisih >= 0 ? 'emerald' : 'red') + '-200/60 p-4 shadow-sm">' +
-          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-' + (totalSelisih >= 0 ? 'emerald' : 'red') + '-700">Selisih</span><svg class="w-4 h-4 text-' + (totalSelisih >= 0 ? 'emerald' : 'red') + '-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 17V9m0 0l-4 4m4-4l4 4"/></svg></div>' +
-          '<div class="text-lg font-bold text-' + (totalSelisih >= 0 ? 'emerald' : 'red') + '-800">' + fmtIDR(Math.abs(totalSelisih)) + '</div>' +
-          '<div class="text-[10px] text-' + (totalSelisih >= 0 ? 'emerald' : 'red') + '-600/70">' + (totalSelisih >= 0 ? 'Surplus' : 'Defisit') + '</div>' +
+          '<div class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 mb-1">Total Sekolah</div>' +
+          '<div class="text-lg font-bold text-emerald-800">' + fmtIDR(rabRes.total_sekolah || 0) + '</div>' +
+          '<div class="text-[10px] text-emerald-600/70">' + (rabRes.sekolah || []).length + ' titik</div>' +
         '</div>' +
         '<div class="bg-gradient-to-br from-violet-50 to-violet-100/60 rounded-2xl border border-violet-200/60 p-4 shadow-sm">' +
-          '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-violet-700">Rata/Hari</span><svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></div>' +
-          '<div class="text-lg font-bold text-violet-800">' + fmtIDR(r.total_hari ? Math.round(r.grand_total / r.total_hari) : 0) + '</div>' +
-          '<div class="text-[10px] text-violet-600/70">Biaya per ' + hariLabel + '</div>' +
+          '<div class="text-[10px] font-semibold uppercase tracking-wider text-violet-700 mb-1">Total Posyandu</div>' +
+          '<div class="text-lg font-bold text-violet-800">' + fmtIDR(rabRes.total_posyandu || 0) + '</div>' +
+          '<div class="text-[10px] text-violet-600/70">' + (rabRes.posyandu || []).length + ' titik</div>' +
+        '</div>' +
+        '<div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm">' +
+          '<div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-1">Grand Total</div>' +
+          '<div class="text-lg font-bold text-blue-800">' + fmtIDR(rabRes.grand_total || 0) + '</div>' +
+          '<div class="text-[10px] text-blue-600/70">Periode ' + escHtml(rabRes.periode || filterPeriode) + '</div>' +
         '</div>' +
       '</div>';
 
-      // Summary cards
-      var summaryCards = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">' +
-        '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
-          '<div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div><div class="text-xs font-semibold text-stone-700">Ringkasan Anggaran</div></div></div>' +
-          '<div class="space-y-1.5">' +
-            '<div class="flex justify-between"><span class="text-xs text-stone-500">Budget</span><span class="text-xs font-semibold text-blue-600">' + fmtIdr(totalBudget) + '</span></div>' +
-            '<div class="flex justify-between"><span class="text-xs text-stone-500">Realisasi</span><span class="text-xs font-semibold text-red-500">' + fmtIdr(totalBiayaKas) + '</span></div>' +
-            '<div class="border-t border-stone-100 pt-1.5 flex justify-between"><span class="text-xs font-bold text-stone-700">Selisih</span><span class="text-xs font-bold ' + (totalSelisih >= 0 ? 'text-emerald-600' : 'text-red-600') + '">' + fmtIdr(Math.abs(totalSelisih)) + ' (' + (totalSelisih >= 0 ? 'surplus' : 'defisit') + ')' + '</span></div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
-          '<div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-sm"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div><div class="text-xs font-semibold text-stone-700">Detail Realisasi</div></div></div>' +
-          '<div class="space-y-1.5">' +
-            '<div class="flex justify-between"><span class="text-xs text-stone-500">Manual</span><span class="text-xs font-semibold text-stone-800">' + fmtIdr(bd.total_realisasi_manual || 0) + '</span></div>' +
-            '<div class="flex justify-between"><span class="text-xs text-stone-500">Supplier</span><span class="text-xs font-semibold text-stone-800">' + fmtIdr(bd.total_realisasi_kas || 0) + '</span></div>' +
-            '<div class="border-t border-stone-100 pt-1.5 flex justify-between"><span class="text-xs font-bold text-stone-700">Total</span><span class="text-xs font-bold text-red-500">' + fmtIdr(totalBiayaKas) + '</span></div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
-          '<div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-sm"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div><div class="text-xs font-semibold text-stone-700">Serapan</div></div></div>' +
-          '<div class="flex items-end justify-between mb-1"><span class="text-xs text-stone-500">Progress</span><span class="text-xs font-bold text-stone-700">' + serapan.toFixed(1) + '%</span></div>' +
-          '<div class="w-full bg-stone-100 rounded-full h-2 overflow-hidden"><div class="h-2 rounded-full transition-all duration-500 ' + (serapan > 100 ? 'bg-red-500' : serapan > 80 ? 'bg-amber-500' : serapan > 0 ? 'bg-emerald-500' : 'bg-stone-200') + '" style="width:' + Math.min(serapan, 100) + '%"></div></div>' +
-          '<div class="flex justify-between mt-1 text-[10px] text-stone-400"><span>Budget: ' + fmtIdr(totalBudget) + '</span><span>Realisasi: ' + fmtIdr(totalBiayaKas) + '</span></div>' +
-        '</div>' +
-        '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
-          '<div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-sm"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><div><div class="text-xs font-semibold text-stone-700">Rincian Biaya</div></div></div>' +
-          '<div class="space-y-1">' +
-            '<div class="flex justify-between"><span class="text-xs text-stone-500">Bahan Baku</span><span class="text-xs font-semibold text-teal-600">' + fmtIdr(biayaBahanBaku) + '</span></div>' +
-            '<div class="flex justify-between"><span class="text-xs text-stone-500">Operasional</span><span class="text-xs font-semibold text-stone-700">' + fmtIdr(biayaOperasional) + '</span></div>' +
-            '<div class="flex justify-between"><span class="text-xs text-stone-500">Gaji</span><span class="text-xs font-semibold text-amber-600">' + fmtIdr(biayaGaji) + '</span></div>' +
-            (biayaLainnya > 0 ? '<div class="flex justify-between"><span class="text-xs text-stone-500">Lainnya</span><span class="text-xs font-semibold text-stone-500">' + fmtIdr(biayaLainnya) + '</span></div>' : '') +
-            '<div class="border-t border-stone-100 pt-1 flex justify-between"><span class="text-xs font-bold text-stone-700">Total</span><span class="text-xs font-bold text-red-500">' + fmtIdr(totalBiayaKas) + '</span></div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-
-      // Table
-      var tableContent = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
-        '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between"><h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider">Rincian per Kategori</h3><span class="text-[10px] text-stone-400">' + rows.length + ' kategori</span></div>' +
-        '<div class="overflow-x-auto"><table class="w-full text-xs">' +
-        '<thead><tr class="bg-stone-50">' +
-        '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Kategori</th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Harga Besar</th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Harga Kecil</th>' +
-        '<th class="text-center px-1 py-3 text-[10px] font-bold text-stone-400" style="width:16px"></th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Penerima</th>' +
-        '<th class="text-center px-1 py-3 text-[10px] font-bold text-stone-400" style="width:16px"></th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Hari</th>' +
-        '<th class="text-center px-1 py-3 text-[10px] font-bold text-stone-400" style="width:16px"></th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Anggaran</th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Budget</th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Realisasi</th>' +
-        '</tr></thead><tbody>';
-
-      var catColors = ['#059669','#0891b2','#d97706','#7c3aed','#be185d','#0d9488','#dc2626','#2563eb','#ca8a04'];
-      var catIdx = 0;
-      rows.forEach(function(b) {
-        var budgetVal = Number(b.budget || 0);
-        var realisasiVal = Number(b.realisasi || 0);
-        var selisihRow = budgetVal - realisasiVal;
-        var isPosyandu = b.kategori && b.kategori.indexOf('Posyandu') === 0;
-        var isSub = isPosyandu;
-        var bgRow = isSub ? 'bg-amber-50/40' : '';
-        var dotColor = catColors[catIdx % catColors.length];
-        if (!isSub) catIdx++;
-        tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors ' + bgRow + '">' +
-          '<td class="px-4 py-3 font-medium text-xs"><span class="inline-block w-2 h-2 rounded-full mr-2" style="background:' + dotColor + '"></span>' + escHtml(b.kategori) + '</td>' +
-          '<td class="px-4 py-3 text-right mono text-xs font-semibold text-amber-700">' + (b.harga_besar > 0 ? fmtIdr(b.harga_besar) : '<span class="text-stone-300">—</span>') + '</td>' +
-          '<td class="px-4 py-3 text-right mono text-xs font-semibold text-rose-600">' + (b.harga_kecil > 0 ? fmtIdr(b.harga_kecil) : '<span class="text-stone-300">—</span>') + '</td>' +
-          '<td class="px-1 py-3 text-center text-stone-300 text-[9px]">×</td>' +
-          '<td class="px-4 py-3 text-right text-xs font-semibold text-stone-700">' + fmtNum(b.jumlah_penerima) + '</td>' +
-          '<td class="px-1 py-3 text-center text-stone-300 text-[9px]">×</td>' +
-          '<td class="px-4 py-3 text-right text-xs font-semibold text-stone-700">' + b.jumlah_hari + '</td>' +
-          '<td class="px-1 py-3 text-center text-stone-300 text-[9px]">=</td>' +
-          '<td class="px-4 py-3 text-right mono font-bold text-xs text-stone-800">' + fmtIdr(b.total) + '</td>' +
-          '<td class="px-4 py-3 text-right mono text-xs"><span class="' + (budgetVal > 0 ? 'font-semibold text-stone-700' : 'text-stone-300') + '">' + fmtIdr(budgetVal) + '</span></td>' +
-          '<td class="px-4 py-3 text-right mono text-xs"><span class="font-semibold ' + (realisasiVal > budgetVal ? 'text-red-500' : realisasiVal > 0 ? 'text-emerald-600' : 'text-stone-300') + '">' + fmtIdr(realisasiVal) + '</span></td></tr>';
-      });
-
-      catIdx = 0;
-      tableContent += '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-stone-100 to-stone-50">' +
-        '<td class="px-4 py-3.5 font-bold text-xs text-stone-800">Total ' + rows.length + ' kategori</td>' +
-        '<td class="px-4 py-3.5"></td><td class="px-4 py-3.5"></td><td class="px-1 py-3.5"></td>' +
-        '<td class="px-4 py-3.5 text-right font-bold text-xs text-stone-800">' + fmtNum(r.grand_penerima) + '</td>' +
-        '<td class="px-1 py-3.5"></td>' +
-        '<td class="px-4 py-3.5 text-right font-bold text-xs text-stone-800">' + (r.total_hari || 0) + '</td>' +
-        '<td class="px-1 py-3.5"></td>' +
-        '<td class="px-4 py-3.5 text-right mono font-bold text-xs text-blue-700">' + fmtIdr(r.grand_total) + '</td>' +
-        '<td class="px-4 py-3.5 text-right mono font-bold text-xs text-stone-800">' + fmtIdr(totalBudget) + '</td>' +
-        '<td class="px-4 py-3.5 text-right mono font-bold text-xs ' + (totalSelisih >= 0 ? 'text-emerald-600' : 'text-red-600') + '">' + fmtIdr(totalBiayaKas) + '</td></tr>';
-
-      tableContent += '</tbody></table></div></div>';
-
-      // Tabel Rincian Biaya Pengeluaran
-      var biayaContent = '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
-        '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">' +
-          '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Biaya Bahan Baku & Pengeluaran</h3>' +
-          '<span class="text-[10px] text-stone-400">' + filterPeriode + '</span>' +
-        '</div>' +
-        '<div class="overflow-x-auto"><table class="w-full text-xs">' +
-        '<thead><tr class="bg-stone-50">' +
-        '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Jenis Biaya</th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Jumlah</th>' +
-        '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">% Thd Total</th>' +
-        '</tr></thead><tbody>' +
-        '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
-          '<td class="px-4 py-3 font-medium text-xs"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-teal-500"></span>Biaya Bahan Baku</span></td>' +
-          '<td class="px-4 py-3 text-right mono text-xs font-semibold text-teal-600">' + fmtIdr(biayaBahanBaku) + '</td>' +
-          '<td class="px-4 py-3 text-right text-xs font-semibold text-stone-700">' + (totalBiayaKas > 0 ? (biayaBahanBaku / totalBiayaKas * 100).toFixed(1) + '%' : '—') + '</td>' +
-        '</tr>' +
-        '<tr class="border-t border-stone-100 bg-stone-50/40 hover:bg-stone-50/80 transition-colors">' +
-          '<td class="px-4 py-3 font-medium text-xs"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span>Biaya Operasional</span></td>' +
-          '<td class="px-4 py-3 text-right mono text-xs font-semibold text-stone-700">' + fmtIdr(biayaOperasional) + '</td>' +
-          '<td class="px-4 py-3 text-right text-xs font-semibold text-stone-700">' + (totalBiayaKas > 0 ? (biayaOperasional / totalBiayaKas * 100).toFixed(1) + '%' : '—') + '</td>' +
-        '</tr>' +
-        '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
-          '<td class="px-4 py-3 font-medium text-xs"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Biaya Gaji</span></td>' +
-          '<td class="px-4 py-3 text-right mono text-xs font-semibold text-amber-600">' + fmtIdr(biayaGaji) + '</td>' +
-          '<td class="px-4 py-3 text-right text-xs font-semibold text-stone-700">' + (totalBiayaKas > 0 ? (biayaGaji / totalBiayaKas * 100).toFixed(1) + '%' : '—') + '</td>' +
-        '</tr>' +
-        (biayaLainnya > 0 ? '<tr class="border-t border-stone-100 bg-stone-50/40 hover:bg-stone-50/80 transition-colors">' +
-          '<td class="px-4 py-3 font-medium text-xs"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-stone-400"></span>Biaya Lainnya</span></td>' +
-          '<td class="px-4 py-3 text-right mono text-xs text-stone-500">' + fmtIdr(biayaLainnya) + '</td>' +
-          '<td class="px-4 py-3 text-right text-xs font-semibold text-stone-700">' + (totalBiayaKas > 0 ? (biayaLainnya / totalBiayaKas * 100).toFixed(1) + '%' : '—') + '</td>' +
-        '</tr>' : '') +
-        '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-orange-50 to-amber-50">' +
-          '<td class="px-4 py-3.5 font-bold text-xs text-stone-800">Total Pengeluaran</td>' +
-          '<td class="px-4 py-3.5 text-right mono font-bold text-xs text-red-600">' + fmtIdr(totalBiayaKas) + '</td>' +
-          '<td class="px-4 py-3.5 text-right text-xs font-bold text-stone-700">100%</td>' +
-        '</tr>' +
-        '</tbody></table></div></div>';
-
-
-
-      // Tabel Daftar Pembelian per Pemasok
-      var supplierPembelian = r.supplier_pembelian || [];
-      var totalPembelianSupplier = r.total_pembelian_supplier || 0;
-      var supplierContent = '';
-      if (supplierPembelian.length > 0) {
-        var grouped = {};
-        supplierPembelian.forEach(function(sp) {
-          var key = sp.supplier || 'Tanpa Supplier';
-          if (!grouped[key]) grouped[key] = { supplier: key, total: 0, items: [] };
-          grouped[key].items.push(sp);
-          grouped[key].total += sp.jumlah;
-        });
-        var supplierRows = '';
-        var supIdx = 0;
-        var supColors = ['#0d9488','#7c3aed','#0891b2','#d97706','#be185d','#059669','#dc2626','#2563eb'];
-        Object.keys(grouped).forEach(function(key) {
-          var g = grouped[key];
-          var color = supColors[supIdx % supColors.length];
-          supIdx++;
-          var detailRows = g.items.map(function(sp) {
-            var itemsHtml = '';
-            if (sp.items && sp.items.length > 0) {
-              itemsHtml = '<tr class="bg-stone-50/30"><td colspan="5" class="px-4 py-1.5"><div class="pl-10 text-[10px] text-stone-400">Item pembelian:</div><div class="pl-10 space-y-0.5">' +
-                sp.items.map(function(it) {
-                  var itHarga = it.harga > 0 ? ' @ ' + fmtIdr(it.harga) + '/' + (it.satuan || '') : '';
-                  var itTotal = it.harga > 0 && it.qty > 0 ? ' = ' + fmtIdr(it.harga * it.qty) : '';
-                  return '<div class="text-xs text-stone-600 flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-stone-300"></span>' +
-                    escHtml(it.nama) +
-                    (it.qty > 0 ? ' <span class="text-stone-400">× ' + it.qty + '</span>' : '') +
-                    (it.satuan ? ' <span class="text-stone-400">' + it.satuan + '</span>' : '') +
-                    itHarga + itTotal +
-                  '</div>';
-                }).join('') +
-              '</div></td></tr>';
-            }
-            return '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors">' +
-              '<td class="px-4 py-2.5 text-xs text-stone-500 pl-10">' + fmtDate(sp.tanggal) + '</td>' +
-              '<td class="px-4 py-2.5 text-xs text-stone-600">' + escHtml(sp.no_transaksi || '-') + '</td>' +
-              '<td class="px-4 py-2.5 text-xs text-stone-500">' + escHtml(sp.deskripsi || '-') + '</td>' +
-              '<td class="px-4 py-2.5 text-right mono text-xs font-semibold text-stone-700">' + fmtIdr(sp.jumlah) + '</td>' +
-              '<td></td>' +
-            '</tr>' + itemsHtml;
-          }).join('');
-          var pct = totalPembelianSupplier > 0 ? (g.total / totalPembelianSupplier * 100).toFixed(1) : 0;
-          supplierRows += '<tr class="border-t border-stone-100">' +
-            '<td class="px-4 py-3 font-medium text-xs" colspan="3"><span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:' + color + '"></span><strong>' + escHtml(g.supplier) + '</strong> <span class="text-stone-400 font-normal">(' + g.items.length + ' transaksi)</span></span></td>' +
-            '<td class="px-4 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtIdr(g.total) + '</td>' +
-            '<td class="px-4 py-3 text-right text-xs text-stone-500">' + pct + '%</td>' +
-          '</tr>' +
-          detailRows;
-        });
-        supplierContent = '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
+      var exportRows = [];
+      function buildTitikTable(list, label, numbered) {
+        var head = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">' +
           '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">' +
-            '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Daftar Pembelian per Pemasok</h3>' +
-            '<span class="text-[10px] text-stone-400">' + supplierPembelian.length + ' transaksi — Total: ' + fmtIdr(totalPembelianSupplier) + '</span>' +
+            '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider">' + label + '</h3>' +
+            '<span class="text-[10px] text-stone-400">' + list.length + ' titik</span>' +
           '</div>' +
           '<div class="overflow-x-auto"><table class="w-full text-xs">' +
           '<thead><tr class="bg-stone-50">' +
-          '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Pemasok / Tanggal</th>' +
-          '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">No. Transaksi</th>' +
-          '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Deskripsi</th>' +
-          '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">Nilai</th>' +
-          '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">%</th>' +
-          '</tr></thead><tbody>' +
-          supplierRows +
-          '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-orange-50 to-amber-50">' +
-          '<td class="px-4 py-3.5 font-bold text-xs text-stone-800" colspan="4">Total Pembelian ' + Object.keys(grouped).length + ' Pemasok</td>' +
-          '<td class="px-4 py-3.5 text-right mono font-bold text-xs text-red-600">' + fmtIdr(totalPembelianSupplier) + '</td>' +
-          '<td class="px-4 py-3.5 text-right text-xs font-bold text-stone-700">100%</td>' +
-          '</tr>' +
-          '</tbody></table></div></div>';
-      }
-
-      window._lapData = null;
-      if (isRABDraft) {
-        var draftMsg = '<div class="bg-amber-50 border-2 border-amber-200/80 rounded-2xl p-6 sm:p-8 text-center shadow-sm">' +
-          '<div class="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">' +
-            '<svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>' +
-          '</div>' +
-          '<h3 class="text-sm font-bold text-amber-800 mb-2">Siklus Masih Draft</h3>' +
-          '<p class="text-xs text-amber-700/80 max-w-md mx-auto leading-relaxed">Siklus <strong>' + escHtml(siklusInfo.nama) + '</strong> masih berstatus <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-200/60 text-amber-800 font-semibold text-[10px]">DRAFT</span>. Silakan aktifkan siklus terlebih dahulu untuk melihat laporan RAB.</p>' +
-        '</div>' +
-        '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm p-5">' +
-          '<div class="flex items-center gap-3 text-xs text-stone-500">' +
-            '<svg class="w-5 h-5 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>' +
-            '<span>Data laporan RAB baru tersedia setelah siklus diaktifkan dan memiliki data produksi.</span>' +
-          '</div>' +
-        '</div>';
-        window._lapStatCards = rabFilterBar + draftMsg;
-      } else {
-        window._lapStatCards = rabFilterBar + statCards + summaryCards + tableContent + biayaContent + supplierContent;
-      }
-
-      // ── Tambah RAB Harian (lengkap) di bawah ──
-      try {
-        // Use saved date from lapState, or fallback to siklus start date / today
-        var rhTanggal = lapState.rab_rh_tanggal || ((siklusInfo && siklusInfo.tanggal_mulai) ? siklusInfo.tanggal_mulai : nowDate.toISOString().slice(0, 10));
-        var rabHarianRes = await api.get('/laporan/rab-harian?tanggal=' + rhTanggal + (filterSiklusId ? '&siklus_id=' + filterSiklusId : ''));
-        var d = rabHarianRes;
-        var items = d.items || [];
-
-        // ── Date picker filter bar ──
-        var rhFilterBar = '<div class="mt-6 bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3">' +
-          '<div class="flex flex-wrap items-center gap-x-4 gap-y-2">' +
-            '<div class="flex items-center gap-2">' +
-              '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>' +
-              '<input type="date" id="rab-rh-tanggal" value="' + rhTanggal + '" onchange="gantiTanggalRhDiRab()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">' +
-            '</div>' +
-            '<span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>RAB Harian</span>' +
-            (d.hari ? '<span class="text-xs text-stone-400 ml-auto">' + escHtml(d.hari) + ', ' + d.tanggal + '</span>' : '') +
-          '</div></div>';
-
-        if (items.length > 0) {
-          // ── Report Header ──
-          var hariArr = ['MINGGU','SENIN','SELASA','RABU','KAMIS','JUMAT','SABTU'];
-          var tgl = new Date(d.tanggal + 'T00:00:00');
-          var hariNama = d.hari || hariArr[tgl.getDay()] || '';
-          var tglFormatted = tgl.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-          var menuNama = d.menu_deskripsi || '';
-
-          var reportHeader = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
-            '<div class="px-5 py-4 text-center border-b border-stone-100" style="background:linear-gradient(135deg,#0e7490,#0891b2)">' +
-              '<h1 class="text-sm font-bold text-white uppercase tracking-wider">RENCANA ANGGARAN BELANJA (RAB) BAHAN BAKU HARIAN</h1>' +
-              '<div class="text-[10px] text-cyan-100 mt-1">SPPG BOGOR TAMANSARI SUKALUYU</div>' +
-              '<div class="text-[10px] text-cyan-100">YAYASAN SHAIMA ANAK SHOLEHA</div>' +
-            '</div>' +
-            '<div class="px-5 py-3 bg-stone-50/80 border-b border-stone-100">' +
-              '<div class="flex flex-wrap justify-center gap-x-8 gap-y-1 text-xs">' +
-                (menuNama ? '<div><span class="font-semibold text-stone-700">MENU:</span> <span class="text-stone-600">' + escHtml(menuNama) + '</span></div>' : '') +
-                '<div><span class="font-semibold text-stone-700">Hari :</span> <span class="text-stone-600">' + escHtml(hariNama) + ', ' + tglFormatted + '</span></div>' +
-              '</div>' +
-            '</div>' +
-          '</div>';
-
-          var no = 0;
-          var tabelHtml = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
-            '<div class="overflow-x-auto"><table class="w-full text-xs">' +
-            '<thead><tr class="bg-stone-50">' +
-            '<th class="text-center px-2 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider w-8">NO</th>' +
-            '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">URAIAN</th>' +
-            '<th class="text-right px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">QTY</th>' +
-            '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">SATUAN</th>' +
-            '<th class="text-right px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">HARGA</th>' +
-            '<th class="text-right px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">JUMLAH</th>' +
-            '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">KETERANGAN</th>' +
-            '</tr></thead><tbody>';
-
-          items.forEach(function(it) {
-            no++;
-            tabelHtml += '<tr class="border-t border-stone-100 hover:bg-cyan-50/40 transition-colors">' +
-              '<td class="px-2 py-3 text-center text-xs text-stone-500">' + no + '</td>' +
-              '<td class="px-3 py-3 text-xs font-medium text-stone-700">' + escHtml(it.nama) + '</td>' +
-              '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700">' + fmtNum(it.qty) + '</td>' +
-              '<td class="px-3 py-3 text-xs text-stone-500">' + escHtml(it.satuan) + '</td>' +
-              '<td class="px-3 py-3 text-right mono text-xs text-stone-600">' + fmtIDR(it.harga) + '</td>' +
-              '<td class="px-3 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtIDR(it.jumlah) + '</td>' +
-              '<td class="px-3 py-3 text-xs text-stone-400">' + (it.keterangan ? escHtml(it.keterangan) : '') + '</td>' +
+            '<th class="text-center px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider w-10">NO</th>' +
+            '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">SEKOLAH / TITIK</th>' +
+            '<th class="text-left px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">KLASIFIKASI</th>' +
+            '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">JUMLAH SISWA &amp; GURU</th>' +
+            '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">PAGU HARGA</th>' +
+            '<th class="text-right px-4 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">JUMLAH</th>' +
+          '</tr></thead><tbody>';
+        var body = '';
+        list.forEach(function(it, idx) {
+          var no = numbered ? (idx + 1) : '';
+          var noTd = '<td class="px-3 py-3 text-center text-xs text-stone-500" rowspan="2">' + no + '</td>';
+          var namaTd = '<td class="px-4 py-3 font-semibold text-xs text-stone-800" rowspan="2">' + escHtml(it.nama) + '</td>';
+          it.rows.forEach(function(row, ri) {
+            body += '<tr class="' + (ri === 1 ? 'border-t border-stone-100' : '') + ' hover:bg-stone-50/70 transition-colors">' +
+              (ri === 0 ? noTd + namaTd : '') +
+              '<td class="px-4 py-3 text-xs text-stone-600">' + escHtml(row.klasifikasi) + '</td>' +
+              '<td class="px-4 py-3 text-right mono text-xs font-semibold text-stone-700">' + (row.jumlah > 0 ? fmtNum(row.jumlah) : '') + '</td>' +
+              '<td class="px-4 py-3 text-right mono text-xs text-stone-600">' + (row.pagu > 0 ? fmtIDR(row.pagu) : '') + '</td>' +
+              '<td class="px-4 py-3 text-right mono text-xs font-bold ' + (row.total > 0 ? 'text-[#1e40af]' : 'text-stone-300') + '">' + (row.total > 0 ? fmtIDR(row.total) : '') + '</td>' +
             '</tr>';
+            exportRows.push({ no: no, nama: it.nama, klasifikasi: row.klasifikasi, jumlah: row.jumlah, pagu: row.pagu, total: row.total });
           });
+          body += '<tr class="border-t border-stone-200 bg-gradient-to-r from-stone-50 to-stone-100">' +
+            '<td class="px-4 py-2.5 text-[10px] text-right text-stone-500 uppercase tracking-wider" colspan="5">Sub Total</td>' +
+            '<td class="px-4 py-2.5 text-right mono text-xs font-bold text-stone-800">' + fmtIDR(it.sub_total) + '</td></tr>';
+        });
+        var total = list.reduce(function(s, x) { return s + (x.sub_total || 0); }, 0);
+        body += '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-stone-100 to-stone-50">' +
+          '<td class="px-4 py-3.5 font-bold text-xs text-stone-800" colspan="5">TOTAL ' + label.toUpperCase() + '</td>' +
+          '<td class="px-4 py-3.5 text-right mono font-bold text-xs text-blue-700">' + fmtIDR(total) + '</td></tr>';
+        return head + body + '</tbody></table></div></div>';
+      }
 
-          tabelHtml += '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-cyan-50 to-blue-50 font-bold">' +
-            '<td colspan="5" class="px-4 py-3.5 text-xs text-right text-stone-800 uppercase tracking-wider">TOTAL</td>' +
-            '<td class="px-3 py-3.5 text-right mono text-xs font-bold text-blue-700">' + fmtIDR(d.total) + '</td>' +
-            '<td></td>' +
-          '</tr>' +
-          '<tr class="border-t border-stone-200 bg-white">' +
-            '<td colspan="5" class="px-4 py-3 text-xs text-right text-stone-600">ANGGARAN BELANJA HARIAN</td>' +
-            '<td class="px-3 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtIDR(d.anggaran_belanja_harian) + '</td>' +
-            '<td></td>' +
-          '</tr>' +
-          '<tr class="border-t border-stone-200 ' + (d.sisa >= 0 ? 'bg-emerald-50/50' : 'bg-red-50/50') + '">' +
-            '<td colspan="5" class="px-4 py-3 text-xs text-right font-bold text-' + (d.sisa >= 0 ? 'emerald' : 'red') + '-700">SISA</td>' +
-            '<td class="px-3 py-3 text-right mono text-xs font-bold text-' + (d.sisa >= 0 ? 'emerald' : 'red') + '-600">' + fmtIDR(Math.abs(d.sisa)) + '</td>' +
-            '<td class="px-3 py-3 text-xs text-' + (d.sisa >= 0 ? 'emerald' : 'red') + '-500">' + (d.sisa < 0 ? 'DEFISIT' : '') + '</td>' +
-          '</tr>';
+      var sekolahHtml = buildTitikTable(rabRes.sekolah || [], 'Sekolah', true);
+      var posyanduHtml = buildTitikTable(rabRes.posyandu || [], 'Posyandu', false);
 
-          tabelHtml += '</tbody></table></div></div>';
-
-          window._lapStatCards += rhFilterBar + reportHeader + tabelHtml;
-        } else {
-          window._lapStatCards += rhFilterBar + '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 text-center"><p class="text-xs text-stone-400">Tidak ada data RAB harian untuk <strong>' + escHtml(rhTanggal) + '</strong>. Silakan pilih tanggal lain yang memiliki data produksi.</p></div>';
-        }
-      } catch(e) { console.error('RAB Harian error:', e); }
+      window['_export_rab'] = { data: exportRows, fields: ['no', 'nama', 'klasifikasi', 'jumlah', 'pagu', 'total'] };
+      window._lapData = null;
+      window._lapStatCards = rabFilterBar + rabCards + sekolahHtml + posyanduHtml;
 
     } else if (tab === 'rab-bulanan') {
       var rbBulan = lapState.rb_bulan || '';
