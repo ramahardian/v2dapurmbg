@@ -429,6 +429,12 @@ const tabColors = {
           var hariNama = d.hari || hariArr[tgl.getDay()] || '';
           var tglFormatted = tgl.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
           var menuNama = d.menu_deskripsi || '';
+          var menuChips = '';
+          if (menuNama) {
+            menuChips = menuNama.split(' + ').filter(Boolean).map(function(x) {
+              return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>' + escHtml(x) + '</span>';
+            }).join('');
+          }
 
           var reportHeader = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
             '<div class="px-5 py-4 text-center border-b border-stone-100" style="background:linear-gradient(135deg,#0e7490,#0891b2)">' +
@@ -438,7 +444,7 @@ const tabColors = {
             '</div>' +
             '<div class="px-5 py-3 bg-white border-b border-stone-100">' +
               '<div class="flex flex-wrap items-center justify-center gap-2">' +
-                (menuNama ? '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>MENU: ' + escHtml(menuNama) + '</span>' : '') +
+                (menuChips ? '<span class="inline-flex items-center gap-1 self-center"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-400">MENU</span>' + menuChips + '</span>' : '') +
                 '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-50 border border-cyan-200 text-cyan-700 text-xs font-semibold"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>HARI: ' + escHtml(hariNama) + ' ' + tglFormatted + '</span>' +
               '</div>' +
             '</div>' +
@@ -877,6 +883,12 @@ const tabColors = {
       var tglFormatted = tgl.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
       
       var menuNama = d.menu_deskripsi || '';
+      var menuChips = '';
+      if (menuNama) {
+        menuChips = menuNama.split(' + ').filter(Boolean).map(function(x) {
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>' + escHtml(x) + '</span>';
+        }).join('');
+      }
       var reportHeader = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">' +
         '<div class="px-5 py-4 text-center border-b border-stone-100" style="background:linear-gradient(135deg,#0e7490,#0891b2)">' +
           '<h1 class="text-sm font-bold text-white uppercase tracking-wider">RENCANA ANGGARAN BELANJA (RAB) BAHAN BAKU HARIAN</h1>' +
@@ -885,7 +897,7 @@ const tabColors = {
         '</div>' +
         '<div class="px-5 py-3 bg-white border-b border-stone-100">' +
           '<div class="flex flex-wrap items-center justify-center gap-2">' +
-            (menuNama ? '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>MENU: ' + escHtml(menuNama) + '</span>' : '') +
+            (menuChips ? '<span class="inline-flex items-center gap-1 self-center"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-400">MENU</span>' + menuChips + '</span>' : '') +
             '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-50 border border-cyan-200 text-cyan-700 text-xs font-semibold"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>HARI: ' + escHtml(hariNama) + ' ' + tglFormatted + '</span>' +
             (siklusInfo ? '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>SIKLUS: ' + escHtml(siklusInfo.nama) + '</span>' : '') +
           '</div>' +
@@ -2268,7 +2280,7 @@ function editSaldoAwal(current) {
       '</div>' +
       // Body
       '<div class="px-6 py-5">' +
-        '<label class="block text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-2">Saldo Awal (Rp)</label>' +
+        '<label class="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-2">Saldo Awal (Rp)</label>' +
         '<div class="relative">' +
           '<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">' +
             '<span class="text-stone-400 font-semibold text-sm">Rp</span>' +

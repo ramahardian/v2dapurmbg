@@ -375,8 +375,8 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
 function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
   var tanggal = day.header_tanggal || '';
   var hariNama = day.hari_nama || '';
-  var menuNama = (day.menu_names || []).join(' + ');
   var tglFormatted = fmtTkTanggalPanjang(tanggal, hariNama);
+  var daftarMenu = day.menu_names || [];
 
   // ── Header (hero: hari pelaksanaan + menu; judul instansi dihilangkan di total-kebutuhan) ──
   var html = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">';
@@ -396,13 +396,17 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
     html += '</div>';
   }
 
-  // Kanan: menu hari ini (pill putih)
-  if (menuNama) {
+  // Kanan: menu hari ini — chip per menu, semua terlihat & membungkus (tanpa truncate/ticker)
+  if (daftarMenu.length) {
     html += '<div class="lg:ml-auto min-w-0">';
-    html += '<div class="text-[10px] font-bold uppercase tracking-widest text-emerald-100/90 mb-1">Menu Hari Ini</div>';
-    html += '<div class="inline-flex items-center gap-2 bg-white text-emerald-700 px-3.5 py-1.5 rounded-xl text-sm font-bold shadow-sm max-w-[min(100%,26rem)]">';
-    html += '<svg class="w-4 h-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>';
-    html += '<span class="truncate">' + escHtmlTk(menuNama) + '</span>';
+    html += '<div class="text-[10px] font-bold uppercase tracking-widest text-emerald-100/90 mb-1.5">Menu Hari Ini</div>';
+    html += '<div class="flex flex-wrap gap-1.5">';
+    for (var mi = 0; mi < daftarMenu.length; mi++) {
+      html += '<span class="inline-flex items-center gap-1.5 bg-white/15 border border-white/25 text-white px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm">';
+      html += '<svg class="w-3 h-3 shrink-0 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>';
+      html += escHtmlTk(daftarMenu[mi]);
+      html += '</span>';
+    }
     html += '</div>';
     html += '</div>';
   }
