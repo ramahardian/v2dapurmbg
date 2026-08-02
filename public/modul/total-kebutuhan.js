@@ -378,13 +378,8 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
   var menuNama = (day.menu_names || []).join(' + ');
   var tglFormatted = fmtTkTanggalPanjang(tanggal, hariNama);
 
-  // ── Header ──
+  // ── Header (hanya menu + hari; judul instansi dihilangkan di total-kebutuhan) ──
   var html = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">';
-  html += '<div class="px-5 py-4 text-center border-b border-stone-100" style="background:linear-gradient(135deg,#0e7490,#0891b2)">';
-  html += '<h1 class="text-sm font-bold text-white uppercase tracking-wider">RENCANA ANGGARAN BELANJA (RAB) BAHAN BAKU HARIAN</h1>';
-  html += '<div class="text-[10px] text-cyan-100 mt-1">SPPG BOGOR TAMANSARI SUKALUYU</div>';
-  html += '<div class="text-[10px] text-cyan-100">YAYASAN SHAIMA ANAK SHOLEHA</div>';
-  html += '</div>';
   html += '<div class="px-5 py-3 bg-stone-50/80 border-b border-stone-100">';
   html += '<div class="flex flex-wrap justify-center gap-x-8 gap-y-1 text-xs">';
   if (menuNama) html += '<div><span class="font-semibold text-stone-700">MENU:</span> <span class="text-stone-600">' + escHtmlTk(menuNama) + '</span></div>';
