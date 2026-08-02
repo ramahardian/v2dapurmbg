@@ -1132,13 +1132,20 @@ function registerRabRoutes(router) {
         [t]
       );
 
-      const [budgetRows] = await db.query(
-        `SELECT periode, kategori_penerima, harga_besar, harga_kecil
-         FROM budget
-         WHERE tenant_id=?
-         ORDER BY periode DESC, id ASC`,
-        [t]
+      const [budgetCols] = await db.query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'budget'"
       );
+      const colNames = budgetCols.map(c => c.COLUMN_NAME);
+      const hasHargaBesar = colNames.includes('harga_besar');
+      const hasHargaKecil = colNames.includes('harga_kecil');
+
+      const budgetSelect =
+        'SELECT periode, kategori_penerima, harga_per_porsi' +
+        (hasHargaBesar ? ', harga_besar' : '') +
+        (hasHargaKecil ? ', harga_kecil' : '') +
+        ' FROM budget WHERE tenant_id=? ORDER BY periode DESC, id ASC';
+
+      const [budgetRows] = await db.query(budgetSelect, [t]);
 
       const byPeriode = {};
       for (const b of budgetRows) {
@@ -1152,10 +1159,9 @@ function registerRabRoutes(router) {
       const budgetByKategori = {};
       for (const b of useBudget) {
         if (!budgetByKategori[b.kategori_penerima]) {
-          budgetByKategori[b.kategori_penerima] = {
-            harga_besar: Number(b.harga_besar) || 0,
-            harga_kecil: Number(b.harga_kecil) || 0,
-          };
+          const hargaBesar = hasHargaBesar ? (Number(b.harga_besar) || 0) : (Number(b.harga_per_porsi) || 0);
+          const hargaKecil = hasHargaKecil ? (Number(b.harga_kecil) || 0) : (Number(b.harga_per_porsi) || 0);
+          budgetByKategori[b.kategori_penerima] = { harga_besar: hargaBesar, harga_kecil: hargaKecil };
         }
       }
 
