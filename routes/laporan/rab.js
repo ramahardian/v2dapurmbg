@@ -340,7 +340,16 @@ function registerRabRoutes(router) {
   router.get('/laporan/rab-sinkron', roleOps, async (req, res) => {
     try {
       const t = req.user.tenant_id;
-      const periode = req.query.periode || new Date().toISOString().slice(0, 7);
+      const requestedPeriode = req.query.periode || '';
+      let periode = requestedPeriode;
+      if (!periode) {
+        const [[{ p }]] = await db.query(
+          `SELECT MAX(periode) as p FROM budget WHERE tenant_id=? AND periode <= ?`,
+          [t, new Date().toISOString().slice(0, 7)]
+        );
+        if (p) periode = p;
+      }
+      if (!periode) periode = new Date().toISOString().slice(0, 7);
       const siklusId = req.query.siklus_id || '';
 
       let siklusInfo = null;

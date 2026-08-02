@@ -81,7 +81,7 @@ const tabColors = {
       window['_export_distribusi'] = { data: rows, fields: ['tanggal_distribusi','titik_distribusi','kategori_penerima','jumlah_porsi','status'] };
       window._lapStatCards = '';
     } else if (tab === 'rab') {
-      const filterPeriode = lapState.rab_periode || new Date().toISOString().slice(0, 7);
+      const filterPeriode = lapState.rab_periode || '';
       const filterSiklusId = lapState.rab_siklus_id || '';
 
       const [siklusList, rabRes, rabTitikRes] = await Promise.all([
@@ -90,6 +90,7 @@ const tabColors = {
         api.get('/laporan/rab-per-titik?periode=' + filterPeriode).catch(() => null),
       ]);
       const r = rabRes;
+      const effectivePeriode = r.periode || filterPeriode || new Date().toISOString().slice(0, 7);
       const rows = r.rows || [];
       const bd = r.budget || {};
       const siklusInfo = r.siklus || null;
@@ -128,7 +129,7 @@ const tabColors = {
           '<div class="flex items-center gap-2">' +
             '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>' +
             '<select id="rab-filter-periode" onchange="gantiPeriodeRab()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
-            periods.map(function(p) { return '<option value="' + p + '" ' + (filterPeriode===p?'selected':'') + '>' + p + '</option>'; }).join('') +
+            periods.map(function(p) { return '<option value="' + p + '" ' + (effectivePeriode===p?'selected':'') + '>' + p + '</option>'; }).join('') +
             '</select>' +
           '</div>' +
           '<div class="flex items-center gap-2">' +
@@ -272,7 +273,7 @@ const tabColors = {
       var biayaContent = '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
         '<div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">' +
           '<h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2"><svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Biaya Bahan Baku & Pengeluaran</h3>' +
-          '<span class="text-[10px] text-stone-400">' + filterPeriode + '</span>' +
+          '<span class="text-[10px] text-stone-400">' + effectivePeriode + '</span>' +
         '</div>' +
         '<div class="overflow-x-auto"><table class="w-full text-xs">' +
         '<thead><tr class="bg-stone-50">' +
@@ -511,7 +512,7 @@ const tabColors = {
           '<div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm">' +
             '<div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-1">Grand Total</div>' +
             '<div class="text-lg font-bold text-blue-800">' + fmtIDR(rabTitik.grand_total || 0) + '</div>' +
-            '<div class="text-[10px] text-blue-600/70">Periode ' + escHtml(rabTitik.periode || filterPeriode) + '</div>' +
+            '<div class="text-[10px] text-blue-600/70">Periode ' + escHtml(rabTitik.periode || effectivePeriode) + '</div>' +
           '</div>' +
         '</div>';
 
