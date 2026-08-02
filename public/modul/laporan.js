@@ -33,8 +33,14 @@ function getLapTabsForRole() {
 // Misal ["TK/PAUD","SD 1-3","SMP/MTs, SMA/SMK"] → "TK/PAUD +2"
 function fmtKategoriHpp(kp) {
   if (!kp) return '<span class="text-stone-400">-</span>';
-  let p;
-  try { p = JSON.parse(kp); if (!Array.isArray(p)) p = null; } catch { p = null; }
+  // Data bisa tersimpan sebagai array JSON biasa, string array, atau ter-encode ganda.
+  let p = kp;
+  let depth = 0;
+  while (typeof p === 'string' && depth < 3) {
+    try { p = JSON.parse(p); } catch { break; }
+    depth++;
+  }
+  if (!Array.isArray(p)) p = null;
   if (p && p.length > 1) {
     return '<span class="inline-flex items-center gap-1">' +
       '<span class="max-w-[110px] truncate" title="' + escHtml(p.join(', ')) + '">' + escHtml(p[0]) + '</span>' +
