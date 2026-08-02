@@ -832,7 +832,7 @@ const tabColors = {
       });
 
       // ── Filter bar ──
-      var filterBar = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">' +
+      var filterBar = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-8">' +
         '<div class="flex flex-wrap items-center gap-x-4 gap-y-2">' +
           '<div class="flex items-center gap-2">' +
             '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>' +
