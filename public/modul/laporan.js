@@ -502,10 +502,9 @@ const tabColors = {
                 '<div class="flex items-center gap-2 mb-3">' +
                   '<span class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>TOTAL KEBUTUHAN HARIAN</span>' +
                   '<span class="text-xs text-stone-400">' + rhTanggal + ' — data RAB harian belum tersedia, menampilkan kebutuhan pangan terencana</span>' +
-                '</div>' +
-                renderTkBelanjaPerHari(tkHari, tkSiswa) +
-              '</div>';
-              window._lapStatCards += rhFilterBar + tkHtml;
+                '</div>';
+              var tkRabHtml = await renderTkBelanjaPerHari(tkHari, tkSiswa);
+              window._lapStatCards += rhFilterBar + tkHtml + tkRabHtml + '</div>';
             } else {
               window._lapStatCards += rhFilterBar + '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 text-center"><p class="text-xs text-stone-400">Tidak ada data RAB harian untuk <strong>' + escHtml(rhTanggal) + '</strong>. Silakan pilih tanggal lain yang memiliki data produksi.</p></div>';
             }
