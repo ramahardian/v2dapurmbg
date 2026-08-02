@@ -27,19 +27,22 @@ function bahanKalkulatorInfo(b) {
     });
   }
   var satuan = (master && master.satuan) ? master.satuan : (b.satuan || 'g');
-  var perUnit = Number(master && master.berat_per_satuan) || Number(b.berat_per_satuan) || Number(b.berat_1_sp) || Number(master && master.berat_1_sp) || 0;
+  // Faktor konversi: nilai baris yang di-set eksplisit (>0) menang — mis. user mengisi
+  // faktor kustom di modal kalkulator; kalau baris 0/kosong, baru fallback ke master
+  // (baris dari DB selalu berisi nilai master via JOIN, jadi tidak ada konflik).
+  var perUnit = Number(b.berat_per_satuan) || Number(master && master.berat_per_satuan) || Number(b.berat_1_sp) || Number(master && master.berat_1_sp) || 0;
   // Kg/kilogram tanpa berat_per_satuan → asumsi standar 1000 g
   if (perUnit <= 0 && isKgSatuan(satuan)) perUnit = 1000;
   return { satuan: satuan, perUnit: perUnit };
 }
 
-// Satuan asli master bahan_baku (mis. Karton) untuk kalkulator.
-// Hanya ditampilkan bila faktor konversi (perUnit) tersedia — kalau tidak, aman
-// kembali ke gram (Gram ↔ Kg).
+// Satuan asli master bahan_baku (mis. Karton) untuk kalkulator. Item bersatuan unit
+// (Karton/Pcs/Botol/Ikat/Liter/dll) SELALU tampil dalam mode unit ↔ Gram — bila
+// berat_per_satuan belum ada, faktor konversi bisa diisi langsung di modal kalkulator.
 function bahanKalkulatorSatuan(b) {
   var info = bahanKalkulatorInfo(b);
   var low = String(info.satuan).toLowerCase();
-  if (low !== 'g' && low !== 'gram' && info.perUnit > 0) return info.satuan;
+  if (low !== 'g' && low !== 'gram') return info.satuan;
   return 'g';
 }
 
@@ -675,23 +678,31 @@ function openBahanKalkulator(i) {
   if (existing) existing.remove();
   var satuan = bahanKalkulatorSatuan(b);
   var porsi = Number(window._menuPorsi) || 0;
-  var perUnit = bahanKalkulatorInfo(b).perUnit || 1;
-  window._bkPerUnit = perUnit;
+  var perUnit = bahanKalkulatorInfo(b).perUnit || 0;
+  window._bkPerUnit = perUnit || 1;
   var isUnitSatuan = isSatuanUnit(satuan);
-  // Nilai yang tampil di kolom jumlah (total untuk porsi, dalam satuan tampilan)
-  var displayJumlah = Number(b.jumlah) || 0;
-  if (perUnit > 0 && isUnitSatuan) {
-    displayJumlah = displayJumlah / perUnit;
+  // b.jumlah tersimpan dalam gram per porsi
+  var baseGram = Number(b.jumlah) || 0;
+  var unitVal = '', curGram;
+  if (isUnitSatuan && perUnit > 0) {
+    var unitPerPorsi = baseGram / perUnit;
+    var totalUnit = porsi > 0 ? unitPerPorsi * porsi : unitPerPorsi;
+    unitVal = Math.round(totalUnit * 10000) / 10000;
+    curGram = totalUnit * perUnit;
+  } else {
+    curGram = baseGram * (porsi > 0 ? porsi : 1);
   }
-  var totalJumlah = porsi > 0 ? displayJumlah * porsi : displayJumlah;
-  // Konversi ke gram
-  var curGram;
-  if (satuan === 'Kg' || satuan === 'kg') curGram = totalJumlah * 1000;
-  else if (isUnitSatuan) curGram = totalJumlah * perUnit;
-  else curGram = totalJumlah;
+  var factorVal = perUnit > 0 ? perUnit : '';
 
-  var unitField = isUnitSatuan ? '<div><label class="text-xs font-medium text-stone-600">' + escHtml(satuan) + ' (1 ' + escHtml(satuan) + ' = ' + Math.round(perUnit) + ' g)</label>' +
-    '<input id="bk-unit" type="number" step="any" value="' + (Math.round((curGram / perUnit) * 10000) / 10000) + '" oninput="bkSyncUnit()" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>' : '';
+  // Kolom jumlah unit + faktor konversi yang BISA DIEDIT (untuk item yang
+  // berat_per_satuan-nya masih kosong, user tinggal isi faktor di modal).
+  var unitField = isUnitSatuan ? (
+    '<div class="space-y-2">' +
+      '<div><label class="text-xs font-medium text-stone-600">' + escHtml(satuan) + '</label>' +
+        '<input id="bk-unit" type="number" step="any" value="' + unitVal + '" oninput="bkSyncUnit()" placeholder="0" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>' +
+      '<div><label class="text-xs font-medium text-stone-600">1 ' + escHtml(satuan) + ' = <input id="bk-factor" type="number" step="any" value="' + factorVal + '" oninput="bkSyncFactor()" placeholder="mis. 11000" class="w-24 h-8 px-2 ml-1 border border-stone-200 rounded-lg text-sm mono text-right focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /> g</label></div>' +
+    '</div>'
+  ) : '';
 
   var m = document.createElement('div');
   m.id = 'bahan-kalkulator-modal';
@@ -719,16 +730,26 @@ function openBahanKalkulator(i) {
   (document.getElementById('bk-unit') || document.getElementById('bk-gram')).focus();
 }
 
+function bkGetFactor() {
+  var el = document.getElementById('bk-factor');
+  return Number(el && el.value) || 0;
+}
 function bkSyncUnit() {
   var g = document.getElementById('bk-gram');
   var k = document.getElementById('bk-kg');
   var u = document.getElementById('bk-unit');
   if (!g || !k) return;
-  var perUnit = Number(window._bkPerUnit) || 1;
+  var f = bkGetFactor() || Number(window._bkPerUnit) || 1;
   var v = Number(u && u.value) || 0;
-  var gram = v * perUnit;
+  var gram = v * f;
   g.value = gram ? Math.round(gram * 100) / 100 : '';
   k.value = gram ? Math.round((gram / 1000) * 10000) / 10000 : '';
+}
+function bkSyncFactor() {
+  // Faktor konversi diubah → hitung ulang dari jumlah unit (bila ada)
+  var u = document.getElementById('bk-unit');
+  if (u && u.value) bkSyncUnit();
+  else bkSyncGram();
 }
 function bkSyncGram() {
   var g = document.getElementById('bk-gram');
@@ -737,7 +758,10 @@ function bkSyncGram() {
   if (!g || !k) return;
   var v = Number(g.value) || 0;
   k.value = v ? Math.round((v / 1000) * 10000) / 10000 : '';
-  if (u) u.value = v ? Math.round((v / (Number(window._bkPerUnit) || 1)) * 10000) / 10000 : '';
+  if (u) {
+    var f = bkGetFactor() || Number(window._bkPerUnit) || 1;
+    u.value = v ? Math.round((v / f) * 10000) / 10000 : '';
+  }
 }
 function bkSyncKg() {
   var g = document.getElementById('bk-gram');
@@ -747,7 +771,10 @@ function bkSyncKg() {
   var v = Number(k.value) || 0;
   var gram = v * 1000;
   g.value = gram ? Math.round(gram * 100) / 100 : '';
-  if (u) u.value = gram ? Math.round((gram / (Number(window._bkPerUnit) || 1)) * 10000) / 10000 : '';
+  if (u) {
+    var f = bkGetFactor() || Number(window._bkPerUnit) || 1;
+    u.value = gram ? Math.round((gram / f) * 10000) / 10000 : '';
+  }
 }
 
 function applyBahanKalkulator(i) {
@@ -756,7 +783,8 @@ function applyBahanKalkulator(i) {
   var g = document.getElementById('bk-gram');
   var k = document.getElementById('bk-kg');
   var u = document.getElementById('bk-unit');
-  var perUnit = bahanKalkulatorInfo(b).perUnit || 1;
+  var factor = bkGetFactor();
+  var perUnit = factor || bahanKalkulatorInfo(b).perUnit || 1;
   var satuan = bahanKalkulatorSatuan(b);
   var isUnitSatuan = isSatuanUnit(satuan);
   var gram = 0;
@@ -767,11 +795,16 @@ function applyBahanKalkulator(i) {
   }
   if (gram <= 0 && k && k.value) gram = (Number(k.value) || 0) * 1000;
   if (gram <= 0) { showAlert('Isi nilai ' + (isUnitSatuan ? satuan : 'gram') + ' atau gram terlebih dahulu', 'warning'); return; }
+  // Faktor kustom dari modal disimpan ke baris agar updateBahan/renderBahanList konsisten
+  if (factor > 0) b.berat_per_satuan = factor;
   // Kembalikan ke satuan tampilan kolom jumlah (total untuk porsi), lalu serahkan ke updateBahan.
   // updateBahan memakai menuSatuanTampil (minyak = 'g'), jadi konversi ulang ke satuan itu.
+  // Pakai faktor yang SAMA dengan arah maju (variabel perUnit) — jangan resolve ulang
+  // via bahanKalkulatorInfo karena itu master-first dan akan mengabaikan override faktor
+  // yang diketik user di modal (mis. master bps=12000, user ubah jadi 15000).
   var displaySatuan = menuSatuanTampil(b);
   var displayVal;
-  if (isKgSatuan(displaySatuan)) displayVal = gram / 1000;
+  if (isKgSatuan(displaySatuan)) displayVal = gram / perUnit;
   else if (isSatuanUnit(displaySatuan)) displayVal = gram / perUnit;
   else displayVal = gram;
   var m = document.getElementById('bahan-kalkulator-modal');

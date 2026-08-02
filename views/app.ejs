@@ -30,6 +30,8 @@
     .sidebar-sub-link:hover { opacity:1; }
     .sidebar-sub-link.active { opacity:1; }
     #sidebar.collapsed .sidebar-dropdown .sidebar-sub { display:none !important; }
+    #sidebar.collapsed #sidebar-search-wrap { display:none !important; }
+    #sidebar-search-results a.active-search { background: var(--bg-sidebar-hover); opacity:1; }
     #sidebar.collapsed .sidebar-dropdown .dropdown-arrow { display:none; }
     #sidebar.collapsed .sidebar-dropdown .sidebar-sub-link { padding-left:.5rem !important; }
     #sidebar.collapsed { width: 64px; }
@@ -178,6 +180,18 @@
       <div class="sidebar-logo-wrap flex items-center gap-3 px-5 py-5 cursor-pointer" onclick="expandSidebar()" style="border-bottom:1px solid var(--border)">
         <img src="/asset/logo.png" alt="Dapur Sukaluyu" class="h-9 w-9 rounded-md shrink-0 object-contain" style="background:var(--border)" />
         <span class="sidebar-logo-text font-bold leading-tight truncate">Dapur Sukaluyu</span>
+      </div>
+      <!-- Sidebar Search -->
+      <div id="sidebar-search-wrap" class="relative px-3 pt-3 shrink-0">
+        <div class="relative">
+          <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style="opacity:.45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="sidebar-search" type="text" placeholder="Cari menu…" autocomplete="off" spellcheck="false"
+            oninput="onSidebarSearch(this.value)" onkeydown="onSidebarSearchKey(event)"
+            class="w-full h-9 pl-8 pr-8 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none"
+            style="background:var(--bg-card);border:1px solid var(--border)" />
+          <button id="sidebar-search-clear" onclick="clearSidebarSearch()" class="hidden absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 items-center justify-center rounded-full transition-opacity" style="opacity:.5" title="Bersihkan">✕</button>
+        </div>
+        <div id="sidebar-search-results" class="hidden absolute left-3 right-3 top-[calc(100%+6px)] z-50 rounded-xl overflow-hidden shadow-xl" style="background:var(--bg-card);border:1px solid var(--border);max-height:min(56vh,420px);overflow-y:auto"></div>
       </div>
       <nav id="nav" class="flex-1 overflow-y-auto py-4 px-3 space-y-0.5"></nav>
       <div style="border-top:1px solid var(--border)" class="px-4 py-3 text-sm">

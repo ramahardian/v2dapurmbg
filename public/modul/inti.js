@@ -67,50 +67,46 @@ async function init() {
   } catch { location.href = '/login'; }
 }
 
-function renderNav() {
-  const nav = document.getElementById('nav');
-  const userRole = currentUser?.role || '';
+// Hak akses item navigasi — satu sumber kebenaran, dipakai renderNav() & pencarian sidebar.
+function navItemVisible(key, userRole) {
   const isAdminOrKeuangan = userRole === 'admin' || userRole === 'keuangan';
   const isAdminOrGudang = userRole === 'admin' || userRole === 'gudang';
   const isAdminOrAhliGizi = userRole === 'admin' || userRole === 'ahli_gizi';
   const isAdminOrKeuanganOrGudang = userRole === 'admin' || userRole === 'keuangan' || userRole === 'gudang';
   const isAdminOrProduksi = userRole === 'admin' || userRole === 'produksi' || userRole === 'gudang' || userRole === 'keuangan';
+  if (key === 'laporan-siklus') return userRole === 'admin' || userRole === 'ahli_gizi';
+  if (key.startsWith('laporan-')) return isAdminOrKeuangan;
+  if (key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'perencanaan' || key === 'total-kebutuhan' || key === 'standar-sp' || key === 'sp-referensi' || key === 'perhitungan-bdd' || key === 'bdd-kalkulator' || key === 'panduan-ahli-gizi') return isAdminOrAhliGizi;
+  if (key === 'gudang') return isAdminOrGudang;
+  if (key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun') return isAdminOrKeuangan;
+  if (key === 'penerima-manfaat') return isAdminOrKeuangan;
+  if (key === 'karyawan' || key === 'absensi' || key === 'payroll' || key === 'shift' || key === 'divisi' || key === 'ijin-cuti' || key === 'hari-libur' || key === 'panduan-sdm') return isAdminOrKeuangan;
+  if (key === 'supplier') return isAdminOrKeuanganOrGudang;
+  if (key === 'pembelian') return isAdminOrKeuanganOrGudang;
+  if (key === 'penerimaan') return isAdminOrKeuanganOrGudang;
+  if (key === 'panduan-keuangan') return isAdminOrKeuangan;
+  if (key === 'produksi' || key === 'distribusi') return isAdminOrProduksi;
+  if (key === 'kelola-user') return userRole === 'admin';
+  return true;
+}
+
+function renderNav() {
+  const nav = document.getElementById('nav');
+  const userRole = currentUser?.role || '';
 
   nav.innerHTML = NAV_GROUPS.map(g => {
-    const visibleItems = g.items.filter(key => {
-      if (typeof key === 'object' && key.children) {
-        const childKeys = key.children;
-        const visibleChildren = childKeys.filter(ck => {
-          if (ck === 'laporan-siklus') return userRole === 'admin' || userRole === 'ahli_gizi';
-          if (ck.startsWith('laporan-')) return isAdminOrKeuangan;
-          return true;
-        });
-        return visibleChildren.length > 0;
-      }
-      if (key === 'menu' || key === 'hpp' || key === 'siklus' || key === 'perencanaan' || key === 'total-kebutuhan' || key === 'standar-sp' || key === 'sp-referensi' || key === 'perhitungan-bdd' || key === 'bdd-kalkulator' || key === 'panduan-ahli-gizi') return isAdminOrAhliGizi;
-      if (key === 'gudang') return isAdminOrGudang;
-      if (key === 'budgeting' || key === 'kas-bank' || key === 'bp-operasional' || key === 'daftar-akun') return isAdminOrKeuangan;
-      if (key === 'penerima-manfaat') return isAdminOrKeuangan;
-      if (key === 'karyawan' || key === 'absensi' || key === 'payroll' || key === 'shift' || key === 'divisi' || key === 'ijin-cuti' || key === 'hari-libur' || key === 'panduan-sdm') return isAdminOrKeuangan;
-      if (key === 'supplier') return isAdminOrKeuanganOrGudang;
-      if (key === 'pembelian') return isAdminOrKeuanganOrGudang;
-      if (key === 'penerimaan') return isAdminOrKeuanganOrGudang;
-      if (key === 'panduan-keuangan') return isAdminOrKeuangan;
-      if (key === 'produksi' || key === 'distribusi') return isAdminOrProduksi;
-      if (key === 'kelola-user') return userRole === 'admin';
-      return true;
-    });
+    const visibleItems = g.items.filter(key =>
+      (typeof key === 'object' && key.children)
+        ? key.children.some(ck => navItemVisible(ck, userRole))
+        : navItemVisible(key, userRole)
+    );
 
     if (visibleItems.length === 0) return '';
 
     return (g.label ? `<div class="nav-group-label px-3 pt-4 pb-1.5 text-[10px] uppercase tracking-wider font-semibold" style="opacity:.4">${g.label}</div>` : '') +
     visibleItems.map(key => {
       if (typeof key === 'object' && key.children) {
-        const visibleChildKeys = key.children.filter(ck => {
-          if (ck === 'laporan-siklus') return userRole === 'admin' || userRole === 'ahli_gizi';
-          if (ck.startsWith('laporan-')) return isAdminOrKeuangan;
-          return true;
-        });
+        const visibleChildKeys = key.children.filter(ck => navItemVisible(ck, userRole));
         const childLinks = visibleChildKeys.filter(ck => MODULES[ck]).map(ck => {
           const m = MODULES[ck];
           return `<a href="/${ck}" data-key="${ck}" class="sidebar-link sidebar-sub-link" onclick="closeSidebar()" title="${m.title}"><span class="text-base w-5 text-center shrink-0">${m.icon}</span><span class="nav-label truncate">${m.title}</span></a>`;
@@ -129,6 +125,103 @@ function renderNav() {
       return `<a href="/${key}" data-key="${key}" class="sidebar-link" onclick="closeSidebar()" title="${m.title}"><span class="text-base w-5 text-center shrink-0">${m.icon}</span><span class="nav-label truncate">${m.title}</span>${badge}</a>`;
     }).join('');
   }).join('');
+}
+
+// ===== Sidebar Search =====
+// Kumpulkan SEMUA item navigasi yang boleh diakses user (termasuk sub-item dropdown),
+// lengkap dengan konteks (grup / induk dropdown) untuk ditampilkan di hasil pencarian.
+function getSidebarNavEntries() {
+  const userRole = currentUser?.role || '';
+  const entries = [];
+  NAV_GROUPS.forEach(g => {
+    g.items.forEach(key => {
+      if (typeof key === 'object' && key.children) {
+        key.children.forEach(ck => {
+          if (!navItemVisible(ck, userRole)) return;
+          const m = MODULES[ck];
+          if (!m) return;
+          entries.push({ key: ck, title: m.title, icon: m.icon, ctx: key.label, group: g.label || '' });
+        });
+      } else {
+        if (!navItemVisible(key, userRole)) return;
+        const m = MODULES[key];
+        if (!m) return;
+        entries.push({ key, title: m.title, icon: m.icon, ctx: '', group: g.label || '' });
+      }
+    });
+  });
+  // Link akun di footer sidebar
+  const akun = MODULES['akun'];
+  if (akun) entries.push({ key: 'akun', title: akun.title, icon: akun.icon, ctx: '', group: '' });
+  return entries;
+}
+
+function onSidebarSearch(q) {
+  const wrap = document.getElementById('sidebar-search-results');
+  const clearBtn = document.getElementById('sidebar-search-clear');
+  const val = String(q || '').trim().toLowerCase();
+  if (clearBtn) clearBtn.classList.toggle('hidden', !val);
+  if (!wrap) return;
+  if (!val) { wrap.classList.add('hidden'); wrap.innerHTML = ''; return; }
+
+  const matches = getSidebarNavEntries().filter(e =>
+    e.title.toLowerCase().includes(val) ||
+    e.key.toLowerCase().includes(val) ||
+    e.ctx.toLowerCase().includes(val)
+  );
+
+  let html;
+  if (!matches.length) {
+    html = '<div class="px-4 py-6 text-center text-sm" style="opacity:.5">Tidak ada menu yang cocok</div>';
+  } else {
+    const shown = matches.slice(0, 12);
+    html = shown.map((e, idx) => `
+      <a href="/${e.key}" data-search-idx="${idx}" onclick="event.preventDefault();pickSidebarSearch('${e.key}')" class="flex items-center gap-2.5 px-3.5 py-2.5 transition-colors cursor-pointer" style="border-bottom:1px solid var(--border)" title="${e.title}">
+        <span class="text-base w-5 text-center shrink-0">${e.icon}</span>
+        <span class="min-w-0 flex-1">
+          <span class="block text-sm font-medium truncate">${e.title}</span>
+          ${(e.ctx || e.group) ? `<span class="block text-[10px] truncate" style="opacity:.5">${escHtml([e.ctx, e.group].filter(Boolean).join(' · '))}</span>` : ''}
+        </span>
+      </a>`).join('');
+    if (matches.length > 12) html += `<div class="px-3.5 py-2 text-[10px] text-center" style="opacity:.4">+${matches.length - 12} menu lainnya…</div>`;
+  }
+  wrap.innerHTML = html;
+  wrap.classList.remove('hidden');
+}
+
+function pickSidebarSearch(key) {
+  navigate(key);
+  closeSidebar();
+  clearSidebarSearch();
+}
+
+function clearSidebarSearch() {
+  const input = document.getElementById('sidebar-search');
+  if (input) input.value = '';
+  const wrap = document.getElementById('sidebar-search-results');
+  if (wrap) { wrap.classList.add('hidden'); wrap.innerHTML = ''; }
+  const clearBtn = document.getElementById('sidebar-search-clear');
+  if (clearBtn) clearBtn.classList.add('hidden');
+}
+
+function onSidebarSearchKey(e) {
+  if (e.key === 'Escape') { clearSidebarSearch(); return; }
+  const links = Array.from(document.querySelectorAll('#sidebar-search-results a[data-search-idx]'));
+  if (e.key === 'Enter') {
+    if (!links.length) return;
+    const cur = links.findIndex(l => l.classList.contains('active-search'));
+    (cur >= 0 ? links[cur] : links[0]).click();
+    return;
+  }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (!links.length) return;
+    e.preventDefault();
+    const cur = links.findIndex(l => l.classList.contains('active-search'));
+    const next = cur < 0 ? 0 : (e.key === 'ArrowDown' ? Math.min(cur + 1, links.length - 1) : Math.max(cur - 1, 0));
+    links.forEach(l => l.classList.remove('active-search'));
+    links[next].classList.add('active-search');
+    links[next].scrollIntoView({ block: 'nearest' });
+  }
 }
 
 function navigate(key) {
