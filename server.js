@@ -186,16 +186,38 @@ if (cluster.isMaster && WORKERS > 1) {
     }
   }
 
-  // Cache-buster berbasis hash konten (bukan mtime) — akurat antar environment
-  // dan tidak terpengaruh cara deploy (git pull / rsync / tar yang preserve timestamp).
-  const distVer = (() => {
-    try {
-      const buf = require('fs').readFileSync(path.join(__dirname, 'public', 'dist', 'app.min.js'));
-      return require('crypto').createHash('md5').update(buf).digest('hex').slice(0, 8);
-    } catch { return Date.now(); }
-  })();
-  app.get('/', requirePageAuth, (req, res) => res.render('app', { distVer }));
-  app.get(/^\/(?!api).*/, requirePageAuth, (req, res) => res.render('app', { distVer }));
+  // Cache-buster berbasis hash konten (MD5 8 hex). Hash dihitung ulang otomatis setiap
+  // file bundle berubah (deteksi perubahan via mtime), jadi rebuild tanpa restart server
+  // langsung terlihat oleh pengguna. statSync per-request sangat murah (<0.1ms); baca
+  // file + hash hanya dilakukan ketika mtime berubah. Catatan: karena trigger-nya mtime,
+  // deploy yang preserve timestamp (mis. rsync -t / tar) tidak memicu rehash — gunakan
+  // scripts/build.js atau pastikan mtime berubah setelah menyalin bundle.
+  const DIST_BUNDLE_PATH = path.join(__dirname, 'public', 'dist', 'app.min.js');
+  let distVerCache = { mtime: null, ver: null };
+  function getDistVer() {
+    let mtime;
+    try { mtime = require('fs').statSync(DIST_BUNDLE_PATH).mtimeMs; }
+    catch { return distVerCache.ver || Date.now(); }
+    if (distVerCache.ver === null || distVerCache.mtime !== mtime) {
+      distVerCache.mtime = mtime;
+      try {
+        const buf = require('fs').readFileSync(DIST_BUNDLE_PATH);
+        distVerCache.ver = require('crypto').createHash('md5').update(buf).digest('hex').slice(0, 8);
+      } catch { distVerCache.ver = Date.now(); }
+    }
+    return distVerCache.ver;
+  }
+  // Halaman HTML selalu di-revalidate (Cache-Control: no-cache) agar `?v=` terbaru
+  // langsung dimuat browser tanpa hard refresh; file bundle-nya sendiri tetap
+  // disajikan immutable 7 hari (aman karena URL ber-version).
+  app.get('/', requirePageAuth, (req, res) => {
+    res.set('Cache-Control', 'no-cache');
+    res.render('app', { distVer: getDistVer() });
+  });
+  app.get(/^\/(?!api).*/, requirePageAuth, (req, res) => {
+    res.set('Cache-Control', 'no-cache');
+    res.render('app', { distVer: getDistVer() });
+  });
 
   // ── MIGRASI / UTILITY ──────────────────────
   // Endpoint untuk alter ENUM absensi via browser (admin only)
