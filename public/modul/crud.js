@@ -370,11 +370,15 @@ function openForm(cfg, editing) {
       if (f.fmt === 'pct') val = val / 100;
       payload[f.k] = val;
     });
-    if (editing) await api.put(cfg.endpoint + '/' + editing.id, payload);
-    else await api.post(cfg.endpoint, payload);
-    closeModal();
-    if (cfg.onSaved) cfg.onSaved();
-    else reloadCrud(cfg);
+    try {
+      if (editing) await api.put(cfg.endpoint + '/' + editing.id, payload);
+      else await api.post(cfg.endpoint, payload);
+      closeModal();
+      if (cfg.onSaved) cfg.onSaved();
+      else reloadCrud(cfg);
+    } catch (e) {
+      showAlert('Gagal menyimpan: ' + (e.message || 'Terjadi kesalahan'), 'error');
+    }
   };
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');

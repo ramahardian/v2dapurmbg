@@ -159,7 +159,7 @@ function registerDynamicRoutes(router) {
         }
       } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Gagal menyimpan' });
+        res.status(500).json({ error: 'Gagal menyimpan: ' + (e.message || 'Terjadi kesalahan') });
       }
     });
 
@@ -210,7 +210,7 @@ function registerDynamicRoutes(router) {
         res.json(rows[0]);
       } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Gagal' });
+        res.status(500).json({ error: 'Gagal: ' + (e.message || 'Terjadi kesalahan') });
       }
     });
 
