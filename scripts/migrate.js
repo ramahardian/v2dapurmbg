@@ -542,13 +542,22 @@ async function runMigration() {
   } catch (e) { log('  (skip perencanaan_override): ' + e.message); }
 
   // Budget: porsi_besar, porsi_kecil, harga_besar, harga_kecil
+  // Cek per kolom (bukan hanya porsi_besar) agar migrasi parsial — mis. kolom
+  // porsi_besar/porsi_kecil sudah ada tapi harga_besar/harga_kecil belum —
+  // tetap terdeteksi dan kolom yang kurang langsung ditambahkan.
   try {
-    const [pb] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'budget' AND COLUMN_NAME = 'porsi_besar'");
-    if (!pb.length) {
-      await q("ALTER TABLE budget ADD COLUMN porsi_besar INT DEFAULT 0 AFTER kategori_penerima, ADD COLUMN porsi_kecil INT DEFAULT 0 AFTER porsi_besar, ADD COLUMN harga_besar DECIMAL(15,2) DEFAULT 0 AFTER harga_per_porsi, ADD COLUMN harga_kecil DECIMAL(15,2) DEFAULT 0 AFTER harga_besar");
-      log('✓ Migrasi budget: tambah kolom porsi_besar, porsi_kecil, harga_besar, harga_kecil');
+    const [budgetCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'budget' AND COLUMN_NAME IN ('porsi_besar','porsi_kecil','harga_besar','harga_kecil')");
+    const existingCols = new Set(budgetCols.map(c => c.COLUMN_NAME));
+    const budgetAdds = [];
+    if (!existingCols.has('porsi_besar')) budgetAdds.push('ADD COLUMN porsi_besar INT DEFAULT 0 AFTER kategori_penerima');
+    if (!existingCols.has('porsi_kecil')) budgetAdds.push('ADD COLUMN porsi_kecil INT DEFAULT 0 AFTER porsi_besar');
+    if (!existingCols.has('harga_besar')) budgetAdds.push('ADD COLUMN harga_besar DECIMAL(15,2) DEFAULT 0 AFTER harga_per_porsi');
+    if (!existingCols.has('harga_kecil')) budgetAdds.push('ADD COLUMN harga_kecil DECIMAL(15,2) DEFAULT 0 AFTER harga_besar');
+    if (budgetAdds.length) {
+      await q('ALTER TABLE budget ' + budgetAdds.join(', '));
+      log('✓ Migrasi budget: tambah kolom ' + budgetAdds.map(a => a.replace('ADD COLUMN ', '').split(' ')[0]).join(', '));
     }
-  } catch (e) { log('  (skip migrasi porsi_besar/harga_kecil budget)'); }
+  } catch (e) { log('  (skip migrasi porsi_besar/harga_kecil budget): ' + e.message); }
 
   // Soft-delete untuk notifikasi (deleted_by_pengirim / deleted_by_penerima)
   try {

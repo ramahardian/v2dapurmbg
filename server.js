@@ -1056,10 +1056,17 @@ CREATE TABLE menu_bahan (
   // Endpoint migrasi: budget → tambah porsi_besar, porsi_kecil, harga_besar, harga_kecil
   app.get('/api/migrate/budget-porsi-besar-kecil', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-      const [pb] = await db.query(
-        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'budget' AND COLUMN_NAME = 'porsi_besar'"
+      // Cek per kolom (bukan hanya porsi_besar) agar migrasi parsial tetap terdeteksi
+      const [budgetCols] = await db.query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'budget' AND COLUMN_NAME IN ('porsi_besar','porsi_kecil','harga_besar','harga_kecil')"
       );
-      if (pb.length) {
+      const existingCols = new Set(budgetCols.map(c => c.COLUMN_NAME));
+      const budgetAdds = [];
+      if (!existingCols.has('porsi_besar')) budgetAdds.push('ADD COLUMN porsi_besar INT DEFAULT 0 AFTER kategori_penerima');
+      if (!existingCols.has('porsi_kecil')) budgetAdds.push('ADD COLUMN porsi_kecil INT DEFAULT 0 AFTER porsi_besar');
+      if (!existingCols.has('harga_besar')) budgetAdds.push('ADD COLUMN harga_besar DECIMAL(15,2) DEFAULT 0 AFTER harga_per_porsi');
+      if (!existingCols.has('harga_kecil')) budgetAdds.push('ADD COLUMN harga_kecil DECIMAL(15,2) DEFAULT 0 AFTER harga_besar');
+      if (!budgetAdds.length) {
         return res.send(`
           <div style="font-family:sans-serif;padding:2rem;text-align:center;background:#f5f5f4;min-height:100vh">
             <h2 style="color:#16a34a">✅ Kolom sudah ada</h2>
@@ -1067,11 +1074,11 @@ CREATE TABLE menu_bahan (
             <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a>
           </div>`);
       }
-      await db.query("ALTER TABLE budget ADD COLUMN porsi_besar INT DEFAULT 0 AFTER kategori_penerima, ADD COLUMN porsi_kecil INT DEFAULT 0 AFTER porsi_besar, ADD COLUMN harga_besar DECIMAL(15,2) DEFAULT 0 AFTER harga_per_porsi, ADD COLUMN harga_kecil DECIMAL(15,2) DEFAULT 0 AFTER harga_besar");
+      await db.query('ALTER TABLE budget ' + budgetAdds.join(', '));
       res.send(`
         <div style="font-family:sans-serif;padding:2rem;text-align:center;background:#f5f5f4;min-height:100vh">
           <h2 style="color:#16a34a">✅ ALTER TABLE BERHASIL!</h2>
-          <p style="color:#6b7280;margin-top:0.5rem">Kolom <code>porsi_besar</code>, <code>porsi_kecil</code>, <code>harga_besar</code>, <code>harga_kecil</code> berhasil ditambahkan ke tabel <code>budget</code>.</p>
+          <p style="color:#6b7280;margin-top:0.5rem">Kolom <code>${budgetAdds.map(a => a.replace('ADD COLUMN ', '').split(' ')[0]).join('</code>, <code>')}</code> berhasil ditambahkan ke tabel <code>budget</code>.</p>
           <p style="color:#6b7280;margin-top:0.5rem;font-size:0.875rem"><code>jumlah_penerima</code> otomatis = porsi_besar + porsi_kecil</p>
           <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali ke Dashboard</a>
         </div>`);
