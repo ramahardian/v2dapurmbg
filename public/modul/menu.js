@@ -2,6 +2,14 @@
 let menuState = { page: 1, limit: 10, search: '', total: 0, totalPages: 1 };
 let menuViewMode = 'list'; // 'list' | 'siklus'
 
+// Satuan tampilan/perhitungan di halaman /menu: bahan kategori Minyak selalu
+// diperlakukan dalam gram (master bahan_baku tetap memakai satuan aslinya,
+// mis. Karton — hanya perhitungan di /menu yang memakai gram).
+function menuSatuanTampil(b) {
+  if (b && String(b.kategori_sp || '').toLowerCase() === 'minyak') return 'g';
+  return (b && b.satuan) || 'g';
+}
+
 async function ensureBahanBakuLoaded() {
   if (window._bahanBaku) return;
   const [bahan, spRef] = await Promise.all([
@@ -482,7 +490,7 @@ async function openMenuForm(editing) {
   window._menuKategoriPenerima = null; // reset kategori dari siklus
   var badgeEl = document.getElementById('m-kategori-badge');
   if (badgeEl) badgeEl.remove();
-  window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: b.satuan || 'g', kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, keterangan: b.keterangan || '' }));
+  window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: menuSatuanTampil(b), kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, keterangan: b.keterangan || '' }));
   // Biarkan nilai tersimpan dari DB — user bisa klik "↺ Reset ke SP" jika ingin reset
   var savedPorsi = Number(m.jumlah_porsi) || 0;
   window._menuPorsi = savedPorsi;
@@ -580,11 +588,12 @@ function updateBahan(i, k, v) {
     var b = window._menuBahan[i];
     if (!b) return;
     var porsi = Number(window._menuPorsi) || 1;
+    var satuan = menuSatuanTampil(b);
     var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
     // Input shows total when porsi>0; convert back to grams per-porsi for storage
     var valPerPorsi = Number(v) / porsi;
     var newJumlah;
-    if (perUnit > 0 && (b.satuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(b.satuan))) {
+    if (perUnit > 0 && (satuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(satuan))) {
       newJumlah = valPerPorsi * perUnit;
     } else {
       newJumlah = valPerPorsi;
@@ -593,8 +602,8 @@ function updateBahan(i, k, v) {
     var sp = window._spRefMap && window._spRefMap[b.nama];
     var defaultGram = (sp ? Number(sp.berat_bersih) : 0) || Number(b.berat_1_sp) || 0;
     if (defaultGram > 0 && newJumlah > defaultGram * 10) {
-      var spDisplay = defaultGram / perUnit;
-      showConfirm('Nilai ' + v + ' ' + b.satuan + ' jauh dari standar SP (' + Math.round(spDisplay * 100) / 100 + ' ' + b.satuan + '). Lanjutkan?', 'Lanjutkan', 'Batalkan', '', 'question').then(function(ok) {
+      var spDisplay = satuan === 'g' ? defaultGram : (defaultGram / perUnit);
+      showConfirm('Nilai ' + v + ' ' + satuan + ' jauh dari standar SP (' + Math.round(spDisplay * 100) / 100 + ' ' + satuan + '). Lanjutkan?', 'Lanjutkan', 'Batalkan', '', 'question').then(function(ok) {
         if (ok) {
           b.jumlah = newJumlah;
           delete b._autoJumlah;
@@ -619,7 +628,7 @@ function openBahanKalkulator(i) {
   if (!b) return;
   var existing = document.getElementById('bahan-kalkulator-modal');
   if (existing) existing.remove();
-  var satuan = b.satuan || 'g';
+  var satuan = menuSatuanTampil(b);
   var porsi = Number(window._menuPorsi) || 0;
   var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
   // Nilai yang tampil di kolom jumlah (total untuk porsi, dalam satuan tampilan)
@@ -684,7 +693,7 @@ function applyBahanKalkulator(i) {
   if (gram <= 0 && kg <= 0) { showAlert('Isi nilai gram atau kg terlebih dahulu', 'warning'); return; }
   if (gram <= 0 && kg > 0) gram = kg * 1000;
   // Kembalikan ke satuan tampilan kolom jumlah (total untuk porsi), lalu serahkan ke updateBahan
-  var satuan = b.satuan || 'g';
+  var satuan = menuSatuanTampil(b);
   var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
   var displayVal;
   if (satuan.toLowerCase() === 'kg') displayVal = gram / 1000;
@@ -715,7 +724,7 @@ function renderBahanList() {
   var porsi = Number(window._menuPorsi) || 0;
   document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
     var displayNama = b.nama || '';
-    var displaySatuan = b.satuan || 'g';
+    var displaySatuan = menuSatuanTampil(b);
       var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
       var displayJumlah = b.jumlah || 0;
       if (perUnit > 0 && (displaySatuan === 'Kg' || ['Pcs','Butir','Botol','Ikat','Renceng','Karton'].includes(displaySatuan))) {
@@ -778,13 +787,13 @@ function onBahanSearch(i, el) {
     if (!seen.has(r.nama.toLowerCase())) {
       seen.add(r.nama.toLowerCase());
       var bbSat = (window._bahanBaku || []).find(function(bb) { return bb.nama && bb.nama.toLowerCase() === r.nama.toLowerCase(); });
-      merged.push({ sumber: 'sp', nama: r.nama, kategori: r.kategori || '', berat: r.berat_bersih, satuan: bbSat ? bbSat.satuan : 'g', berat_per_satuan: bbSat ? Number(bbSat.berat_per_satuan) : 0, nutrisi: (r.energi ? r.energi + ' kkal' : '') + (r.protein ? ' · P' + r.protein + 'g' : '') + (r.karbohidrat ? ' · KH' + r.karbohidrat + 'g' : '') });
+      merged.push({ sumber: 'sp', nama: r.nama, kategori: r.kategori || '', berat: r.berat_bersih, satuan: menuSatuanTampil({ kategori_sp: (r.kategori || '').toLowerCase(), satuan: bbSat ? bbSat.satuan : 'g' }), berat_per_satuan: bbSat ? Number(bbSat.berat_per_satuan) : 0, nutrisi: (r.energi ? r.energi + ' kkal' : '') + (r.protein ? ' · P' + r.protein + 'g' : '') + (r.karbohidrat ? ' · KH' + r.karbohidrat + 'g' : '') });
     }
   }
   for (var b of bbMatches) {
     if (!seen.has(b.nama.toLowerCase())) {
       seen.add(b.nama.toLowerCase());
-      merged.push({ sumber: 'bb', nama: b.nama, kategori: b.kategori_sp || '', berat: b.berat_1_sp, satuan: b.satuan || 'g', berat_per_satuan: Number(b.berat_per_satuan) || 0, nutrisi: (b.kalori ? b.kalori + ' kkal' : '') + (b.protein ? ' · P' + b.protein + 'g' : '') + (b.karbohidrat ? ' · KH' + b.karbohidrat + 'g' : '') });
+      merged.push({ sumber: 'bb', nama: b.nama, kategori: b.kategori_sp || '', berat: b.berat_1_sp, satuan: menuSatuanTampil(b), berat_per_satuan: Number(b.berat_per_satuan) || 0, nutrisi: (b.kalori ? b.kalori + ' kkal' : '') + (b.protein ? ' · P' + b.protein + 'g' : '') + (b.karbohidrat ? ' · KH' + b.karbohidrat + 'g' : '') });
     }
   }
   if (!merged.length) { dropdown.classList.add('hidden'); return; }
@@ -844,7 +853,7 @@ async function selectBahan(i, nama) {
     window._menuBahan[i].bahan_baku_id = bb ? bb.id : '';
     window._menuBahan[i].nama = nama;
     window._menuBahan[i].berat_per_satuan = Number(bb ? bb.berat_per_satuan : 0) || berat1Sp;
-    window._menuBahan[i].satuan = bb ? (bb.satuan || 'g') : 'g';
+    window._menuBahan[i].satuan = menuSatuanTampil({ kategori_sp: kat, satuan: bb ? (bb.satuan || 'g') : 'g' });
     window._menuBahan[i].kategori_sp = kat;
     window._menuBahan[i].berat_1_sp = berat1Sp;
     window._menuBahan[i].persen_bdd = Math.round(ref.bdd_persen * 100);
@@ -864,7 +873,7 @@ async function selectBahan(i, nama) {
     window._menuBahan[i].bahan_baku_id = bb.id || '';
     window._menuBahan[i].nama = nama;
     window._menuBahan[i].berat_per_satuan = Number(bb.berat_per_satuan) || 0;
-    window._menuBahan[i].satuan = bb.satuan || 'g';
+    window._menuBahan[i].satuan = menuSatuanTampil({ kategori_sp: kat, satuan: bb.satuan || 'g' });
     window._menuBahan[i].kategori_sp = kat;
     window._menuBahan[i].berat_1_sp = berat1Sp;
     window._menuBahan[i].persen_bdd = Number(bb.persen_bdd || 100);
