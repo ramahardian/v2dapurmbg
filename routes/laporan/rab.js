@@ -1168,8 +1168,8 @@ function registerRabRoutes(router) {
       const budgetByKategori = {};
       for (const b of useBudget) {
         if (!budgetByKategori[b.kategori_penerima]) {
-          const hargaBesar = hasHargaBesar ? (Number(b.harga_besar) || 0) : (Number(b.harga_per_porsi) || 0);
-          const hargaKecil = hasHargaKecil ? (Number(b.harga_kecil) || 0) : (Number(b.harga_per_porsi) || 0);
+          const hargaBesar = hasHargaBesar ? (Number(b.harga_besar) || Number(b.harga_per_porsi) || 0) : (Number(b.harga_per_porsi) || 0);
+          const hargaKecil = hasHargaKecil ? (Number(b.harga_kecil) || Number(b.harga_per_porsi) || 0) : (Number(b.harga_per_porsi) || 0);
           budgetByKategori[b.kategori_penerima] = { harga_besar: hargaBesar, harga_kecil: hargaKecil };
         }
       }
