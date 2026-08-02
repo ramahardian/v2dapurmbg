@@ -680,6 +680,7 @@ function openBahanKalkulator(i) {
   var porsi = Number(window._menuPorsi) || 0;
   var perUnit = bahanKalkulatorInfo(b).perUnit || 0;
   window._bkPerUnit = perUnit || 1;
+  window._bkLastInput = ''; // reset pelacakan kolom terakhir diedit
   var isUnitSatuan = isSatuanUnit(satuan);
   // b.jumlah tersimpan dalam gram per porsi
   var baseGram = Number(b.jumlah) || 0;
@@ -734,6 +735,8 @@ function bkGetFactor() {
   var el = document.getElementById('bk-factor');
   return Number(el && el.value) || 0;
 }
+// Kolom terakhir yang diedit user di modal — sumber kebenaran saat faktor berubah.
+function bkLastInput() { return window._bkLastInput || ''; }
 function bkSyncUnit() {
   var g = document.getElementById('bk-gram');
   var k = document.getElementById('bk-kg');
@@ -744,11 +747,13 @@ function bkSyncUnit() {
   var gram = v * f;
   g.value = gram ? Math.round(gram * 100) / 100 : '';
   k.value = gram ? Math.round((gram / 1000) * 10000) / 10000 : '';
+  window._bkLastInput = 'unit';
 }
 function bkSyncFactor() {
-  // Faktor konversi diubah → hitung ulang dari jumlah unit (bila ada)
-  var u = document.getElementById('bk-unit');
-  if (u && u.value) bkSyncUnit();
+  // Faktor konversi diubah → hitung ulang dari kolom yang TERAKHIR diedit user
+  // (unit, atau gram/kg). Ini mencegah kesalahan saat user mengetik gram dulu
+  // lalu mengisi faktor: gram tetap jadi acuan, bukan ikut dikalikan faktor.
+  if (bkLastInput() === 'unit') bkSyncUnit();
   else bkSyncGram();
 }
 function bkSyncGram() {
@@ -759,9 +764,17 @@ function bkSyncGram() {
   var v = Number(g.value) || 0;
   k.value = v ? Math.round((v / 1000) * 10000) / 10000 : '';
   if (u) {
-    var f = bkGetFactor() || Number(window._bkPerUnit) || 1;
-    u.value = v ? Math.round((v / f) * 10000) / 10000 : '';
+    var f = bkGetFactor();
+    if (f > 0) {
+      // Faktor sudah ada → konversi gram ke unit
+      u.value = v ? Math.round((v / f) * 10000) / 10000 : '';
+    } else {
+      // Faktor belum diisi → unit TIDAK bisa dihitung; biarkan kosong agar
+      // user tidak salah mengira angka palsu (unit=gram) sebagai hasil benar.
+      u.value = '';
+    }
   }
+  window._bkLastInput = 'gram';
 }
 function bkSyncKg() {
   var g = document.getElementById('bk-gram');
@@ -772,9 +785,14 @@ function bkSyncKg() {
   var gram = v * 1000;
   g.value = gram ? Math.round(gram * 100) / 100 : '';
   if (u) {
-    var f = bkGetFactor() || Number(window._bkPerUnit) || 1;
-    u.value = gram ? Math.round((gram / f) * 10000) / 10000 : '';
+    var f = bkGetFactor();
+    if (f > 0) {
+      u.value = gram ? Math.round((gram / f) * 10000) / 10000 : '';
+    } else {
+      u.value = '';
+    }
   }
+  window._bkLastInput = 'kg';
 }
 
 function applyBahanKalkulator(i) {
