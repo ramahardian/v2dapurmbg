@@ -700,6 +700,7 @@ function openBahanKalkulator(i) {
   // berat_per_satuan-nya masih kosong, user tinggal isi faktor di modal).
   // Ada juga seksi "komposisi kemasan" (mis. 1 Karton = 12 × 1 L atau 6 × 2 L)
   // yang otomatis menghitung faktor gram dari jumlah isi × volume × berat jenis.
+  var compUnitDefault = bkCompUnitDefault(satuan);
   var compField = isUnitSatuan ? (
     '<div class="pt-2.5 mt-2 border-t border-stone-100">' +
       '<div class="text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-1.5">Atau isi komposisi kemasan</div>' +
@@ -707,10 +708,14 @@ function openBahanKalkulator(i) {
         '<span class="text-xs text-stone-500">1 ' + escHtml(satuan) + ' =</span>' +
         '<input id="bk-comp-count" type="number" min="1" step="1" placeholder="12" oninput="bkSyncComp()" title="Jumlah isi per ' + escHtml(satuan) + '" class="w-14 h-8 px-2 border border-stone-200 rounded-lg text-sm mono text-right focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
         '<span class="text-stone-400">×</span>' +
-        '<input id="bk-comp-size" type="number" min="0" step="any" placeholder="1" oninput="bkSyncComp()" title="Volume isi per kemasan" class="w-14 h-8 px-2 border border-stone-200 rounded-lg text-sm mono text-right focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
-        '<select id="bk-comp-unit" onchange="bkSyncComp()" title="Satuan volume" class="h-8 px-1.5 border border-stone-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"><option value="L">L</option><option value="ml">ml</option></select>' +
+        '<input id="bk-comp-size" type="number" min="0" step="any" placeholder="1" oninput="bkSyncComp()" title="Isi per kemasan (volume L/ml atau berat g)" class="w-14 h-8 px-2 border border-stone-200 rounded-lg text-sm mono text-right focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />' +
+        '<select id="bk-comp-unit" onchange="bkSyncComp()" title="Satuan isi: L/ml = volume, g = berat langsung" class="h-8 px-1.5 border border-stone-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">' +
+          '<option value="L"' + (compUnitDefault === 'g' ? '' : ' selected') + '>L</option>' +
+          '<option value="ml">ml</option>' +
+          '<option value="g"' + (compUnitDefault === 'g' ? ' selected' : '') + '>g</option>' +
+        '</select>' +
         '<span class="text-stone-300 mx-0.5">·</span>' +
-        '<label class="text-xs text-stone-500 flex items-center gap-1">Berat jenis <input id="bk-density" type="number" min="0" step="any" value="1000" oninput="bkSyncComp()" title="Gram per liter (minyak goreng ± 917 g/L)" class="w-20 h-8 px-2 border border-stone-200 rounded-lg text-sm mono text-right focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /> g/L</label>' +
+        '<span id="bk-density-wrap"' + (compUnitDefault === 'g' ? ' class="hidden"' : '') + '><label class="text-xs text-stone-500 flex items-center gap-1">Berat jenis <input id="bk-density" type="number" min="0" step="any" value="1000" oninput="bkSyncComp()" title="Gram per liter (minyak goreng ± 917 g/L)" class="w-20 h-8 px-2 border border-stone-200 rounded-lg text-sm mono text-right focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /> g/L</label></span>' +
       '</div>' +
       '<div id="bk-comp-hint" class="text-xs text-stone-400 mt-1.5"></div>' +
     '</div>'
@@ -834,6 +839,27 @@ function bkCompLiter(comp) {
   if (comp.unit === 'ml') sz = sz / 1000;
   return comp.count * sz;
 }
+// Satuan isi default komposisi: item renceng/sachet (isi per kemasan berupa berat)
+// langsung memakai gram — sesuai contoh Ladaku 1 renceng = 10 sachet × 8 g.
+function bkCompUnitDefault(satuan) {
+  // Hanya satuan isi-per-kemasan yang jelas berupa berat (renceng/sachet/bungkus)
+  // yang default-nya gram; karton/dus/botol umumnya volume (L) — bisa diganti manual.
+  return /renceng|sachet|bks|bungkus|paket|pack|packet/i.test(satuan || '') ? 'g' : 'L';
+}
+// Satuan isi berupa berat langsung (gram)? Mis. renceng Ladaku = 10 sachet × 8 g.
+function bkCompIsGram(comp) {
+  return String(comp.unit || '').toLowerCase() === 'g';
+}
+// Gram per satuan dari komposisi kemasan.
+// - unit volume (L/ml): jumlah × isi × berat jenis (mis. 1 Karton = 12 × 1 L, BJ 917)
+// - unit gram (g): jumlah × isi langsung — tanpa berat jenis (mis. 1 Renceng = 10 × 8 g = 80 g)
+function bkCompGram(comp) {
+  if (comp.count <= 0 || comp.size <= 0) return 0;
+  if (bkCompIsGram(comp)) return Math.round(comp.count * comp.size * 100) / 100;
+  if (comp.density <= 0) return 0;
+  var liter = bkCompLiter(comp);
+  return Math.round(liter * comp.density * 100) / 100;
+}
 // Komposisi kemasan diubah → hitung ulang faktor (g per satuan) dan sinkronkan
 // kolom unit/gram/kg berdasar kolom yang terakhir diedit (sama seperti bkSyncFactor).
 function bkSyncComp() {
@@ -841,9 +867,12 @@ function bkSyncComp() {
   if (!f) return;
   var comp = bkCompData();
   var hint = document.getElementById('bk-comp-hint');
-  if (comp.count > 0 && comp.size > 0 && comp.density > 0) {
-    var liter = bkCompLiter(comp);
-    var gram = Math.round(liter * comp.density * 100) / 100;
+  var isGram = bkCompIsGram(comp);
+  // Berat jenis hanya relevan untuk satuan volume (L/ml) — sembunyikan saat gram.
+  var dw = document.getElementById('bk-density-wrap');
+  if (dw) dw.classList.toggle('hidden', isGram);
+  var gram = bkCompGram(comp);
+  if (gram > 0) {
     f.value = gram;
     // Alur pre-filled: modal terbuka dengan kolom unit sudah terisi (mis. 5 Karton
     // dari baris) tapi user BELUM mengetik kolom mana pun → jadikan unit sebagai
@@ -852,7 +881,15 @@ function bkSyncComp() {
     // terlebih dahulu, edit-nya tetap dihormati sebagai acuan.
     var u = document.getElementById('bk-unit');
     if (!bkLastInput() && u && Number(u.value) > 0) window._bkLastInput = 'unit';
-    if (hint) hint.innerHTML = '≈ ' + comp.count + ' × ' + comp.size + ' ' + comp.unit + ' = <b>' + (Math.round(liter * 10000) / 10000) + ' L</b> → <b>' + gram + ' g</b> per ' + escHtml(window._bkSatuan || 'satuan');
+    if (hint) {
+      if (isGram) {
+        // mis. 1 Renceng = 10 × 8 g → 80 g per Renceng
+        hint.innerHTML = '≈ ' + comp.count + ' × ' + comp.size + ' g = <b>' + gram + ' g</b> per ' + escHtml(window._bkSatuan || 'satuan');
+      } else {
+        var liter = bkCompLiter(comp);
+        hint.innerHTML = '≈ ' + comp.count + ' × ' + comp.size + ' ' + comp.unit + ' = <b>' + (Math.round(liter * 10000) / 10000) + ' L</b> → <b>' + gram + ' g</b> per ' + escHtml(window._bkSatuan || 'satuan');
+      }
+    }
     bkSyncFactor();
   } else if (hint) {
     hint.innerHTML = '';
