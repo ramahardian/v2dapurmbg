@@ -490,7 +490,29 @@ const tabColors = {
 
           window._lapStatCards += rhFilterBar + reportHeader + tabelHtml;
         } else {
-          window._lapStatCards += rhFilterBar + '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 text-center"><p class="text-xs text-stone-400">Tidak ada data RAB harian untuk <strong>' + escHtml(rhTanggal) + '</strong>. Silakan pilih tanggal lain yang memiliki data produksi.</p></div>';
+          // ── Fallback: tampilkan Total Kebutuhan Harian (seperti halaman /total-kebutuhan) ──
+          try {
+            var tkRes = await api.get('/siklus/laporan/perencanaan?tanggal_mulai=' + rhTanggal + '&tanggal_selesai=' + rhTanggal + (filterSiklusId ? '&siklus_id=' + filterSiklusId : ''));
+            var tkHari = (tkRes && Array.isArray(tkRes.hari)) ? tkRes.hari : [];
+            var tkAda = tkHari.length && tkHari[0].bahan && tkHari[0].bahan.length;
+            if (tkAda) {
+              var tkSiswa = 0;
+              if (tkRes.pm_map) { for (var tkK in tkRes.pm_map) tkSiswa += Number(tkRes.pm_map[tkK]) || 0; }
+              var tkHtml = '<div class="mt-4">' +
+                '<div class="flex items-center gap-2 mb-3">' +
+                  '<span class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>TOTAL KEBUTUHAN HARIAN</span>' +
+                  '<span class="text-xs text-stone-400">' + rhTanggal + ' — data RAB harian belum tersedia, menampilkan kebutuhan pangan terencana</span>' +
+                '</div>' +
+                renderTkBelanjaPerHari(tkHari, tkSiswa) +
+              '</div>';
+              window._lapStatCards += rhFilterBar + tkHtml;
+            } else {
+              window._lapStatCards += rhFilterBar + '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 text-center"><p class="text-xs text-stone-400">Tidak ada data RAB harian untuk <strong>' + escHtml(rhTanggal) + '</strong>. Silakan pilih tanggal lain yang memiliki data produksi.</p></div>';
+            }
+          } catch(tkErr) {
+            console.error('RAB Harian fallback error:', tkErr);
+            window._lapStatCards += rhFilterBar + '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 text-center"><p class="text-xs text-stone-400">Tidak ada data RAB harian untuk <strong>' + escHtml(rhTanggal) + '</strong>. Silakan pilih tanggal lain yang memiliki data produksi.</p></div>';
+          }
         }
       } catch(e) { console.error('RAB Harian error:', e); }
 
