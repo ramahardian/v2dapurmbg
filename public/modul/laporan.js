@@ -498,7 +498,7 @@ const tabColors = {
       var exportRows = [];
       var rabTitik = rabTitikRes;
       if (rabTitik && Array.isArray(rabTitik.sekolah)) {
-        var rabCards = '<div class="grid grid-cols-2 lg:grid-cols-3 gap-3">' +
+        var rabCards = '<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-8">' +
           '<div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm">' +
             '<div class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 mb-1">Total Sekolah</div>' +
             '<div class="text-lg font-bold text-emerald-800">' + fmtIDR(rabTitik.total_sekolah || 0) + '</div>' +
