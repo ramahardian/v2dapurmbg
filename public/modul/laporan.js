@@ -29,6 +29,28 @@ function getLapTabsForRole() {
   return LAP_TABS;
 }
 
+// Format kategori penerima: tampilkan kategori pertama + badge "+N" jika lebih dari satu.
+// Misal ["TK/PAUD","SD 1-3","SMP/MTs, SMA/SMK"] → "TK/PAUD +2"
+function fmtKategoriHpp(kp) {
+  if (!kp) return '<span class="text-stone-400">-</span>';
+  // Data bisa tersimpan sebagai array JSON biasa, string array, atau ter-encode ganda.
+  let p = kp;
+  let depth = 0;
+  while (typeof p === 'string' && depth < 3) {
+    try { p = JSON.parse(p); } catch { break; }
+    depth++;
+  }
+  if (!Array.isArray(p)) p = null;
+  if (p && p.length > 1) {
+    return '<span class="inline-flex items-center gap-1">' +
+      '<span class="max-w-[110px] truncate" title="' + escHtml(p.join(', ')) + '">' + escHtml(p[0]) + '</span>' +
+      '<span class="bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none shrink-0">+' + (p.length - 1) + '</span>' +
+      '</span>';
+  }
+  const v = p && p.length === 1 ? p[0] : kp;
+  return escHtml(v);
+}
+
 async function showLap(tab) {
   const tabs = getLapTabsForRole();
   if (!tabs.includes(tab)) tab = tabs[0];
@@ -1637,15 +1659,16 @@ const tabColors = {
       const detailBahan = r.detail_bahan || {};
 
       window._lapData = { tab: 'hpp', rows,
-        headers: ['Menu','Jumlah Bahan','Total HPP'],
-        fields: ['menu_nama','jumlah_bahan','total_hpp'],
+        headers: ['Menu','Kategori','Jumlah Bahan','Total HPP'],
+        fields: ['menu_nama','kategori_penerima','jumlah_bahan','total_hpp'],
         fmt: rows.map(m => [
           escHtml(m.menu_nama),
+          m.kategori_penerima || '-',
           fmtNum(m.jumlah_bahan) + ' bahan',
           fmtIDR(m.total_hpp),
         ])
       };
-      window['_export_hpp'] = { data: rows, fields: ['menu_nama','jumlah_bahan','total_hpp'] };
+      window['_export_hpp'] = { data: rows, fields: ['menu_nama','kategori_penerima','jumlah_bahan','total_hpp'] };
       window._lapData = null;
 
       // Build stat cards
@@ -1661,6 +1684,7 @@ const tabColors = {
       var hppTable = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm">' +
         '<thead class="bg-stone-50"><tr>' +
         '<th class="text-left px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Menu</th>' +
+        '<th class="text-left px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Kategori</th>' +
         '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Bahan</th>' +
         '<th class="text-right px-3 sm:px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider">Total HPP</th>' +
         '</tr></thead><tbody>';
@@ -1672,20 +1696,22 @@ const tabColors = {
           var detailHtml = bahanList.map(function(b) {
             return '<tr class="bg-stone-50/50">' +
               '<td class="px-6 py-1.5 text-[11px] text-stone-500">↳ ' + escHtml(b.bahan_nama) + '</td>' +
+              '<td class="px-2 py-1.5 text-[11px] text-stone-500"></td>' +
               '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500">' + fmtNum(b.jumlah) + ' ' + (b.satuan||'') + '</td>' +
               '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500 mono">@' + fmtIDR(b.harga_satuan) + '</td>' +
               '<td class="px-3 py-1.5 text-[11px] text-right text-stone-500 mono">' + fmtIDR(b.subtotal) + '</td>' +
               '</tr>';
           }).join('');
           detailRow = '<tr class="detail-hpp-' + m.menu_id + '" style="display:none">' +
-            '<td colspan="3" class="p-0"><div class="overflow-hidden"><table class="w-full text-xs">' +
-            '<thead><tr class="bg-stone-100"><th class="px-6 py-1.5 text-[10px] font-medium text-left">Bahan Baku</th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Jumlah</th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Harga</th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Subtotal</th></tr></thead><tbody>' +
+            '<td colspan="5" class="p-0"><div class="overflow-hidden"><table class="w-full text-xs">' +
+            '<thead><tr class="bg-stone-100"><th class="px-6 py-1.5 text-[10px] font-medium text-left">Bahan Baku</th><th class="px-2 py-1.5"></th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Jumlah</th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Harga</th><th class="px-3 py-1.5 text-[10px] font-medium text-right">Subtotal</th></tr></thead><tbody>' +
             detailHtml + '</tbody></table></div></td></tr>';
         }        hppTable += '<tr class="border-t border-stone-100 hover:bg-stone-50 cursor-pointer" onclick="toggleHppDetail(' + m.menu_id + ')">' +
           '<td class="px-3 sm:px-4 py-2.5 sm:py-3 font-medium">' +
           '<span class="inline-flex items-center gap-1.5">' +
           '<span id="arrow-hpp-' + m.menu_id + '" class="text-stone-400 transition-transform duration-150">▶</span> ' +
           escHtml(m.menu_nama) + '</span></td>' +
+          '<td class="px-2 py-2.5 sm:py-3 text-xs text-stone-500">' + fmtKategoriHpp(m.kategori_penerima) + '</td>' +
           '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right">' + fmtNum(m.jumlah_bahan) + '</td>' +
           '<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right mono font-bold text-[#1e40af]">' + fmtIDR(m.total_hpp) + '</td>' +
           '</tr>' + detailRow;
