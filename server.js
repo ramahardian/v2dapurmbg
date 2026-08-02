@@ -186,26 +186,62 @@ if (cluster.isMaster && WORKERS > 1) {
     }
   }
 
-  // Cache-buster berbasis hash konten (MD5 8 hex). Hash dihitung ulang otomatis setiap
-  // file bundle berubah (deteksi perubahan via mtime), jadi rebuild tanpa restart server
-  // langsung terlihat oleh pengguna. statSync per-request sangat murah (<0.1ms); baca
-  // file + hash hanya dilakukan ketika mtime berubah. Catatan: karena trigger-nya mtime,
-  // deploy yang preserve timestamp (mis. rsync -t / tar) tidak memicu rehash — gunakan
-  // scripts/build.js atau pastikan mtime berubah setelah menyalin bundle.
+  // Cache-buster berbasis hash konten (MD5 8 hex). Sumber utama: manifest
+  // `app.min.js.hash` yang ditulis scripts/build.js pada SETIAP build — jadi build
+  // baru yang mengubah isi bundle langsung menghasilkan versi baru, bahkan jika
+  // deploy preserve timestamp (rsync -t / tar / git) atau server tidak direstart.
+  // statSync + baca file kecil per-request sangat murah (<0.1ms); hash besar hanya
+  // dibaca ulang saat mtime manifest berubah. Fallback (tanpa manifest): hash
+  // konten bundle, di-trigger oleh perubahan mtime ATAU ukuran file.
   const DIST_BUNDLE_PATH = path.join(__dirname, 'public', 'dist', 'app.min.js');
-  let distVerCache = { mtime: null, ver: null };
+  const DIST_VER_PATH = path.join(__dirname, 'public', 'dist', 'app.min.js.hash');
+  let distVerCache = { hashMtime: null, bundleMtime: null, bundleSize: null, ver: null };
+  function hashBundle() {
+    return require('crypto').createHash('md5').update(require('fs').readFileSync(DIST_BUNDLE_PATH)).digest('hex').slice(0, 8);
+  }
   function getDistVer() {
-    let mtime;
-    try { mtime = require('fs').statSync(DIST_BUNDLE_PATH).mtimeMs; }
-    catch { return distVerCache.ver || Date.now(); }
-    if (distVerCache.ver === null || distVerCache.mtime !== mtime) {
-      distVerCache.mtime = mtime;
-      try {
-        const buf = require('fs').readFileSync(DIST_BUNDLE_PATH);
-        distVerCache.ver = require('crypto').createHash('md5').update(buf).digest('hex').slice(0, 8);
-      } catch { distVerCache.ver = Date.now(); }
-    }
-    return distVerCache.ver;
+    const fs = require('fs');
+    // 1) Sumber utama: manifest `app.min.js.hash` yang ditulis scripts/build.js.
+    //    Berbasis konten (bukan mtime) — setiap build baru dengan isi berbeda
+    //    langsung menghasilkan versi baru, bahkan saat deploy preserve timestamp
+    //    (rsync -t / tar / git) atau server tidak direstart.
+    //    Signature cache = (mtime manifest, mtime bundle, size bundle); ketiganya
+    //    direkam bareng setiap recompute agar tidak saling menimpa dengan data basi.
+    try {
+      const hmtime = fs.statSync(DIST_VER_PATH).mtimeMs;
+      const bst = fs.statSync(DIST_BUNDLE_PATH);
+      const bundleChanged = distVerCache.bundleMtime !== null
+        && (distVerCache.bundleMtime !== bst.mtimeMs || distVerCache.bundleSize !== bst.size);
+      const manifestChanged = distVerCache.hashMtime !== hmtime;
+      if (distVerCache.ver === null || bundleChanged || manifestChanged) {
+        distVerCache.hashMtime = hmtime;
+        distVerCache.bundleMtime = bst.mtimeMs;
+        distVerCache.bundleSize = bst.size;
+        if (bundleChanged) {
+          // Bundle diganti (build baru / deploy parsial tanpa update manifest)
+          // → kebenaran ada di konten bundle itu sendiri.
+          distVerCache.ver = hashBundle();
+        } else {
+          // Hanya manifest yang berubah → pakai hash-nya, dengan guard korup/kosong.
+          const v = fs.readFileSync(DIST_VER_PATH, 'utf8').trim();
+          distVerCache.ver = /^[0-9a-f]{8}$/.test(v) ? v : hashBundle();
+        }
+      }
+      return distVerCache.ver;
+    } catch {}
+    // 2) Fallback tanpa manifest: hash konten bundle; re-hash hanya saat
+    //    mtime ATAU size berubah (menangkap deploy yang preserve mtime
+    //    tetapi mengubah ukuran file).
+    try {
+      const st = fs.statSync(DIST_BUNDLE_PATH);
+      if (distVerCache.ver === null || distVerCache.bundleMtime !== st.mtimeMs || distVerCache.bundleSize !== st.size) {
+        distVerCache.bundleMtime = st.mtimeMs;
+        distVerCache.bundleSize = st.size;
+        distVerCache.ver = hashBundle();
+      }
+      return distVerCache.ver;
+    } catch {}
+    return distVerCache.ver || Date.now();
   }
   // Halaman HTML selalu di-revalidate (Cache-Control: no-cache) agar `?v=` terbaru
   // langsung dimuat browser tanpa hard refresh; file bundle-nya sendiri tetap

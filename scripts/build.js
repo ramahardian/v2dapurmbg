@@ -63,8 +63,17 @@ async function build() {
 
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(outFile, output, 'utf8');
+
+  // Manifest versi: hash konten (MD5 8-hex) dari bundle yang baru ditulis.
+  // server.js memakai file ini sebagai cache-buster `?v=`. Berbasis konten (bukan
+  // mtime), jadi SETIAP build baru dengan isi berbeda langsung menghasilkan versi
+  // baru — bahkan saat deploy preserve timestamp (rsync -t / tar / git).
+  const ver = require('crypto').createHash('md5').update(output).digest('hex').slice(0, 8);
+  fs.writeFileSync(path.join(outDir, 'app.min.js.hash'), ver, 'utf8');
+
   console.log(`✓ ${label} ${FILES.length} file → ${outFile}`);
   console.log(`  Size: ${(output.length / 1024).toFixed(1)} KB`);
+  console.log(`  Ver:  ${ver}`);
 }
 
 build().catch(err => { console.error('Build gagal:', err); process.exit(1); });
