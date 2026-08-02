@@ -315,7 +315,10 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       var satuan = b.satuan || 'kg';
       var kategoriSp = b.kategori_sp || '';
       var hargaSatuan = Number(b.harga_satuan) || 0;
-      var qty = autoQty(satuan, bufferKg, rowSiswa, kategoriSp, Number(b.berat_per_satuan) || 0);
+      var beratPerSatuan = Number(b.berat_per_satuan) || 0;
+      // Tanda merah: bahan baku sudah masuk total kebutuhan tapi harga & berat belum diisi di master
+      var kekuranganHargaBerat = !hargaSatuan && !beratPerSatuan;
+      var qty = autoQty(satuan, bufferKg, rowSiswa, kategoriSp, beratPerSatuan);
       var parsed = parseTkQtySatuan(qty);
       if (parsed.qty <= 0) continue;
       no++;
@@ -329,7 +332,8 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
         satuan: parsed.satuan,
         harga: hargaSatuan,
         jumlah: jumlah,
-        ket: b.keterangan || ''
+        ket: b.keterangan || '',
+        kekurangan: kekuranganHargaBerat
       });
     }
 
@@ -358,6 +362,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     html += '<li><strong>HARGA</strong> = harga satuan dari master Bahan Baku (bahan_baku.harga_satuan).</li>';
     html += '<li><strong>JUMLAH</strong> = QTY × HARGA.</li>';
     html += '<li><strong>KETERANGAN</strong> = instruksi bahan (mis. Potong 10, Fillet) dari resep menu.</li>';
+    html += '<li><strong>Baris merah</strong> = bahan baku sudah masuk total kebutuhan tapi <em>harga satuan</em> dan <em>berat per satuan</em> di master Bahan Baku masih kosong — wajib diisi agar QTY &amp; JUMLAH akurat.</li>';
     html += '<li>Kebutuhan sudah termasuk <em>buffer</em> 1-10% (jika ada). Angka memakai pembulatan ke atas agar aman.</li>';
     html += '</ul></div>';
   }
@@ -400,13 +405,20 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
     html += '</tr></thead><tbody>';
 
     rows.forEach(function(r) {
-      html += '<tr class="border-t border-stone-100 hover:bg-cyan-50/40 transition-colors">';
+      var rowCls = r.kekurangan
+        ? 'border-t border-stone-100 bg-red-50/70'
+        : 'border-t border-stone-100 hover:bg-cyan-50/40 transition-colors';
+      html += '<tr class="' + rowCls + '">';
       html += '<td class="px-2 py-3 text-center text-xs text-stone-500">' + r.no + '</td>';
-      html += '<td class="px-3 py-3 text-xs font-medium text-stone-700">' + escHtmlTk(r.uraian) + '</td>';
+      html += '<td class="px-3 py-3 text-xs font-medium ' + (r.kekurangan ? 'text-red-700' : 'text-stone-700') + '">' + escHtmlTk(r.uraian);
+      if (r.kekurangan) {
+        html += ' <span class="inline-block ml-1 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap" title="Harga satuan & berat per satuan belum diisi di master Bahan Baku">Harga &amp; Berat kosong</span>';
+      }
+      html += '</td>';
       html += '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700">' + r.qty + '</td>';
       html += '<td class="px-3 py-3 text-xs text-stone-500">' + escHtmlTk(r.satuan) + '</td>';
-      html += '<td class="px-3 py-3 text-right mono text-xs text-stone-600">' + fmtTkRp(r.harga) + '</td>';
-      html += '<td class="px-3 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtTkRp(r.jumlah) + '</td>';
+      html += '<td class="px-3 py-3 text-right mono text-xs ' + (r.kekurangan ? 'font-bold text-red-700' : 'text-stone-600') + '">' + fmtTkRp(r.harga) + '</td>';
+      html += '<td class="px-3 py-3 text-right mono text-xs font-bold ' + (r.kekurangan ? 'text-red-700' : 'text-stone-800') + '">' + fmtTkRp(r.jumlah) + '</td>';
       html += '<td class="px-3 py-3 text-xs text-stone-400">' + (r.ket ? escHtmlTk(r.ket) : '') + '</td>';
       html += '</tr>';
     });
