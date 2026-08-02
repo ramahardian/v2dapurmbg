@@ -10,22 +10,36 @@ function menuSatuanTampil(b) {
   return (b && b.satuan) || 'g';
 }
 
-// Satuan asli master bahan_baku (mis. Karton) untuk kalkulator, bila perUnit tersedia.
-function bahanKalkulatorSatuan(b) {
-  var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 0;
-  if (perUnit > 0) {
-    var master = (window._bahanBaku || []).find(function(x) { return x.id === b.bahan_baku_id; });
-    // Fallback by nama — bahan_baku_id bisa kosong utk bahan diketik manual / data lama
-    if (!master && b.nama) {
-      var namaQ = String(b.nama).toLowerCase().trim();
-      master = (window._bahanBaku || []).find(function(x) {
-        return x.nama && String(x.nama).toLowerCase().trim() === namaQ;
-      });
-    }
-    var ms = (master && master.satuan) ? master.satuan : (b.satuan || 'g');
-    var low = String(ms).toLowerCase();
-    if (low !== 'g' && low !== 'gram') return ms;
+// Resolusi satuan & faktor konversi untuk kalkulator. Master bahan_baku adalah
+// sumber kebenaran (dicari by id, lalu by nama — case-insensitive + trim); nilai
+// baris hanya fallback. Ini menutup kasus bahan diketik manual / data lama / baris
+// dari DB yang berat_per_satuan-nya 0 — selama master punya satuan unit & berat
+// per satuan, kalkulator tetap menampilkan satuan yang benar (Karton/Liter/Pcs/dll).
+function bahanKalkulatorInfo(b) {
+  var master = null;
+  if (b && b.bahan_baku_id) {
+    master = (window._bahanBaku || []).find(function(x) { return String(x.id) === String(b.bahan_baku_id); });
   }
+  if (!master && b && b.nama) {
+    var namaQ = String(b.nama).toLowerCase().trim();
+    master = (window._bahanBaku || []).find(function(x) {
+      return x.nama && String(x.nama).toLowerCase().trim() === namaQ;
+    });
+  }
+  var satuan = (master && master.satuan) ? master.satuan : (b.satuan || 'g');
+  var perUnit = Number(master && master.berat_per_satuan) || Number(b.berat_per_satuan) || Number(b.berat_1_sp) || Number(master && master.berat_1_sp) || 0;
+  // Kg/kilogram tanpa berat_per_satuan → asumsi standar 1000 g
+  if (perUnit <= 0 && isKgSatuan(satuan)) perUnit = 1000;
+  return { satuan: satuan, perUnit: perUnit };
+}
+
+// Satuan asli master bahan_baku (mis. Karton) untuk kalkulator.
+// Hanya ditampilkan bila faktor konversi (perUnit) tersedia — kalau tidak, aman
+// kembali ke gram (Gram ↔ Kg).
+function bahanKalkulatorSatuan(b) {
+  var info = bahanKalkulatorInfo(b);
+  var low = String(info.satuan).toLowerCase();
+  if (low !== 'g' && low !== 'gram' && info.perUnit > 0) return info.satuan;
   return 'g';
 }
 
@@ -620,7 +634,7 @@ function updateBahan(i, k, v) {
     if (!b) return;
     var porsi = Number(window._menuPorsi) || 1;
     var satuan = menuSatuanTampil(b);
-    var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+    var perUnit = bahanKalkulatorInfo(b).perUnit || 1;
     // Input shows total when porsi>0; convert back to grams per-porsi for storage
     var valPerPorsi = Number(v) / porsi;
     var newJumlah;
@@ -661,7 +675,7 @@ function openBahanKalkulator(i) {
   if (existing) existing.remove();
   var satuan = bahanKalkulatorSatuan(b);
   var porsi = Number(window._menuPorsi) || 0;
-  var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+  var perUnit = bahanKalkulatorInfo(b).perUnit || 1;
   window._bkPerUnit = perUnit;
   var isUnitSatuan = isSatuanUnit(satuan);
   // Nilai yang tampil di kolom jumlah (total untuk porsi, dalam satuan tampilan)
@@ -742,7 +756,7 @@ function applyBahanKalkulator(i) {
   var g = document.getElementById('bk-gram');
   var k = document.getElementById('bk-kg');
   var u = document.getElementById('bk-unit');
-  var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+  var perUnit = bahanKalkulatorInfo(b).perUnit || 1;
   var satuan = bahanKalkulatorSatuan(b);
   var isUnitSatuan = isSatuanUnit(satuan);
   var gram = 0;
@@ -786,7 +800,7 @@ function renderBahanList() {
   document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
     var displayNama = b.nama || '';
     var displaySatuan = menuSatuanTampil(b);
-      var perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+      var perUnit = bahanKalkulatorInfo(b).perUnit || 1;
       var displayJumlah = b.jumlah || 0;
       if (perUnit > 0 && isSatuanUnit(displaySatuan)) {
         displayJumlah = displayJumlah / perUnit;
