@@ -8,10 +8,38 @@ async function renderDashboard() {
       throw new Error(err.error || 'Gagal memuat dashboard');
     }
     c.innerHTML = await r.text();
+    animateDashboardCounts(c);
   } catch (err) {
     console.error('Dashboard error:', err);
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat dashboard: ${err.message}</div>`;
   }
+}
+
+/**
+ * animateDashboardCounts - Animasi count-up untuk elemen dengan class .dash-count.
+ * Mendukung format angka default dan format Rupiah (data-format="idr").
+ */
+function animateDashboardCounts(root) {
+  const els = root.querySelectorAll('.dash-count');
+  els.forEach(el => {
+    const target = parseFloat(el.getAttribute('data-count')) || 0;
+    const isIdr = el.getAttribute('data-format') === 'idr';
+    const dur = 900;
+    const start = performance.now();
+    const fmt = (v) => {
+      const n = Math.round(v);
+      const s = n.toLocaleString('id-ID');
+      return isIdr ? 'Rp ' + s : s;
+    };
+    el.textContent = fmt(0);
+    const tick = (now) => {
+      const p = Math.min((now - start) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(target * eased);
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
 }
 
 /**

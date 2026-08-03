@@ -13,17 +13,34 @@ router.get('/dashboard', async (req, res) => {
     const [budget] = await db.query('SELECT COALESCE(SUM(total_budget), 0) as total_budget, COALESCE(SUM(realisasi), 0) as total_realisasi FROM budget WHERE tenant_id=?', [req.user.tenant_id]);
     const [bahan] = await db.query('SELECT COUNT(*) as jumlah_bahan_baku FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
     const [lowStock] = await db.query('SELECT nama, satuan, stok_minimum as min, stok_saat_ini as stok FROM bahan_baku WHERE tenant_id=? AND stok_saat_ini < stok_minimum', [req.user.tenant_id]);
+
+    // Ijin/cuti hari ini (disetujui & masih berlangsung) + yang menunggu persetujuan
+    const [[ijinHariIni]] = await db.query(
+      `SELECT COUNT(*) AS total FROM ijin_cuti
+       WHERE tenant_id=? AND status='Disetujui' AND tanggal_mulai <= CURDATE() AND tanggal_selesai >= CURDATE()`,
+      [req.user.tenant_id]
+    );
+    const [[ijinMenunggu]] = await db.query(
+      `SELECT COUNT(*) AS total FROM ijin_cuti WHERE tenant_id=? AND status='Menunggu'`,
+      [req.user.tenant_id]
+    );
     
+    const totalBudget = Number(budget[0]?.total_budget || 0);
+    const totalRealisasi = Number(budget[0]?.total_realisasi || 0);
+
     const summary = {
       total_penerima_manfaat: penerima[0]?.total_penerima_manfaat || 0,
       paket_besar: penerima[0]?.paket_besar || 0,
       paket_kecil: penerima[0]?.paket_kecil || 0,
       total_porsi_diproduksi: produksi[0]?.total_porsi_diproduksi || 0,
-      total_budget: budget[0]?.total_budget || 0,
-      total_realisasi: budget[0]?.total_realisasi || 0,
+      total_budget: totalBudget,
+      total_realisasi: totalRealisasi,
+      persen_budget: totalBudget > 0 ? Math.round((totalRealisasi / totalBudget) * 100) : 0,
       jumlah_bahan_baku: bahan[0]?.jumlah_bahan_baku || 0,
       stok_menipis: lowStock.length,
-      low_stock_items: lowStock
+      low_stock_items: lowStock,
+      ijin_cuti_hari_ini: Number(ijinHariIni.total || 0),
+      ijin_cuti_menunggu: Number(ijinMenunggu.total || 0)
     };
     
     res.render('partials/dashboard', { 
