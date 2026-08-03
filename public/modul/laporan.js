@@ -537,20 +537,27 @@ const tabColors = {
                 '<input type="date" id="rab-pm-tanggal" value="' + pmTanggal + '" onchange="gantiTanggalPMMan()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">' +
               '</div>' +
               pmSumberTxt +
-              '<button onclick="simpanPMMan()" class="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg transition-colors shadow-sm">' +
-                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>' +
-                'Simpan PM Harian' +
-              '</button>' +
+              '<div class="ml-auto flex items-center gap-2">' +
+                '<input type="text" id="pm-search" placeholder="Cari titik..." oninput="filterPMMan()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white placeholder-stone-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">' +
+                '<button onclick="simpanPMMan()" class="inline-flex items-center gap-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg transition-colors shadow-sm">' +
+                  '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>' +
+                  'Simpan PM Harian' +
+                '</button>' +
+              '</div>' +
             '</div>' +
             '<div class="overflow-x-auto"><table class="w-full text-xs">' +
               '<thead><tr class="bg-stone-50">' +
-                '<th class="text-left px-3 py-2 text-[10px] font-bold text-stone-500 uppercase tracking-wider">TITIK</th>' +
-                '<th class="text-right px-3 py-2 text-[10px] font-bold text-stone-500 uppercase tracking-wider">PAKET BESAR</th>' +
-                '<th class="text-right px-3 py-2 text-[10px] font-bold text-stone-500 uppercase tracking-wider">PAKET KECIL</th>' +
+                '<th class="text-left px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">TITIK</th>' +
+                '<th class="text-left px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">KATEGORI</th>' +
+                '<th class="text-right px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">PAKET BESAR</th>' +
+                '<th class="text-right px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">PAKET KECIL</th>' +
               '</tr></thead><tbody id="pm-editor-tbody">' +
-              '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="3">Muat data editor...</td></tr>' +
+              '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="4">Muat data editor...</td></tr>' +
             '</tbody></table></div>' +
-            '<div id="pm-editor-status" class="mt-2 text-[10px] text-stone-400"></div>' +
+            '<div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-2">' +
+              '<div id="pm-editor-status" class="text-[10px] text-stone-400"></div>' +
+              '<div class="text-[10px] text-stone-500">Total terisi: <b id="pm-editor-count">0</b> titik</div>' +
+            '</div>' +
           '</div>';
 
         var rabCards = '<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-8">' +
@@ -2210,22 +2217,77 @@ async function loadPMEditor(tanggal) {
   var statusEl = document.getElementById('pm-editor-status');
   var t = tanggal || lapState.rab_pm_tanggal || new Date().toISOString().slice(0, 10);
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="3">Memuat...</td></tr>';
+  tbody.innerHTML = '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="4">Memuat...</td></tr>';
+  var filterEl = document.getElementById('pm-search');
+  if (filterEl) filterEl.value = '';
   try {
     var d = await api.get('/laporan/rab-pm-harian?tanggal=' + t);
     var rows = d.rows || [];
+    var shown = rows.filter(function(r) {
+      var q = (filterEl && filterEl.value || '').trim().toLowerCase();
+      if (!q) return true;
+      return (r.nama_titik || '').toLowerCase().indexOf(q) > -1 || (r.kategori_penerima || '').toLowerCase().indexOf(q) > -1;
+    });
     window.__pm_rows = rows;
-    tbody.innerHTML = rows.length ? rows.map(function(r) {
-      return '<tr class="border-t border-stone-100">' +
-        '<td class="px-3 py-2 font-semibold text-xs text-stone-800">' + escHtml(r.nama_titik) + ' ' + (r.is_snapshot ? '<span class="text-[9px] text-emerald-600">· tersimpan</span>' : '') + '</td>' +
-        '<td class="px-3 py-2"><input type="number" min="0" data-k="' + r.penerima_manfaat_id + '" data-f="besar" value="' + r.paket_besar + '" class="w-24 text-right text-xs border border-stone-200 rounded-lg px-2 py-1.5"></td>' +
-        '<td class="px-3 py-2"><input type="number" min="0" data-k="' + r.penerima_manfaat_id + '" data-f="kecil" value="' + r.paket_kecil + '" class="w-24 text-right text-xs border border-stone-200 rounded-lg px-2 py-1.5"></td>' +
-      '</tr>';
-    }).join('') : '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="3">Belum ada titik. Tambah dulu di Penerima Manfaat.</td></tr>';
-    if (statusEl) statusEl.textContent = d.terisi + '/' + d.total + ' titik tersimpan utk ' + t;
+    tbody.innerHTML = renderPMRowsWithTotal(shown);
+    pmAutoTotals();
+    if (statusEl) statusEl.textContent = 'Snapshot utk ' + t;
+    var countEl = document.getElementById('pm-editor-count');
+    if (countEl) countEl.textContent = d.terisi + ' dari ' + d.total;
   } catch(e) {
-    tbody.innerHTML = '<tr><td class="px-3 py-6 text-center text-red-500" colspan="3">Gagal memuat: ' + escHtml(e.message) + '</td></tr>';
+    tbody.innerHTML = '<tr><td class="px-3 py-6 text-center text-red-500" colspan="4">Gagal memuat: ' + escHtml(e.message) + '</td></tr>';
   }
+}
+
+function pmRowsFiltered() {
+  var rows = window.__pm_rows || [];
+  var q = (document.getElementById('pm-search')?.value || '').trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter(function (r) {
+    return (r.nama_titik || '').toLowerCase().indexOf(q) > -1 || (r.kategori_penerima || '').toLowerCase().indexOf(q) > -1;
+  });
+}
+
+function filterPMMan() {
+  var tbody = document.getElementById('pm-editor-tbody');
+  if (!tbody) return;
+  var shown = pmRowsFiltered();
+  tbody.innerHTML = renderPMRowsWithTotal(shown);
+  pmAutoTotals();
+}
+
+function renderPMRows(rows) {
+  if (!rows.length) return '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="4">Tidak ada titik yang cocok.</td></tr>';
+  return rows.map(function(r) {
+    return '<tr class="border-t border-stone-100">' +
+      '<td class="px-3 py-2 font-semibold text-xs text-stone-800">' + escHtml(r.nama_titik) + (r.is_snapshot ? ' <span class="text-[9px] font-medium text-emerald-600 bg-emerald-50 rounded px-1 py-0.5">tersimpan</span>' : '') + '</td>' +
+      '<td class="px-3 py-2 text-[11px] text-stone-500">' + escHtml(r.kategori_penerima || '-') + '</td>' +
+      '<td class="px-2 py-1.5 text-right"><input type="number" min="0" step="1" data-k="' + r.penerima_manfaat_id + '" data-f="besar" value="' + r.paket_besar + '" oninput="pmAutoTotals()" class="inline-block w-20 text-right text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"></td>' +
+      '<td class="px-2 py-1.5 text-right"><input type="number" min="0" step="1" data-k="' + r.penerima_manfaat_id + '" data-f="kecil" value="' + r.paket_kecil + '" oninput="pmAutoTotals()" class="inline-block w-20 text-right text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function renderPMRowsWithTotal(rows) {
+  var besar = rows.reduce(function(s, r) { return s + (Number(r.paket_besar) || 0); }, 0);
+  var kecil = rows.reduce(function(s, r) { return s + (Number(r.paket_kecil) || 0); }, 0);
+  return renderPMRows(rows) +
+    '<tr class="border-t-2 border-stone-300 bg-stone-50 font-bold text-stone-700">' +
+      '<td class="px-3 py-2 text-xs" colspan="2">TOTAL (' + rows.length + ' titik)</td>' +
+      '<td class="px-2 py-2 text-right text-xs" id="pm-total-besar">' + besar + '</td>' +
+      '<td class="px-2 py-2 text-right text-xs" id="pm-total-kecil">' + kecil + '</td>' +
+    '</tr>';
+}
+
+function pmAutoTotals() {
+  var rows = window.__pm_rows || [];
+  var besar = 0, kecil = 0;
+  document.querySelectorAll('#pm-editor-tbody tr input[data-f]').forEach(function(inp) {
+    if (inp.getAttribute('data-f') === 'besar') besar += parseInt(inp.value, 10) || 0;
+    else kecil += parseInt(inp.value, 10) || 0;
+  });
+  var be = document.getElementById('pm-total-besar'); if (be) be.textContent = besar;
+  var ke = document.getElementById('pm-total-kecil'); if (ke) ke.textContent = kecil;
 }
 function gantiTanggalPMMan() {
   var v = document.getElementById('rab-pm-tanggal')?.value || new Date().toISOString().slice(0, 10);

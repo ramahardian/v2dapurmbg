@@ -1203,12 +1203,15 @@ function registerRabRoutes(router) {
       const usePeriode = periodeKeys.find(p => !periodeFilter || p === periodeFilter) || periodeKeys[0] || '';
       const useBudget = usePeriode ? byPeriode[usePeriode] : [];
 
+      const dbToDisplay = buildDbToDisplay();
+
       const budgetByKategori = {};
       for (const b of useBudget) {
-        if (!budgetByKategori[b.kategori_penerima]) {
+        const bKey = dbToDisplay[b.kategori_penerima] || b.kategori_penerima;
+        if (!budgetByKategori[bKey]) {
           const hargaBesar = hasHargaBesar ? (Number(b.harga_besar) || Number(b.harga_per_porsi) || 0) : (Number(b.harga_per_porsi) || 0);
           const hargaKecil = hasHargaKecil ? (Number(b.harga_kecil) || Number(b.harga_per_porsi) || 0) : (Number(b.harga_per_porsi) || 0);
-          budgetByKategori[b.kategori_penerima] = { harga_besar: hargaBesar, harga_kecil: hargaKecil };
+          budgetByKategori[bKey] = { harga_besar: hargaBesar, harga_kecil: hargaKecil };
         }
       }
 
@@ -1220,8 +1223,9 @@ function registerRabRoutes(router) {
       }
 
       function buildTitik(pm) {
-        const kat = (parseKategoriPenerima(pm.kategori_penerima)[0] || '').trim();
-        const pagu = budgetByKategori[kat] || { harga_besar: 0, harga_kecil: 0 };
+        const rawKat = (parseKategoriPenerima(pm.kategori_penerima)[0] || '').trim();
+        const kat = dbToDisplay[rawKat] || rawKat;
+        const pagu = budgetByKategori[kat] || budgetByKategori[rawKat] || { harga_besar: 0, harga_kecil: 0 };
         const kecil = Number(pm.paket_kecil) || 0;
         const besar = Number(pm.paket_besar) || 0;
         const posyandu = isPosyandu(pm);
