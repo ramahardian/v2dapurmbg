@@ -557,3 +557,20 @@ CREATE TABLE IF NOT EXISTS notifikasi (
   INDEX idx_notif_penerima (penerima_id),
   INDEX idx_notif_read (penerima_id, is_read)
 ) ENGINE=InnoDB;
+
+-- PM Harian — snapshot jumlah porsi besar/kecil per titik per tanggal
+CREATE TABLE IF NOT EXISTS pm_harian (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  tanggal DATE NOT NULL,
+  penerima_manfaat_id INT NOT NULL,
+  nama_titik VARCHAR(200) NOT NULL,
+  kategori_penerima VARCHAR(100) DEFAULT NULL,
+  paket_besar INT DEFAULT 0,
+  paket_kecil INT DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_pm_harian (tenant_id, tanggal, penerima_manfaat_id),
+  INDEX idx_pm_harian_tenant (tenant_id),
+  INDEX idx_pm_harian_tanggal (tenant_id, tanggal)
+) ENGINE=InnoDB;

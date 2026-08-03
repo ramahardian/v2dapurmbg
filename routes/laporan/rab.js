@@ -3,6 +3,7 @@
  * Module untuk endpoint laporan RAB dan budgeting.
  */
 const db = require('../../db');
+const { requireRole } = require('../../middleware/auth');
 const { roleFinance, roleOps } = require('./config');
 const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP } = require('../siklus/helpers');
 
@@ -1338,6 +1339,37 @@ function registerRabRoutes(router) {
       res.json({ ok: true, message: 'PM harian tersimpan', tanggal, saved, failed });
     } catch (err) {
       console.error('RAB PM harian save error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Setup: buat tabel pm_harian jika belum ada (hanya admin)
+  router.get('/laporan/rab-pm-harian/setup', requireRole('admin'), async (req, res) => {
+    try {
+      const sql = `
+        CREATE TABLE IF NOT EXISTS pm_harian (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          tenant_id INT NOT NULL,
+          tanggal DATE NOT NULL,
+          penerima_manfaat_id INT NOT NULL,
+          nama_titik VARCHAR(200) NOT NULL,
+          kategori_penerima VARCHAR(100) DEFAULT NULL,
+          paket_besar INT DEFAULT 0,
+          paket_kecil INT DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY uq_pm_harian (tenant_id, tanggal, penerima_manfaat_id),
+          INDEX idx_pm_harian_tenant (tenant_id),
+          INDEX idx_pm_harian_tanggal (tenant_id, tanggal)
+        ) ENGINE=InnoDB`;
+      await db.query(sql);
+      const [[{ c } = { c: 0 }]] = await db.query(
+        `SELECT COUNT(*) AS c FROM information_schema.tables
+         WHERE table_schema=DATABASE() AND table_name='pm_harian'`
+      );
+      res.json({ ok: true, tabel: 'pm_harian', exists: Number(c) > 0 });
+    } catch (err) {
+      console.error('Setup pm_harian error:', err);
       res.status(500).json({ error: err.message });
     }
   });
