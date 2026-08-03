@@ -99,32 +99,37 @@
     <% } %>
   </div>
   <% if (ma) { %>
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div class="min-w-0">
-        <div class="text-[10px] uppercase tracking-wider text-stone-400 font-bold mb-1"><%= ma.siklus_nama %><% if (maJenjangLabel) { %> • <span class="text-emerald-600"><%= maJenjangLabel %></span><% } %></div>
-        <div class="text-lg font-bold text-stone-800 truncate"><%= ma.menu_nama || 'Menu belum diisi' %></div>
-        <div class="text-xs text-stone-500 mt-1">
-          Porsi: <b class="mono"><%= ma.porsi_item.toLocaleString('id-ID') %></b>
-          <% if (ma.jumlah_porsi > 0) { %> dari total <b class="mono"><%= ma.jumlah_porsi.toLocaleString('id-ID') %></b> porsi<% } %>
+    <div class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap mb-1.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-md px-2 py-0.5"><%= ma.siklus_nama %></span>
+            <% if (maJenjangLabel) { %><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400"><%= maJenjangLabel %></span><% } %>
+          </div>
+          <div class="text-lg font-bold text-stone-800 leading-snug"><%= ma.menu_nama || 'Menu belum diisi' %></div>
+        </div>
+        <div class="shrink-0">
+          <div class="text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-1">Porsi</div>
+          <div class="mono text-sm font-bold text-stone-700"><%= ma.porsi_item.toLocaleString('id-ID') %><% if (ma.jumlah_porsi > 0) { %> / <%= ma.jumlah_porsi.toLocaleString('id-ID') %> porsi<% } %></div>
         </div>
       </div>
       <% if (ma.kalori > 0) { %>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
-          <div class="bg-orange-50 border border-orange-100 rounded-xl px-3 py-2 text-center">
+        <div class="grid grid-cols-4 gap-2 border-t border-stone-100 pt-3">
+          <div class="text-center">
             <div class="mono text-sm font-bold text-orange-700"><%= ma.kalori.toLocaleString('id-ID') %></div>
-            <div class="text-[9px] text-orange-600/70 font-semibold uppercase tracking-wider">Kalori</div>
+            <div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Kalori</div>
           </div>
-          <div class="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-center">
+          <div class="text-center">
             <div class="mono text-sm font-bold text-blue-700"><%= ma.protein.toLocaleString('id-ID') %>g</div>
-            <div class="text-[9px] text-blue-600/70 font-semibold uppercase tracking-wider">Protein</div>
+            <div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Protein</div>
           </div>
-          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-center">
+          <div class="text-center">
             <div class="mono text-sm font-bold text-amber-700"><%= ma.karbohidrat.toLocaleString('id-ID') %>g</div>
-            <div class="text-[9px] text-amber-600/70 font-semibold uppercase tracking-wider">Karbo</div>
+            <div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Karbo</div>
           </div>
-          <div class="bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 text-center">
+          <div class="text-center">
             <div class="mono text-sm font-bold text-rose-700"><%= ma.lemak.toLocaleString('id-ID') %>g</div>
-            <div class="text-[9px] text-rose-600/70 font-semibold uppercase tracking-wider">Lemak</div>
+            <div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Lemak</div>
           </div>
         </div>
       <% } %>
