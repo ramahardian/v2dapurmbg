@@ -52,7 +52,7 @@ router.get('/dashboard', async (req, res) => {
         hariKe = diffDays >= 0 ? (diffDays % totalHari) + 1 : 1;
       }
       const [menuItem] = await db.query(
-        `SELECT menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat
+        `SELECT menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, foto
          FROM siklus_menu_item WHERE siklus_id=? AND hari_ke=? LIMIT 1`,
         [s.id, hariKe]
       );
@@ -64,6 +64,7 @@ router.get('/dashboard', async (req, res) => {
         total_hari: totalHari,
         menu_id: menuItem.length ? menuItem[0].menu_id : null,
         menu_nama: menuItem.length ? (menuItem[0].menu_nama || '-') : null,
+        foto: menuItem.length ? (menuItem[0].foto || null) : null,
         porsi_item: menuItem.length ? Number(menuItem[0].jumlah_porsi || 0) : 0,
         kalori: menuItem.length ? Number(menuItem[0].kalori || 0) : 0,
         protein: menuItem.length ? Number(menuItem[0].protein || 0) : 0,
