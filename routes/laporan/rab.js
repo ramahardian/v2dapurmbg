@@ -1146,14 +1146,37 @@ function registerRabRoutes(router) {
   router.get('/laporan/rab-per-titik', roleOps, async (req, res) => {
     const t = req.user.tenant_id;
     const periodeFilter = req.query.periode || '';
+    // Filter per tanggal: bila ada tanggal & snapshot pm_harian utk tanggal tsb,
+    // pakai snapshot tsb; jika tidak ada snapshot utk tanggal tsb, fallback ke penerima_manfaat.
+    const tanggalFilter = (req.query.tanggal || '').trim();
     try {
-      const [pmRows] = await db.query(
-        `SELECT id, nama_kelompok, paket_besar, paket_kecil, kategori_penerima, lokasi
-         FROM penerima_manfaat
-         WHERE tenant_id=?
-         ORDER BY nama_kelompok ASC`,
-        [t]
-      );
+      let pmRows;
+      let pakaiSnapshot = false;
+      if (tanggalFilter) {
+        const attrs = 'penerima_manfaat_id as id, nama_titik as nama_kelompok, paket_besar, paket_kecil, kategori_penerima, NULL as lokasi';
+        const [[{ cnt } = { cnt: 0 }]] = await db.query(
+          `SELECT COUNT(*) as c FROM pm_harian WHERE tenant_id=? AND tanggal=? LIMIT 1`,
+          [t, tanggalFilter]
+        );
+        if (Number(cnt) > 0) {
+          [pmRows] = await db.query(
+            `SELECT ${attrs} FROM pm_harian
+             WHERE tenant_id=? AND tanggal=?
+             ORDER BY nama_titik ASC`,
+            [t, tanggalFilter]
+          );
+          pakaiSnapshot = true;
+        }
+      }
+      if (!pmRows) {
+        [pmRows] = await db.query(
+          `SELECT id, nama_kelompok, paket_besar, paket_kecil, kategori_penerima, lokasi
+           FROM penerima_manfaat
+           WHERE tenant_id=?
+           ORDER BY nama_kelompok ASC`,
+          [t]
+        );
+      }
 
       const [budgetCols] = await db.query(
         "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'budget'"
@@ -1223,6 +1246,8 @@ function registerRabRoutes(router) {
 
       res.json({
         periode: usePeriode || periodeFilter,
+        tanggal: tanggalFilter,
+        sumber: pakaiSnapshot ? 'snapshot' : 'live',
         sekolah,
         posyandu,
         total_sekolah: sum(sekolah),
@@ -1231,6 +1256,88 @@ function registerRabRoutes(router) {
       });
     } catch (err) {
       console.error('RAB per titik error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ===== PM Harian — edit jumlah porsi besar/kecil per tanggal =====
+  // GET /laporan/rab-pm-harian?tanggal=YYYY-MM-DD
+  //   → daftar semua titik + nilai snapshot utk tanggal tsb (atau default dari penerima_manfaat)
+  router.get('/laporan/rab-pm-harian', roleOps, async (req, res) => {
+    try {
+      const t = req.user.tenant_id;
+      const tanggal = (req.query.tanggal || new Date().toISOString().slice(0, 10)).trim();
+
+      const [snap] = await db.query(
+        `SELECT penerima_manfaat_id, nama_titik, kategori_penerima, paket_besar, paket_kecil
+         FROM pm_harian WHERE tenant_id=? AND tanggal=?`,
+        [t, tanggal]
+      );
+      const snapMap = {};
+      for (const s of snap) snapMap[s.penerima_manfaat_id] = s;
+
+      const [pmList] = await db.query(
+        `SELECT id, nama_kelompok, paket_besar, paket_kecil, kategori_penerima
+         FROM penerima_manfaat WHERE tenant_id=? ORDER BY nama_kelompok ASC`,
+        [t]
+      );
+
+      const rows = pmList.map(p => ({
+        penerima_manfaat_id: p.id,
+        nama_titik: p.nama_kelompok,
+        kategori_penerima: p.kategori_penerima,
+        paket_besar: snapMap[p.id] ? Number(snapMap[p.id].paket_besar) : Number(p.paket_besar || 0),
+        paket_kecil: snapMap[p.id] ? Number(snapMap[p.id].paket_kecil) : Number(p.paket_kecil || 0),
+        is_snapshot: !!snapMap[p.id],
+      }));
+
+      res.json({ tanggal, total: rows.length, terisi: snap.length, rows });
+    } catch (err) {
+      console.error('RAB PM harian error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /laporan/rab-pm-harian  { tanggal, rows:[{penerima_manfaat_id,paket_besar,paket_kecil}] }
+  router.post('/laporan/rab-pm-harian', roleOps, async (req, res) => {
+    try {
+      const t = req.user.tenant_id;
+      const { tanggal, rows } = req.body || {};
+      if (!tanggal) return res.status(400).json({ error: 'Tanggal wajib diisi (YYYY-MM-DD)' });
+      if (!Array.isArray(rows)) return res.status(400).json({ error: 'rows harus berupa array' });
+
+      let saved = 0, failed = 0;
+
+      // Ulangi daftar penerima_manfaat utk ambil nama_titik & kategori saat ini
+      const [pmList] = await db.query(
+        `SELECT id, nama_kelompok, kategori_penerima FROM penerima_manfaat WHERE tenant_id=?`,
+        [t]
+      );
+      const pmMap = {};
+      for (const p of pmList) pmMap[p.id] = p;
+
+      for (const r of rows) {
+        const pm = pmMap[r.penerima_manfaat_id];
+        if (!pm) { failed++; continue; }
+        const besar = Math.max(0, parseInt(r.paket_besar, 10) || 0);
+        const kecil = Math.max(0, parseInt(r.paket_kecil, 10) || 0);
+
+        await db.query(
+          `INSERT INTO pm_harian (tenant_id, tanggal, penerima_manfaat_id, nama_titik, kategori_penerima, paket_besar, paket_kecil)
+           VALUES (?,?,?,?,?,?,?)
+           ON DUPLICATE KEY UPDATE
+             nama_titik=VALUES(nama_titik),
+             kategori_penerima=VALUES(kategori_penerima),
+             paket_besar=VALUES(paket_besar),
+             paket_kecil=VALUES(paket_kecil)`,
+          [t, tanggal, r.penerima_manfaat_id, pm.nama_kelompok, pm.kategori_penerima, besar, kecil]
+        );
+        saved++;
+      }
+
+      res.json({ ok: true, message: 'PM harian tersimpan', tanggal, saved, failed });
+    } catch (err) {
+      console.error('RAB PM harian save error:', err);
       res.status(500).json({ error: err.message });
     }
   });

@@ -42,6 +42,24 @@ async function runMigration() {
   ) ENGINE=InnoDB`);
   log('[OK] Tabel siklus_menu_item_bahan tersedia');
 
+  // Tabel Snapshot PM Harian (jumlah porsi besar/kecil per tanggal per titik)
+  await q(`CREATE TABLE IF NOT EXISTS pm_harian (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    tanggal DATE NOT NULL,
+    penerima_manfaat_id INT NOT NULL,
+    nama_titik VARCHAR(255) NOT NULL,
+    kategori_penerima VARCHAR(255) DEFAULT NULL,
+    paket_besar INT DEFAULT 0,
+    paket_kecil INT DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_pm_tanggal_titik (tenant_id, tanggal, penerima_manfaat_id),
+    INDEX idx_tanggal (tenant_id, tanggal)
+  ) ENGINE=InnoDB`);
+  log('[OK] Tabel pm_harian tersedia');
+
   // Migrasi kolom penerima_manfaat
   try {
     const [cols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'penerima_manfaat' AND COLUMN_NAME = 'paket_besar'");

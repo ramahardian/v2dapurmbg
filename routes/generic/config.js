@@ -18,6 +18,7 @@ const TABLES = {
   sp_referensi_bahan: ['nama', 'kategori', 'berat_bersih', 'bdd_persen', 'berat_kotor', 'energi', 'protein', 'lemak', 'karbohidrat', 'serat'],
   akun: ['kode', 'nama', 'bp', 'tipe', 'is_active'],
   hari_libur: ['tanggal', 'nama', 'kategori'],
+  pm_harian: ['tanggal', 'penerima_manfaat_id', 'nama_titik', 'kategori_penerima', 'paket_besar', 'paket_kecil'],
 };
 
 /**
@@ -38,6 +39,7 @@ const REQUIRED_FIELDS = {
   sp_referensi_bahan: ['nama', 'berat_bersih'],
   akun: ['kode', 'nama', 'bp'],
   hari_libur: ['tanggal', 'nama'],
+  pm_harian: ['tanggal', 'penerima_manfaat_id'],
 };
 
 /**
@@ -87,6 +89,7 @@ const TABLE_ROLES = {
   distribusi: ['admin', 'produksi', 'gudang', 'keuangan', 'ahli_gizi'],
   sp_referensi_bahan: ['admin', 'ahli_gizi'],
   akun: ['admin', 'keuangan'],
+  pm_harian: ['admin', 'keuangan', 'produksi', 'gudang'],
 };
 
 module.exports = { TABLES, REQUIRED_FIELDS, UNIQUE_FIELDS, SEARCHABLE_FIELDS, TABLE_ROLES };

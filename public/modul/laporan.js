@@ -87,7 +87,7 @@ const tabColors = {
       const [siklusList, rabRes, rabTitikRes] = await Promise.all([
         api.get('/siklus').catch(() => []),
         api.get('/laporan/rab-sinkron?periode=' + filterPeriode + (filterSiklusId ? '&siklus_id=' + filterSiklusId : '')),
-        api.get('/laporan/rab-per-titik?periode=' + filterPeriode).catch(() => null),
+        api.get('/laporan/rab-per-titik?periode=' + filterPeriode + '&tanggal=' + (lapState.rab_pm_tanggal || '')).catch(() => null),
       ]);
       const r = rabRes;
       const effectivePeriode = r.periode || filterPeriode || new Date().toISOString().slice(0, 7);
@@ -525,6 +525,34 @@ const tabColors = {
       var exportRows = [];
       var rabTitik = rabTitikRes;
       if (rabTitik && Array.isArray(rabTitik.sekolah)) {
+        var pmTanggal = lapState.rab_pm_tanggal || new Date().toISOString().slice(0, 10);
+        var pmSumberTxt = rabTitik.sumber === 'snapshot'
+          ? '<span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded">DATA PM HARIAN (' + escHtml(pmTanggal) + ')</span>'
+          : '<span class="text-[10px] font-semibold text-stone-500 bg-stone-100 border border-stone-200 px-2 py-1 rounded">DATA PM SAAT INI</span>';
+        var pmEditor =
+          '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4 mb-4">' +
+            '<div class="flex flex-wrap items-center gap-3 mb-3">' +
+              '<div class="flex items-center gap-2">' +
+                '<span class="text-xs font-bold text-stone-700">Jumlah PM per Hari</span>' +
+                '<input type="date" id="rab-pm-tanggal" value="' + pmTanggal + '" onchange="gantiTanggalPMMan()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">' +
+              '</div>' +
+              pmSumberTxt +
+              '<button onclick="simpanPMMan()" class="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg transition-colors shadow-sm">' +
+                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>' +
+                'Simpan PM Harian' +
+              '</button>' +
+            '</div>' +
+            '<div class="overflow-x-auto"><table class="w-full text-xs">' +
+              '<thead><tr class="bg-stone-50">' +
+                '<th class="text-left px-3 py-2 text-[10px] font-bold text-stone-500 uppercase tracking-wider">TITIK</th>' +
+                '<th class="text-right px-3 py-2 text-[10px] font-bold text-stone-500 uppercase tracking-wider">PAKET BESAR</th>' +
+                '<th class="text-right px-3 py-2 text-[10px] font-bold text-stone-500 uppercase tracking-wider">PAKET KECIL</th>' +
+              '</tr></thead><tbody id="pm-editor-tbody">' +
+              '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="3">Muat data editor...</td></tr>' +
+            '</tbody></table></div>' +
+            '<div id="pm-editor-status" class="mt-2 text-[10px] text-stone-400"></div>' +
+          '</div>';
+
         var rabCards = '<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-8">' +
           '<div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm">' +
             '<div class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 mb-1">Total Sekolah</div>' +
@@ -592,7 +620,7 @@ const tabColors = {
 
         var sekolahHtml = buildTitikTable(rabTitik.sekolah || [], 'Sekolah', true);
         var posyanduHtml = buildTitikTable(rabTitik.posyandu || [], 'Posyandu', false);
-        window._lapStatCards += '<div class="mt-8">' + rabCards + sekolahHtml + posyanduHtml + '</div>';
+        window._lapStatCards += '<div class="mt-8">' + pmEditor + rabCards + sekolahHtml + posyanduHtml + '</div>';
         window['_export_rab'] = { data: exportRows, fields: ['no', 'nama', 'klasifikasi', 'jumlah', 'pagu', 'total'] };
       } else {
         window['_export_rab'] = { data: [], fields: ['no', 'nama', 'klasifikasi', 'jumlah', 'pagu', 'total'] };
@@ -1984,6 +2012,7 @@ function renderLapPage() {
   const ld = window._lapData;
   if (!ld) {
     if (window._lapStatCards) wrap.innerHTML = window._lapStatCards;
+    if (document.getElementById('rab-pm-tanggal')) loadPMEditor();
     return;
   }
   const totalPages = Math.ceil(ld.fmt.length / LAP_PAGE_SIZE) || 1;
@@ -2012,6 +2041,7 @@ function renderLapPage() {
   }
 
   wrap.innerHTML = html;
+  if (document.getElementById('rab-pm-tanggal')) loadPMEditor();
 }
 
 function lapGoToPage(p) {
@@ -2172,6 +2202,54 @@ function gantiPeriodeRabPembelian() {
   lapState.rp_periode = document.getElementById('rp-filter-periode')?.value || '';
   lapState.page = 1;
   showLap('rab-pembelian');
+}
+
+// ── PM Harian editor (RAB per titik) ────────────────────────────────
+async function loadPMEditor(tanggal) {
+  var tbody = document.getElementById('pm-editor-tbody');
+  var statusEl = document.getElementById('pm-editor-status');
+  var t = tanggal || lapState.rab_pm_tanggal || new Date().toISOString().slice(0, 10);
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="3">Memuat...</td></tr>';
+  try {
+    var d = await api.get('/laporan/rab-pm-harian?tanggal=' + t);
+    var rows = d.rows || [];
+    window.__pm_rows = rows;
+    tbody.innerHTML = rows.length ? rows.map(function(r) {
+      return '<tr class="border-t border-stone-100">' +
+        '<td class="px-3 py-2 font-semibold text-xs text-stone-800">' + escHtml(r.nama_titik) + ' ' + (r.is_snapshot ? '<span class="text-[9px] text-emerald-600">· tersimpan</span>' : '') + '</td>' +
+        '<td class="px-3 py-2"><input type="number" min="0" data-k="' + r.penerima_manfaat_id + '" data-f="besar" value="' + r.paket_besar + '" class="w-24 text-right text-xs border border-stone-200 rounded-lg px-2 py-1.5"></td>' +
+        '<td class="px-3 py-2"><input type="number" min="0" data-k="' + r.penerima_manfaat_id + '" data-f="kecil" value="' + r.paket_kecil + '" class="w-24 text-right text-xs border border-stone-200 rounded-lg px-2 py-1.5"></td>' +
+      '</tr>';
+    }).join('') : '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="3">Belum ada titik. Tambah dulu di Penerima Manfaat.</td></tr>';
+    if (statusEl) statusEl.textContent = d.terisi + '/' + d.total + ' titik tersimpan utk ' + t;
+  } catch(e) {
+    tbody.innerHTML = '<tr><td class="px-3 py-6 text-center text-red-500" colspan="3">Gagal memuat: ' + escHtml(e.message) + '</td></tr>';
+  }
+}
+function gantiTanggalPMMan() {
+  var v = document.getElementById('rab-pm-tanggal')?.value || new Date().toISOString().slice(0, 10);
+  lapState.rab_pm_tanggal = v;
+  showLap('rab');
+}
+async function simpanPMMan() {
+  var tanggal = document.getElementById('rab-pm-tanggal')?.value;
+  if (!tanggal) { showAlert('Pilih tanggal terlebih dahulu', 'error'); return; }
+  var rows = [];
+  document.querySelectorAll('#pm-editor-tbody tr input[data-f]').forEach(function(inp) {
+    var pid = parseInt(inp.getAttribute('data-k'), 10);
+    var found = rows.find(function(x) { return x.penerima_manfaat_id === pid; });
+    if (!found) { found = { penerima_manfaat_id: pid, paket_besar: 0, paket_kecil: 0 }; rows.push(found); }
+    if (inp.getAttribute('data-f') === 'besar') found.paket_besar = parseInt(inp.value, 10) || 0;
+    else found.paket_kecil = parseInt(inp.value, 10) || 0;
+  });
+  try {
+    await api.post('/laporan/rab-pm-harian', { tanggal: tanggal, rows: rows });
+    showAlert('✅ PM harian ' + tanggal + ' tersimpan (' + rows.length + ' titik)', 'success');
+    showLap('rab');
+  } catch(e) {
+    showAlert('Gagal: ' + e.message, 'error');
+  }
 }
 
 function toggleRpSupplier(idx) {
