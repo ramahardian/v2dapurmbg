@@ -1200,9 +1200,12 @@ function registerRabRoutes(router) {
         const pagu = budgetByKategori[kat] || { harga_besar: 0, harga_kecil: 0 };
         const kecil = Number(pm.paket_kecil) || 0;
         const besar = Number(pm.paket_besar) || 0;
+        const posyandu = isPosyandu(pm);
+        const labelKecil = posyandu ? 'Porsi Kecil' : 'Paud & Kelas 1-3';
+        const labelBesar = posyandu ? 'Porsi Besar' : 'Kelas 4-12 + Guru';
         const rows = [
-          { klasifikasi: 'Paud & Kelas 1-3', jumlah: kecil, pagu: pagu.harga_kecil, total: kecil * pagu.harga_kecil },
-          { klasifikasi: 'Kelas 4-12 + Guru', jumlah: besar, pagu: pagu.harga_besar, total: besar * pagu.harga_besar },
+          { klasifikasi: labelKecil, jumlah: kecil, pagu: pagu.harga_kecil, total: kecil * pagu.harga_kecil },
+          { klasifikasi: labelBesar, jumlah: besar, pagu: pagu.harga_besar, total: besar * pagu.harga_besar },
         ];
         const sub_total = rows.reduce((s, r) => s + r.total, 0);
         return { id: pm.id, nama: pm.nama_kelompok, kategori: kat, lokasi: pm.lokasi || '', rows, sub_total };
