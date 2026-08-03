@@ -411,8 +411,41 @@ const tabColors = {
         var d = rabHarianRes;
         var items = d.items || [];
 
+        // ── Jumlah PM per Hari — ringkasan porsi makan utk tanggal RAB harian ──
+        var pmHarianSummary = '';
+        try {
+          var pmRes = await api.get('/laporan/rab-pm-harian?tanggal=' + rhTanggal);
+          var pmRows = (pmRes && Array.isArray(pmRes.rows)) ? pmRes.rows : [];
+          var pmBesar = 0, pmKecil = 0;
+          pmRows.forEach(function(pr) { pmBesar += Number(pr.paket_besar) || 0; pmKecil += Number(pr.paket_kecil) || 0; });
+          var pmTotal = pmBesar + pmKecil;
+          var pmSumberLabel = pmRes && Number(pmRes.terisi) > 0 ? 'Data PM harian' : 'Data PM saat ini';
+          pmHarianSummary = '<div class="mt-6 mb-4 grid grid-cols-2 lg:grid-cols-4 gap-3">' +
+            '<div class="bg-gradient-to-br from-cyan-50 to-emerald-100/60 rounded-2xl border border-cyan-200/60 p-4 shadow-sm">' +
+              '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-cyan-700">Jumlah PM per Hari</span><svg class="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>' +
+              '<div class="text-2xl font-bold text-cyan-800">' + fmtNum(pmTotal) + '</div>' +
+              '<div class="text-[10px] text-cyan-600/70">' + escHtml(fmtDateIndonesia(rhTanggal)) + ' · ' + pmSumberLabel + '</div>' +
+            '</div>' +
+            '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
+              '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Paket Besar</span></div>' +
+              '<div class="text-lg font-bold text-amber-600">' + fmtNum(pmBesar) + '</div>' +
+              '<div class="text-[10px] text-stone-400">Kelas 4-12 + Guru</div>' +
+            '</div>' +
+            '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
+              '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Paket Kecil</span></div>' +
+              '<div class="text-lg font-bold text-rose-500">' + fmtNum(pmKecil) + '</div>' +
+              '<div class="text-[10px] text-stone-400">Paud & Kelas 1-3</div>' +
+            '</div>' +
+            '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-4">' +
+              '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Titik</span></div>' +
+              '<div class="text-lg font-bold text-stone-800">' + fmtNum(pmRows.length) + '</div>' +
+              '<div class="text-[10px] text-stone-400">Sekolah & Posyandu</div>' +
+            '</div>' +
+          '</div>';
+        } catch(pmErr) { console.error('PM Harian summary error:', pmErr); }
+
         // ── Date picker filter bar ──
-        var rhFilterBar = '<div class="mt-6 mb-8 bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3">' +
+        var rhFilterBar = pmHarianSummary + '<div class="' + (pmHarianSummary ? 'mt-2' : 'mt-6') + ' mb-8 bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3">' +
           '<div class="flex flex-wrap items-center gap-x-4 gap-y-2">' +
             '<div class="flex items-center gap-2">' +
               '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>' +
