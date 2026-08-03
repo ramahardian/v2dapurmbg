@@ -14,6 +14,14 @@ router.get('/dashboard', async (req, res) => {
     const [bahan] = await db.query('SELECT COUNT(*) as jumlah_bahan_baku FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
     const [lowStock] = await db.query('SELECT nama, satuan, stok_minimum as min, stok_saat_ini as stok FROM bahan_baku WHERE tenant_id=? AND stok_saat_ini < stok_minimum', [req.user.tenant_id]);
 
+    // Produksi 7 hari terakhir (untuk grafik)
+    const [produksi7] = await db.query(
+      `SELECT tanggal_produksi, SUM(jumlah_porsi) AS porsi
+       FROM produksi WHERE tenant_id=? AND tanggal_produksi >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+       GROUP BY tanggal_produksi ORDER BY tanggal_produksi`,
+      [req.user.tenant_id]
+    );
+
     // Ijin/cuti hari ini (disetujui & masih berlangsung) + yang menunggu persetujuan
     const [[ijinHariIni]] = await db.query(
       `SELECT COUNT(*) AS total FROM ijin_cuti
@@ -28,6 +36,26 @@ router.get('/dashboard', async (req, res) => {
     const totalBudget = Number(budget[0]?.total_budget || 0);
     const totalRealisasi = Number(budget[0]?.total_realisasi || 0);
 
+    // Siapkan data grafik produksi 7 hari (isi 0 untuk tanggal tanpa produksi)
+    const porsiByDate = {};
+    produksi7.forEach(r => {
+      const d = new Date(r.tanggal_produksi);
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      porsiByDate[key] = Number(r.porsi || 0);
+    });
+    const grafikProduksi = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      grafikProduksi.push({
+        tanggal: d.getDate() + '/' + (d.getMonth() + 1),
+        label: i === 0 ? 'Hari Ini' : d.toLocaleDateString('id-ID', { weekday: 'short' }),
+        porsi: porsiByDate[key] || 0
+      });
+    }
+    const maxPorsi = Math.max(1, ...grafikProduksi.map(g => g.porsi));
+
     const summary = {
       total_penerima_manfaat: penerima[0]?.total_penerima_manfaat || 0,
       paket_besar: penerima[0]?.paket_besar || 0,
@@ -40,7 +68,10 @@ router.get('/dashboard', async (req, res) => {
       stok_menipis: lowStock.length,
       low_stock_items: lowStock,
       ijin_cuti_hari_ini: Number(ijinHariIni.total || 0),
-      ijin_cuti_menunggu: Number(ijinMenunggu.total || 0)
+      ijin_cuti_menunggu: Number(ijinMenunggu.total || 0),
+      grafik_produksi: grafikProduksi,
+      grafik_max_porsi: maxPorsi,
+      grafik_total_7hari: grafikProduksi.reduce((s, g) => s + g.porsi, 0)
     };
     
     res.render('partials/dashboard', { 
