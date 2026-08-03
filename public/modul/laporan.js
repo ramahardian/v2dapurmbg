@@ -564,18 +564,24 @@ const tabColors = {
             var noTd = '<td class="px-3 py-3 text-center text-xs text-stone-500" rowspan="2">' + no + '</td>';
             var namaTd = '<td class="px-4 py-3 font-semibold text-xs text-stone-800" rowspan="2">' + escHtml(it.nama) + '</td>';
             it.rows.forEach(function(row, ri) {
-              body += '<tr class="' + (ri === 1 ? 'border-t border-stone-100' : '') + ' hover:bg-stone-50/70 transition-colors">' +
+              var missing = row.jumlah > 0 && row.total === 0;
+              var rowCls = missing ? 'bg-red-50/70 border-l-2 border-l-red-500' : (ri === 1 ? '' : '');
+              var jumlahCls = row.jumlah > 0 ? (missing ? 'text-red-600' : 'text-stone-700') : 'text-stone-300';
+              var paguCls = row.pagu > 0 ? (missing ? 'text-red-500' : 'text-stone-600') : (row.jumlah > 0 ? 'text-red-400' : 'text-stone-300');
+              var totalCls = row.total > 0 ? 'text-[#1e40af]' : (missing ? 'text-red-600 font-bold' : 'text-stone-300');
+              var badge = missing ? '<span class="ml-1 inline-block align-middle text-[9px] font-bold text-white bg-red-500 rounded px-1 py-0.5">0</span>' : '';
+              body += '<tr class="' + (ri === 1 ? 'border-t border-stone-100 ' : '') + rowCls + ' hover:bg-stone-50/70 transition-colors">' +
                 (ri === 0 ? noTd + namaTd : '') +
                 '<td class="px-4 py-3 text-xs text-stone-600">' + escHtml(row.klasifikasi) + '</td>' +
-                '<td class="px-4 py-3 text-right mono text-xs font-semibold text-stone-700">' + (row.jumlah > 0 ? fmtNum(row.jumlah) : '') + '</td>' +
-                '<td class="px-4 py-3 text-right mono text-xs text-stone-600">' + (row.pagu > 0 ? fmtIDR(row.pagu) : '') + '</td>' +
-                '<td class="px-4 py-3 text-right mono text-xs font-bold ' + (row.total > 0 ? 'text-[#1e40af]' : 'text-stone-300') + '">' + (row.total > 0 ? fmtIDR(row.total) : '') + '</td>' +
+                '<td class="px-4 py-3 text-right mono text-xs font-semibold ' + jumlahCls + '">' + (row.jumlah > 0 ? fmtNum(row.jumlah) : '') + '</td>' +
+                '<td class="px-4 py-3 text-right mono text-xs ' + paguCls + '">' + (row.pagu > 0 ? fmtIDR(row.pagu) : (row.jumlah > 0 ? 'Rp0' : '')) + '</td>' +
+                '<td class="px-4 py-3 text-right mono text-xs ' + totalCls + '">' + (row.total > 0 ? fmtIDR(row.total) : (missing ? '0' : '')) + badge + '</td>' +
               '</tr>';
               exportRows.push({ no: no, nama: it.nama, klasifikasi: row.klasifikasi, jumlah: row.jumlah, pagu: row.pagu, total: row.total });
             });
-            body += '<tr class="border-t border-stone-200 bg-gradient-to-r from-stone-50 to-stone-100">' +
+            body += '<tr class="border-t border-stone-200 ' + (it.sub_total === 0 ? 'bg-red-50' : 'bg-gradient-to-r from-stone-50 to-stone-100') + '">' +
               '<td class="px-4 py-2.5 text-[10px] text-right text-stone-500 uppercase tracking-wider" colspan="5">Sub Total</td>' +
-              '<td class="px-4 py-2.5 text-right mono text-xs font-bold text-stone-800">' + fmtIDR(it.sub_total) + '</td></tr>';
+              '<td class="px-4 py-2.5 text-right mono text-xs font-bold ' + (it.sub_total === 0 ? 'text-red-600' : 'text-stone-800') + '">' + fmtIDR(it.sub_total) + '</td></tr>';
           });
           var total = list.reduce(function(s, x) { return s + (x.sub_total || 0); }, 0);
           body += '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-stone-100 to-stone-50">' +
