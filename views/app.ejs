@@ -73,6 +73,21 @@
     .badge-alpha { background:#fee2e2;color:#991b1b; }
     .badge-terlambat { background:#ffedd5;color:#9a3412; }
     .badge-koreksi { background:#fce7f3;color:#9d174d; }
+
+    /* ═══ Animasi kartu global (dipakai semua halaman) ═══ */
+    @keyframes dashIn {
+      from { opacity: 0; transform: translateY(14px) scale(.97); }
+      to { opacity: 1; transform: none; }
+    }
+    .dash-card-item { animation: dashIn .5s ease-out both; transition: transform .2s ease, box-shadow .2s ease; }
+    .dash-card-item:hover { transform: translateY(-3px); box-shadow: 0 12px 28px -10px rgba(0,0,0,.18); }
+    html.dark .dash-card-item:hover { box-shadow: 0 12px 28px -10px rgba(0,0,0,.6); }
+    .dash-card-enter { animation: dashIn .5s ease-out both; }
+    @keyframes dashPulseSoft {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    .dash-icon-pulse { animation: dashPulseSoft 2.4s ease-in-out infinite; }
   </style>
 </head>
 <body>
