@@ -310,10 +310,10 @@ router.post('/siklus/:id/duplicate', async (req, res) => {
     );
     for (const it of items) {
       await conn.query(
-        `INSERT INTO siklus_menu_item (siklus_id, hari_ke, hari_nama, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, resep_map)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO siklus_menu_item (siklus_id, hari_ke, hari_nama, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, resep_map, foto)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [newId, it.hari_ke, it.hari_nama, it.menu_id, it.menu_nama, it.jumlah_porsi,
-         it.kalori || 0, it.protein || 0, it.karbohidrat || 0, it.lemak || 0, it.serat || 0, it.resep_map || null]
+         it.kalori || 0, it.protein || 0, it.karbohidrat || 0, it.lemak || 0, it.serat || 0, it.resep_map || null, it.foto || null]
       );
     }
 
