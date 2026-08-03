@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS menu (
   lemak DECIMAL(10,2) DEFAULT 0,
   serat DECIMAL(10,2) DEFAULT 0,
   jumlah_porsi INT DEFAULT 0,
-  foto VARCHAR(255) DEFAULT NULL,
+  foto LONGTEXT DEFAULT NULL,
   jenis_porsi ENUM('besar','kecil') DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
@@ -277,7 +277,7 @@ CREATE TABLE IF NOT EXISTS siklus_menu_item (
   karbohidrat DECIMAL(10,2) DEFAULT 0,
   lemak DECIMAL(10,2) DEFAULT 0,
   serat DECIMAL(10,2) DEFAULT 0,
-  foto VARCHAR(255) DEFAULT NULL,
+  foto LONGTEXT DEFAULT NULL,
   FOREIGN KEY (siklus_id) REFERENCES siklus_menu(id) ON DELETE CASCADE,
   FOREIGN KEY (menu_id) REFERENCES menu(id) ON DELETE SET NULL,
   INDEX idx_siklus (siklus_id)

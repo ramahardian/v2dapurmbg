@@ -1087,7 +1087,7 @@ async function openSiklusForm(editing) {
       const hk = it.hari_ke;
       const existingItem = isEdit && s.items ? s.items.find(i => i.hari_ke === hk) : null;
       const resepMapFromItem = existingItem && existingItem.resep_map ? (typeof existingItem.resep_map === 'string' ? JSON.parse(existingItem.resep_map) : existingItem.resep_map) : {};
-      gridData[hk] = { hari_ke: hk, hari_nama: it.hari_nama, menu_id: it.menu_id || '', menu_nama: it.menu_nama || '', bahan: {}, resep_map: resepMapFromItem };
+      gridData[hk] = { hari_ke: hk, hari_nama: it.hari_nama, menu_id: it.menu_id || '', menu_nama: it.menu_nama || '', foto: it.foto || '', bahan: {}, resep_map: resepMapFromItem };
       for (const rk of ROW_KEYS) {
         const existing = existingGrid[hk] && existingGrid[hk].bahan && existingGrid[hk].bahan[rk];
         gridData[hk].bahan[rk] = (existing || []).map(b => ({ ...b }));
@@ -1128,7 +1128,8 @@ async function openSiklusForm(editing) {
           <th class="w-[100px] min-w-[100px] px-3 py-3 text-left text-xs font-semibold text-stone-400 bg-stone-50 border-b border-r border-stone-200">Kelompok</th>${formData.items.map(it => {
             const dt = getDate(it.hari_ke);
             var _mn = it.menu_nama || (gridData[it.hari_ke] && gridData[it.hari_ke].menu_nama) || '';
-            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top"><div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div><div class="inline-block my-1 px-2 py-0.5 rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">Menu ' + it.hari_ke + '</div>' + (dt ? '<div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div>' : '') + (_mn ? '<div class="text-[9px] text-stone-500 mt-0.5 truncate max-w-[120px] mx-auto" title="' + escHtml(_mn) + '">' + escHtml(_mn) + '</div>' : '') + '</th>';
+            var _ft = (gridData[it.hari_ke] && gridData[it.hari_ke].foto) || '';
+            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top"><div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div><div class="inline-block my-1 px-2 py-0.5 rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">Menu ' + it.hari_ke + '</div>' + (dt ? '<div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div>' : '') + (_mn ? '<div class="text-[9px] text-stone-500 mt-0.5 truncate max-w-[120px] mx-auto" title="' + escHtml(_mn) + '">' + escHtml(_mn) + '</div>' : '') + '<div id="sk-foto-' + it.hari_ke + '" class="mt-1.5">' + renderSiklusFoto(it.hari_ke, _ft) + '</div></th>';
           }).join('')}
         </tr></thead><tbody>
           ${ROW_KEYS.map(rk => {
@@ -1208,7 +1209,7 @@ async function openSiklusForm(editing) {
       var hasAnyBahan = rowKeys.some(function(rk) { return (day.bahan[rk] || []).length > 0; });
       var hasMenu = !!day.menu_id;
       if (!hasAnyBahan && !hasMenu) continue;
-      items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: day.menu_id || '', menu_nama: day.menu_nama || '', jumlah_porsi: meta.jumlah_porsi || 0 });
+      items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: day.menu_id || '', menu_nama: day.menu_nama || '', jumlah_porsi: meta.jumlah_porsi || 0, foto: day.foto || '' });
       for (var ri = 0; ri < rowKeys.length; ri++) {
         var rk = rowKeys[ri], ids = (day.bahan[rk] || []).map(function(b) { return b.id; });
         gridPayload.push({ hari_ke: hk, kategori_sp: rk, bahan_baku_ids: ids });
@@ -1348,6 +1349,39 @@ function showModal(title, bodyHtml, sizeClass) {
 
 // Popup picker
 var _gridPickerOpen = false;
+
+// Foto menu per hari (base64)
+function renderSiklusFoto(hk, foto) {
+  var img = foto ? '<img src="' + foto + '" class="w-14 h-14 object-cover rounded-lg border border-stone-200 shadow-sm mx-auto mb-1">' : '';
+  var btns = '<div class="flex items-center justify-center gap-1">'
+    + '<label class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-stone-200 cursor-pointer hover:border-emerald-400 text-[10px] font-medium text-stone-500 transition-colors">'
+    + '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>'
+    + (foto ? 'Ganti' : 'Foto')
+    + '<input type="file" accept="image/*" class="hidden" onchange="siklusFotoChange(this,' + hk + ')"></label>';
+  if (foto) btns += '<button type="button" onclick="siklusFotoRemove(' + hk + ')" class="inline-flex items-center px-2 py-1 rounded-md bg-red-50 border border-red-200 text-red-500 text-[10px] font-medium hover:bg-red-100 transition-colors">Hapus</button>';
+  btns += '</div>';
+  return '<div class="flex flex-col items-center">' + img + btns + '</div>';
+}
+
+function siklusFotoChange(input, hk) {
+  var file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showAlert('Ukuran foto maksimal 2MB', 'warning'); input.value = ''; return; }
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    if (window._gridData && window._gridData[hk]) window._gridData[hk].foto = ev.target.result;
+    var wrap = document.getElementById('sk-foto-' + hk);
+    if (wrap) wrap.innerHTML = renderSiklusFoto(hk, ev.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+function siklusFotoRemove(hk) {
+  if (window._gridData && window._gridData[hk]) window._gridData[hk].foto = '';
+  var wrap = document.getElementById('sk-foto-' + hk);
+  if (wrap) wrap.innerHTML = renderSiklusFoto(hk, '');
+}
+
 function openGridPicker(hk, rk) {
   if (_gridPickerOpen) return;
   _gridPickerOpen = true;

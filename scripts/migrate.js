@@ -169,6 +169,17 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi foto siklus)'); }
 
+  // Foto base64: menu & siklus_menu_item VARCHAR(255) → LONGTEXT
+  for (const tbl of ['menu', 'siklus_menu_item']) {
+    try {
+      const [ftCol] = await q(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '${tbl}' AND COLUMN_NAME = 'foto' AND DATA_TYPE != 'longtext'`);
+      if (ftCol.length) {
+        await q(`ALTER TABLE ${tbl} MODIFY foto LONGTEXT DEFAULT NULL`);
+        log(`✓ Migrasi ${tbl}: foto VARCHAR(255) → LONGTEXT untuk base64`);
+      }
+    } catch (e) { log(`  (skip migrasi foto longtext ${tbl})`); }
+  }
+
   // id_koperasi
   try {
     const [ikCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'id_koperasi'");
