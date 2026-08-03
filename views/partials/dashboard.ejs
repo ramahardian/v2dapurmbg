@@ -90,7 +90,60 @@
   </ul>
 </div>
 
+<% var ma = summary.menu_aktif; %>
 <div class="dash-card-item bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-6" style="animation-delay:420ms">
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-2">
+      <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      <h3 class="font-bold text-stone-800">Menu Aktif Hari Ini</h3>
+    </div>
+    <% if (ma) { %>
+      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        Hari <%= ma.hari_ke %>/<%= ma.total_hari %>
+      </span>
+    <% } %>
+  </div>
+  <% if (ma) { %>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="min-w-0">
+        <div class="text-[10px] uppercase tracking-wider text-stone-400 font-bold mb-1"><%= ma.siklus_nama %><% if (ma.kategori) { %> • <%= ma.kategori %><% } %></div>
+        <div class="text-lg font-bold text-stone-800 truncate"><%= ma.menu_nama || 'Menu belum diisi' %></div>
+        <div class="text-xs text-stone-500 mt-1">
+          Porsi: <b class="mono"><%= ma.porsi_item.toLocaleString('id-ID') %></b>
+          <% if (ma.jumlah_porsi > 0) { %> dari total <b class="mono"><%= ma.jumlah_porsi.toLocaleString('id-ID') %></b> porsi<% } %>
+        </div>
+      </div>
+      <% if (ma.kalori > 0) { %>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
+          <div class="bg-orange-50 border border-orange-100 rounded-xl px-3 py-2 text-center">
+            <div class="mono text-sm font-bold text-orange-700"><%= ma.kalori.toLocaleString('id-ID') %></div>
+            <div class="text-[9px] text-orange-600/70 font-semibold uppercase tracking-wider">Kalori</div>
+          </div>
+          <div class="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-center">
+            <div class="mono text-sm font-bold text-blue-700"><%= ma.protein.toLocaleString('id-ID') %>g</div>
+            <div class="text-[9px] text-blue-600/70 font-semibold uppercase tracking-wider">Protein</div>
+          </div>
+          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-center">
+            <div class="mono text-sm font-bold text-amber-700"><%= ma.karbohidrat.toLocaleString('id-ID') %>g</div>
+            <div class="text-[9px] text-amber-600/70 font-semibold uppercase tracking-wider">Karbo</div>
+          </div>
+          <div class="bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 text-center">
+            <div class="mono text-sm font-bold text-rose-700"><%= ma.lemak.toLocaleString('id-ID') %>g</div>
+            <div class="text-[9px] text-rose-600/70 font-semibold uppercase tracking-wider">Lemak</div>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  <% } else { %>
+    <div class="text-sm text-stone-400 py-6 text-center flex flex-col items-center gap-2">
+      <svg class="w-6 h-6 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      Belum ada siklus aktif. <a href="/siklus" data-key="siklus" class="font-medium text-emerald-600 underline hover:no-underline">Aktifkan siklus →</a>
+    </div>
+  <% } %>
+</div>
+
+<div class="dash-card-item bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-6" style="animation-delay:480ms">
   <div class="flex items-center justify-between mb-4">
     <div class="flex items-center gap-2">
       <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
@@ -116,7 +169,7 @@
   <% } %>
 </div>
 
-<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-6 dash-card-item" style="animation-delay:480ms">
+<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-6 dash-card-item" style="animation-delay:540ms">
   <div class="flex items-center gap-2 mb-4">
     <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
     <h3 class="font-bold text-stone-800">Stok Menipis</h3>

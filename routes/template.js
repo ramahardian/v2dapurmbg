@@ -32,6 +32,46 @@ router.get('/dashboard', async (req, res) => {
       `SELECT COUNT(*) AS total FROM ijin_cuti WHERE tenant_id=? AND status='Menunggu'`,
       [req.user.tenant_id]
     );
+
+    // Menu aktif hari ini: ambil siklus status Aktif, hitung hari_ke = selisih
+    // hari dari tanggal_mulai (mod total_hari) + 1
+    const [siklusAktif] = await db.query(
+      `SELECT id, nama, kategori_penerima, jumlah_porsi, total_hari, tanggal_mulai
+       FROM siklus_menu WHERE tenant_id=? AND status='Aktif' ORDER BY tanggal_mulai ASC LIMIT 1`,
+      [req.user.tenant_id]
+    );
+    let menuAktifHariIni = null;
+    if (siklusAktif.length > 0) {
+      const s = siklusAktif[0];
+      const totalHari = Math.max(1, Number(s.total_hari || 7));
+      let hariKe = 1;
+      if (s.tanggal_mulai) {
+        const mulai = new Date(s.tanggal_mulai);
+        const today = new Date();
+        const diffDays = Math.floor((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(mulai.getFullYear(), mulai.getMonth(), mulai.getDate())) / 86400000);
+        hariKe = diffDays >= 0 ? (diffDays % totalHari) + 1 : 1;
+      }
+      const [menuItem] = await db.query(
+        `SELECT menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat
+         FROM siklus_menu_item WHERE siklus_id=? AND hari_ke=? LIMIT 1`,
+        [s.id, hariKe]
+      );
+      menuAktifHariIni = {
+        siklus_nama: s.nama,
+        kategori: s.kategori_penerima || '',
+        jumlah_porsi: Number(s.jumlah_porsi || 0),
+        hari_ke: hariKe,
+        total_hari: totalHari,
+        menu_id: menuItem.length ? menuItem[0].menu_id : null,
+        menu_nama: menuItem.length ? (menuItem[0].menu_nama || '-') : null,
+        porsi_item: menuItem.length ? Number(menuItem[0].jumlah_porsi || 0) : 0,
+        kalori: menuItem.length ? Number(menuItem[0].kalori || 0) : 0,
+        protein: menuItem.length ? Number(menuItem[0].protein || 0) : 0,
+        karbohidrat: menuItem.length ? Number(menuItem[0].karbohidrat || 0) : 0,
+        lemak: menuItem.length ? Number(menuItem[0].lemak || 0) : 0,
+        serat: menuItem.length ? Number(menuItem[0].serat || 0) : 0
+      };
+    }
     
     const totalBudget = Number(budget[0]?.total_budget || 0);
     const totalRealisasi = Number(budget[0]?.total_realisasi || 0);
@@ -71,7 +111,8 @@ router.get('/dashboard', async (req, res) => {
       ijin_cuti_menunggu: Number(ijinMenunggu.total || 0),
       grafik_produksi: grafikProduksi,
       grafik_max_porsi: maxPorsi,
-      grafik_total_7hari: grafikProduksi.reduce((s, g) => s + g.porsi, 0)
+      grafik_total_7hari: grafikProduksi.reduce((s, g) => s + g.porsi, 0),
+      menu_aktif: menuAktifHariIni
     };
     
     res.render('partials/dashboard', { 
