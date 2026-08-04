@@ -247,5 +247,38 @@ router.get('/dashboard/siklus-notif', async (req, res) => {
   res.json({ count: notifItems.length, items: notifItems.slice(0, 20) });
 });
 
+/**
+ * GET /dashboard/online-users
+ * Mendapatkan daftar user yang online (aktivitas < 5 menit lalu)
+ */
+router.get('/dashboard/online-users', async (req, res) => {
+  const t = req.user.tenant_id;
+  const [users] = await db.query(
+    `SELECT id, nama, email, role, foto, last_activity,
+            TIMESTAMPDIFF(SECOND, last_activity, NOW()) as seconds_ago
+     FROM users 
+     WHERE tenant_id = ? AND last_activity IS NOT NULL 
+       AND TIMESTAMPDIFF(SECOND, last_activity, NOW()) <= 300
+     ORDER BY last_activity DESC`,
+    [t]
+  );
+  
+  const onlineUsers = users.map(u => ({
+    id: u.id,
+    nama: u.nama,
+    email: u.email,
+    role: u.role,
+    foto: u.foto,
+    last_activity: u.last_activity,
+    seconds_ago: u.seconds_ago,
+    is_online: u.seconds_ago <= 300
+  }));
+
+  res.json({ 
+    count: onlineUsers.length, 
+    users: onlineUsers 
+  });
+});
+
 module.exports = router;
 

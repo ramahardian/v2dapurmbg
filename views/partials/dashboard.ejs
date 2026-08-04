@@ -48,32 +48,56 @@
   </div>
 </div>
 
-<% if (user.role === 'admin' || user.role === 'keuangan') { %>
-<div class="dash-card-item bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-6" style="animation-delay:340ms">
-  <div class="flex items-center justify-between mb-3">
-    <div class="flex items-center gap-2">
-      <svg class="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      <h3 class="font-bold text-stone-800">Export RAB Harian (XLSX)</h3>
+<!-- Export RAB + User Online (split flex) -->
+<div class="flex flex-col lg:flex-row gap-4 mb-6">
+  <% if (user.role === 'admin' || user.role === 'keuangan') { %>
+  <div class="dash-card-item bg-white rounded-2xl border border-stone-200 shadow-sm p-5 flex-1 min-w-0" style="animation-delay:340ms">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <h3 class="font-bold text-stone-800">Export RAB Harian (XLSX)</h3>
+      </div>
+    </div>
+    <p class="text-xs text-stone-500 mb-3">Unduh RAB Harian (rencana belanja bahan baku per hari) untuk tanggal tertentu atau rentang tanggal — format Excel template RAB.</p>
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2">
+        <span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Tanggal</span>
+        <input type="date" id="dash-rh-tanggal" value="<%= new Date().toISOString().slice(0, 10) %>" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400">
+      </label>
+      <span class="text-xs text-stone-400">s/d</span>
+      <label class="flex items-center gap-2">
+        <span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">sampai</span>
+        <input type="date" id="dash-rh-tanggal-sampai" value="<%= new Date().toISOString().slice(0, 10) %>" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400" title="Tanggal akhir rentang (opsional, maks. 31 hari)">
+      </label>
+      <button onclick="exportDashboardRabHarian()" class="inline-flex items-center gap-1.5 text-xs font-medium text-white bg-cyan-600 hover:bg-cyan-700 px-3 py-2 rounded-lg transition-colors shadow-sm">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Export XLSX
+      </button>
     </div>
   </div>
-  <p class="text-xs text-stone-500 mb-3">Unduh RAB Harian (rencana belanja bahan baku per hari) untuk tanggal tertentu atau rentang tanggal — format Excel template RAB.</p>
-  <div class="flex flex-wrap items-center gap-3">
-    <label class="flex items-center gap-2">
-      <span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Tanggal</span>
-      <input type="date" id="dash-rh-tanggal" value="<%= new Date().toISOString().slice(0, 10) %>" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400">
-    </label>
-    <span class="text-xs text-stone-400">s/d</span>
-    <label class="flex items-center gap-2">
-      <span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">sampai</span>
-      <input type="date" id="dash-rh-tanggal-sampai" value="<%= new Date().toISOString().slice(0, 10) %>" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400" title="Tanggal akhir rentang (opsional, maks. 31 hari)">
-    </label>
-    <button onclick="exportDashboardRabHarian()" class="inline-flex items-center gap-1.5 text-xs font-medium text-white bg-cyan-600 hover:bg-cyan-700 px-3 py-2 rounded-lg transition-colors shadow-sm">
-      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-      Export XLSX
-    </button>
+  <% } else { %>
+  <div class="dash-card-item bg-white rounded-2xl border border-stone-200 shadow-sm p-5 flex-1 min-w-0 hidden" id="export-rab-placeholder" style="animation-delay:340ms"></div>
+  <% } %>
+
+  <!-- Online Users Card -->
+  <div class="dash-card-item bg-white rounded-2xl border border-stone-200 shadow-sm p-5 flex-1 min-w-0" style="animation-delay:540ms">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        <h3 class="font-bold text-stone-800">User Online Saat Ini</h3>
+      </div>
+      <span id="online-count" class="mono text-sm font-semibold text-emerald-600">—</span>
+    </div>
+    <div id="online-users-list" class="space-y-2 max-h-48 overflow-y-auto">
+      <div class="text-sm text-stone-400 text-center py-4">Memuat...</div>
+    </div>
+    <div class="mt-3 text-center">
+      <button onclick="loadOnlineUsers()" class="text-xs font-medium text-blue-600 hover:underline">Refresh</button>
+      <span class="mx-2 text-stone-300">|</span>
+      <span class="text-[10px] text-stone-400">Auto-refresh tiap 30 detik</span>
+    </div>
   </div>
 </div>
-<% } %>
 
 <% var ma = summary.menu_aktif; %>
 <% var maJenjang = (function(kp){ if(!kp) return []; try { var p = JSON.parse(kp); if (Array.isArray(p)) return p; } catch(e){} return [kp]; })(ma && ma.kategori); %>
@@ -163,7 +187,8 @@
     <div class="mt-2 flex justify-between text-[9px] text-stone-300">
       <span>7 hari lalu</span><span>Hari ini</span>
     </div>
-  <% } else { %>
-    <div class="text-sm text-stone-400 py-8 text-center">Belum ada data produksi dalam 7 hari terakhir.</div>
-  <% } %>
+<% } else { %>
+      <div class="text-sm text-stone-400 py-8 text-center">Belum ada data produksi dalam 7 hari terakhir.</div>
+    <% } %>
+  </div>
 </div>

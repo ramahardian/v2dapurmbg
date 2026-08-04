@@ -9,6 +9,8 @@ async function renderDashboard() {
     }
     c.innerHTML = await r.text();
     animateDashboardCounts(c);
+    loadOnlineUsers();
+    startOnlineUsersAutoRefresh();
   } catch (err) {
     console.error('Dashboard error:', err);
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat dashboard: ${err.message}</div>`;
@@ -256,3 +258,71 @@ async function renderDashboardKeuangan() {
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat dashboard keuangan: ${err.message}</div>`;
   }
 }
+
+let onlineUsersRefreshInterval = null;
+
+async function loadOnlineUsers() {
+  try {
+    const r = await fetch('/api/dashboard/online-users', { credentials: 'include' });
+    if (!r.ok) throw new Error('Failed to fetch');
+    const data = await r.json();
+    
+    const countEl = document.getElementById('online-count');
+    const listEl = document.getElementById('online-users-list');
+    
+    if (countEl) countEl.textContent = data.count + ' user';
+    
+    if (!data.users || data.users.length === 0) {
+      if (listEl) listEl.innerHTML = '<div class="text-sm text-stone-400 text-center py-4">Tidak ada user online</div>';
+      return;
+    }
+    
+    if (listEl) {
+      listEl.innerHTML = data.users.map(u => {
+        const initials = u.nama?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || '?';
+        const mins = Math.floor(u.seconds_ago / 60);
+        const secs = u.seconds_ago % 60;
+        const timeAgo = mins > 0 ? `${mins}m ${secs}s lalu` : `${secs}s lalu`;
+        const roleLabel = { admin: 'Admin', ahli_gizi: 'Ahli Gizi', gudang: 'Gudang', keuangan: 'Keuangan', produksi: 'Produksi' }[u.role] || u.role;
+        
+        return `
+          <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-stone-50 transition-colors">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style="background: linear-gradient(135deg, #10b981, #059669);">
+              ${initials}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-stone-800 truncate">${u.nama}</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Online"></span>
+              </div>
+              <div class="text-[10px] text-stone-400 flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded bg-stone-100 text-[9px] font-medium">${roleLabel}</span>
+                <span>${timeAgo}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    console.error('Failed to load online users:', err);
+    const listEl = document.getElementById('online-users-list');
+    if (listEl) listEl.innerHTML = '<div class="text-sm text-red-500 text-center py-4">Gagal memuat</div>';
+  }
+}
+
+function startOnlineUsersAutoRefresh() {
+  if (onlineUsersRefreshInterval) clearInterval(onlineUsersRefreshInterval);
+  onlineUsersRefreshInterval = setInterval(loadOnlineUsers, 30000);
+}
+
+function stopOnlineUsersAutoRefresh() {
+  if (onlineUsersRefreshInterval) {
+    clearInterval(onlineUsersRefreshInterval);
+    onlineUsersRefreshInterval = null;
+  }
+}
+
+// Expose for manual refresh button
+window.loadOnlineUsers = loadOnlineUsers;
+window.stopOnlineUsersAutoRefresh = stopOnlineUsersAutoRefresh;

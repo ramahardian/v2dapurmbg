@@ -30,7 +30,7 @@ if (cluster.isMaster && WORKERS > 1) {
   const helmet = require('helmet');
   const cookieParser = require('cookie-parser');
   const jwt = require('jsonwebtoken');
-  const { requireAuth, requireRole } = require('./middleware/auth');
+  const { requireAuth, requireRole, trackActivity } = require('./middleware/auth');
   const authRoutes = require('./routes/auth');
   const apiRoutes = require('./routes/api');
   const db = require('./db');
@@ -143,7 +143,7 @@ if (cluster.isMaster && WORKERS > 1) {
 
   // Auth & API
   app.use('/api/auth', authRoutes);
-  app.use('/api', apiRoutes);
+  app.use('/api', trackActivity, apiRoutes);
 
   // Pages
   app.get('/login', (req, res) => res.render('login'));
@@ -1080,6 +1080,48 @@ CREATE TABLE menu_bahan (
           <h2 style="color:#16a34a">✅ ALTER TABLE BERHASIL!</h2>
           <p style="color:#6b7280;margin-top:0.5rem">Kolom <code>${budgetAdds.map(a => a.replace('ADD COLUMN ', '').split(' ')[0]).join('</code>, <code>')}</code> berhasil ditambahkan ke tabel <code>budget</code>.</p>
           <p style="color:#6b7280;margin-top:0.5rem;font-size:0.875rem"><code>jumlah_penerima</code> otomatis = porsi_besar + porsi_kecil</p>
+          <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali ke Dashboard</a>
+        </div>`);
+    } catch (e) {
+      res.status(500).send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center;background:#f5f5f4;min-height:100vh">
+          <h2 style="color:#dc2626">❌ Gagal</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">${e.message}</p>
+          <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a>
+        </div>`);
+    }
+  });
+  
+  // Endpoint migrasi: tambah kolom last_activity ke users (untuk fitur Who's Online)
+  app.get('/api/migrate/users-last-activity', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [cols] = await db.query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'last_activity'`
+      );
+      
+      if (cols.length) {
+        return res.send(`
+          <div style="font-family:sans-serif;padding:2rem;text-align:center;background:#f5f5f4;min-height:100vh">
+            <h2 style="color:#16a34a">✅ Kolom last_activity sudah ada</h2>
+            <p style="color:#6b7280;margin-top:0.5rem">Tidak perlu diubah. Fitur Who's Online siap digunakan.</p>
+            <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a>
+          </div>`);
+      }
+      
+      await db.query(
+        `ALTER TABLE users ADD COLUMN last_activity DATETIME DEFAULT NULL AFTER karyawan_id`
+      );
+      
+      res.send(`
+        <div style="font-family:sans-serif;padding:2rem;text-align:center;background:#f5f5f4;min-height:100vh">
+          <h2 style="color:#16a34a">✅ ALTER TABLE BERHASIL!</h2>
+          <p style="color:#6b7280;margin-top:0.5rem">
+            Kolom <code>last_activity</code> (DATETIME, NULL) berhasil ditambahkan ke tabel <code>users</code>
+          </p>
+          <p style="color:#6b7280;margin-top:0.5rem;font-size:0.875rem">
+            Digunakan untuk tracking aktivitas user (fitur <strong>Who's Online</strong> di Dashboard)
+          </p>
           <a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali ke Dashboard</a>
         </div>`);
     } catch (e) {

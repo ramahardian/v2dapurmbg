@@ -281,6 +281,7 @@ function toggleDropdown(label) {
 function route() {
   const key = (location.pathname || '/dashboard').slice(1) || 'dashboard';
   if (bahanSyncInterval && key !== 'bahan-baku') { clearInterval(bahanSyncInterval); bahanSyncInterval = null; }
+  if (window.stopOnlineUsersAutoRefresh && key !== 'dashboard') { window.stopOnlineUsersAutoRefresh(); }
   const m = MODULES[key] || MODULES.dashboard;
   
   const userRole = currentUser?.role || '';

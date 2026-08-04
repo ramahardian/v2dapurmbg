@@ -43,4 +43,11 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { sign, requireAuth, requireRole };
+async function trackActivity(req, res, next) {
+  if (req.user?.uid) {
+    await db.query('UPDATE users SET last_activity = NOW() WHERE id = ?', [req.user.uid]).catch(() => {});
+  }
+  next();
+}
+
+module.exports = { sign, requireAuth, requireRole, trackActivity };
