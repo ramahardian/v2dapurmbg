@@ -2103,6 +2103,10 @@ function exportXlsxLaporan(name) {
 function exportRabHarianXlsx() {
   const tanggal = (document.getElementById('rh-tanggal') || {}).value || (document.getElementById('rab-rh-tanggal') || {}).value;
   const siklusId = (document.getElementById('rh-filter-siklus') || {}).value || (document.getElementById('rab-filter-siklus') || {}).value || '';
+  if (!lapState.rh_tanggal && !lapState.rab_rh_tanggal) {
+    showAlert('Pilih tanggal RAB Harian terlebih dahulu sebelum export', 'warning');
+    return;
+  }
   if (!tanggal) { showAlert('Pilih tanggal terlebih dahulu', 'warning'); return; }
   const url = '/api/laporan/rab-harian/export?tanggal=' + encodeURIComponent(tanggal) + (siklusId ? '&siklus_id=' + encodeURIComponent(siklusId) : '');
   const a = document.createElement('a');
