@@ -453,4 +453,47 @@ router.get('/system/create-notifikasi-table', requireRole('admin'), (req, res) =
 </html>`);
 });
 
+// GET /system/backup — unduh backup database sebagai file .sql
+router.get('/system/backup', requireRole('admin'), async (req, res) => {
+  try {
+    const { generateSqlDump } = require('../services/dbBackup');
+    const sql = await generateSqlDump();
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    res.setHeader('Content-Type', 'application/sql; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="mbg-backup-' + stamp + '.sql"');
+    res.send(sql);
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal membuat backup: ' + err.message });
+  }
+});
+
+// GET /system/backup-page — halaman trigger unduh backup (web UI)
+router.get('/system/backup-page', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Backup Database</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-lg w-full">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-emerald-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-stone-800">Backup Database</h1>
+        <p class="text-xs text-stone-500">Unduh seluruh database sebagai file SQL.</p>
+      </div>
+    </div>
+    <p class="text-sm text-stone-600 leading-relaxed mb-4">File <b>.sql</b> berisi struktur tabel + seluruh data, siap diimpor ke server MySQL lain (CREATE DATABASE + USE disertakan). Hanya bisa diakses oleh role <b>admin</b>.</p>
+    <a href="/api/system/backup" id="btn" class="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold transition shadow-md">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Unduh Backup (.sql)
+    </a>
+    <div class="mt-4 text-[11px] text-stone-400 text-center">URL langsung: <code class="bg-stone-100 px-1.5 py-0.5 rounded">/api/system/backup</code></div>
+  </div>
+</body>
+</html>`);
+});
+
 module.exports = router;
