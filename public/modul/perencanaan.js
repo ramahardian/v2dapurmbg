@@ -480,8 +480,10 @@ function pncSwitchDayTab(event, btn) {
   btn.setAttribute('aria-selected', 'true');
 
   // Bagian siklus yang memuat tab ini: tab bar & konten hari ada dalam <div data-siklus-idx> yang sama.
-  // (querySelectorAll('[data-siklus-idx]') TIDAK dipakai karena div tab-bar juga punya atribut itu.)
-  var siklusSection = tabBar.closest('div[data-siklus-idx]');
+  // PENTING: closest() menyertakan elemen itu sendiri — div tab-bar juga punya atribut data-siklus-idx,
+  // jadi jangan closest langsung dari tabBar (akan mengembalikan tab-bar itu sendiri).
+  // Naik satu tingkat dulu ke pembungkusnya (px-5 py-2) baru closest ke section siklus.
+  var siklusSection = tabBar.parentElement ? tabBar.parentElement.closest('div[data-siklus-idx]') : null;
   var siklusContents = siklusSection ? siklusSection.querySelectorAll('.pnc-day-content') : [];
 
   for (var i = 0; i < siklusContents.length; i++) {
