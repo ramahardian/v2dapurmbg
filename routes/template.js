@@ -13,7 +13,6 @@ router.get('/dashboard', async (req, res) => {
     const [budget] = await db.query('SELECT COALESCE(SUM(total_budget), 0) as total_budget, COALESCE(SUM(realisasi), 0) as total_realisasi FROM budget WHERE tenant_id=?', [req.user.tenant_id]);
     const [bahan] = await db.query('SELECT COUNT(*) as jumlah_bahan_baku FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);
     const [lowStock] = await db.query('SELECT nama, satuan, stok_minimum as min, stok_saat_ini as stok FROM bahan_baku WHERE tenant_id=? AND stok_saat_ini < stok_minimum', [req.user.tenant_id]);
-    const [periodeRows] = await db.query('SELECT DISTINCT periode FROM budget WHERE tenant_id=? ORDER BY periode DESC', [req.user.tenant_id]);
 
     // Produksi 7 hari terakhir (untuk grafik)
     const [produksi7] = await db.query(
@@ -111,7 +110,6 @@ router.get('/dashboard', async (req, res) => {
       low_stock_items: lowStock,
       ijin_cuti_hari_ini: Number(ijinHariIni.total || 0),
       ijin_cuti_menunggu: Number(ijinMenunggu.total || 0),
-      periode_options: periodeRows.map(r => r.periode),
       grafik_produksi: grafikProduksi,
       grafik_max_porsi: maxPorsi,
       grafik_total_7hari: grafikProduksi.reduce((s, g) => s + g.porsi, 0),
