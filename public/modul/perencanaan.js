@@ -192,11 +192,14 @@ async function loadPncMatriksPerencanaan(siklusId) {
       html += '</div></div></div>';
     }
 
-    html += '<div class="mt-6 mb-3 flex items-center gap-2">';
-    html += '<svg class="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="13" width="3" height="4"/><rect x="13" y="11" width="3" height="6"/></svg>';
-    html += '<span class="text-sm font-bold text-stone-700">Perencanaan Final — Kebutuhan Bahan per Hari</span>';
-    html += '<span class="text-xs text-stone-400">(format matriks, sesuai contoh)</span>';
-    html += '<button onclick="exportPncFinalXlsx()" class="ml-auto inline-flex items-center gap-1.5 text-[11px] font-medium text-white bg-sky-600 hover:bg-sky-700 px-3 py-2 rounded-lg shadow-sm transition-colors" title="Export Perencanaan Final ke Excel (template FINAL-PERENCANAAN.xlsx)">';
+    html += '<div class="mt-6 mb-3 flex flex-wrap items-center gap-2 justify-between">';
+    html += '<div class="flex items-center gap-2 flex-1 min-w-0">';
+    html += '<svg class="w-5 h-5 text-sky-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="13" width="3" height="4"/><rect x="13" y="11" width="3" height="6"/></svg>';
+    html += '<div class="min-w-0">';
+    html += '<span class="text-sm font-bold text-stone-700 truncate block">Perencanaan Final — Kebutuhan Bahan per Hari</span>';
+    html += '<span class="text-xs text-stone-400 truncate block">(format matriks, sesuai contoh)</span>';
+    html += '</div></div>';
+    html += '<button onclick="exportPncFinalXlsx()" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-white bg-sky-600 hover:bg-sky-700 px-3 py-2 rounded-lg shadow-sm transition-colors shrink-0" title="Export Perencanaan Final ke Excel (template FINAL-PERENCANAAN.xlsx)">';
     html += '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> EXPORT FINAL XLSX';
     html += '</button>';
     html += '</div>';
