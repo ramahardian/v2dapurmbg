@@ -47,6 +47,42 @@ function expandSiklusTargetJenjang(parsedList) {
   return out;
 }
 
+// Apakah kategori penerima manfaat dari database merupakan kategori Posyandu
+// (kategori tunggal yang menyimpan Bumil/Busui sebagai paket besar dan
+// Balita sebagai paket kecil dalam satu baris). Exact match agar konsisten
+// dengan expandSiklusTargetJenjang (juga exact 'POSYANDU').
+function isPosyanduKat(kat) {
+  return String(kat || '').trim().toUpperCase() === 'POSYANDU';
+}
+
+// Bangun peta penerima manfaat per jenjang display dari baris penerima_manfaat
+// (sudah di-GROUP BY kategori dengan kolom paket_besar & paket_kecil).
+// Kategori 'Posyandu' dipecah: paket besar → Bumil/Busui, paket kecil → Balita.
+// Mengembalikan { pmByDisplay, pmByDisplayBesar, pmByDisplayKecil }.
+function buildPmDisplayMaps(pmRows) {
+  const dbToDisplay = buildDbToDisplay();
+  const pmByDisplay = {};
+  const pmByDisplayBesar = {};
+  const pmByDisplayKecil = {};
+  for (const p of pmRows || []) {
+    const dbJenjang = String(p.jenjang || p.kategori_penerima || '').trim();
+    const besar = Number(p.paket_besar) || 0;
+    const kecil = Number(p.paket_kecil) || 0;
+    if (isPosyanduKat(dbJenjang)) {
+      pmByDisplay['Bumil/Busui'] = (pmByDisplay['Bumil/Busui'] || 0) + besar;
+      pmByDisplayBesar['Bumil/Busui'] = (pmByDisplayBesar['Bumil/Busui'] || 0) + besar;
+      pmByDisplay['Balita'] = (pmByDisplay['Balita'] || 0) + kecil;
+      pmByDisplayKecil['Balita'] = (pmByDisplayKecil['Balita'] || 0) + kecil;
+    } else {
+      const display = dbToDisplay[dbJenjang] || dbJenjang;
+      pmByDisplay[display] = (pmByDisplay[display] || 0) + besar + kecil;
+      pmByDisplayBesar[display] = (pmByDisplayBesar[display] || 0) + besar;
+      pmByDisplayKecil[display] = (pmByDisplayKecil[display] || 0) + kecil;
+    }
+  }
+  return { pmByDisplay, pmByDisplayBesar, pmByDisplayKecil };
+}
+
 function escHtml(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
@@ -298,6 +334,8 @@ module.exports = {
   parseKategoriPenerima,
   escHtml,
   expandSiklusTargetJenjang,
+  isPosyanduKat,
+  buildPmDisplayMaps,
   expandJenjangToDbValues,
   batchLoadItems,
   batchLoadBahanCounts,

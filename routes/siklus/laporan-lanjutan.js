@@ -3,7 +3,7 @@ const path = require('path');
 const ExcelJS = require('exceljs');
 const db = require('../../db');
 const { hitungBDD } = require('../../services/spBddCalculator');
-const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandSiklusTargetJenjang, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName, resolveGridBeratPerSiswa } = require('./helpers');
+const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandSiklusTargetJenjang, buildPmDisplayMaps, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName, resolveGridBeratPerSiswa } = require('./helpers');
 
 const router = express.Router();
 
@@ -94,23 +94,8 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
     `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang, COALESCE(SUM(paket_besar),0) AS paket_besar, COALESCE(SUM(paket_kecil),0) AS paket_kecil FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
     [req.user.tenant_id]
   );
-  const pmByDb = {},
-        pmBesarByDb = {},
-        pmKecilByDb = {};
-  for (const p of pmRows) {
-    pmByDb[p.jenjang] = Number(p.paket_besar) + Number(p.paket_kecil);
-    pmBesarByDb[p.jenjang] = Number(p.paket_besar);
-    pmKecilByDb[p.jenjang] = Number(p.paket_kecil);
-  }
-  const pmByDisplay = {},
-        pmByDisplayBesar = {},
-        pmByDisplayKecil = {};
-  for (const [dbJenjang, total] of Object.entries(pmByDb)) {
-    const display = dbToDisplay[dbJenjang] || dbJenjang;
-    pmByDisplay[display] = (pmByDisplay[display] || 0) + total;
-    pmByDisplayBesar[display] = (pmByDisplayBesar[display] || 0) + (pmBesarByDb[dbJenjang] || 0);
-    pmByDisplayKecil[display] = (pmByDisplayKecil[display] || 0) + (pmKecilByDb[dbJenjang] || 0);
-  }
+  // Pecah kategori 'Posyandu' (paket besar = Bumil/Busui, paket kecil = Balita)
+  const { pmByDisplay, pmByDisplayBesar, pmByDisplayKecil } = buildPmDisplayMaps(pmRows);
 
   // Hanya tampilkan jenjang yang: ada di siklus target DAN punya penerima manfaat
   const activeJenjang = JENJANG_DISPLAY_ORDER.filter(j =>
@@ -323,18 +308,16 @@ async function buildPerencanaanData({ tenant_id, query }) {
     });
   }
 
-  // PM totals
+  // PM totals — split paket_besar & paket_kecil; kategori 'Posyandu' dipecah
+  // menjadi Bumil/Busui (paket besar) + Balita (paket kecil).
   const [pmRows] = await db.query(
-    `SELECT kategori_penerima, COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
+    `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang,
+            COALESCE(SUM(paket_besar),0) AS paket_besar,
+            COALESCE(SUM(paket_kecil),0) AS paket_kecil
+     FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
     [tenant_id]
   );
-  const pmByDb = {};
-  for (const p of pmRows) pmByDb[p.kategori_penerima] = Number(p.total);
-  const pmByDisplay = {};
-  for (const [dbJenjang, total] of Object.entries(pmByDb)) {
-    const display = dbToDisplay[dbJenjang] || dbJenjang;
-    pmByDisplay[display] = (pmByDisplay[display] || 0) + total;
-  }
+  const { pmByDisplay } = buildPmDisplayMaps(pmRows);
   // Filter by siklus target jenjang — 'Posyandu' dipecah menjadi Bumil/Busui + Balita
   const siklusTargetJenjang = new Set();
   for (const s of siklusList) {
