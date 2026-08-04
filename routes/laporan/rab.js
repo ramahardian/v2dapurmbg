@@ -524,15 +524,15 @@ function registerRabRoutes(router) {
           const totalPenerima = totalBesar + totalKecil;
           if (!totalPenerima) continue;
 
-          const hargaBesar = hargaBesarMap['Bumil/Busui'] || 0;
-          const hargaKecil = hargaKecilMap['Balita'] || 0;
+          const hargaBesar = hargaBesarMap['Bumil/Busui'] || hargaBesarMap['Posyandu'] || 0;
+          const hargaKecil = hargaKecilMap['Balita'] || hargaKecilMap['Posyandu'] || 0;
 
           // Weighted average harga per porsi (pembulatan ke rupiah terdekat)
           const hargaRata = Math.round((hargaBesar * totalBesar + hargaKecil * totalKecil) / totalPenerima);
 
-          // Gabung budget & realisasi dari kedua sub-kategori
-          const budgetGabung = (budgetMap['Bumil/Busui'] || 0) + (budgetMap['Balita'] || 0);
-          const realisasiGabung = (realisasiMap['Bumil/Busui'] || 0) + (realisasiMap['Balita'] || 0);
+          // Gabung budget & realisasi dari sub-kategori + entri ber-kategori 'Posyandu'
+          const budgetGabung = (budgetMap['Bumil/Busui'] || 0) + (budgetMap['Balita'] || 0) + (budgetMap['Posyandu'] || 0);
+          const realisasiGabung = (realisasiMap['Bumil/Busui'] || 0) + (realisasiMap['Balita'] || 0) + (realisasiMap['Posyandu'] || 0);
           const total = hargaRata * totalPenerima * (total_hari || 0);
 
           grandPenerima += totalPenerima;
