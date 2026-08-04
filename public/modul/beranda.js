@@ -60,6 +60,29 @@ function exportDashboardRab() {
 }
 
 /**
+ * exportDashboardRabHarian - Export RAB Harian (XLSX) dari dashboard admin.
+ * Mengunduh /api/laporan/rab-harian/export?tanggal=YYYY-MM-DD&tanggal_sampai=YYYY-MM-DD.
+ */
+function exportDashboardRabHarian() {
+  const tgl = (document.getElementById('dash-rh-tanggal') || {}).value || '';
+  const tglSampai = (document.getElementById('dash-rh-tanggal-sampai') || {}).value || '';
+  if (!tgl) { showAlert('Pilih tanggal RAB Harian terlebih dahulu', 'warning'); return; }
+  if (tglSampai && tglSampai < tgl) {
+    showAlert('Tanggal akhir tidak boleh lebih awal dari tanggal mulai', 'warning');
+    return;
+  }
+  let url = '/api/laporan/rab-harian/export?tanggal=' + encodeURIComponent(tgl);
+  if (tglSampai) url += '&tanggal_sampai=' + encodeURIComponent(tglSampai);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showAlert('Export RAB Harian diproses, file akan terunduh', 'info');
+}
+
+/**
  * renderDashboardKeuangan - Dashboard Keuangan
  * Menampilkan ringkasan keuangan: saldo kas, pendapatan/biaya bulan ini, transaksi terbaru
  */

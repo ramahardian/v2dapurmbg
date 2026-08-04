@@ -1230,20 +1230,53 @@ function registerRabRoutes(router) {
     row.getCell(4).value = sumS; row.getCell(4).numFmt = MONEY_FMT2;
   }
 
+  // ===== Export RAB Harian ke Excel (template public/template/RAB.xlsx) =====
+  // Bila ?tanggal_sampai diisi, export menghasilkan 1 sheet per hari.
+  function cloneTemplateSheet(wb, pristineModel, merges, name) {
+    const model = JSON.parse(JSON.stringify(pristineModel));
+    model.name = name;
+    model.merges = [];
+    const ws = wb.addWorksheet(name);
+    ws.model = model;
+    for (const r of merges) ws.mergeCells(r);
+    return ws;
+  }
+
   router.get('/laporan/rab-harian/export', roleOps, async (req, res) => {
     try {
       const t = req.user.tenant_id;
       const tanggal = req.query.tanggal || '';
+      const tanggalSampai = req.query.tanggal_sampai || '';
       const siklusId = req.query.siklus_id || '';
       if (!tanggal) return res.status(400).json({ error: 'tanggal wajib diisi' });
 
-      const d = new Date(tanggal + 'T00:00:00');
-      if (isNaN(d.getTime())) return res.status(400).json({ error: 'tanggal tidak valid' });
+      const d0 = new Date(tanggal + 'T00:00:00');
+      if (isNaN(d0.getTime())) return res.status(400).json({ error: 'tanggal tidak valid' });
 
-      const [rab, titik] = await Promise.all([
-        getRabHarianData(t, tanggal, siklusId),
-        getRabPerTitikData(t, tanggal, ''),
-      ]);
+      // Bangun daftar hari (1 hari bila tanggal_sampai kosong, atau rentang).
+      const days = [d0];
+      if (tanggalSampai) {
+        const dN = new Date(tanggalSampai + 'T00:00:00');
+        if (isNaN(dN.getTime())) return res.status(400).json({ error: 'tanggal_sampai tidak valid' });
+        if (dN < d0) return res.status(400).json({ error: 'tanggal_sampai tidak boleh lebih awal dari tanggal' });
+        const rangeDays = Math.round((dN - d0) / 86400000) + 1;
+        if (rangeDays > 31) return res.status(400).json({ error: 'Rentang maksimal 31 hari' });
+        for (let i = 1; i < rangeDays; i++) {
+          const dd = new Date(d0);
+          dd.setDate(dd.getDate() + i);
+          days.push(dd);
+        }
+      }
+
+      const allDayData = [];
+      for (const d of days) {
+        const ymd = ymdStr(d);
+        const [rab, titik] = await Promise.all([
+          getRabHarianData(t, ymd, siklusId),
+          getRabPerTitikData(t, ymd, ''),
+        ]);
+        allDayData.push({ d, rab, titik });
+      }
 
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.readFile(path.join(__dirname, '..', '..', 'public', 'template', 'RAB.xlsx'));
@@ -1251,17 +1284,31 @@ function registerRabRoutes(router) {
       const halWs = wb.getWorksheet('hal 1');
       if (!halWs) throw new Error('Template RAB tidak memiliki sheet "hal 1"');
       const S = captureStyles(halWs);
-      fillDaySheet(halWs, { d, rab, titik }, S);
+      const pristineModel = JSON.parse(JSON.stringify(halWs.model));
+      const pristineMerges = JSON.parse(JSON.stringify(pristineModel.merges));
+
+      // Hari pertama memakai sheet "hal 1" (direname), sisanya hasil clone.
+      const first = allDayData[0];
+      halWs.name = daySheetName(first.d);
+      fillDaySheet(halWs, first, S);
+      for (let i = 1; i < allDayData.length; i++) {
+        const dd = allDayData[i];
+        const ws = cloneTemplateSheet(wb, pristineModel, pristineMerges, daySheetName(dd.d));
+        fillDaySheet(ws, dd, S);
+      }
 
       const tWs = wb.getWorksheet('total');
       if (tWs) {
-        const totalName = 'TOTAL RAB ' + d.getDate() + ' ' + MONTHS_ID[d.getMonth()] + ' ' + d.getFullYear();
+        const totalName = 'TOTAL RAB ' + daySheetName(first.d) + (allDayData.length > 1 ? ' s/d ' + daySheetName(allDayData[allDayData.length - 1].d) : '');
         if (tWs.name !== totalName) tWs.name = totalName;
-        fillTotalSheet(tWs, [{ d, rab, titik }]);
+        fillTotalSheet(tWs, allDayData);
       }
 
+      const fileTag = allDayData.length > 1
+        ? tanggal + '-' + tanggalSampai
+        : tanggal;
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename="RAB-' + tanggal + '.xlsx"');
+      res.setHeader('Content-Disposition', 'attachment; filename="RAB-' + fileTag + '.xlsx"');
       await wb.xlsx.write(res);
     } catch (err) {
       console.error('Export RAB Harian error:', err);

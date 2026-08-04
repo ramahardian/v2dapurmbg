@@ -459,6 +459,8 @@ const tabColors = {
             '<div class="flex items-center gap-2">' +
               '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>' +
               '<input type="date" id="rab-rh-tanggal" value="' + rhTanggal + '" onchange="gantiTanggalRhDiRab()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">' +
+              '<span class="text-xs text-stone-400">s/d</span>' +
+              '<input type="date" id="rab-rh-tanggal-sampai" value="' + (lapState.rab_rh_tanggal_sampai || rhTanggal) + '" onchange="gantiTanggalRhDiRab()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" title="Tanggal akhir rentang export (opsional, untuk export multi-hari)">' +
             '</div>' +
             '<span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>RAB Harian</span>' +
             '<button onclick="exportRabHarianXlsx()" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg shadow-sm transition-colors" title="Export RAB Harian ke Excel (template RAB.xlsx)">' +
@@ -914,6 +916,8 @@ const tabColors = {
           '<div class="flex items-center gap-2">' +
             '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>' +
             '<input type="date" id="rh-tanggal" value="' + rhTanggal + '" onchange="gantiTanggalRabHarian()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400">' +
+            '<span class="text-xs text-stone-400">s/d</span>' +
+            '<input type="date" id="rh-tanggal-sampai" value="' + (lapState.rh_tanggal_sampai || rhTanggal) + '" onchange="gantiTanggalRabHarian()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400" title="Tanggal akhir rentang export (opsional, untuk export multi-hari)">' +
           '</div>' +
           '<div class="flex items-center gap-2">' +
             '<svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
@@ -2102,13 +2106,20 @@ function exportXlsxLaporan(name) {
 
 function exportRabHarianXlsx() {
   const tanggal = (document.getElementById('rh-tanggal') || {}).value || (document.getElementById('rab-rh-tanggal') || {}).value;
+  const tanggalSampai = (document.getElementById('rh-tanggal-sampai') || {}).value || (document.getElementById('rab-rh-tanggal-sampai') || {}).value || '';
   const siklusId = (document.getElementById('rh-filter-siklus') || {}).value || (document.getElementById('rab-filter-siklus') || {}).value || '';
   if (!lapState.rh_tanggal && !lapState.rab_rh_tanggal) {
     showAlert('Pilih tanggal RAB Harian terlebih dahulu sebelum export', 'warning');
     return;
   }
   if (!tanggal) { showAlert('Pilih tanggal terlebih dahulu', 'warning'); return; }
-  const url = '/api/laporan/rab-harian/export?tanggal=' + encodeURIComponent(tanggal) + (siklusId ? '&siklus_id=' + encodeURIComponent(siklusId) : '');
+  if (tanggalSampai && tanggalSampai < tanggal) {
+    showAlert('Tanggal akhir tidak boleh lebih awal dari tanggal mulai', 'warning');
+    return;
+  }
+  let url = '/api/laporan/rab-harian/export?tanggal=' + encodeURIComponent(tanggal);
+  if (tanggalSampai) url += '&tanggal_sampai=' + encodeURIComponent(tanggalSampai);
+  if (siklusId) url += '&siklus_id=' + encodeURIComponent(siklusId);
   const a = document.createElement('a');
   a.href = url;
   a.download = '';
@@ -2200,12 +2211,14 @@ function fmtDateIndonesia(dateStr) {
 }
 function gantiTanggalRabHarian() {
   lapState.rh_tanggal = document.getElementById('rh-tanggal')?.value || '';
+  lapState.rh_tanggal_sampai = document.getElementById('rh-tanggal-sampai')?.value || '';
   lapState.rh_siklus_id = document.getElementById('rh-filter-siklus')?.value || '';
   showLap('rab-harian');
 }
 
 function gantiTanggalRhDiRab() {
   lapState.rab_rh_tanggal = document.getElementById('rab-rh-tanggal')?.value || '';
+  lapState.rab_rh_tanggal_sampai = document.getElementById('rab-rh-tanggal-sampai')?.value || '';
   showLap('rab');
 }
 
