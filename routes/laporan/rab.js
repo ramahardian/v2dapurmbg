@@ -1103,14 +1103,17 @@ function registerRabRoutes(router) {
   function captureStyles(ws) {
     const cap = (r, c) => { const cell = ws.getCell(r, c); return { style: cell.style, numFmt: cell.numFmt }; };
     const itemStyle = []; for (let c = 1; c <= 7; c++) itemStyle.push(cap(8, c));
-    const labelStyle = cap(29, 1);
-    const valStyle = cap(29, 6);
-    const anggValStyle = cap(30, 6);
-    const hdr2Style = []; for (let c = 1; c <= 6; c++) hdr2Style.push(cap(34, c));
-    const titikSekolahStyle = []; for (let c = 1; c <= 6; c++) titikSekolahStyle.push(cap(35, c));
-    const titikPosyanduStyle = []; for (let c = 1; c <= 6; c++) titikPosyanduStyle.push(cap(75, c));
-    const total2Style = { d: cap(85, 4), f: cap(85, 6) };
-    return { itemStyle, labelStyle, valStyle, anggValStyle, hdr2Style, titikSekolahStyle, titikPosyanduStyle, total2Style };
+    const labelStyle = cap(9, 1);
+    const valStyle = cap(9, 6);
+    const anggLabelStyle = cap(10, 1);
+    const anggValStyle = cap(10, 6);
+    const sisaLabelStyle = cap(11, 1);
+    const sisaValStyle = cap(11, 6);
+    const hdr2Style = []; for (let c = 1; c <= 6; c++) hdr2Style.push(cap(14, c));
+    const titikSekolahStyle = []; for (let c = 1; c <= 6; c++) titikSekolahStyle.push(cap(15, c));
+    const titikPosyanduStyle = []; for (let c = 1; c <= 6; c++) titikPosyanduStyle.push(cap(17, c));
+    const total2Style = { d: cap(21, 4), f: cap(21, 6) };
+    return { itemStyle, labelStyle, valStyle, anggLabelStyle, anggValStyle, sisaLabelStyle, sisaValStyle, hdr2Style, titikSekolahStyle, titikPosyanduStyle, total2Style };
   }
 
   function clearDataRegion(ws) {
@@ -1164,10 +1167,10 @@ function registerRabRoutes(router) {
     });
 
     const totRow = row, anggRow = totRow + 1, sisaRow = totRow + 2;
-    const putLabel = (r, label, v, vs) => { put(r, 1, label, S.labelStyle.style); put(r, 6, v, vs.style, MONEY_FMT); merge(r, 1, r, 5); };
-    putLabel(totRow, 'TOTAL', totalBahan, S.valStyle);
-    putLabel(anggRow, 'ANGGARAN BELANJA HARIAN', anggaran, S.anggValStyle);
-    putLabel(sisaRow, 'SISA', sisa, S.valStyle);
+    const putLabel = (r, label, v, ls, vs) => { put(r, 1, label, ls.style); put(r, 6, v, vs.style, MONEY_FMT); merge(r, 1, r, 5); };
+    putLabel(totRow, 'TOTAL', totalBahan, S.labelStyle, S.valStyle);
+    putLabel(anggRow, 'ANGGARAN BELANJA HARIAN', anggaran, S.anggLabelStyle, S.anggValStyle);
+    putLabel(sisaRow, 'SISA', sisa, S.sisaLabelStyle, S.sisaValStyle);
 
     const hdr2Row = sisaRow + 3;
     const titikStart = hdr2Row + 1;
@@ -1201,8 +1204,11 @@ function registerRabRoutes(router) {
   }
 
   function fillTotalSheet(ws, dayData) {
-    const d0 = dayData[0].d, d4 = dayData[4].d;
-    ws.getCell('A1').value = 'TOTAL RAB BAHAN BAKU ' + d0.getDate() + '-' + d4.getDate() + ' ' + MONTHS_ID[d0.getMonth()] + ' ' + d0.getFullYear();
+    const d0 = dayData[0].d;
+    const label = dayData.length > 1
+      ? d0.getDate() + '-' + dayData[dayData.length - 1].d.getDate() + ' ' + MONTHS_ID[d0.getMonth()] + ' ' + d0.getFullYear()
+      : d0.getDate() + ' ' + MONTHS_ID[d0.getMonth()] + ' ' + d0.getFullYear();
+    ws.getCell('A1').value = 'TOTAL RAB BAHAN BAKU ' + label;
     ['TANGGAL', 'ANGGARAN', 'REALISASI', 'SELISIH'].forEach((h, i) => { ws.getCell(3, i + 1).value = h; });
     let r = 4, sumA = 0, sumR = 0, sumS = 0;
     for (const dd of dayData) {
@@ -1231,47 +1237,31 @@ function registerRabRoutes(router) {
       const siklusId = req.query.siklus_id || '';
       if (!tanggal) return res.status(400).json({ error: 'tanggal wajib diisi' });
 
-      const monday = mondayOf(tanggal);
-      const days = [];
-      for (let i = 0; i < 5; i++) { const d = new Date(monday); d.setDate(monday.getDate() + i); days.push(d); }
+      const d = new Date(tanggal + 'T00:00:00');
+      if (isNaN(d.getTime())) return res.status(400).json({ error: 'tanggal tidak valid' });
 
-      const dayData = [];
-      for (const d of days) {
-        const ds = ymdStr(d);
-        const [rab, titik] = await Promise.all([
-          getRabHarianData(t, ds, siklusId),
-          getRabPerTitikData(t, ds, ''),
-        ]);
-        dayData.push({ d, rab, titik });
-      }
+      const [rab, titik] = await Promise.all([
+        getRabHarianData(t, tanggal, siklusId),
+        getRabPerTitikData(t, tanggal, ''),
+      ]);
 
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.readFile(path.join(__dirname, '..', '..', 'public', 'template', 'RAB.xlsx'));
 
-      const sheets = wb.worksheets;
-      const dayIdx = [];
-      sheets.forEach((ws, i) => { if (/^\d{1,2} [A-Z]+ \d{4}$/.test(ws.name)) dayIdx.push(i); });
-      const totalIdx = sheets.findIndex(ws => /^TOTAL/i.test(ws.name));
-      if (!dayIdx.length) throw new Error('Template RAB tidak memiliki sheet harian');
+      const halWs = wb.getWorksheet('hal 1');
+      if (!halWs) throw new Error('Template RAB tidak memiliki sheet "hal 1"');
+      const S = captureStyles(halWs);
+      fillDaySheet(halWs, { d, rab, titik }, S);
 
-      const S = captureStyles(sheets[dayIdx[0]]);
-      const targetNames = days.map(daySheetName);
-
-      dayIdx.forEach((idx, i) => {
-        if (i >= targetNames.length) return;
-        if (sheets[idx].name !== targetNames[i]) sheets[idx].name = targetNames[i];
-      });
-      dayIdx.forEach((idx, i) => { if (i < dayData.length) fillDaySheet(sheets[idx], dayData[i], S); });
-
-      if (totalIdx >= 0) {
-        const tWs = sheets[totalIdx];
-        const totalName = 'TOTAL RAB ' + days[0].getDate() + '-' + days[4].getDate() + ' ' + MONTHS_ID[days[0].getMonth()] + ' ' + days[0].getFullYear();
+      const tWs = wb.getWorksheet('total');
+      if (tWs) {
+        const totalName = 'TOTAL RAB ' + d.getDate() + ' ' + MONTHS_ID[d.getMonth()] + ' ' + d.getFullYear();
         if (tWs.name !== totalName) tWs.name = totalName;
-        fillTotalSheet(tWs, dayData);
+        fillTotalSheet(tWs, [{ d, rab, titik }]);
       }
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename="RAB-' + targetNames[0].replace(/ /g, '-') + '-' + targetNames[4].replace(/ /g, '-') + '.xlsx"');
+      res.setHeader('Content-Disposition', 'attachment; filename="RAB-' + tanggal + '.xlsx"');
       await wb.xlsx.write(res);
     } catch (err) {
       console.error('Export RAB Harian error:', err);
