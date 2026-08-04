@@ -399,29 +399,38 @@ async function buildPerencanaanData({ tenant_id, query }) {
     }
   } catch (e) { /* table might not exist */ }
 
-  // Determine date range
-  let mulai = tanggal_mulai || null;
-  let selesai = tanggal_selesai || null;
+  // Determine date range — pakai tanggal lokal (YYYY-MM-DD) agar label tanggal
+  // tidak bergeser akibat konversi zona waktu UTC vs lokal pada tanggal_mulai.
+  const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const parseYmd = s => {
+    const p = String(s || '').split('-').map(Number);
+    return (p.length === 3 && !isNaN(p[0]) && !isNaN(p[1]) && !isNaN(p[2])) ? new Date(p[0], p[1] - 1, p[2]) : null;
+  };
 
-  if (!mulai) {
+  let mulaiStr = tanggal_mulai ? String(tanggal_mulai).slice(0, 10) : '';
+  let selesaiStr = tanggal_selesai ? String(tanggal_selesai).slice(0, 10) : '';
+
+  if (!mulaiStr) {
     // Get earliest tanggal_mulai from active siklus
     for (const s of siklusList) {
       if (s.tanggal_mulai) {
-        if (!mulai || s.tanggal_mulai < mulai) mulai = s.tanggal_mulai;
+        const sd = ymd(new Date(s.tanggal_mulai));
+        if (!mulaiStr || sd < mulaiStr) mulaiStr = sd;
       }
     }
-    if (!mulai) {
+    if (!mulaiStr) {
       // Fallback: use current date
-      const now = new Date();
-      mulai = now.toISOString().split('T')[0];
+      mulaiStr = ymd(new Date());
     }
   }
 
-  if (!selesai) {
+  const mulai = parseYmd(mulaiStr);
+  if (!selesaiStr) {
     const d = new Date(mulai);
     d.setDate(d.getDate() + 29); // default 1 bulan (30 hari)
-    selesai = d.toISOString().split('T')[0];
+    selesaiStr = ymd(d);
   }
+  const selesai = parseYmd(selesaiStr);
 
   // Generate daily plan
   const hari = [];
@@ -430,7 +439,7 @@ async function buildPerencanaanData({ tenant_id, query }) {
   const curDate = new Date(startDate);
 
   while (curDate <= endDate) {
-    const dateStr = curDate.toISOString().split('T')[0];
+    const dateStr = ymd(curDate);
     const dayOfWeek = curDate.getDay(); // 0=Sun, 1=Mon, ...
     const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
@@ -440,7 +449,7 @@ async function buildPerencanaanData({ tenant_id, query }) {
     for (const s of siklusList) {
       let siklusStart;
       if (s.tanggal_mulai) {
-        siklusStart = new Date(s.tanggal_mulai);
+        siklusStart = parseYmd(ymd(new Date(s.tanggal_mulai)));
       } else {
         siklusStart = startDate;
       }
@@ -551,7 +560,7 @@ async function buildPerencanaanData({ tenant_id, query }) {
   }
 
   const totalPorsi = Object.values(filteredPmMap).reduce((s, v) => s + (Number(v) || 0), 0);
-  return { jenjang_list: activeJenjang, hari, pm_map: filteredPmMap, tanggal_mulai: mulai, tanggal_selesai: selesai, total_porsi: totalPorsi };
+  return { jenjang_list: activeJenjang, hari, pm_map: filteredPmMap, tanggal_mulai: mulaiStr, tanggal_selesai: selesaiStr, total_porsi: totalPorsi };
 }
 
 /**
