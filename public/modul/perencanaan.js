@@ -346,7 +346,7 @@ function renderPncRekapPorsi(allData) {
   //    Card SELALU dirender agar layout "Porsi Besar & Porsi Kecil" tidak menghilang,
   //    walau salah satu porsi belum punya penerima manfaat (count = 0).
   function renderRekapTable(porsiKey, porsiLabel, porsiCount, colorClass, iconSvg) {
-    var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">';
+    var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden h-full">';
     html += '<div class="px-5 py-3 ' + colorClass + ' flex items-center gap-3">';
     if (iconSvg) html += iconSvg;
     html += '<span class="font-bold text-base">' + porsiLabel + '</span>';
@@ -452,10 +452,11 @@ function renderPncRekapPorsi(allData) {
   html += '<span class="text-xs text-stone-400">(Semua jenjang digabung)</span>';
   html += '</div>';
 
-  // Section 1 — Porsi Besar & Kecil: semua card full width (stacked), gap 24px antar card
-  html += '<div class="space-y-6 mb-4">';
-  html += renderRekapTable('BESAR', 'Porsi Besar', totalBesar, 'bg-amber-50 text-amber-800 border-b-2 border-b-amber-400', besarIcon);
-  html += renderRekapTable('KECIL', 'Porsi Kecil', totalKecil, 'bg-emerald-50 text-emerald-800 border-b-2 border-b-emerald-400', kecilIcon);
+  // Section 1 — Porsi Besar & Kecil: 2 kolom sejajar (masing-masing 50%) di desktop,
+  // otomatis 1 kolom di tablet/mobile. Tinggi card sama (stretch) dengan gap 24px antar card.
+  html += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">';
+  html += '<div class="h-full min-w-0">' + renderRekapTable('BESAR', 'Porsi Besar', totalBesar, 'bg-amber-50 text-amber-800 border-b-2 border-b-amber-400', besarIcon) + '</div>';
+  html += '<div class="h-full min-w-0">' + renderRekapTable('KECIL', 'Porsi Kecil', totalKecil, 'bg-emerald-50 text-emerald-800 border-b-2 border-b-emerald-400', kecilIcon) + '</div>';
   html += '</div>';
   html += '</div>';
 
