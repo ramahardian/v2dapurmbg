@@ -75,40 +75,6 @@
 </div>
 <% } %>
 
-<% const tips = []; %>
-<% if (summary.stok_menipis > 0) tips.push({ tone: 'rose', text: '<b>' + summary.stok_menipis + '</b> bahan baku berstatus stok menipis. Prioritaskan restock hari ini agar produksi tidak terhambat.' }); %>
-<% if (summary.persen_budget >= 80 && summary.persen_budget <= 100) tips.push({ tone: 'amber', text: 'Penyerapan budget sudah <b>' + summary.persen_budget + '%</b>. Pantau pengeluaran agar tidak melewati pagu.' }); %>
-<% if (summary.persen_budget > 100) tips.push({ tone: 'rose', text: 'Realisasi budget <b>melebihi</b> pagu (' + summary.persen_budget + '%). Segera evaluasi anggaran periode ini.' }); %>
-<% if (summary.ijin_cuti_menunggu > 0) tips.push({ tone: 'violet', text: 'Ada <b>' + summary.ijin_cuti_menunggu + '</b> pengajuan ijin/cuti yang menunggu persetujuan Anda.' }); %>
-<% if (summary.total_penerima_manfaat > 0 && summary.total_porsi_diproduksi === 0) tips.push({ tone: 'blue', text: 'Jadwalkan produksi hari ini — data penerima sudah tercatat namun belum ada porsi yang diproduksi.' }); %>
-<% if (tips.length === 0) tips.push({ tone: 'emerald', text: 'Semua berjalan lancar! Tidak ada peringatan yang perlu ditindaklanjuti saat ini.' }); %>
-
-<div class="dash-card-item bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-6" style="animation-delay:360ms">
-  <div class="flex items-center justify-between mb-4">
-    <div class="flex items-center gap-2">
-      <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-      <h3 class="font-bold text-stone-800">Tips Cerdas</h3>
-    </div>
-    <span class="text-[10px] font-medium uppercase tracking-wider text-stone-400">Berdasarkan data saat ini</span>
-  </div>
-  <ul class="space-y-2.5">
-    <% tips.forEach(function(t) {
-        var barColor = {
-          rose:   'bg-rose-400',
-          amber:  'bg-amber-400',
-          violet: 'bg-violet-400',
-          blue:   'bg-blue-400',
-          emerald:'bg-emerald-400'
-        }[t.tone] || 'bg-stone-300';
-    %>
-      <li class="flex items-start gap-2.5">
-        <span class="mt-[7px] w-1.5 h-1.5 rounded-full shrink-0 <%= barColor %>"></span>
-        <span class="text-sm leading-relaxed text-stone-700"><%- t.text %></span>
-      </li>
-    <% }); %>
-  </ul>
-</div>
-
 <% var ma = summary.menu_aktif; %>
 <% var maJenjang = (function(kp){ if(!kp) return []; try { var p = JSON.parse(kp); if (Array.isArray(p)) return p; } catch(e){} return [kp]; })(ma && ma.kategori); %>
 <% var maJenjangLabel = maJenjang.length > 1 ? maJenjang[0] + ' +' + (maJenjang.length - 1) : (maJenjang[0] || ''); %>
