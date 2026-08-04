@@ -229,6 +229,50 @@ function navigate(key) {
   route();
 }
 
+// ===== Mobile Breadcrumb =====
+// Susun jejak navigasi dari NAV_GROUPS + MODULES, mis. "Ahli Gizi / Siklus Menu"
+// atau "Akuntansi / Laporan / RAB". Crumb induk yang berupa modul bisa diklik.
+function getBreadcrumbTrail(key) {
+  const trail = [];
+  const title = (MODULES[key] && MODULES[key].title) || key;
+  for (const g of NAV_GROUPS) {
+    for (const item of g.items) {
+      if (typeof item === 'string') {
+        if (item === key) {
+          if (g.label) trail.push({ label: g.label });
+          trail.push({ label: title, key });
+          return trail;
+        }
+      } else if (item.children && item.children.includes(key)) {
+        if (g.label) trail.push({ label: g.label });
+        trail.push({ label: item.label });
+        trail.push({ label: title, key });
+        return trail;
+      }
+    }
+  }
+  // Fallback: modul di luar NAV_GROUPS (mis. akun)
+  trail.push({ label: title, key });
+  return trail;
+}
+
+function renderMobileBreadcrumb(key) {
+  const el = document.getElementById('mobile-breadcrumb');
+  if (!el) return;
+  const trail = getBreadcrumbTrail(key);
+  el.innerHTML = trail.map((c, i) => {
+    const last = i === trail.length - 1;
+    const sep = i > 0 ? '<span class="opacity-40 px-0.5 shrink-0">/</span>' : '';
+    if (last) {
+      return sep + '<span class="font-bold">' + escHtml(c.label) + '</span>';
+    }
+    if (c.key) {
+      return sep + '<a href="/' + c.key + '" data-key="' + c.key + '" class="opacity-60 hover:opacity-100 transition-opacity shrink-0">' + escHtml(c.label) + '</a>';
+    }
+    return sep + '<span class="opacity-60 shrink-0">' + escHtml(c.label) + '</span>';
+  }).join('');
+}
+
 function toggleDropdown(label) {
   const el = document.querySelector(`[data-dropdown="${label}"]`);
   if (el) el.classList.toggle('open');
@@ -293,6 +337,7 @@ function route() {
   document.title = m.title + ' — Dapur Sukaluyu';
   document.getElementById('page-title').textContent = m.title;
   document.getElementById('page-sub').textContent = m.sub;
+  renderMobileBreadcrumb(MODULES[key] ? key : 'dashboard');
   if (key === 'karyawan' && location.search) {
     const params = new URLSearchParams(location.search);
     const id = params.get('id');
