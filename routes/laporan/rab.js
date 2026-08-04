@@ -1270,6 +1270,173 @@ function registerRabRoutes(router) {
     }
   });
 
+  // ===== Export RAB per Periode ke Excel (data budget yang dibuat akuntan) =====
+  router.get('/laporan/rab-periode/export', roleOps, async (req, res) => {
+    try {
+      const t = req.user.tenant_id;
+      const { periode } = req.query;
+      if (!periode) return res.status(400).json({ error: 'Periode wajib diisi (YYYY-MM)' });
+      if (!/^\d{4}-\d{2}$/.test(periode)) return res.status(400).json({ error: 'Format periode tidak valid (YYYY-MM)' });
+
+      const [budgetRows] = await db.query(
+        `SELECT id, kategori_penerima, jumlah_penerima, harga_per_porsi, biaya_operasional, total_budget, realisasi, catatan
+         FROM budget WHERE tenant_id=? AND periode=? ORDER BY kategori_penerima`,
+        [t, periode]
+      );
+
+      const [[{ total_hari } = { total_hari: 0 }]] = await db.query(
+        `SELECT COUNT(DISTINCT tanggal_produksi) as total_hari
+         FROM produksi WHERE tenant_id=? AND DATE_FORMAT(tanggal_produksi, '%Y-%m')=?`,
+        [t, periode]
+      );
+
+      const [realisasiPerKat] = await db.query(
+        `SELECT kategori, SUM(jumlah) as total
+         FROM kas_bank WHERE tenant_id=? AND tipe='keluar'
+         AND DATE_FORMAT(tanggal, '%Y-%m')=?
+         GROUP BY kategori ORDER BY total DESC`,
+        [t, periode]
+      );
+
+      const [[{ total_realisasi_kas } = { total_realisasi_kas: 0 }]] = await db.query(
+        `SELECT COALESCE(SUM(jumlah),0) AS total_realisasi_kas
+         FROM kas_bank WHERE tenant_id=? AND tipe='keluar'
+         AND DATE_FORMAT(tanggal, '%Y-%m')=?`,
+        [t, periode]
+      );
+
+      const totalBudget = budgetRows.reduce((s, r) => s + Number(r.total_budget), 0);
+      const totalRealisasiBudget = budgetRows.reduce((s, r) => s + Number(r.realisasi), 0);
+
+      const wb = new ExcelJS.Workbook();
+      wb.creator = req.user.nama || '';
+      wb.created = new Date();
+      const ws = wb.addWorksheet('RAB ' + periode);
+
+      const [y, m] = periode.split('-');
+      const bulanLbl = MONTHS_ID[parseInt(m, 10) - 1];
+      ws.columns = [
+        { key: 'no', width: 6 },
+        { key: 'kategori', width: 28 },
+        { key: 'penerima', width: 14 },
+        { key: 'harga', width: 16 },
+        { key: 'biaya', width: 18 },
+        { key: 'budget', width: 18 },
+        { key: 'realisasi', width: 18 },
+        { key: 'selisih', width: 18 },
+        { key: 'capaian', width: 12 },
+      ];
+
+      const title = ws.getCell('A1');
+      title.value = 'RENCANA ANGGARAN BIAYA (RAB) — ' + bulanLbl + ' ' + y;
+      title.font = { name: 'Calibri', size: 14, bold: true };
+      ws.mergeCells('A1:I1');
+      ws.getCell('A2').value = 'Periode : ' + periode + '  •  Hari Produksi : ' + total_hari;
+      ws.getCell('A2').font = { name: 'Calibri', size: 10, italic: true };
+      ws.mergeCells('A2:I2');
+
+      const header = ['NO', 'KATEGORI PENERIMA', 'JML PENERIMA', 'HARGA/PORSI', 'BIAYA OPERASIONAL', 'TOTAL BUDGET', 'REALISASI', 'SELISIH', 'CAPAIAN'];
+      const hdrRow = ws.getRow(4);
+      header.forEach((h, i) => {
+        const cell = hdrRow.getCell(i + 1);
+        cell.value = h;
+        cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+      });
+      ws.views = [{ state: 'frozen', ySplit: 4 }];
+
+      let r = 5;
+      budgetRows.forEach((b, idx) => {
+        const budget = Number(b.total_budget) || 0;
+        const real = Number(b.realisasi) || 0;
+        const selisih = budget - real;
+        const capaian = budget > 0 ? (real / budget * 100) : 0;
+        const cells = [
+          idx + 1,
+          b.kategori_penerima || 'Umum',
+          Number(b.jumlah_penerima) || 0,
+          Number(b.harga_per_porsi) || 0,
+          Number(b.biaya_operasional) || 0,
+          budget,
+          real,
+          selisih,
+          capaian,
+        ];
+        cells.forEach((v, ci) => {
+          const cell = ws.getCell(r, ci + 1);
+          cell.value = v;
+          cell.font = { name: 'Calibri', size: 10 };
+          cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+          if (ci === 0) { cell.alignment = { horizontal: 'center' }; }
+          if (ci >= 2 && ci <= 7) cell.numFmt = MONEY_FMT;
+          if (ci === 8) { cell.numFmt = '0.0"%"'; cell.alignment = { horizontal: 'right' }; }
+        });
+        r++;
+      });
+
+      const totalCells = [
+        '',
+        'TOTAL',
+        budgetRows.reduce((s, b) => s + (Number(b.jumlah_penerima) || 0), 0),
+        '',
+        budgetRows.reduce((s, b) => s + (Number(b.biaya_operasional) || 0), 0),
+        totalBudget,
+        totalRealisasiBudget,
+        totalBudget - totalRealisasiBudget,
+        totalBudget > 0 ? (totalRealisasiBudget / totalBudget * 100) : 0,
+      ];
+      totalCells.forEach((v, ci) => {
+        const cell = ws.getCell(r, ci + 1);
+        cell.value = v;
+        cell.font = { name: 'Calibri', size: 10, bold: true };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD6E4FF' } };
+        cell.border = { top: { style: 'medium' }, left: { style: 'thin' }, bottom: { style: 'medium' }, right: { style: 'thin' } };
+        if (ci >= 2 && ci <= 7) cell.numFmt = MONEY_FMT;
+        if (ci === 8) { cell.numFmt = '0.0"%"'; cell.alignment = { horizontal: 'right' }; }
+      });
+
+      const rk = r + 2;
+      ws.getCell('A' + rk).value = 'REALISASI KAS KELUAR PER KATEGORI';
+      ws.getCell('A' + rk).font = { name: 'Calibri', size: 11, bold: true };
+      ws.mergeCells('A' + rk + ':I' + rk);
+      const rkHdr = rk + 1;
+      ['KATEGORI', 'JUMLAH', 'PERSENTASE'].forEach((h, i) => {
+        const cell = ws.getCell(rkHdr, i + 1);
+        cell.value = h;
+        cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB45309' } };
+        cell.alignment = { horizontal: 'center' };
+      });
+      let rr = rkHdr + 1;
+      realisasiPerKat.forEach(x => {
+        ws.getCell('A' + rr).value = x.kategori;
+        ws.getCell('B' + rr).value = Number(x.total) || 0;
+        ws.getCell('B' + rr).numFmt = MONEY_FMT;
+        ws.getCell('C' + rr).value = total_realisasi_kas > 0 ? (Number(x.total) / total_realisasi_kas * 100) : 0;
+        ws.getCell('C' + rr).numFmt = '0.0"%"';
+        rr++;
+      });
+      ws.getCell('A' + rr).value = 'TOTAL';
+      ws.getCell('A' + rr).font = { name: 'Calibri', size: 10, bold: true };
+      ws.getCell('B' + rr).value = total_realisasi_kas;
+      ws.getCell('B' + rr).numFmt = MONEY_FMT;
+      ws.getCell('B' + rr).font = { name: 'Calibri', size: 10, bold: true };
+      ws.getCell('C' + rr).value = 100;
+      ws.getCell('C' + rr).numFmt = '0.0"%"';
+      ws.getCell('C' + rr).font = { name: 'Calibri', size: 10, bold: true };
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="RAB-' + periode + '.xlsx"');
+      await wb.xlsx.write(res);
+    } catch (err) {
+      console.error('Export RAB per periode error:', err);
+      if (!res.headersSent) res.status(500).json({ error: err.message });
+      else res.end();
+    }
+  });
+
   // ===== RAB Pembelian Supplier — rincian biaya pembelian per periode =====
   router.get('/laporan/rab-pembelian-suplier', roleFinance, async (req, res) => {
     try {

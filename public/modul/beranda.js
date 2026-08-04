@@ -43,6 +43,23 @@ function animateDashboardCounts(root) {
 }
 
 /**
+ * exportDashboardRab - Export RAB per periode dari dashboard admin.
+ * Mengunduh /api/laporan/rab-periode/export?periode=YYYY-MM.
+ */
+function exportDashboardRab() {
+  const sel = document.getElementById('dash-rab-periode');
+  const periode = sel ? sel.value : '';
+  if (!periode) { showAlert('Pilih periode RAB terlebih dahulu', 'warning'); return; }
+  const a = document.createElement('a');
+  a.href = '/api/laporan/rab-periode/export?periode=' + encodeURIComponent(periode);
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showAlert('Export RAB periode ' + periode + ' diproses, file akan terunduh', 'info');
+}
+
+/**
  * renderDashboardKeuangan - Dashboard Keuangan
  * Menampilkan ringkasan keuangan: saldo kas, pendapatan/biaya bulan ini, transaksi terbaru
  */

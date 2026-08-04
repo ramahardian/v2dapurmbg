@@ -48,6 +48,30 @@
   </div>
 </div>
 
+<% const canExportRab = (user.role === 'admin' || user.role === 'keuangan') && (summary.periode_options && summary.periode_options.length > 0); %>
+<% if (canExportRab) { %>
+<div class="dash-card-item bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-6" style="animation-delay:300ms">
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center gap-2">
+      <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <h3 class="font-bold text-stone-800">Export RAB per Periode</h3>
+    </div>
+  </div>
+  <p class="text-xs text-stone-500 mb-3">Unduh RAB yang telah dibuat akuntan untuk periode tertentu (format Excel).</p>
+  <div class="flex flex-wrap items-center gap-3">
+    <select id="dash-rab-periode" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+      <% summary.periode_options.forEach(function(p) { %>
+        <option value="<%= p %>"><%= p %></option>
+      <% }); %>
+    </select>
+    <button onclick="exportDashboardRab()" class="inline-flex items-center gap-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg transition-colors shadow-sm">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Export XLSX
+    </button>
+  </div>
+</div>
+<% } %>
+
 <% const tips = []; %>
 <% if (summary.stok_menipis > 0) tips.push({ tone: 'rose', text: '<b>' + summary.stok_menipis + '</b> bahan baku berstatus stok menipis. Prioritaskan restock hari ini agar produksi tidak terhambat.' }); %>
 <% if (summary.persen_budget >= 80 && summary.persen_budget <= 100) tips.push({ tone: 'amber', text: 'Penyerapan budget sudah <b>' + summary.persen_budget + '%</b>. Pantau pengeluaran agar tidak melewati pagu.' }); %>
