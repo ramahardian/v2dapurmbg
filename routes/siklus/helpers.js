@@ -31,6 +31,22 @@ function parseKategoriPenerima(kp) {
   return [kp];
 }
 
+// 'Posyandu' adalah pseudo-jenjang dari titik posyandu yang melayani dua
+// kelompok sekaligus: Bumil/Busui (paket besar) + Balita (paket kecil).
+// Dipecah ke dua kolom display agar kebutuhan per harinya terhitung.
+function expandSiklusTargetJenjang(parsedList) {
+  const out = new Set();
+  for (const p of parsedList) {
+    if (String(p).trim().toUpperCase() === 'POSYANDU') {
+      out.add('Bumil/Busui');
+      out.add('Balita');
+    } else {
+      out.add(p);
+    }
+  }
+  return out;
+}
+
 function escHtml(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
@@ -281,6 +297,7 @@ module.exports = {
   buildDbToDisplay,
   parseKategoriPenerima,
   escHtml,
+  expandSiklusTargetJenjang,
   expandJenjangToDbValues,
   batchLoadItems,
   batchLoadBahanCounts,

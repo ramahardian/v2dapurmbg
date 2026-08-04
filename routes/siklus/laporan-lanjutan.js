@@ -3,7 +3,7 @@ const path = require('path');
 const ExcelJS = require('exceljs');
 const db = require('../../db');
 const { hitungBDD } = require('../../services/spBddCalculator');
-const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName, resolveGridBeratPerSiswa } = require('./helpers');
+const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandSiklusTargetJenjang, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName, resolveGridBeratPerSiswa } = require('./helpers');
 
 const router = express.Router();
 
@@ -70,11 +70,11 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
     });
   }
 
-  // Collect target jenjang from siklus (hanya yang dipilih di data siklus)
+  // Collect target jenjang from siklus (hanya yang dipilih di data siklus).
+  // 'Posyandu' dipecah menjadi Bumil/Busui + Balita.
   const siklusTargetJenjang = new Set();
   for (const s of siklusList) {
-    const parsed = parseKategoriPenerima(s.kategori_penerima);
-    for (const p of parsed) {
+    for (const p of expandSiklusTargetJenjang(parseKategoriPenerima(s.kategori_penerima))) {
       const display = dbToDisplay[p] || p;
       siklusTargetJenjang.add(display);
     }
@@ -335,11 +335,10 @@ async function buildPerencanaanData({ tenant_id, query }) {
     const display = dbToDisplay[dbJenjang] || dbJenjang;
     pmByDisplay[display] = (pmByDisplay[display] || 0) + total;
   }
-  // Filter by siklus target jenjang
+  // Filter by siklus target jenjang — 'Posyandu' dipecah menjadi Bumil/Busui + Balita
   const siklusTargetJenjang = new Set();
   for (const s of siklusList) {
-    const parsed = parseKategoriPenerima(s.kategori_penerima);
-    for (const p of parsed) {
+    for (const p of expandSiklusTargetJenjang(parseKategoriPenerima(s.kategori_penerima))) {
       const display = dbToDisplay[p] || p;
       siklusTargetJenjang.add(display);
     }
