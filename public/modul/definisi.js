@@ -35,18 +35,41 @@ const MODULES = {
       { k: 'status', l: 'Status', type: 'select', opts: ['Direncanakan','Diproduksi','Packing','Selesai'] },
       { k: 'catatan', l: 'Catatan', type: 'textarea' },
     ], cols: ['tanggal_produksi','menu_nama','kategori_penerima','jumlah_porsi','status'] }
-  },
-distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
-    crud: { endpoint: '/distribusi', suratJalan: true, fields: [
-      { k: 'tanggal_distribusi', l: 'Tanggal', type: 'date', req: true },
-      { k: 'penerima_manfaat_id', l: 'Penerima Manfaat (PM)', type: 'select-api', source: '/penerima_manfaat', valueField: 'id', labelField: 'nama_kelompok', req: true,
-        fill: { nama_kelompok: 'pm_nama', lokasi: 'pm_alamat' } },
-      { k: 'kategori_penerima', l: 'Kategori' },
-      { k: 'jumlah_porsi', l: 'Jumlah Porsi', type: 'number', fmt: 'num' },
-      { k: 'kurir', l: 'Kurir / Driver', type: 'select-api', source: '/karyawan?status=Aktif&jabatan=Driver', valueField: 'nama', labelField: 'nama' },
-      { k: 'status', l: 'Status', type: 'select', opts: ['Dalam Perjalanan','Diterima','Gagal'] },
-      { k: 'catatan', l: 'Catatan', type: 'textarea' },
-    ], cols: ['tanggal_distribusi','penerima_manfaat_id','pm_nama','pm_alamat','kategori_penerima','jumlah_porsi','status'] }
+  },  distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+    crud: { endpoint: '/distribusi', suratJalan: true, title: 'Distribusi',
+      stats: { endpoint: '/distribusi/total', label: 'Total Porsi', format: 'num', extra: [
+        { field: 'hari_ini', label: 'Porsi Hari Ini', color: 'blue' },
+        { field: 'titik', label: 'Titik Aktif', color: 'violet' },
+        { field: 'dalam_perjalanan', label: 'Dalam Perjalanan', color: 'amber' },
+        { field: 'diterima', label: 'Diterima', color: 'emerald' },
+        { field: 'gagal', label: 'Gagal', color: 'red' },
+      ] },
+      filters: [
+        { k: 'tanggal_dari', l: 'Dari Tanggal', type: 'date' },
+        { k: 'tanggal_sampai', l: 'Sampai Tanggal', type: 'date' },
+        { k: 'status', l: 'Status', type: 'select', opts: ['Dalam Perjalanan','Diterima','Gagal'] },
+      ],
+      statusActions: [
+        { to: 'Diterima', label: 'Terima', cls: 'hover:text-emerald-600 hover:bg-emerald-50', title: 'Tandai Diterima', icon: '<path d="M5 13l4 4L19 7"/>' },
+        { to: 'Gagal', label: 'Gagal', cls: 'hover:text-red-600 hover:bg-red-50', title: 'Tandai Gagal', icon: '<path d="M18 6L6 18M6 6l12 12"/>' },
+      ],
+      extraButtons: [
+        { label: '⚙️ Atur Kop Surat', onclick: 'openKopSuratSettings()', adminOnly: true },
+      ],
+      fields: [
+        { k: 'no_surat_jalan', l: 'No. Surat Jalan', readOnly: true },
+        { k: 'tanggal_distribusi', l: 'Tanggal', type: 'date', req: true, default: 'today' },
+        { k: 'penerima_manfaat_id', l: 'Penerima Manfaat (PM)', type: 'select-api', source: '/penerima_manfaat', valueField: 'id', labelField: 'nama_kelompok', req: true,
+          fill: { kategori_penerima: 'kategori_penerima', jumlah_porsi: ['paket_besar','paket_kecil'] } },
+        { k: 'titik_distribusi', l: 'Titik Distribusi' },
+        { k: 'kategori_penerima', l: 'Kategori' },
+        { k: 'jumlah_porsi', l: 'Jumlah Porsi', type: 'number', fmt: 'num' },
+        { k: 'kurir', l: 'Kurir / Driver', type: 'select-api', source: '/karyawan?status=Aktif&jabatan=Driver', valueField: 'nama', labelField: 'nama' },
+        { k: 'status', l: 'Status', type: 'select', opts: ['Dalam Perjalanan','Diterima','Gagal'],
+          badge: { 'Dalam Perjalanan': 'bg-blue-100 text-blue-700', 'Diterima': 'bg-emerald-100 text-emerald-700', 'Gagal': 'bg-red-100 text-red-700' } },
+        { k: 'catatan', l: 'Catatan', type: 'textarea' },
+      ],
+      cols: ['no_surat_jalan','tanggal_distribusi','pm_nama','kategori_penerima','jumlah_porsi','kurir','status'] }
   },
   supplier: { title: 'Supplier', sub: 'Daftar pemasok bahan baku', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-8 2a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>',
     crud: { endpoint: '/supplier', fields: [

@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nama VARCHAR(150) NOT NULL,
   alamat TEXT,
+  telepon VARCHAR(30),
   plan ENUM('free','pro','enterprise') DEFAULT 'free',
   is_active TINYINT(1) DEFAULT 1,
   saldo_awal DECIMAL(15,2) DEFAULT 0,
@@ -193,6 +194,7 @@ CREATE TABLE IF NOT EXISTS produksi (
 CREATE TABLE IF NOT EXISTS distribusi (
   id INT AUTO_INCREMENT PRIMARY KEY,
   tenant_id INT NOT NULL,
+  no_surat_jalan VARCHAR(30),
   tanggal_distribusi DATE NOT NULL,
   titik_distribusi VARCHAR(200),
   penerima_manfaat_id INT NULL,

@@ -28,14 +28,39 @@ async function renderCrud(cfg) {
         <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
       </div>
       ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="h-11 px-4 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-xl text-sm font-medium shadow-sm transition-all">${cfg.sync.label}</button>` : ''}
-      ${cfg.extraButtons ? cfg.extraButtons.map(b => `<button onclick="${b.onclick}" class="h-11 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-sm font-medium shadow-sm transition-all">${b.label}</button>`).join('') : ''}
+      ${cfg.extraButtons ? cfg.extraButtons.filter(b => !b.adminOnly || currentUser?.role === 'admin').map(b => `<button onclick="${b.onclick}" class="h-11 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-sm font-medium shadow-sm transition-all">${b.label}</button>`).join('') : ''}
       <button onclick="exportXlsx()" class="h-11 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-sm font-medium shadow-sm transition-all">Export XLSX</button>
     </div>
   </div>
+  ${cfg.filters && cfg.filters.length ? `<div id="crud-filters" class="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-xl border border-stone-200 bg-stone-50/60">
+    ${cfg.filters.map(f => {
+      const opts = f.type === 'select' ? `<option value="">Semua</option>${f.opts.map(o => `<option value="${o}">${o}</option>`).join('')}` : '';
+      const ctrl = f.type === 'select'
+        ? `<select id="cf-${f.k}" class="h-10 px-3 rounded-lg border border-stone-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">${opts}</select>`
+        : `<input id="cf-${f.k}" type="${f.type || 'text'}" class="h-10 px-3 rounded-lg border border-stone-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">`;
+      return `<label class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500"><span class="shrink-0">${f.l}</span>${ctrl}</label>`;
+    }).join('')}
+    <button id="crud-filter-reset" onclick="resetCrudFilters()" class="h-10 px-3 text-sm font-medium text-stone-500 hover:text-stone-700 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 transition-all">Reset</button>
+  </div>` : ''}
   <div id="table-wrap" class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden"></div>
   <div id="crud-pagination" class="flex items-center justify-between mt-3"></div>`;
   window._crudInfoCfg = cfg;
   document.getElementById('add-btn').onclick = () => openForm(cfg, null);
+
+  // Filter bar (opsional, mis. distribusi): init nilai + wire event
+  if (cfg.filters && cfg.filters.length) {
+    _crudState.filters = _crudState.filters || {};
+    cfg.filters.forEach(f => {
+      const el = document.getElementById('cf-' + f.k);
+      if (!el) return;
+      el.value = _crudState.filters[f.k] || '';
+      el.addEventListener('change', () => {
+        _crudState.filters[f.k] = el.value;
+        _crudState.page = 1;
+        reloadCrud(cfg);
+      });
+    });
+  }
 
   const searchInput = document.getElementById('crud-search');
   let debounceTimer;
@@ -51,8 +76,25 @@ async function renderCrud(cfg) {
   await reloadCrud(cfg);
 }
 
+function resetCrudFilters() {
+  const cfg = _crudCfg;
+  if (!cfg || !cfg.filters) return;
+  _crudState.filters = {};
+  (cfg.filters || []).forEach(f => {
+    const el = document.getElementById('cf-' + f.k);
+    if (el) el.value = '';
+  });
+  _crudState.page = 1;
+  reloadCrud(cfg);
+}
+
 async function reloadCrud(cfg) {
   const params = new URLSearchParams({ page: _crudState.page, limit: _crudState.limit, search: _crudState.search });
+  if (_crudState.filters) {
+    Object.entries(_crudState.filters).forEach(([k, v]) => {
+      if (v) params.set(k, v);
+    });
+  }
   const res = await api.get(cfg.endpoint + '?' + params);
   const rows = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
   const pagination = res.pagination || { total: rows.length, totalPages: 1, page: 1 };
@@ -102,7 +144,8 @@ async function reloadCrud(cfg) {
       const f = cfg.fields.find(x => x.k === k);
       const v = r[k];
       let cell = v == null || v === '' ? '-' : v;
-      if (f?.fmt === 'idr') cell = `<span class="mono">${fmtIDR(v)}</span>`;
+      if (f?.badge && v) cell = `<span class="badge ${f.badge[v] || 'bg-stone-100 text-stone-600'}">${v}</span>`;
+      else if (f?.fmt === 'idr') cell = `<span class="mono">${fmtIDR(v)}</span>`;
       else if (f?.fmt === 'num') cell = `<span class="mono">${f.decimals != null ? Number(v).toFixed(f.decimals) : fmtNum(v)}</span>`;
       else if (f?.fmt === 'pct') cell = `<span class="mono">${Math.round(v * 100)}</span>%`;
       else if (f?.type === 'date') cell = fmtDate(v);
@@ -110,6 +153,7 @@ async function reloadCrud(cfg) {
     }).join('')}
     <td class="px-4 py-3 text-right whitespace-nowrap">
       ${cfg.suratJalan ? '<button onclick="cetakSuratJalan(' + r.id + ')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Cetak Surat Jalan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>' : ''}
+      ${(cfg.statusActions || []).filter(a => a.to !== r.status).map(a => `<button onclick="quickSetStatus('${cfg.endpoint}', ${r.id}, '${a.to}')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 ${a.cls} transition-all" title="${a.title}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">${a.icon}</svg></button>`).join('')}
       <button onclick='editRow(${JSON.stringify(cfg).replace(/'/g, "&#39;")}, ${JSON.stringify(r).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
     </td></tr>`).join('');
@@ -140,6 +184,20 @@ function editRow(cfg, row) { openForm(cfg, row); }
 async function deleteRow(endpoint, id, cfg) {
   if (!await showConfirm('Hapus data ini?')) return;
   await api.del(endpoint + '/' + id); reloadCrud(cfg);
+}
+
+// Update status cepat dari baris (mis. Distribusi: Terima / Gagal)
+async function quickSetStatus(endpoint, id, status) {
+  const cfg = _crudCfg;
+  if (!cfg) return;
+  if (!await showConfirm('Ubah status menjadi "' + status + '"?', 'Ya, Ubah')) return;
+  try {
+    await api.put(endpoint + '/' + id, { status });
+    showToast('Status diubah ke ' + status, 'success');
+    reloadCrud(cfg);
+  } catch (e) {
+    showToast('Gagal mengubah status: ' + (e.message || 'Unknown error'), 'error');
+  }
 }
 
 function toggleSelectAllCrud(master) {
@@ -239,6 +297,11 @@ function renderField(f, editing) {
   } else {
     const itype = f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text';
     let ival = val != null ? (f.type === 'date' ? String(val).slice(0,10) : val) : '';
+    // Default otomatis 'hari ini' untuk field tanggal baru
+    if (f.default === 'today' && !ival) {
+      const d = new Date();
+      ival = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
     if (f.fmt === 'pct' && val != null) ival = Math.round(val * 100);
     if (f.fmt === 'num' && f.decimals != null && val != null) ival = Number(val).toFixed(f.decimals);
     input = `<input id="f-${f.k}" type="${itype}" value="${ival}" ${ro ? 'readonly' : ''} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all ${f.type === 'number' ? 'mono' : ''} ${roCls}" />`;
@@ -311,7 +374,14 @@ function openForm(cfg, editing) {
           const item = JSON.parse(decodeURIComponent(opt.dataset.item));
           if (f.fill) Object.keys(f.fill).forEach(key => {
             const src = document.getElementById('f-' + key);
-            if (src) src.value = item[f.fill[key]] || '';
+            if (!src) return;
+            const spec = f.fill[key];
+            // Array = jumlahkan beberapa field (mis. jumlah_porsi = paket_besar + paket_kecil)
+            if (Array.isArray(spec)) {
+              src.value = spec.reduce((s, k2) => s + (Number(item[k2]) || 0), 0);
+            } else {
+              src.value = item[spec] || '';
+            }
           });
           if (f.fillApi && item[f.fillApi.param]) {
             api.get(f.fillApi.url + '?kategori=' + encodeURIComponent(item[f.fillApi.param])).then(r => {
@@ -663,6 +733,36 @@ window.tanyaAi = async function(fieldId, sourceField) {
   }
 };
 
+// ===== Atur Kop Surat (nama/alamat/telepon tenant) =====
+async function openKopSuratSettings() {
+  let data = {};
+  try { data = await api.get('/system/kop-surat'); } catch (e) { /* fallback kosong */ }
+  document.getElementById('modal-title').textContent = 'Atur Kop Surat';
+  document.getElementById('modal-body').innerHTML =
+    '<div class="mb-4 text-xs text-stone-500 leading-relaxed">Data ini tampil di kop surat jalan (nama dapur, alamat, telepon). Tersimpan di profil tenant.</div>' +
+    '<div class="mb-4"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Dapur</label>' +
+    '<input id="ks-nama" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" value="' + escHtml(data.kop_nama || '') + '"></div>' +
+    '<div class="mb-4"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Alamat</label>' +
+    '<textarea id="ks-alamat" rows="2" class="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">' + escHtml(data.kop_alamat || '') + '</textarea></div>' +
+    '<div class="mb-4"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Telepon</label>' +
+    '<input id="ks-telepon" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" value="' + escHtml(data.kop_telepon || '') + '"></div>';
+  document.getElementById('modal-save').onclick = async () => {
+    try {
+      await api.put('/system/kop-surat', {
+        kop_nama: document.getElementById('ks-nama').value,
+        kop_alamat: document.getElementById('ks-alamat').value,
+        kop_telepon: document.getElementById('ks-telepon').value,
+      });
+      closeModal();
+      showToast('Kop surat diperbarui', 'success');
+    } catch (e) {
+      showAlert('Gagal menyimpan: ' + (e.message || 'Terjadi kesalahan'), 'error');
+    }
+  };
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modal').classList.add('flex');
+}
+
 // ===== Surat Jalan Distribusi =====
 async function cetakSuratJalan(id) {
   try {
@@ -670,7 +770,11 @@ async function cetakSuratJalan(id) {
     var d = res.id ? res : (res.data || res);
     if (!d || !d.id) throw new Error('Data tidak ditemukan');
     var tgl = fmtDate(d.tanggal_distribusi) || d.tanggal_distribusi;
-    var no = 'SJ/' + String(d.id).padStart(4, '0') + '/' + (d.tanggal_distribusi ? d.tanggal_distribusi.slice(0, 7).replace('-', '/') : '');
+    var no = d.no_surat_jalan || ('SJ/' + String(d.id).padStart(4, '0') + '/' + (d.tanggal_distribusi ? d.tanggal_distribusi.slice(0, 7).replace('-', '/') : ''));
+    // Kop surat diambil dari data tenant (bisa diatur di master tenant), fallback ke default
+    var kopNama = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama) || 'Dapur Sukaluyu';
+    var kopAlamat = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.alamat) || 'Jl. Contoh No. 123, Kota Sukaluyu';
+    var kopTelp = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.telepon) || '(0265) 123456';
     var html = '<html><head><meta charset="utf-8"><title>Surat Jalan</title>' +
       '<style>' +
       'body{font-family:Arial,sans-serif;margin:0;padding:40px;color:#1c1917}' +
@@ -690,7 +794,7 @@ async function cetakSuratJalan(id) {
       '.ttd .line{margin-top:48px;padding-top:4px;border-top:1px solid #1c1917;font-size:11px}' +
       '@media print{body{padding:20px}}' +
       '</style></head><body>' +
-      '<div class="kop"><h1>DAPUR SUKALUYU</h1><p>Jl. Contoh No. 123, Kota Sukaluyu</p><p>Telp: (0265) 123456</p></div>' +
+      '<div class="kop"><h1>' + (kopNama || '').toUpperCase() + '</h1><p>' + (kopAlamat || '') + '</p><p>Telp: ' + (kopTelp || '') + '</p></div>' +
       '<h2>SURAT JALAN</h2>' +
       '<table class="detail">' +
       '<tr><td class="label">No. Surat Jalan</td><td class="sep">:</td><td>' + no + '</td></tr>' +

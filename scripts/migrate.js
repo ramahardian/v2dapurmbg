@@ -336,6 +336,15 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi saldo_awal)'); }
 
+  // telepon di tenants (kop surat distribusi)
+  try {
+    const [tlpCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tenants' AND COLUMN_NAME = 'telepon'");
+    if (!tlpCols.length) {
+      await q("ALTER TABLE tenants ADD COLUMN telepon VARCHAR(30) DEFAULT NULL AFTER alamat");
+      log('✓ Migrasi tenants: tambah kolom telepon');
+    }
+  } catch (e) { log('  (skip migrasi telepon tenants)'); }
+
   // shift_divisi
   try {
     await q(`CREATE TABLE IF NOT EXISTS shift_divisi (
@@ -406,6 +415,15 @@ async function runMigration() {
       log('✓ Migrasi distribusi: tambah kolom penerima_manfaat_id');
     }
   } catch (e) { log('  (skip migrasi distribusi)'); }
+
+  // distribusi no_surat_jalan (auto-generated SJ/YYYY/MM/XXXX)
+  try {
+    const [nsjCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'distribusi' AND COLUMN_NAME = 'no_surat_jalan'");
+    if (!nsjCol.length) {
+      await q("ALTER TABLE distribusi ADD COLUMN no_surat_jalan VARCHAR(30) NULL AFTER tenant_id");
+      log('✓ Migrasi distribusi: tambah kolom no_surat_jalan');
+    }
+  } catch (e) { log('  (skip migrasi no_surat_jalan distribusi)'); }
 
   // penerimaan_barang supplier_id
   try {

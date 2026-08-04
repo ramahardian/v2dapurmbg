@@ -176,7 +176,7 @@ router.post('/logout', (req, res) => {
 
 router.get('/me', requireAuth, async (req, res) => {
   const [rows] = await db.query('SELECT id, tenant_id, email, nama, role, foto, karyawan_id FROM users WHERE id=?', [req.user.id]);
-  const [t] = await db.query('SELECT id, nama FROM tenants WHERE id=?', [req.user.tenant_id]);
+  const [t] = await db.query('SELECT id, nama, alamat, telepon FROM tenants WHERE id=?', [req.user.tenant_id]);
   res.json({ user: rows[0] || null, tenant: t[0] });
 });
 

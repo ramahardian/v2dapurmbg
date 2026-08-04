@@ -453,6 +453,32 @@ router.get('/system/create-notifikasi-table', requireRole('admin'), (req, res) =
 </html>`);
 });
 
+// GET/PUT /system/kop-surat — lihat & atur kop surat (nama, alamat, telepon tenant)
+router.get('/system/kop-surat', async (req, res) => {
+  try {
+    const [[t]] = await db.query('SELECT id, nama, alamat, telepon FROM tenants WHERE id=?', [req.user.tenant_id]);
+    if (!t) return res.status(404).json({ error: 'Tenant tidak ditemukan' });
+    res.json({ kop_nama: t.nama, kop_alamat: t.alamat || '', kop_telepon: t.telepon || '' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.put('/system/kop-surat', requireRole('admin'), async (req, res) => {
+  try {
+    const { kop_nama, kop_alamat, kop_telepon } = req.body || {};
+    await db.query('UPDATE tenants SET nama=?, alamat=?, telepon=? WHERE id=?', [
+      (kop_nama || '').trim() || 'Dapur Sukaluyu',
+      (kop_alamat || '').trim(),
+      (kop_telepon || '').trim(),
+      req.user.tenant_id
+    ]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /system/backup — unduh backup database sebagai file .sql
 router.get('/system/backup', requireRole('admin'), async (req, res) => {
   try {

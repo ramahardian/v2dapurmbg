@@ -11,7 +11,7 @@ const TABLES = {
   purchase_order: ['no_po', 'tanggal', 'supplier_id', 'supplier_nama', 'item', 'total_nilai', 'status', 'unit_dapur', 'catatan'],
   penerimaan_barang: ['no_dokumen', 'tanggal_terima', 'supplier_id', 'ref_po', 'item', 'total_nilai', 'status_qc', 'catatan'],
   produksi: ['tanggal_produksi', 'menu_id', 'menu_nama', 'kategori_penerima', 'jumlah_porsi', 'status', 'catatan'],
-  distribusi: ['tanggal_distribusi', 'titik_distribusi', 'penerima_manfaat_id', 'kategori_penerima', 'jumlah_porsi', 'kurir', 'status', 'catatan'],
+  distribusi: ['no_surat_jalan', 'tanggal_distribusi', 'titik_distribusi', 'penerima_manfaat_id', 'kategori_penerima', 'jumlah_porsi', 'kurir', 'status', 'catatan'],
   budget: ['periode', 'kategori_penerima', 'jumlah_penerima', 'harga_per_porsi', 'harga_besar', 'harga_kecil', 'biaya_operasional', 'total_budget', 'realisasi', 'catatan'],
   kas_bank: ['tanggal', 'no_transaksi', 'tipe', 'kategori', 'akun', 'akun_id', 'deskripsi', 'jumlah'],
   divisi: ['nama'],

@@ -49,6 +49,22 @@ function registerDynamicRoutes(router) {
         orderByClause = 'ORDER BY tanggal DESC, id DESC';
       }
 
+      // Filter distribusi: rentang tanggal + status (dipakai halaman Distribusi)
+      if (table === 'distribusi') {
+        if (req.query.tanggal_dari) {
+          whereClause += ' AND d.tanggal_distribusi >= ?';
+          params.push(req.query.tanggal_dari);
+        }
+        if (req.query.tanggal_sampai) {
+          whereClause += ' AND d.tanggal_distribusi <= ?';
+          params.push(req.query.tanggal_sampai);
+        }
+        if (req.query.status) {
+          whereClause += ' AND d.status = ?';
+          params.push(req.query.status);
+        }
+      }
+
       // Filter: untuk purchase_order, bedakan PR vs PO via prefix no_po
       if ((table === 'purchase_order' || table === 'penerimaan_barang') && req.query.tipe) {
         if (req.query.tipe === 'po') {
@@ -137,6 +153,15 @@ function registerDynamicRoutes(router) {
 
           const { sql, vals } = buildInsert(TABLES, table, req.body, req.user.tenant_id);
           const [r] = await conn.query(sql, vals);
+
+          // Distribusi: auto-generate no_surat_jalan jika belum diisi
+          if (table === 'distribusi' && !req.body.no_surat_jalan) {
+            const thn = new Date().getFullYear();
+            const bln = String(new Date().getMonth() + 1).padStart(2, '0');
+            const no = 'SJ/' + thn + '/' + bln + '/' + String(r.insertId).padStart(4, '0');
+            await conn.query('UPDATE distribusi SET no_surat_jalan=? WHERE id=?', [no, r.insertId]);
+            req.body.no_surat_jalan = no;
+          }
 
           const [rows] = await conn.query(`SELECT * FROM ${table} WHERE id=? AND tenant_id=?`, [r.insertId, req.user.tenant_id]);
           await conn.commit();
@@ -304,6 +329,48 @@ function registerDynamicRoutes(router) {
       total_paket_kecil: Number(row.total_paket_kecil),
       total_paket: Number(row.total) // total = paket_besar + paket_kecil
     });
+  });
+
+  // ─── EXTRA: Stats distribusi (kartu ringkasan di halaman) ──────
+  // Didaftarkan SEBELUM /distribusi/:id agar 'total' tidak tertangkap sebagai id.
+  router.get('/distribusi/total', async (req, res) => {
+    const t = req.user.tenant_id;
+    const [[row]] = await db.query(
+      `SELECT
+         COALESCE(SUM(jumlah_porsi),0) AS total,
+         COALESCE(SUM(CASE WHEN DATE(tanggal_distribusi)=CURDATE() THEN jumlah_porsi ELSE 0 END),0) AS total_hari_ini,
+         COALESCE(COUNT(DISTINCT penerima_manfaat_id),0) AS total_titik,
+         COALESCE(SUM(CASE WHEN status='Dalam Perjalanan' THEN jumlah_porsi ELSE 0 END),0) AS total_dalam_perjalanan,
+         COALESCE(SUM(CASE WHEN status='Diterima' THEN jumlah_porsi ELSE 0 END),0) AS total_diterima,
+         COALESCE(SUM(CASE WHEN status='Gagal' THEN jumlah_porsi ELSE 0 END),0) AS total_gagal
+       FROM distribusi WHERE tenant_id=?`,
+      [t]
+    );
+    res.json({
+      total: Number(row.total),
+      total_hari_ini: Number(row.total_hari_ini),
+      total_titik: Number(row.total_titik),
+      total_dalam_perjalanan: Number(row.total_dalam_perjalanan),
+      total_diterima: Number(row.total_diterima),
+      total_gagal: Number(row.total_gagal),
+    });
+  });
+
+  // ─── EXTRA: Detail distribusi by id (dipakai cetak Surat Jalan) ──────
+  router.get('/distribusi/:id', requireRole('admin', 'produksi', 'gudang', 'keuangan', 'ahli_gizi'), async (req, res) => {
+    try {
+      const [rows] = await db.query(
+        `SELECT d.*, pm.nama_kelompok as pm_nama, pm.lokasi as pm_alamat
+         FROM distribusi d LEFT JOIN penerima_manfaat pm ON pm.id = d.penerima_manfaat_id AND pm.tenant_id = d.tenant_id
+         WHERE d.id=? AND d.tenant_id=?`,
+        [req.params.id, req.user.tenant_id]
+      );
+      if (!rows.length) return res.status(404).json({ error: 'Data tidak ditemukan' });
+      res.json(rows[0]);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // ─── EXTRA: Recalculate Budget Realisasi ──────
