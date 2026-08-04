@@ -400,45 +400,45 @@ function renderPncRekapPorsi(allData) {
         html += '</div>';
 
         if (!day.bahan || !day.bahan.length) {
-          html += '<div class="text-xs text-stone-400 italic px-2 pb-2">Tidak ada bahan</div></div>';
-          continue;
+          html += '<div class="text-xs text-stone-400 italic px-2 pb-2">Tidak ada bahan</div>';
+        } else {
+          // Table
+          html += '<div class="overflow-x-auto pb-2"><table class="w-full text-xs border-collapse">';
+          html += '<thead><tr class="border-b border-stone-200">';
+          html += '<th class="px-2 py-1.5 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
+          html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Bersih (g)</th>';
+          html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">BDD (%)</th>';
+          html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Kotor (g)</th>';
+          html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Jumlah Siswa</th>';
+          html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan (kg)</th>';
+          html += '</tr></thead><tbody>';
+
+          for (var bi = 0; bi < day.bahan.length; bi++) {
+            var b = day.bahan[bi];
+            // Hitung per-siswa values
+            var bbPerSiswa = perSiswa(b.berat_bersih, totalSiswa);
+            var bkPerSiswa = perSiswa(b.berat_kotor, totalSiswa);
+            // Kebutuhan untuk porsi ini
+            var kebutuhanPorsi = Math.round((bkPerSiswa * porsiCount / 1000) * 100) / 100;
+
+            html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
+            html += '<td class="px-2 py-1.5 text-sm font-medium">' + b.nama_display + '</td>';
+            html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(bbPerSiswa) + '</td>';
+            html += '<td class="px-2 py-1.5 text-sm text-right mono">' + b.persen_bdd + '%</td>';
+            html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(bkPerSiswa) + '</td>';
+            html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(porsiCount) + '</td>';
+            html += '<td class="px-2 py-1.5 text-sm text-right mono font-bold ' + (porsiKey === 'BESAR' ? 'text-amber-700' : 'text-emerald-700') + '">' + fmtPncNum(kebutuhanPorsi) + '</td>';
+            html += '</tr>';
+          }
+
+          html += '</tbody></table></div>';
         }
-
-        // Table
-        html += '<div class="overflow-x-auto pb-2"><table class="w-full text-xs border-collapse">';
-        html += '<thead><tr class="border-b border-stone-200">';
-        html += '<th class="px-2 py-1.5 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
-        html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Bersih (g)</th>';
-        html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">BDD (%)</th>';
-        html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Kotor (g)</th>';
-        html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Jumlah Siswa</th>';
-        html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan (kg)</th>';
-        html += '</tr></thead><tbody>';
-
-        for (var bi = 0; bi < day.bahan.length; bi++) {
-          var b = day.bahan[bi];
-          // Hitung per-siswa values
-          var bbPerSiswa = perSiswa(b.berat_bersih, totalSiswa);
-          var bkPerSiswa = perSiswa(b.berat_kotor, totalSiswa);
-          // Kebutuhan untuk porsi ini
-          var kebutuhanPorsi = Math.round((bkPerSiswa * porsiCount / 1000) * 100) / 100;
-
-          html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
-          html += '<td class="px-2 py-1.5 text-sm font-medium">' + b.nama_display + '</td>';
-          html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(bbPerSiswa) + '</td>';
-          html += '<td class="px-2 py-1.5 text-sm text-right mono">' + b.persen_bdd + '%</td>';
-          html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(bkPerSiswa) + '</td>';
-          html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(porsiCount) + '</td>';
-          html += '<td class="px-2 py-1.5 text-sm text-right mono font-bold ' + (porsiKey === 'BESAR' ? 'text-amber-700' : 'text-emerald-700') + '">' + fmtPncNum(kebutuhanPorsi) + '</td>';
-          html += '</tr>';
-        }
-
-        html += '</tbody></table></div></div>';
+        html += '</div>'; // close body hari
+        html += '</div>'; // close konten hari (pnc-day-content)
       }
+      html += '</div>'; // close data-siklus-idx
     }
-    html += '</div>'; // close data-siklus-idx
-
-    html += '</div>';
+    html += '</div>'; // close card
     return html;
   }
 
@@ -479,18 +479,11 @@ function pncSwitchDayTab(event, btn) {
   btn.className = 'px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all bg-white shadow-sm font-bold text-sky-700';
   btn.setAttribute('aria-selected', 'true');
 
-  var siklusSection = tabBar.closest('.bg-white').querySelectorAll('[data-siklus-idx]');
-  var contents = [];
-  for (var i = 0; i < siklusSection.length; i++) {
-    var dayContents = siklusSection[i].querySelectorAll('.pnc-day-content');
-    for (var j = 0; j < dayContents.length; j++) {
-      contents.push(dayContents[j]);
-    }
-  }
-  
-  var tabBarSiklusIdx = parseInt(tabBar.getAttribute('data-siklus-idx') || '0');
-  var siklusContents = siklusSection[tabBarSiklusIdx] ? siklusSection[tabBarSiklusIdx].querySelectorAll('.pnc-day-content') : [];
-  
+  // Bagian siklus yang memuat tab ini: tab bar & konten hari ada dalam <div data-siklus-idx> yang sama.
+  // (querySelectorAll('[data-siklus-idx]') TIDAK dipakai karena div tab-bar juga punya atribut itu.)
+  var siklusSection = tabBar.closest('div[data-siklus-idx]');
+  var siklusContents = siklusSection ? siklusSection.querySelectorAll('.pnc-day-content') : [];
+
   for (var i = 0; i < siklusContents.length; i++) {
     siklusContents[i].classList.add('hidden');
   }
