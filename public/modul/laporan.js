@@ -2111,11 +2111,6 @@ function exportRabHarianXlsx() {
   showAlert('Export RAB Harian diproses, file akan terunduh', 'info');
 }
 
-function lapExport() {
-  const tab = lapState.tab;
-  exportXlsxLaporan(tab);
-}
-
 function fmt2(v) {
   return Number(v || 0).toFixed(2);
 }
