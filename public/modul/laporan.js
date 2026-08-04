@@ -2117,16 +2117,35 @@ function exportRabHarianXlsx() {
     showAlert('Tanggal akhir tidak boleh lebih awal dari tanggal mulai', 'warning');
     return;
   }
-  let url = '/api/laporan/rab-harian/export?tanggal=' + encodeURIComponent(tanggal);
-  if (tanggalSampai) url += '&tanggal_sampai=' + encodeURIComponent(tanggalSampai);
-  if (siklusId) url += '&siklus_id=' + encodeURIComponent(siklusId);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = '';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  showAlert('Export RAB Harian diproses, file akan terunduh', 'info');
+
+  // Check if there's data for the selected date(s)
+  checkRabDataExists(tanggal, tanggalSampai).then(hasData => {
+    if (!hasData) {
+      showAlert('Tidak ada data RAB untuk tanggal yang dipilih', 'warning');
+      // Optional: Check accountant and nutritionist permissions
+      if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'keuangan')) {
+        checkProfessionalAccess().then(access => {
+          if (!access.hasAnyData) {
+            showProfessionalWarning(access);
+          }
+        });
+      }
+      return;
+    }
+    let url = '/api/laporan/rab-harian/export?tanggal=' + encodeURIComponent(tanggal);
+    if (tanggalSampai) url += '&tanggal_sampai=' + encodeURIComponent(tanggalSampai);
+    if (siklusId) url += '&siklus_id=' + encodeURIComponent(siklusId);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showAlert('Export RAB Harian diproses, file akan terunduh', 'info');
+  }).catch(err => {
+    console.error('Error checking RAB data:', err);
+    showAlert('Gagal memeriksa data RAB: ' + err.message, 'error');
+  });
 }
 
 function fmt2(v) {

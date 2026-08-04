@@ -43,9 +43,9 @@ function animateDashboardCounts(root) {
 }
 
 /**
- * exportDashboardRabHarian - Export RAB Harian (XLSX) dari dashboard admin.
- * Mengunduh /api/laporan/rab-harian/export?tanggal=YYYY-MM-DD&tanggal_sampai=YYYY-MM-DD.
- */
+  * exportDashboardRabHarian - Export RAB Harian (XLSX) dari dashboard admin.
+  * Mengunduh /api/laporan/rab-harian/export?tanggal=YYYY-MM-DD&tanggal_sampai=YYYY-MM-DD.
+  */
 function exportDashboardRabHarian() {
   const tgl = (document.getElementById('dash-rh-tanggal') || {}).value || '';
   const tglSampai = (document.getElementById('dash-rh-tanggal-sampai') || {}).value || '';
@@ -54,15 +54,82 @@ function exportDashboardRabHarian() {
     showAlert('Tanggal akhir tidak boleh lebih awal dari tanggal mulai', 'warning');
     return;
   }
-  let url = '/api/laporan/rab-harian/export?tanggal=' + encodeURIComponent(tgl);
-  if (tglSampai) url += '&tanggal_sampai=' + encodeURIComponent(tglSampai);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = '';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  showAlert('Export RAB Harian diproses, file akan terunduh', 'info');
+
+  // Check if there's data for the selected date(s)
+  checkRabDataExists(tgl, tglSampai).then(hasData => {
+    if (!hasData) {
+      showAlert('Tidak ada data RAB untuk tanggal yang dipilih', 'warning');
+      // Optional: Check accountant and nutritionist permissions
+      if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'keuangan')) {
+        checkProfessionalAccess().then(access => {
+          if (!access.hasAnyData) {
+            showProfessionalWarning(access);
+          }
+        });
+      }
+      return;
+    }
+    let url = '/api/laporan/rab-harian/export?tanggal=' + encodeURIComponent(tgl);
+    if (tglSampai) url += '&tanggal_sampai=' + encodeURIComponent(tglSampai);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showAlert('Export RAB Harian diproses, file akan terunduh', 'info');
+  }).catch(err => {
+    console.error('Error checking RAB data:', err);
+    showAlert('Gagal memeriksa data RAB: ' + err.message, 'error');
+  });
+}
+
+async function checkRabDataExists(startDate, endDate) {
+  try {
+    let url = '/api/laporan/rab-harian/check?tanggal=' + encodeURIComponent(startDate);
+    if (endDate) url += '&tanggal_sampai=' + encodeURIComponent(endDate);
+    const res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.hasData || false;
+  } catch (err) {
+    console.error('Error checking RAB data:', err);
+    return false;
+  }
+}
+
+async function checkProfessionalAccess() {
+  try {
+    // Check if accountant has data
+    const accountantRes = await fetch('/api/laporan/rab-harian/check-akuntan', { credentials: 'include' });
+    const accountantData = await accountantRes.json() || {};
+
+    // Check if nutritionist has data
+    const giziRes = await fetch('/api/laporan/rab-harian/check-ahli-gizi', { credentials: 'include' });
+    const giziData = await giziRes.json() || {};
+
+    return {
+      hasAnyData: (accountantData.hasData || false) || (giziData.hasData || false),
+      accountantData: accountantData,
+      giziData: giziData
+    };
+  } catch (err) {
+    console.error('Error checking professional access:', err);
+    return { hasAnyData: false };
+  }
+}
+
+function showProfessionalWarning(access) {
+  let warningMsg = 'Tidak ada data RAB untuk tanggal yang dipilih';
+  if (access.accountantData && access.accountantData.warning) {
+    warningMsg += '\n';
+    warningMsg += 'Perhatian Akuntan: ' + access.accountantData.warning;
+  }
+  if (access.giziData && access.giziData.warning) {
+    warningMsg += '\n';
+    warningMsg += 'Perhatian Ahli Gizi: ' + access.giziData.warning;
+  }
+  showAlert(warningMsg, 'warning');
 }
 
 /**
