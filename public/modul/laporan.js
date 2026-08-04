@@ -916,6 +916,9 @@ const tabColors = {
           '</div>' +
           (siklusInfo ? '<span class="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-700 bg-cyan-50 border border-cyan-200 px-3 py-2 rounded-lg"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' + escHtml(siklusInfo.nama) + '</span>' : '') +
           (d.hari ? '<span class="text-xs text-stone-400 ml-auto">' + escHtml(d.hari) + ', ' + d.tanggal + '</span>' : '') +
+          '<button onclick="exportRabHarianXlsx()" class="inline-flex items-center gap-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg shadow-sm transition-colors" title="Export ke Excel (format RAB Harian)">' +
+            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> EXPORT XLSX' +
+          '</button>' +
         '</div></div>';
 
       // ── Defisit flag ──
@@ -2093,6 +2096,77 @@ function exportXlsxLaporan(name) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, name);
   XLSX.writeFile(wb, `laporan-${name}.xlsx`);
+}
+
+async function exportRabHarianXlsx() {
+  const tanggal = (document.getElementById('rh-tanggal') || {}).value;
+  const siklusId = (document.getElementById('rh-filter-siklus') || {}).value || '';
+  if (!tanggal) { showAlert('Pilih tanggal terlebih dahulu', 'warning'); return; }
+  try {
+    const [d, pt] = await Promise.all([
+      api.get('/laporan/rab-harian?tanggal=' + tanggal + (siklusId ? '&siklus_id=' + siklusId : '')),
+      api.get('/laporan/rab-per-titik?tanggal=' + tanggal),
+    ]);
+
+    const fx = n => Math.round(n || 0).toLocaleString('id-ID');
+    const rp = n => { const v = Math.round(n || 0); return (v < 0 ? '-Rp' : 'Rp') + Math.abs(v).toLocaleString('id-ID'); };
+
+    const hariArr = ['MINGGU','SENIN','SELASA','RABU','KAMIS','JUMAT','SABTU'];
+    const tgl = new Date(d.tanggal + 'T00:00:00');
+    const hariNama = (d.hari || '').toString().toUpperCase() || hariArr[tgl.getDay()] || '';
+    const tglLabel = tgl.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+
+    const anggaran = Number(pt.grand_total || 0) || Number(d.anggaran_belanja_harian || 0);
+    const sisa = anggaran - (d.total || 0);
+
+    const aoa = [];
+    aoa.push(['RENCANA ANGGARAN BELANJA (RAB) BAHAN BAKU HARIAN']);
+    aoa.push(['SPPG BOGOR TAMANSARI SUKALUYU']);
+    aoa.push(['YAYASAN SHAIMA ANAK SHOLEHA']);
+    aoa.push(['MENU: ' + (d.menu_deskripsi || '')]);
+    aoa.push(['Hari : ' + hariNama + ' ' + tglLabel]);
+    aoa.push([]);
+    aoa.push(['NO','URAIAN','QTY','SATUAN','HARGA','JUMLAH','KETERANGAN']);
+    (d.items || []).forEach(function(it, i) {
+      aoa.push([i + 1, it.nama, fx(it.qty), it.satuan, rp(it.harga), rp(it.jumlah), it.keterangan || '']);
+    });
+    aoa.push(['', 'TOTAL', '', '', '', rp(d.total), '']);
+    aoa.push(['', 'ANGGARAN BELANJA HARIAN', '', '', '', rp(anggaran), '']);
+    aoa.push(['', 'SISA', '', '', '', rp(sisa), '']);
+    aoa.push([]);
+    aoa.push([]);
+    aoa.push(['NO', 'TANGGAL / SEKOLAH', 'KLASIFIKASI', 'JUMLAH SISWA & GURU', 'PAGU HARGA', 'JUMLAH']);
+    let no = 0;
+    let totalSiswa = 0;
+    function pushTitik(titik) {
+      let first = true;
+      (titik.rows || []).forEach(function(r) {
+        totalSiswa += Number(r.jumlah) || 0;
+        aoa.push([first ? (++no) : '', first ? titik.nama : '', r.klasifikasi, fx(r.jumlah), rp(r.pagu), rp(r.total)]);
+        first = false;
+      });
+    }
+    (pt.sekolah || []).forEach(pushTitik);
+    (pt.posyandu || []).forEach(pushTitik);
+    aoa.push(['', '', '', fx(totalSiswa), '', rp(pt.grand_total || 0)]);
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:5},{wch:24},{wch:16},{wch:12},{wch:12},{wch:15},{wch:12}];
+    ws['!merges'] = [
+      {s:{r:0,c:0},e:{r:0,c:6}},
+      {s:{r:1,c:0},e:{r:1,c:6}},
+      {s:{r:2,c:0},e:{r:2,c:6}},
+      {s:{r:3,c:0},e:{r:3,c:6}},
+      {s:{r:4,c:0},e:{r:4,c:6}},
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'RAB Harian');
+    XLSX.writeFile(wb, 'RAB-Harian-' + tanggal + '.xlsx');
+    showAlert('Export RAB Harian berhasil', 'success');
+  } catch (e) {
+    console.error('Export RAB Harian error:', e);
+    showAlert('Gagal export: ' + (e.message || 'Terjadi kesalahan'), 'error');
+  }
 }
 function lapExport() {
   const tab = lapState.tab;

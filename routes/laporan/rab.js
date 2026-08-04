@@ -5,7 +5,7 @@
 const db = require('../../db');
 const { requireRole } = require('../../middleware/auth');
 const { roleFinance, roleOps } = require('./config');
-const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP } = require('../siklus/helpers');
+const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP } = require('../siklus/helpers');
 
 function registerRabRoutes(router) {
   // 8. RAB Bulanan (agregat per periode) - Operasional/Produksi/Admin
@@ -917,8 +917,14 @@ function registerRabRoutes(router) {
       }
 
       // Load bahan with prices for all menus
-      const menuIds = [...new Set(menuItems.filter(m => m.menu_id).map(m => m.menu_id))];
       const dbToDisplay = buildDbToDisplay();
+
+      // Menu yang direferensikan via menu_nama (menu_id null) → resolusi ke id menu
+      const unmatchedNames = [...new Set(menuItems.filter(m => !m.menu_id && m.menu_nama).map(m => String(m.menu_nama || '').trim()).filter(Boolean))];
+      const menuIdByName = await batchLoadMenuIdByName(unmatchedNames, t);
+      const effMenuId = mi => mi.menu_id || lookupMenuIdByName(menuIdByName, mi);
+
+      const menuIds = [...new Set(menuItems.map(mi => effMenuId(mi)).filter(Boolean))];
 
       // Get PM counts per jenjang
       const siklusKat = siklusInfo ? parseKategoriPenerima(siklusInfo.kategori_penerima || '') : [];
@@ -970,8 +976,9 @@ function registerRabRoutes(router) {
         const totalPm = dbKeys.reduce((s, k) => s + (pmMap[k] || 0), 0) || Number(siklusInfo?.jumlah_porsi || 0) || 1;
         const porsi = Number(mi.jumlah_porsi) || totalPm;
 
-        const bahanList = bahanByMenu[mi.menu_id] || [];
-        const menuNama = mi.menu_nama || 'Menu #' + mi.menu_id;
+        const mid = effMenuId(mi);
+        const bahanList = bahanByMenu[mid] || [];
+        const menuNama = mi.menu_nama || 'Menu #' + mid;
 
         for (const b of bahanList) {
           const totalGram = b.jumlah_per_porsi * porsi;
