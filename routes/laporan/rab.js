@@ -3,9 +3,30 @@
  * Module untuk endpoint laporan RAB dan budgeting.
  */
 const db = require('../../db');
+const path = require('path');
+const ExcelJS = require('exceljs');
 const { requireRole } = require('../../middleware/auth');
 const { roleFinance, roleOps } = require('./config');
 const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP } = require('../siklus/helpers');
+
+const MONTHS_ID = ['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
+const HARI_ID = ['MINGGU','SENIN','SELASA','RABU','KAMIS','JUMAT','SABTU'];
+const MONEY_FMT = '"Rp"* #,###';
+const MONEY_FMT2 = '"Rp"#,##0.00';
+const pad2 = n => String(n).padStart(2, '0');
+const ymdStr = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+const daySheetName = d => d.getDate() + ' ' + MONTHS_ID[d.getMonth()] + ' ' + d.getFullYear();
+function mondayOf(tanggal) {
+  const d = new Date(tanggal + 'T00:00:00');
+  if (isNaN(d.getTime())) throw new Error('tanggal tidak valid');
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d;
+}
+const COL_LETTER = c => {
+  let s = '';
+  while (c > 0) { const m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); }
+  return s;
+};
 
 function registerRabRoutes(router) {
   // 8. RAB Bulanan (agregat per periode) - Operasional/Produksi/Admin
@@ -806,12 +827,8 @@ function registerRabRoutes(router) {
   });
 
   // ===== RAB Harian — kebutuhan bahan per hari dengan harga dari bahan_baku =====
-  router.get('/laporan/rab-harian', roleOps, async (req, res) => {
+  async function getRabHarianData(t, tanggal, siklusId) {
     try {
-      const t = req.user.tenant_id;
-      const tanggal = req.query.tanggal || new Date().toISOString().slice(0, 10);
-      const siklusId = req.query.siklus_id || '';
-
       let siklusInfo = null;
       let hariKe = 0;
       let menuItems = [];
@@ -904,16 +921,16 @@ function registerRabRoutes(router) {
         );
         const totalHariBudget = total_hari_periode || siklusInfo?.total_hari || 1;
         const anggaranBelanjaHarian = Math.round(total_budget_periode / Math.max(totalHariBudget, 1));
-        return res.json({
+        return {
           tanggal,
           siklus: siklusInfo,
           hari_ke: hariKe,
-          menu_harian: '',
+          menu_deskripsi: '',
           items: [],
           total: 0,
           anggaran_belanja_harian: anggaranBelanjaHarian,
           message: 'Tidak ada menu untuk tanggal ini',
-        });
+        };
       }
 
       // Load bahan with prices for all menus
@@ -1052,7 +1069,7 @@ function registerRabRoutes(router) {
       const menuDeskripsi = menuItems.map(m => m.menu_nama).filter(Boolean).join(' + ');
       const hariNama = menuItems[0]?.hari_nama || '';
 
-      res.json({
+      return {
         tanggal,
         hari: hariNama,
         siklus: siklusInfo,
@@ -1063,10 +1080,203 @@ function registerRabRoutes(router) {
         anggaran_belanja_harian: anggaranBelanjaHarian,
         sisa: anggaranBelanjaHarian - grandTotal,
         item_count: items.length,
-      });
+      };
+    } catch (err) {
+      console.error('RAB harian error:', err);
+      throw err;
+    }
+  }
+
+  router.get('/laporan/rab-harian', roleOps, async (req, res) => {
+    try {
+      const t = req.user.tenant_id;
+      const tanggal = req.query.tanggal || new Date().toISOString().slice(0, 10);
+      const siklusId = req.query.siklus_id || '';
+      res.json(await getRabHarianData(t, tanggal, siklusId));
     } catch (err) {
       console.error('RAB harian error:', err);
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ===== Export RAB Harian ke Excel (template public/template/RAB.xlsx) =====
+  function captureStyles(ws) {
+    const cap = (r, c) => { const cell = ws.getCell(r, c); return { style: cell.style, numFmt: cell.numFmt }; };
+    const itemStyle = []; for (let c = 1; c <= 7; c++) itemStyle.push(cap(8, c));
+    const labelStyle = cap(29, 1);
+    const valStyle = cap(29, 6);
+    const anggValStyle = cap(30, 6);
+    const hdr2Style = []; for (let c = 1; c <= 6; c++) hdr2Style.push(cap(34, c));
+    const titikSekolahStyle = []; for (let c = 1; c <= 6; c++) titikSekolahStyle.push(cap(35, c));
+    const titikPosyanduStyle = []; for (let c = 1; c <= 6; c++) titikPosyanduStyle.push(cap(75, c));
+    const total2Style = { d: cap(85, 4), f: cap(85, 6) };
+    return { itemStyle, labelStyle, valStyle, anggValStyle, hdr2Style, titikSekolahStyle, titikPosyanduStyle, total2Style };
+  }
+
+  function clearDataRegion(ws) {
+    const merges = ws._merges || {};
+    for (const k of Object.keys(merges)) {
+      const m = merges[k];
+      if (m.top >= 8) {
+        try { ws.unMergeCells(COL_LETTER(m.left) + m.top + ':' + COL_LETTER(m.right) + m.bottom); } catch (e) {}
+      }
+    }
+    const maxRow = Math.min(ws.rowCount, 100);
+    for (let r = 8; r <= maxRow; r++) {
+      for (let c = 1; c <= 10; c++) {
+        const cell = ws.getCell(r, c);
+        cell.value = null;
+        cell.style = {};
+      }
+    }
+  }
+
+  function fillDaySheet(ws, data, S) {
+    const items = data.rab.items || [];
+    const anggaran = Number(data.titik.grand_total) || Number(data.rab.anggaran_belanja_harian) || 0;
+    const totalBahan = Number(data.rab.total) || 0;
+    const sisa = anggaran - totalBahan;
+    const dlabel = data.d.getDate() + ' ' + MONTHS_ID[data.d.getMonth()] + ' ' + data.d.getFullYear();
+
+    ws.getCell('A5').value = 'MENU: ' + (data.rab.menu_deskripsi || '');
+    ws.getCell('A6').value = 'Hari : ' + HARI_ID[data.d.getDay()] + ' ' + dlabel;
+
+    clearDataRegion(ws);
+
+    const put = (r, c, v, styleObj, numFmt) => {
+      const cell = ws.getCell(r, c);
+      cell.value = v;
+      if (styleObj) cell.style = JSON.parse(JSON.stringify(styleObj));
+      if (numFmt) cell.numFmt = numFmt;
+    };
+    const merge = (r1, c1, r2, c2) => { try { ws.mergeCells(r1, c1, r2, c2); } catch (e) {} };
+
+    let row = 8;
+    items.forEach((it, i) => {
+      put(row, 1, i + 1, S.itemStyle[0].style);
+      put(row, 2, it.nama, S.itemStyle[1].style);
+      put(row, 3, Number(it.qty) || 0, S.itemStyle[2].style);
+      put(row, 4, it.satuan, S.itemStyle[3].style);
+      put(row, 5, Number(it.harga) || 0, S.itemStyle[4].style, MONEY_FMT);
+      put(row, 6, Number(it.jumlah) || 0, S.itemStyle[5].style, MONEY_FMT);
+      put(row, 7, it.keterangan || null, S.itemStyle[6].style);
+      row++;
+    });
+
+    const totRow = row, anggRow = totRow + 1, sisaRow = totRow + 2;
+    const putLabel = (r, label, v, vs) => { put(r, 1, label, S.labelStyle.style); put(r, 6, v, vs.style, MONEY_FMT); merge(r, 1, r, 5); };
+    putLabel(totRow, 'TOTAL', totalBahan, S.valStyle);
+    putLabel(anggRow, 'ANGGARAN BELANJA HARIAN', anggaran, S.anggValStyle);
+    putLabel(sisaRow, 'SISA', sisa, S.valStyle);
+
+    const hdr2Row = sisaRow + 3;
+    const titikStart = hdr2Row + 1;
+    const h2 = ['NO', 'TANGGAL / SEKOLAH', 'KLASIFIKASI', 'JUMLAH SISWA & GURU', 'PAGU HARGA', 'JUMLAH'];
+    h2.forEach((h, i) => put(hdr2Row, i + 1, h, S.hdr2Style[i].style));
+
+    let tr = titikStart, no = 0, totalSiswa = 0;
+    const writeTitik = (titik, isPosyandu) => {
+      const rows = titik.rows || [];
+      const st = isPosyandu ? S.titikPosyanduStyle : S.titikSekolahStyle;
+      const start = tr;
+      let first = true;
+      for (const r of rows) {
+        put(tr, 1, first ? ++no : null, st[0].style);
+        put(tr, 2, first ? titik.nama : null, st[1].style);
+        put(tr, 3, r.klasifikasi, st[2].style);
+        totalSiswa += Number(r.jumlah) || 0;
+        put(tr, 4, Number(r.jumlah) || 0, st[3].style);
+        put(tr, 5, Number(r.pagu) || 0, st[4].style, MONEY_FMT);
+        put(tr, 6, Number(r.total) || 0, st[5].style, MONEY_FMT);
+        first = false; tr++;
+      }
+      if (rows.length > 1) { merge(start, 1, tr - 1, 1); merge(start, 2, tr - 1, 2); }
+    };
+    (data.titik.sekolah || []).forEach(t => writeTitik(t, false));
+    (data.titik.posyandu || []).forEach(t => writeTitik(t, true));
+
+    const total2Row = tr + 1;
+    put(total2Row, 4, totalSiswa, S.total2Style.d.style);
+    put(total2Row, 6, Number(data.titik.grand_total) || 0, S.total2Style.f.style, MONEY_FMT);
+  }
+
+  function fillTotalSheet(ws, dayData) {
+    const d0 = dayData[0].d, d4 = dayData[4].d;
+    ws.getCell('A1').value = 'TOTAL RAB BAHAN BAKU ' + d0.getDate() + '-' + d4.getDate() + ' ' + MONTHS_ID[d0.getMonth()] + ' ' + d0.getFullYear();
+    ['TANGGAL', 'ANGGARAN', 'REALISASI', 'SELISIH'].forEach((h, i) => { ws.getCell(3, i + 1).value = h; });
+    let r = 4, sumA = 0, sumR = 0, sumS = 0;
+    for (const dd of dayData) {
+      const angg = Number(dd.titik.grand_total) || 0;
+      const real = Number(dd.rab.total) || 0;
+      const sel = angg - real;
+      sumA += angg; sumR += real; sumS += sel;
+      const row = ws.getRow(r);
+      row.getCell(1).value = dd.d.getDate() + ' ' + MONTHS_ID[dd.d.getMonth()];
+      row.getCell(2).value = angg; row.getCell(2).numFmt = MONEY_FMT2;
+      row.getCell(3).value = real; row.getCell(3).numFmt = MONEY_FMT2;
+      row.getCell(4).value = sel; row.getCell(4).numFmt = MONEY_FMT2;
+      r++;
+    }
+    const row = ws.getRow(r);
+    row.getCell(1).value = 'TOTAL';
+    row.getCell(2).value = sumA; row.getCell(2).numFmt = MONEY_FMT2;
+    row.getCell(3).value = sumR; row.getCell(3).numFmt = MONEY_FMT2;
+    row.getCell(4).value = sumS; row.getCell(4).numFmt = MONEY_FMT2;
+  }
+
+  router.get('/laporan/rab-harian/export', roleOps, async (req, res) => {
+    try {
+      const t = req.user.tenant_id;
+      const tanggal = req.query.tanggal || '';
+      const siklusId = req.query.siklus_id || '';
+      if (!tanggal) return res.status(400).json({ error: 'tanggal wajib diisi' });
+
+      const monday = mondayOf(tanggal);
+      const days = [];
+      for (let i = 0; i < 5; i++) { const d = new Date(monday); d.setDate(monday.getDate() + i); days.push(d); }
+
+      const dayData = [];
+      for (const d of days) {
+        const ds = ymdStr(d);
+        const [rab, titik] = await Promise.all([
+          getRabHarianData(t, ds, siklusId),
+          getRabPerTitikData(t, ds, ''),
+        ]);
+        dayData.push({ d, rab, titik });
+      }
+
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.readFile(path.join(__dirname, '..', '..', 'public', 'template', 'RAB.xlsx'));
+
+      const sheets = wb.worksheets;
+      const dayIdx = [];
+      sheets.forEach((ws, i) => { if (/^\d{1,2} [A-Z]+ \d{4}$/.test(ws.name)) dayIdx.push(i); });
+      const totalIdx = sheets.findIndex(ws => /^TOTAL/i.test(ws.name));
+      if (!dayIdx.length) throw new Error('Template RAB tidak memiliki sheet harian');
+
+      const S = captureStyles(sheets[dayIdx[0]]);
+      const targetNames = days.map(daySheetName);
+
+      dayIdx.forEach((idx, i) => {
+        if (i >= targetNames.length) return;
+        if (sheets[idx].name !== targetNames[i]) sheets[idx].name = targetNames[i];
+      });
+      dayIdx.forEach((idx, i) => { if (i < dayData.length) fillDaySheet(sheets[idx], dayData[i], S); });
+
+      if (totalIdx >= 0) {
+        const tWs = sheets[totalIdx];
+        const totalName = 'TOTAL RAB ' + days[0].getDate() + '-' + days[4].getDate() + ' ' + MONTHS_ID[days[0].getMonth()] + ' ' + days[0].getFullYear();
+        if (tWs.name !== totalName) tWs.name = totalName;
+        fillTotalSheet(tWs, dayData);
+      }
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="RAB-' + targetNames[0].replace(/ /g, '-') + '-' + targetNames[4].replace(/ /g, '-') + '.xlsx"');
+      await wb.xlsx.write(res);
+    } catch (err) {
+      console.error('Export RAB Harian error:', err);
+      if (!res.headersSent) res.status(500).json({ error: err.message });
+      else res.end();
     }
   });
 
@@ -1156,12 +1366,7 @@ function registerRabRoutes(router) {
   });
 
   // 9. RAB per titik (sekolah/posyandu) - Operasional/Produksi/Admin
-  router.get('/laporan/rab-per-titik', roleOps, async (req, res) => {
-    const t = req.user.tenant_id;
-    const periodeFilter = req.query.periode || '';
-    // Filter per tanggal: bila ada tanggal & snapshot pm_harian utk tanggal tsb,
-    // pakai snapshot tsb; jika tidak ada snapshot utk tanggal tsb, fallback ke penerima_manfaat.
-    const tanggalFilter = (req.query.tanggal || '').trim();
+  async function getRabPerTitikData(t, tanggalFilter, periodeFilter) {
     try {
       let pmRows;
       let pakaiSnapshot = false;
@@ -1261,7 +1466,7 @@ function registerRabRoutes(router) {
 
       const sum = arr => arr.reduce((s, it) => s + (it.sub_total || 0), 0);
 
-      res.json({
+      return {
         periode: usePeriode || periodeFilter,
         tanggal: tanggalFilter,
         sumber: pakaiSnapshot ? 'snapshot' : 'live',
@@ -1270,7 +1475,17 @@ function registerRabRoutes(router) {
         total_sekolah: sum(sekolah),
         total_posyandu: sum(posyandu),
         grand_total: sum(sekolah) + sum(posyandu),
-      });
+      };
+    } catch (err) {
+      console.error('RAB per titik error:', err);
+      throw err;
+    }
+  }
+
+  router.get('/laporan/rab-per-titik', roleOps, async (req, res) => {
+    try {
+      const t = req.user.tenant_id;
+      res.json(await getRabPerTitikData(t, (req.query.tanggal || '').trim(), req.query.periode || ''));
     } catch (err) {
       console.error('RAB per titik error:', err);
       res.status(500).json({ error: err.message });

@@ -2098,76 +2098,20 @@ function exportXlsxLaporan(name) {
   XLSX.writeFile(wb, `laporan-${name}.xlsx`);
 }
 
-async function exportRabHarianXlsx() {
+function exportRabHarianXlsx() {
   const tanggal = (document.getElementById('rh-tanggal') || {}).value;
   const siklusId = (document.getElementById('rh-filter-siklus') || {}).value || '';
   if (!tanggal) { showAlert('Pilih tanggal terlebih dahulu', 'warning'); return; }
-  try {
-    const [d, pt] = await Promise.all([
-      api.get('/laporan/rab-harian?tanggal=' + tanggal + (siklusId ? '&siklus_id=' + siklusId : '')),
-      api.get('/laporan/rab-per-titik?tanggal=' + tanggal),
-    ]);
-
-    const fx = n => Math.round(n || 0).toLocaleString('id-ID');
-    const rp = n => { const v = Math.round(n || 0); return (v < 0 ? '-Rp' : 'Rp') + Math.abs(v).toLocaleString('id-ID'); };
-
-    const hariArr = ['MINGGU','SENIN','SELASA','RABU','KAMIS','JUMAT','SABTU'];
-    const tgl = new Date(d.tanggal + 'T00:00:00');
-    const hariNama = (d.hari || '').toString().toUpperCase() || hariArr[tgl.getDay()] || '';
-    const tglLabel = tgl.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
-
-    const anggaran = Number(pt.grand_total || 0) || Number(d.anggaran_belanja_harian || 0);
-    const sisa = anggaran - (d.total || 0);
-
-    const aoa = [];
-    aoa.push(['RENCANA ANGGARAN BELANJA (RAB) BAHAN BAKU HARIAN']);
-    aoa.push(['SPPG BOGOR TAMANSARI SUKALUYU']);
-    aoa.push(['YAYASAN SHAIMA ANAK SHOLEHA']);
-    aoa.push(['MENU: ' + (d.menu_deskripsi || '')]);
-    aoa.push(['Hari : ' + hariNama + ' ' + tglLabel]);
-    aoa.push([]);
-    aoa.push(['NO','URAIAN','QTY','SATUAN','HARGA','JUMLAH','KETERANGAN']);
-    (d.items || []).forEach(function(it, i) {
-      aoa.push([i + 1, it.nama, fx(it.qty), it.satuan, rp(it.harga), rp(it.jumlah), it.keterangan || '']);
-    });
-    aoa.push(['', 'TOTAL', '', '', '', rp(d.total), '']);
-    aoa.push(['', 'ANGGARAN BELANJA HARIAN', '', '', '', rp(anggaran), '']);
-    aoa.push(['', 'SISA', '', '', '', rp(sisa), '']);
-    aoa.push([]);
-    aoa.push([]);
-    aoa.push(['NO', 'TANGGAL / SEKOLAH', 'KLASIFIKASI', 'JUMLAH SISWA & GURU', 'PAGU HARGA', 'JUMLAH']);
-    let no = 0;
-    let totalSiswa = 0;
-    function pushTitik(titik) {
-      let first = true;
-      (titik.rows || []).forEach(function(r) {
-        totalSiswa += Number(r.jumlah) || 0;
-        aoa.push([first ? (++no) : '', first ? titik.nama : '', r.klasifikasi, fx(r.jumlah), rp(r.pagu), rp(r.total)]);
-        first = false;
-      });
-    }
-    (pt.sekolah || []).forEach(pushTitik);
-    (pt.posyandu || []).forEach(pushTitik);
-    aoa.push(['', '', '', fx(totalSiswa), '', rp(pt.grand_total || 0)]);
-
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{wch:5},{wch:24},{wch:16},{wch:12},{wch:12},{wch:15},{wch:12}];
-    ws['!merges'] = [
-      {s:{r:0,c:0},e:{r:0,c:6}},
-      {s:{r:1,c:0},e:{r:1,c:6}},
-      {s:{r:2,c:0},e:{r:2,c:6}},
-      {s:{r:3,c:0},e:{r:3,c:6}},
-      {s:{r:4,c:0},e:{r:4,c:6}},
-    ];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'RAB Harian');
-    XLSX.writeFile(wb, 'RAB-Harian-' + tanggal + '.xlsx');
-    showAlert('Export RAB Harian berhasil', 'success');
-  } catch (e) {
-    console.error('Export RAB Harian error:', e);
-    showAlert('Gagal export: ' + (e.message || 'Terjadi kesalahan'), 'error');
-  }
+  const url = '/api/laporan/rab-harian/export?tanggal=' + encodeURIComponent(tanggal) + (siklusId ? '&siklus_id=' + encodeURIComponent(siklusId) : '');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showAlert('Export RAB Harian diproses, file akan terunduh', 'info');
 }
+
 function lapExport() {
   const tab = lapState.tab;
   exportXlsxLaporan(tab);
