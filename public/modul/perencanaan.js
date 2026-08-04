@@ -331,7 +331,6 @@ function renderPncRekapPorsi(allData) {
     totalBesar += allData[di].jumlah_besar || 0;
     totalKecil += allData[di].jumlah_kecil || 0;
   }
-  if (totalBesar === 0 && totalKecil === 0) return '';
 
   // 2. Gunakan data jenjang pertama sebagai template siklus/hari/bahan
   //    (asumsi: semua jenjang pakai menu yang sama)
@@ -343,9 +342,10 @@ function renderPncRekapPorsi(allData) {
     return jmlSiswa > 0 ? totalVal / jmlSiswa : 0;
   }
 
-  // 4. Render satu tabel untuk satu porsi type
+  // 4. Render satu tabel untuk satu porsi type.
+  //    Card SELALU dirender agar layout "Porsi Besar & Porsi Kecil" tidak menghilang,
+  //    walau salah satu porsi belum punya penerima manfaat (count = 0).
   function renderRekapTable(porsiKey, porsiLabel, porsiCount, colorClass, iconSvg) {
-    if (porsiCount <= 0) return '';
     var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">';
     html += '<div class="px-5 py-3 ' + colorClass + ' flex items-center gap-3">';
     if (iconSvg) html += iconSvg;
@@ -353,6 +353,17 @@ function renderPncRekapPorsi(allData) {
     html += '<span class="text-sm font-normal">Jumlah Siswa: <strong>' + fmtPncNum(porsiCount) + '</strong> orang</span>';
     html += '<span class="text-xs opacity-60">(Rekap semua jenjang)</span>';
     html += '</div>';
+
+    // Empty state: card tetap tampil, konten diganti pesan informatif
+    if (porsiCount <= 0) {
+      html += '<div class="px-5 py-8 text-center">';
+      html += '<svg class="w-10 h-10 mx-auto mb-2 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>';
+      html += '<div class="text-sm font-medium text-stone-500">Belum ada penerima untuk ' + porsiLabel.toLowerCase() + '</div>';
+      html += '<div class="text-xs text-stone-400 mt-1">Isi paket besar/kecil di Master Data → Penerima Manfaat agar kebutuhan porsi ini muncul.</div>';
+      html += '</div>';
+      html += '</div>';
+      return html;
+    }
 
     for (var skIdx = 0; skIdx < template.siklus.length; skIdx++) {
       var sk = template.siklus[skIdx];
