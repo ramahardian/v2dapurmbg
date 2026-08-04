@@ -23,7 +23,7 @@ const router = express.Router();
 // Terapkan perlindungan endpoint ke semua rute di bawahnya
 router.use(requireAuth);
 router.use((req, res, next) => {
-  if (req.path.startsWith('/purchase_order')) return requireRole('admin', 'keuangan', 'ahli_gizi')(req, res, next);
+  if (req.path.startsWith('/purchase_order')) return requireRole('admin', 'keuangan', 'gudang')(req, res, next);
   next();
 });
 

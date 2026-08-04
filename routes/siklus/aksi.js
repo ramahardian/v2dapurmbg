@@ -1,9 +1,80 @@
 const express = require('express');
 const db = require('../../db');
-const { parseKategoriPenerima, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, hitungEstimasiGiziManual } = require('./helpers');
+const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, hitungEstimasiGiziManual } = require('./helpers');
 const { hitungBDD } = require('../../services/spBddCalculator');
 
 const router = express.Router();
+
+function hitungHariKerja(periode) {
+  const [year, month] = periode.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let workingDays = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dow = new Date(year, month - 1, d).getDay();
+    if (dow !== 0) workingDays++;
+  }
+  return workingDays;
+}
+
+async function kategoriBudgetSiklus(siklus, tenantId) {
+  const jenjangList = parseKategoriPenerima(siklus.kategori_penerima);
+  let dbVals = expandJenjangToDbValues(jenjangList);
+  if (!dbVals.length) dbVals = ['Umum'];
+
+  const dbToDisplay = buildDbToDisplay();
+  const catMap = {};
+  for (const dv of dbVals) {
+    const display = dbToDisplay[dv] || dv;
+    if (!catMap[display]) catMap[display] = [];
+    catMap[display].push(dv);
+  }
+
+  const ph = dbVals.map(() => '?').join(',');
+  const [pmRows] = await db.query(
+    `SELECT kategori_penerima,
+            COALESCE(SUM(paket_besar),0) AS besar,
+            COALESCE(SUM(paket_kecil),0) AS kecil
+     FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})
+     GROUP BY kategori_penerima`,
+    [tenantId, ...dbVals]
+  );
+  const pmMap = {};
+  for (const p of pmRows) pmMap[p.kategori_penerima] = { besar: Number(p.besar), kecil: Number(p.kecil) };
+
+  const siklusPorsi = Number(siklus.jumlah_porsi) || 0;
+  const displayList = Object.keys(catMap);
+  return displayList.map(display => {
+    let besar = 0, kecil = 0;
+    for (const dv of catMap[display]) {
+      const pm = pmMap[dv];
+      if (pm) { besar += pm.besar; kecil += pm.kecil; }
+    }
+    if (besar + kecil <= 0) {
+      besar = displayList.length ? Math.round(siklusPorsi / displayList.length) : 0;
+      kecil = 0;
+    }
+    return { display, jumlah_penerima: besar + kecil, jumlah_besar: besar, jumlah_kecil: kecil };
+  });
+}
+
+async function refHargaKategori(tenantId, display, periode) {
+  const dbVals = expandJenjangToDbValues([display]);
+  const candidates = [...new Set([...dbVals, display])];
+  const ph = candidates.map(() => '?').join(',');
+  const [rows] = await db.query(
+    `SELECT harga_besar, harga_kecil, harga_per_porsi FROM budget
+     WHERE tenant_id=? AND kategori_penerima IN (${ph})
+     ORDER BY (COALESCE(harga_besar,0) > 0) DESC, (periode = ?) DESC, periode DESC
+     LIMIT 1`,
+    [tenantId, ...candidates, periode]
+  );
+  if (rows.length) {
+    const r = rows[0];
+    const hargaBesar = Number(r.harga_besar) || Number(r.harga_per_porsi) || 0;
+    return { harga_besar: hargaBesar, harga_kecil: Number(r.harga_kecil) || hargaBesar };
+  }
+  return { harga_besar: 0, harga_kecil: 0 };
+}
 
 /**
  * POST /siklus/generate-produksi
@@ -114,45 +185,42 @@ router.post('/siklus/hitung-budget', async (req, res) => {
   const [[siklus]] = await db.query('SELECT * FROM siklus_menu WHERE id=? AND tenant_id=?', [siklus_id, req.user.tenant_id]);
   if (!siklus) return res.status(404).json({ error: 'Siklus tidak ditemukan' });
 
-  // Determine working days in month
-  const [year, month] = periode.split('-').map(Number);
-  const daysInMonth = new Date(year, month, 0).getDate();
-  let workingDays = 0;
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dow = new Date(year, month - 1, d).getDay();
-    if (dow !== 0) workingDays++; // Exclude Sundays
-  }
+  const workingDays = hitungHariKerja(periode);
+  const kategoriList = await kategoriBudgetSiklus(siklus, req.user.tenant_id);
 
-  // Get budget rate from existing budget or use default
-  const [existingBudget] = await db.query(
-    'SELECT * FROM budget WHERE tenant_id=? AND periode=? AND kategori_penerima=?',
-    [req.user.tenant_id, periode, siklus.kategori_penerima || '-']
-  );
+  let totalBudget = 0, created = 0, updated = 0;
+  for (const kat of kategoriList) {
+    const harga = await refHargaKategori(req.user.tenant_id, kat.display, periode);
+    const rowTotal = workingDays * (harga.harga_besar * kat.jumlah_besar + harga.harga_kecil * kat.jumlah_kecil);
+    totalBudget += rowTotal;
 
-  let hargaBesar = 0;
-  if (existingBudget.length) {
-    hargaBesar = Number(existingBudget[0].harga_besar) || Number(existingBudget[0].harga_per_porsi) || 0;
-  } else {
-    const [refBudget] = await db.query('SELECT harga_besar, harga_per_porsi FROM budget WHERE tenant_id=? AND kategori_penerima=? LIMIT 1', [req.user.tenant_id, siklus.kategori_penerima || '-']);
-    if (refBudget.length) hargaBesar = Number(refBudget[0].harga_besar) || Number(refBudget[0].harga_per_porsi) || 0;
-  }
-
-  const jumlahPorsi = Number(siklus.jumlah_porsi) || 0;
-  const totalBudget = workingDays * jumlahPorsi * hargaBesar;
-
-  if (existingBudget.length) {
-    await db.query(
-      'UPDATE budget SET jumlah_penerima=?, harga_besar=?, harga_kecil=?, total_budget=? WHERE id=? AND tenant_id=?',
-      [jumlahPorsi, hargaBesar, 0, totalBudget, existingBudget[0].id, req.user.tenant_id]
+    const [existing] = await db.query(
+      'SELECT id FROM budget WHERE tenant_id=? AND periode=? AND kategori_penerima=?',
+      [req.user.tenant_id, periode, kat.display]
     );
-  } else {
-    await db.query(
-      'INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_besar, harga_kecil, total_budget) VALUES (?,?,?,?,?,?,?)',
-      [req.user.tenant_id, periode, siklus.kategori_penerima || '-', jumlahPorsi, hargaBesar, 0, totalBudget]
-    );
+    if (existing.length) {
+      await db.query(
+        'UPDATE budget SET jumlah_penerima=?, harga_besar=?, harga_kecil=?, total_budget=? WHERE id=? AND tenant_id=?',
+        [kat.jumlah_penerima, harga.harga_besar, harga.harga_kecil, rowTotal, existing[0].id, req.user.tenant_id]
+      );
+      updated++;
+    } else {
+      await db.query(
+        'INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_besar, harga_kecil, total_budget) VALUES (?,?,?,?,?,?,?)',
+        [req.user.tenant_id, periode, kat.display, kat.jumlah_penerima, harga.harga_besar, harga.harga_kecil, rowTotal]
+      );
+      created++;
+    }
   }
 
-  res.json({ ok: true, message: 'Budget ' + periode + ' untuk ' + siklus.nama + ': Rp ' + totalBudget.toLocaleString('id-ID') });
+  res.json({
+    ok: true,
+    message: 'Budget ' + periode + ' untuk ' + siklus.nama + ': Rp ' + totalBudget.toLocaleString('id-ID') + ' (' + kategoriList.length + ' kategori: ' + created + ' baru, ' + updated + ' update)',
+    total_budget: totalBudget,
+    created,
+    updated,
+    kategori: kategoriList.map(k => k.display),
+  });
 });
 
 /**
@@ -170,40 +238,53 @@ router.post('/siklus/hitung-budget-semua', async (req, res) => {
 
   if (!siklusList.length) return res.json({ ok: true, message: 'Tidak ada siklus aktif', updated: 0 });
 
-  const [year, month] = periode.split('-').map(Number);
-  const daysInMonth = new Date(year, month, 0).getDate();
-  let workingDays = 0;
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dow = new Date(year, month - 1, d).getDay();
-    if (dow !== 0) workingDays++;
-  }
+  const workingDays = hitungHariKerja(periode);
 
-  // Load existing budgets for this period
-  const [existingBudgets] = await db.query('SELECT * FROM budget WHERE tenant_id=? AND periode=?', [req.user.tenant_id, periode]);
-  const budgetMap = {};
-  for (const b of existingBudgets) budgetMap[b.kategori_penerima] = b;
-
-  // Load reference prices
-  const [refs] = await db.query('SELECT kategori_penerima, harga_besar, harga_per_porsi FROM budget WHERE tenant_id=? GROUP BY kategori_penerima', [req.user.tenant_id]);
-  const refMap = {};
-  for (const r of refs) refMap[r.kategori_penerima] = Number(r.harga_besar) || Number(r.harga_per_porsi) || 0;
-
-  let updated = 0;
+  // Normalisasi kategori dari setiap siklus aktif lalu agregasi per kategori display
+  const agg = {};
   for (const s of siklusList) {
-    const kat = s.kategori_penerima || '-';
-    const jumlahPorsi = Number(s.jumlah_porsi) || 0;
-    const hargaBesar = refMap[kat] || 0;
-    const totalBudget = workingDays * jumlahPorsi * hargaBesar;
-
-    if (budgetMap[kat]) {
-      await db.query('UPDATE budget SET jumlah_penerima=?, harga_besar=?, harga_kecil=?, total_budget=? WHERE id=?', [jumlahPorsi, hargaBesar, 0, totalBudget, budgetMap[kat].id]);
-    } else {
-      await db.query('INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_besar, harga_kecil, total_budget) VALUES (?,?,?,?,?,?,?)', [req.user.tenant_id, periode, kat, jumlahPorsi, hargaBesar, 0, totalBudget]);
+    const kategoriList = await kategoriBudgetSiklus(s, req.user.tenant_id);
+    for (const kat of kategoriList) {
+      if (!agg[kat.display]) agg[kat.display] = { jumlah_besar: 0, jumlah_kecil: 0 };
+      agg[kat.display].jumlah_besar += kat.jumlah_besar;
+      agg[kat.display].jumlah_kecil += kat.jumlah_kecil;
     }
-    updated++;
   }
 
-  res.json({ ok: true, message: updated + ' budget berhasil dihitung', updated });
+  let totalBudget = 0, created = 0, updated = 0;
+  for (const display of Object.keys(agg)) {
+    const kat = agg[display];
+    const harga = await refHargaKategori(req.user.tenant_id, display, periode);
+    const rowTotal = workingDays * (harga.harga_besar * kat.jumlah_besar + harga.harga_kecil * kat.jumlah_kecil);
+    totalBudget += rowTotal;
+    const jumlahPenerima = kat.jumlah_besar + kat.jumlah_kecil;
+
+    const [existing] = await db.query(
+      'SELECT id FROM budget WHERE tenant_id=? AND periode=? AND kategori_penerima=?',
+      [req.user.tenant_id, periode, display]
+    );
+    if (existing.length) {
+      await db.query(
+        'UPDATE budget SET jumlah_penerima=?, harga_besar=?, harga_kecil=?, total_budget=? WHERE id=? AND tenant_id=?',
+        [jumlahPenerima, harga.harga_besar, harga.harga_kecil, rowTotal, existing[0].id, req.user.tenant_id]
+      );
+      updated++;
+    } else {
+      await db.query(
+        'INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_besar, harga_kecil, total_budget) VALUES (?,?,?,?,?,?,?)',
+        [req.user.tenant_id, periode, display, jumlahPenerima, harga.harga_besar, harga.harga_kecil, rowTotal]
+      );
+      created++;
+    }
+  }
+
+  res.json({
+    ok: true,
+    message: (created + updated) + ' budget berhasil dihitung (total Rp ' + totalBudget.toLocaleString('id-ID') + ')',
+    updated: created + updated,
+    total_budget: totalBudget,
+    kategori: Object.keys(agg),
+  });
 });
 
 /**

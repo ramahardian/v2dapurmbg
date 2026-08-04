@@ -76,12 +76,12 @@ const SEARCHABLE_FIELDS = {
  * Role restrictions for specific tables
  */
 const TABLE_ROLES = {
-  budget: ['admin', 'keuangan', 'ahli_gizi'],
+  budget: ['admin', 'keuangan'],
   kas_bank: ['admin', 'keuangan'],
   penerima_manfaat: ['admin', 'keuangan'],
   bahan_baku: ['admin', 'keuangan', 'gudang', 'ahli_gizi'],
   supplier: ['admin', 'keuangan', 'gudang'],
-  purchase_order: ['admin', 'keuangan', 'gudang', 'ahli_gizi'],
+  purchase_order: ['admin', 'keuangan', 'gudang'],
   penerimaan_barang: ['admin', 'keuangan', 'gudang'],
   stok_masuk: ['admin', 'keuangan', 'gudang'],
   stok_keluar: ['admin', 'keuangan', 'gudang'],
