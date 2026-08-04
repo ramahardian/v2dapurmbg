@@ -419,16 +419,18 @@ function registerRabRoutes(router) {
       }
 
       const [hargaList] = await db.query(
-        `SELECT kategori_penerima, harga_per_porsi, total_budget, realisasi FROM budget
+        `SELECT kategori_penerima, harga_per_porsi, harga_besar, harga_kecil, total_budget, realisasi FROM budget
          WHERE tenant_id=? AND periode=?`,
         [t, periode]
       );
-      const hargaMap = {};
+      const hargaBesarMap = {};
+      const hargaKecilMap = {};
       const budgetMap = {};
       const realisasiMap = {};
       for (const h of hargaList) {
         const displayKey = dbToDisplay[h.kategori_penerima] || h.kategori_penerima;
-        hargaMap[displayKey] = Number(h.harga_per_porsi);
+        hargaBesarMap[displayKey] = Number(h.harga_besar) || Number(h.harga_per_porsi) || 0;
+        hargaKecilMap[displayKey] = Number(h.harga_kecil) || Number(h.harga_per_porsi) || 0;
         budgetMap[displayKey] = Number(h.total_budget || 0);
         realisasiMap[displayKey] = Number(h.realisasi || 0);
       }
@@ -522,8 +524,8 @@ function registerRabRoutes(router) {
           const totalPenerima = totalBesar + totalKecil;
           if (!totalPenerima) continue;
 
-          const hargaBesar = hargaMap['Bumil/Busui'] || 0;
-          const hargaKecil = hargaMap['Balita'] || 0;
+          const hargaBesar = hargaBesarMap['Bumil/Busui'] || 0;
+          const hargaKecil = hargaKecilMap['Balita'] || 0;
 
           // Weighted average harga per porsi (pembulatan ke rupiah terdekat)
           const hargaRata = Math.round((hargaBesar * totalBesar + hargaKecil * totalKecil) / totalPenerima);
@@ -546,16 +548,19 @@ function registerRabRoutes(router) {
             total,
           });
         } else {
-          const harga = hargaMap[kategori] || 0;
+          const hargaBesar = hargaBesarMap[kategori] || 0;
+          const hargaKecil = hargaKecilMap[kategori] || 0;
+          const totalBesar = Number(p.total_besar) || 0;
+          const totalKecil = Number(p.total_kecil) || 0;
           const jmlPenerima = Number(p.total_penerima);
           const jmlHari = total_hari || 0;
-          const total = harga * jmlPenerima * jmlHari;
+          const total = (hargaBesar * totalBesar + hargaKecil * totalKecil) * jmlHari;
           grandPenerima += jmlPenerima;
           grandTotal += total;
           rows.push({
             kategori,
-            harga_besar: harga,
-            harga_kecil: harga,
+            harga_besar: hargaBesar,
+            harga_kecil: hargaKecil,
             jumlah_penerima: jmlPenerima,
             jumlah_hari: jmlHari,
             budget: budgetMap[kategori] || 0,
