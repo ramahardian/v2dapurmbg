@@ -192,7 +192,7 @@ async function loadPncMatriksPerencanaan(siklusId) {
       html += '</div></div></div>';
     }
 
-    html += '<div class="mt-6 mb-3 flex flex-wrap items-center gap-2 justify-between">';
+    html += '<div class="mt-6 mb-3 flex flex-wrap items-center gap-2 justify-between w-full">';
     html += '<div class="flex items-center gap-2 flex-1 min-w-0">';
     html += '<svg class="w-5 h-5 text-sky-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="13" width="3" height="4"/><rect x="13" y="11" width="3" height="6"/></svg>';
     html += '<div class="min-w-0">';
@@ -203,13 +203,122 @@ async function loadPncMatriksPerencanaan(siklusId) {
     html += '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> EXPORT FINAL XLSX';
     html += '</button>';
     html += '</div>';
-    html += renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang);
+    html += renderPncMatriksFinal(hari, totalSiswaSemuaJenjang);
 
     container.innerHTML = html;
   } catch (err) {
     if (reqId !== _pncMatriksReq) return;
     container.innerHTML = '';
   }
+}
+
+// ── Perencanaan Final Matriks (gabungan semua siklus, kartu full-width) ──
+function renderPncMatriksFinal(hari, totalSiswaSemuaJenjang) {
+  if (!hari || !hari.length) return '';
+  
+  var tkJenjangOrder = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
+  var tkBulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+  function tkFmtTanggal(headerTanggal, hariNama) {
+    var p = String(headerTanggal || '').split('-');
+    var dd = parseInt(p[2], 10);
+    var mm = parseInt(p[1], 10) - 1;
+    if (p.length !== 3 || isNaN(dd) || isNaN(mm) || !tkBulan[mm]) return headerTanggal || (hariNama || '');
+    return (hariNama || '') + ', ' + dd + ' ' + tkBulan[mm] + ' ' + p[0];
+  }
+
+  var totalPorsiDay = totalSiswaSemuaJenjang > 0 ? totalSiswaSemuaJenjang : (Number(hari[0] && hari[0].total_porsi) || 0);
+
+  // Kartu per hari full-width (stacked), sehingga matriks memakai seluruh lebar konten
+  var html = '<div class="space-y-4">';
+
+  for (var d = 0; d < hari.length; d++) {
+    var day = hari[d];
+    if (!day.bahan || !day.bahan.length) continue;
+
+    // Day card
+    html += '<div class="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">';
+
+    // Day header
+    html += '<div class="px-5 py-3 bg-gradient-to-r from-emerald-50 to-green-50 border-b border-stone-200 flex items-center gap-3 flex-wrap">';
+    html += '<span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-sm">M' + (d + 1) + '</span>';
+    html += '<div class="min-w-0 flex-1">';
+    html += '<div class="font-semibold text-sm text-emerald-800 truncate">' + tkFmtTanggal(day.header_tanggal, day.hari_nama) + '</div>';
+    if (day.menu_names && day.menu_names.length) {
+      html += '<div class="text-xs text-stone-500 mt-0.5 truncate">' + day.menu_names.join(' + ') + '</div>';
+    }
+    html += '</div>';
+    html += '<div class="text-xs text-stone-500 shrink-0">Total Porsi: <strong class="text-emerald-700">' + fmtPncNum(totalPorsiDay) + '</strong></div>';
+    html += '</div>';
+
+    // ── Matriks: baris = bahan, kolom = jenjang ──
+    html += '<div class="overflow-x-auto p-4"><table class="w-full text-xs border-collapse">';
+    html += '<thead><tr class="border-b border-stone-200 bg-stone-50">';
+    html += '<th class="px-3 py-2 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
+    for (var jc = 0; jc < tkJenjangOrder.length; jc++) {
+      html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">' + tkJenjangOrder[jc] + '</th>';
+    }
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Total Porsi</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan Pangan (kg)</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap" title="Kebutuhan + buffer per bahan (1-10%)">1-10%</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Rincian</th>';
+    html += '</tr></thead><tbody>';
+
+    var colTotal = {};
+    for (var jc2 = 0; jc2 < tkJenjangOrder.length; jc2++) colTotal[tkJenjangOrder[jc2]] = 0;
+    var grandTotalKg = 0;
+    var grandBufferKg = 0;
+
+    for (var bi = 0; bi < day.bahan.length; bi++) {
+      var b = day.bahan[bi];
+      if (!b.per_jenjang) continue;
+      var rowKg = 0;
+      var bufferPersen = Number(b.buffer_persen) || 0;
+      var cells = '';
+      for (var jc3 = 0; jc3 < tkJenjangOrder.length; jc3++) {
+        var jn = tkJenjangOrder[jc3];
+        var pj = b.per_jenjang[jn];
+        var v = pj ? (Number(pj.kebutuhan_kg) || 0) : 0;
+        rowKg += v;
+        colTotal[jn] += v;
+        cells += '<td class="px-3 py-1.5 text-sm text-right mono">' + (v ? fmtPncNum(v) : '-') + '</td>';
+      }
+      var bufferKg = Math.round(rowKg * (1 + bufferPersen / 100) * 100) / 100;
+      grandTotalKg += rowKg;
+      grandBufferKg += bufferKg;
+
+      html += '<tr class="border-b border-stone-100 hover:bg-emerald-50/30 transition-colors">';
+      html += '<td class="px-3 py-1.5 text-sm font-medium text-stone-800">' + (b.nama_display || b.nama) + '</td>';
+      html += cells;
+      html += '<td class="px-3 py-1.5 text-sm text-right mono text-stone-600">' + fmtPncNum(totalPorsiDay) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtPncNum(rowKg) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold ' + (bufferPersen > 0 ? 'text-sky-700' : 'text-stone-500') + '" title="Buffer ' + bufferPersen + '%">' + fmtPncNum(bufferKg) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right text-stone-400"></td>';
+      html += '</tr>';
+    }
+
+    // Total row
+    html += '<tr class="bg-stone-50 border-t-2 border-stone-200 font-bold">';
+    html += '<td class="px-3 py-2 text-sm font-semibold text-stone-700">Total</td>';
+    for (var jc4 = 0; jc4 < tkJenjangOrder.length; jc4++) {
+      html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtPncNum(colTotal[tkJenjangOrder[jc4]]) + '</td>';
+    }
+    html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtPncNum(totalPorsiDay) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-emerald-700">' + fmtPncNum(Math.round(grandTotalKg * 100) / 100) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-sky-700">' + fmtPncNum(Math.round(grandBufferKg * 100) / 100) + '</td>';
+    html += '<td class="px-3 py-2"></td>';
+    html += '</tr>';
+
+    html += '</tbody></table></div></div>';
+  }
+
+  html += '</div>';
+
+  if (!html.trim() || html === '<div class="space-y-4"></div>') {
+    return '<div class="text-xs text-stone-400 italic py-4 text-center">Tidak ada data bahan untuk ditampilkan</div>';
+  }
+
+  return html;
 }
 
 // ── Rekap Porsi Besar & Kecil (aggregate across all jenjang) ──
@@ -237,7 +346,7 @@ function renderPncRekapPorsi(allData) {
   // 4. Render satu tabel untuk satu porsi type
   function renderRekapTable(porsiKey, porsiLabel, porsiCount, colorClass, iconSvg) {
     if (porsiCount <= 0) return '';
-    var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-4">';
+    var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden">';
     html += '<div class="px-5 py-3 ' + colorClass + ' flex items-center gap-3">';
     if (iconSvg) html += iconSvg;
     html += '<span class="font-bold text-base">' + porsiLabel + '</span>';
@@ -280,7 +389,7 @@ function renderPncRekapPorsi(allData) {
         html += '</div>';
 
         if (!day.bahan || !day.bahan.length) {
-          html += '<div class="text-xs text-stone-400 italic px-2 pb-2">Tidak ada bahan</div></div></div>';
+          html += '<div class="text-xs text-stone-400 italic px-2 pb-2">Tidak ada bahan</div></div>';
           continue;
         }
 
@@ -313,7 +422,7 @@ function renderPncRekapPorsi(allData) {
           html += '</tr>';
         }
 
-        html += '</tbody></table></div></div></div>';
+        html += '</tbody></table></div></div>';
       }
     }
     html += '</div>'; // close data-siklus-idx
@@ -332,10 +441,10 @@ function renderPncRekapPorsi(allData) {
   html += '<span class="text-xs text-stone-400">(Semua jenjang digabung)</span>';
   html += '</div>';
 
-  // Two tables side by side on desktop, stacked on mobile
-  html += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">';
-  html += '<div>' + renderRekapTable('BESAR', 'Porsi Besar', totalBesar, 'bg-amber-50 text-amber-800 border-b-2 border-b-amber-400', besarIcon) + '</div>';
-  html += '<div>' + renderRekapTable('KECIL', 'Porsi Kecil', totalKecil, 'bg-emerald-50 text-emerald-800 border-b-2 border-b-emerald-400', kecilIcon) + '</div>';
+  // Section 1 — Porsi Besar & Kecil: semua card full width (stacked), gap 24px antar card
+  html += '<div class="space-y-6 mb-4">';
+  html += renderRekapTable('BESAR', 'Porsi Besar', totalBesar, 'bg-amber-50 text-amber-800 border-b-2 border-b-amber-400', besarIcon);
+  html += renderRekapTable('KECIL', 'Porsi Kecil', totalKecil, 'bg-emerald-50 text-emerald-800 border-b-2 border-b-emerald-400', kecilIcon);
   html += '</div>';
   html += '</div>';
 
