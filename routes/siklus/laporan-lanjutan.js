@@ -1,4 +1,6 @@
 const express = require('express');
+const path = require('path');
+const ExcelJS = require('exceljs');
 const db = require('../../db');
 const { hitungBDD } = require('../../services/spBddCalculator');
 const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName, resolveGridBeratPerSiswa } = require('./helpers');
@@ -292,18 +294,19 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
 });
 
 /**
- * GET /siklus/laporan/perencanaan
- * Generate comprehensive daily planning report for active siklus.
+ * buildPerencanaanData
+ * Generate comprehensive daily planning data (perencanaan final) untuk siklus
+ * aktif/terpilih. Dipakai bersama oleh endpoint JSON dan export XLSX.
  */
-router.get('/siklus/laporan/perencanaan', async (req, res) => {
+async function buildPerencanaanData({ tenant_id, query }) {
   const dbToDisplay = buildDbToDisplay();
-  const { tanggal_mulai, tanggal_selesai, siklus_id } = req.query;
+  const { tanggal_mulai, tanggal_selesai, siklus_id } = query || {};
 
   // Optional filter by siklus (dipakai halaman /perencanaan agar sinkron dgn filter siklus).
   // Konsisten dgn route kebutuhan-per-menu: saat siklus_id diberikan, abaikan status agar
   // siklus non-Aktif yg dipilih user tetap bisa dirender rekap + matriksnya.
   let siklusSql = 'SELECT * FROM siklus_menu WHERE tenant_id=?';
-  const siklusParams = [req.user.tenant_id];
+  const siklusParams = [tenant_id];
   if (siklus_id) {
     siklusSql += ' AND id=?';
     siklusParams.push(parseInt(siklus_id, 10));
@@ -323,7 +326,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
   // PM totals
   const [pmRows] = await db.query(
     `SELECT kategori_penerima, COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
-    [req.user.tenant_id]
+    [tenant_id]
   );
   const pmByDb = {};
   for (const p of pmRows) pmByDb[p.kategori_penerima] = Number(p.total);
@@ -360,7 +363,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
   // SP referensi
   let spRefMap = {};
   try {
-    const [refs] = await db.query('SELECT nama, bdd_persen, berat_bersih FROM sp_referensi_bahan WHERE tenant_id=?', [req.user.tenant_id]);
+    const [refs] = await db.query('SELECT nama, bdd_persen, berat_bersih FROM sp_referensi_bahan WHERE tenant_id=?', [tenant_id]);
     for (const r of refs) spRefMap[r.nama] = { bdd_persen: Math.round(Number(r.bdd_persen) * 100) || 100, berat_bersih: Number(r.berat_bersih) || 0 };
   } catch (e) { /* table optional */ }
 
@@ -378,7 +381,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
   const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
   const gridBahanBySiklus = await batchLoadGridBahanBySiklus(siklusIds);
   // Item tanpa menu_id tapi menu_nama cocok dgn menu → ikuti resep menu (live)
-  const { menuIdByName, menuBahanByNameMap } = await loadMenuBahanByName(itemsBySiklus, req.user.tenant_id);
+  const { menuIdByName, menuBahanByNameMap } = await loadMenuBahanByName(itemsBySiklus, tenant_id);
 
   // ── Load overrides for perencanaan ──
   let ovIndex = {};
@@ -388,7 +391,7 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
        FROM perencanaan_override ov
        LEFT JOIN bahan_baku b ON b.id = ov.new_bahan_baku_id
        WHERE ov.tenant_id=?`,
-      [req.user.tenant_id]
+      [tenant_id]
     );
     for (const ov of overrides) {
       const key = ov.siklus_id + '::' + ov.hari_ke + '::' + ov.jenjang + '::' + (ov.original_bahan_baku_id || '');
@@ -547,7 +550,145 @@ router.get('/siklus/laporan/perencanaan', async (req, res) => {
     if (pmByDisplay[j]) filteredPmMap[j] = pmByDisplay[j];
   }
 
-  res.json({ jenjang_list: activeJenjang, hari, pm_map: filteredPmMap, tanggal_mulai: mulai, tanggal_selesai: selesai });
+  const totalPorsi = Object.values(filteredPmMap).reduce((s, v) => s + (Number(v) || 0), 0);
+  return { jenjang_list: activeJenjang, hari, pm_map: filteredPmMap, tanggal_mulai: mulai, tanggal_selesai: selesai, total_porsi: totalPorsi };
+}
+
+/**
+ * GET /siklus/laporan/perencanaan
+ * Generate comprehensive daily planning report for active siklus.
+ */
+router.get('/siklus/laporan/perencanaan', async (req, res) => {
+  try {
+    const data = await buildPerencanaanData({ tenant_id: req.user.tenant_id, query: req.query });
+    res.json(data);
+  } catch (err) {
+    console.error('Perencanaan error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Helpers export XLSX Perencanaan Final ────────────────────────────
+const TK_BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const TK_JENJANG = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
+
+function tkFmtTanggal(headerTanggal, hariNama) {
+  const p = String(headerTanggal || '').split('-');
+  const dd = parseInt(p[2], 10);
+  const mm = parseInt(p[1], 10) - 1;
+  if (p.length !== 3 || isNaN(dd) || isNaN(mm) || !TK_BULAN[mm]) return headerTanggal || (hariNama || '');
+  return (hariNama || '') + ', ' + dd + ' ' + TK_BULAN[mm] + ' ' + p[0];
+}
+
+/**
+ * GET /siklus/laporan/perencanaan/export
+ * Export Perencanaan Final (kebutuhan bahan per hari) memakai template
+ * public/template/FINAL-PERENCANAAN.xlsx. Semua hari berurutan dalam satu
+ * sheet: judul + header kolom di atas, lalu blok per hari (label tanggal +
+ * baris bahan) ditumpuk ke bawah.
+ */
+router.get('/siklus/laporan/perencanaan/export', async (req, res) => {
+  try {
+    const data = await buildPerencanaanData({ tenant_id: req.user.tenant_id, query: req.query });
+    const days = (data.hari || []).filter(d => d.bahan && d.bahan.length);
+    if (!days.length) return res.status(400).json({ error: 'Tidak ada data perencanaan untuk diexport. Isi menu & bahan siklus terlebih dahulu.' });
+
+    const totalPorsi = Number(data.total_porsi) || 0;
+
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.readFile(path.join(__dirname, '..', '..', 'public', 'template', 'FINAL-PERENCANAAN.xlsx'));
+    const ws = wb.getWorksheet('Format Final');
+    if (!ws) throw new Error('Template FINAL-PERENCANAAN.xlsx tidak memiliki sheet "Format Final"');
+
+    // Capture styles template
+    const cap = (r, c) => { const cell = ws.getCell(r, c); return { style: cell.style, numFmt: cell.numFmt }; };
+    const dateStyle = cap(3, 1);
+    const dataRowStyles = [];
+    for (let c = 1; c <= 11; c++) dataRowStyles.push({ even: cap(4, c), odd: cap(5, c) });
+
+    // Bersihkan baris contoh (row 3 s/d 5) termasuk merge label tanggal
+    try { ws.unMergeCells('A3:K3'); } catch (e) { /* ignore */ }
+    for (let r = 3; r <= 5; r++) {
+      for (let c = 1; c <= 11; c++) {
+        const cell = ws.getCell(r, c);
+        cell.value = null;
+        cell.style = {};
+      }
+    }
+
+    const put = (r, c, v, styleObj, numFmt) => {
+      const cell = ws.getCell(r, c);
+      cell.value = v;
+      if (styleObj) cell.style = JSON.parse(JSON.stringify(styleObj));
+      if (numFmt) cell.numFmt = numFmt;
+    };
+    const merge = (r1, c1, r2, c2) => { try { ws.mergeCells(r1, c1, r2, c2); } catch (e) {} };
+
+    let row = 3;
+    for (let d = 0; d < days.length; d++) {
+      const day = days[d];
+
+      // ── Label tanggal hari ──
+      const label = tkFmtTanggal(day.header_tanggal, day.hari_nama);
+      for (let c = 1; c <= 11; c++) put(row, c, label, dateStyle.style);
+      merge(row, 1, row, 11);
+      row++;
+
+      // ── Baris bahan ──
+      const colTotal = {};
+      let grandKg = 0;
+      let grandBuffer = 0;
+      for (let bi = 0; bi < day.bahan.length; bi++) {
+        const b = day.bahan[bi];
+        const st = (bi % 2 === 0) ? dataRowStyles.map(x => x.even) : dataRowStyles.map(x => x.odd);
+        const pj = b.per_jenjang || {};
+        let rowKg = 0;
+        for (let jc = 0; jc < TK_JENJANG.length; jc++) {
+          const jn = TK_JENJANG[jc];
+          const v = Number((pj[jn] || {}).kebutuhan_kg) || 0;
+          rowKg += v;
+          colTotal[jn] = (colTotal[jn] || 0) + v;
+          put(row, jc + 2, v, st[jc + 1].style, '0.00');
+        }
+        const bufferPersen = Number(b.buffer_persen) || 0;
+        const bufferKg = Math.round(rowKg * (1 + bufferPersen / 100) * 100) / 100;
+        grandKg += rowKg;
+        grandBuffer += bufferKg;
+
+        put(row, 1, b.nama_display || b.nama || '', st[0].style);
+        put(row, 8, totalPorsi, st[7].style);
+        put(row, 9, Math.round(rowKg * 100) / 100, st[8].style, '0.00');
+        put(row, 10, bufferKg, st[9].style, '0.00');
+        put(row, 11, '', st[10].style);
+        row++;
+      }
+
+      // ── Baris total per hari ──
+      const tStyle = dataRowStyles.map(x => x.even);
+      for (let c = 1; c <= 11; c++) put(row, c, null, tStyle[c - 1].style);
+      const fontBold = { bold: true };
+      put(row, 1, 'TOTAL', { ...tStyle[0].style, font: { ...(tStyle[0].style.font || {}), bold: true } });
+      for (let jc = 0; jc < TK_JENJANG.length; jc++) {
+        put(row, jc + 2, Math.round((colTotal[TK_JENJANG[jc]] || 0) * 100) / 100, { ...tStyle[jc + 1].style, font: { ...(tStyle[jc + 1].style.font || {}), bold: true } }, '0.00');
+      }
+      put(row, 8, totalPorsi, { ...tStyle[7].style, font: { ...(tStyle[7].style.font || {}), bold: true } });
+      put(row, 9, Math.round(grandKg * 100) / 100, { ...tStyle[8].style, font: { ...(tStyle[8].style.font || {}), bold: true } }, '0.00');
+      put(row, 10, Math.round(grandBuffer * 100) / 100, { ...tStyle[9].style, font: { ...(tStyle[9].style.font || {}), bold: true } }, '0.00');
+      put(row, 11, '', { ...tStyle[10].style, font: { ...(tStyle[10].style.font || {}), bold: true } });
+      row++;
+    }
+
+    const mulai = data.tanggal_mulai || '';
+    const selesai = data.tanggal_selesai || '';
+    const fileTag = mulai && selesai && mulai !== selesai ? mulai + '_' + selesai : (mulai || new Date().toISOString().slice(0, 10));
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="FINAL-PERENCANAAN-' + fileTag + '.xlsx"');
+    await wb.xlsx.write(res);
+  } catch (err) {
+    console.error('Export Perencanaan Final error:', err);
+    if (!res.headersSent) res.status(500).json({ error: err.message });
+    else res.end();
+  }
 });
 
 // ── Override CRUD ──────────────────────────────────────────────────
