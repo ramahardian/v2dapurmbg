@@ -158,7 +158,7 @@ async function loadPncMatriksPerencanaan(siklusId) {
   try {
     const res = await api.get('/siklus/laporan/perencanaan' + qs);
     if (reqId !== _pncMatriksReq) return; // respons basi, ada filter baru
-    const { hari, pm_map, _validation } = res;
+    const { hari, pm_map, _validation, sync } = res;
 
     if (_validation || !hari || !hari.length) {
       container.innerHTML = '';
@@ -172,6 +172,19 @@ async function loadPncMatriksPerencanaan(siklusId) {
     }
 
     let html = '';
+
+    // ── Peringatan jika jumlah_porsi siklus jauh lebih besar dari siswa aktual ──
+    if (sync && sync.inflating) {
+      var inflasiPct = Math.round((sync.factor - 1) * 100);
+      html += '<div class="mt-6 rounded-xl border-2 border-amber-300 bg-amber-50 p-4">';
+      html += '<div class="flex items-start gap-3">';
+      html += '<svg class="w-5 h-5 shrink-0 mt-0.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
+      html += '<div>';
+      html += '<div class="font-semibold text-sm text-amber-800">Angka kebutuhan berpotensi menggembung (' + inflasiPct + '% lebih tinggi)</div>';
+      html += '<div class="text-xs text-amber-700 mt-1 leading-relaxed">Jumlah porsi siklus (<b>' + fmtPncNum(sync.stored_total) + '</b>) jauh lebih besar dari jumlah siswa aktual (<b>' + fmtPncNum(sync.pm_total) + '</b>). Semua angka kebutuhan otomatis dinaikkan sebanding jumlah porsi tersebut. Periksa kembali <b>Jumlah Porsi</b> di menu <a href="/siklus" onclick="return loadPage(\'siklus\')" class="font-semibold underline hover:no-underline">Siklus</a> agar sesuai dengan data Penerima Manfaat.</div>';
+      html += '</div></div></div>';
+    }
+
     html += '<div class="mt-6 mb-3 flex items-center gap-2">';
     html += '<svg class="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="13" width="3" height="4"/><rect x="13" y="11" width="3" height="6"/></svg>';
     html += '<span class="text-sm font-bold text-stone-700">Perencanaan Final — Kebutuhan Bahan per Hari</span>';

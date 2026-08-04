@@ -358,6 +358,18 @@ async function buildPerencanaanData({ tenant_id, query }) {
   }
 
   // Sinkronkan total porsi dgn jumlah_porsi tersimpan siklus (konsisten dgn /menu)
+  const syncInfo = (() => {
+    const storedTotal = siklusList.reduce((sum, s) => sum + (Number(s.jumlah_porsi) || 0), 0);
+    const pmTotal = activeJenjang.reduce((sum, j) => sum + (Number(pmByDisplay[j]) || 0), 0);
+    let factor = null;
+    if (storedTotal > 0 && pmTotal > 0) factor = Math.round((storedTotal / pmTotal) * 100) / 100;
+    return {
+      stored_total: storedTotal,
+      pm_total: pmTotal,
+      factor,
+      inflating: factor !== null && factor > 1.2,
+    };
+  })();
   syncPorsiDenganSiklus(siklusList, activeJenjang, pmByDisplay);
 
   // SP referensi
@@ -560,7 +572,7 @@ async function buildPerencanaanData({ tenant_id, query }) {
   }
 
   const totalPorsi = Object.values(filteredPmMap).reduce((s, v) => s + (Number(v) || 0), 0);
-  return { jenjang_list: activeJenjang, hari, pm_map: filteredPmMap, tanggal_mulai: mulaiStr, tanggal_selesai: selesaiStr, total_porsi: totalPorsi };
+  return { jenjang_list: activeJenjang, hari, pm_map: filteredPmMap, tanggal_mulai: mulaiStr, tanggal_selesai: selesaiStr, total_porsi: totalPorsi, sync: syncInfo };
 }
 
 /**
