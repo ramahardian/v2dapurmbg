@@ -66,11 +66,11 @@ async function loadPerencanaanData(siklusId) {
 
     // Siklus filter
     html += '<label class="text-sm font-medium text-stone-700">Filter Siklus:</label>';
-    html += '<select onchange="loadPerencanaanData(this.value)" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[200px] focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400">';
+    html += '<select onchange="onSiklusFilterChange(this)" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[200px] focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400">';
     html += '<option value="">— Semua Siklus Aktif —</option>';
     for (var i = 0; i < siklus_list.length; i++) {
       var s = siklus_list[i];
-      var sel = selected_siklus_id && Number(selected_siklus_id) === s.id;
+      var sel = _pncSiklusId && String(_pncSiklusId) === String(s.id);
       html += '<option value="' + s.id + '" ' + (sel ? 'selected' : '') + '>' + s.nama + ' (' + s.status + ')' + '</option>';
     }
     html += '</select>';
@@ -142,6 +142,13 @@ async function loadPerencanaanData(siklusId) {
 
 // ── Tabel Perencanaan Final (format matriks, sama seperti halaman Total Kebutuhan) ──
 var _pncMatriksReq = 0;
+
+function onSiklusFilterChange(selectEl) {
+  const siklusId = selectEl.value || '';
+  _pncSiklusId = siklusId;
+  loadPerencanaanData(siklusId);
+}
+
 async function loadPncMatriksPerencanaan(siklusId) {
   const container = document.getElementById('pnc-matriks-container');
   if (!container) return;
@@ -239,6 +246,7 @@ function renderPncRekapPorsi(allData) {
       var sk = template.siklus[skIdx];
 
       // Siklus header
+      html += '<div data-siklus-idx="' + skIdx + '">';
       html += '<div class="px-5 py-2 bg-stone-50 border-b border-stone-200 text-sm font-semibold text-stone-600 flex items-center gap-2">';
       html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
       html += sk.siklus_nama;
@@ -247,7 +255,7 @@ function renderPncRekapPorsi(allData) {
       // Day tabs
       if (sk.hari.length > 1) {
         html += '<div class="px-5 py-2 border-b border-stone-100">';
-        html += '<div class="flex gap-1 bg-stone-100 rounded-lg p-0.5 overflow-x-auto siklus-tab-bar" role="tablist">';
+        html += '<div class="flex gap-1 bg-stone-100 rounded-lg p-0.5 overflow-x-auto siklus-tab-bar" role="tablist" data-siklus-idx="' + skIdx + '">';
         for (var h = 0; h < sk.hari.length; h++) {
           var day = sk.hari[h];
           var isFirst = h === 0;
@@ -305,6 +313,7 @@ function renderPncRekapPorsi(allData) {
         html += '</tbody></table></div></div></div>';
       }
     }
+    html += '</div>'; // close data-siklus-idx
 
     html += '</div>';
     return html;
@@ -346,13 +355,22 @@ function pncSwitchDayTab(event, btn) {
   btn.className = 'px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all bg-white shadow-sm font-bold text-sky-700';
   btn.setAttribute('aria-selected', 'true');
 
-  var section = tabBar.closest('.bg-white');
-  if (!section) return;
-  var contents = section.querySelectorAll('.pnc-day-content');
-  for (var i = 0; i < contents.length; i++) {
-    contents[i].classList.add('hidden');
+  var siklusSection = tabBar.closest('.bg-white').querySelectorAll('[data-siklus-idx]');
+  var contents = [];
+  for (var i = 0; i < siklusSection.length; i++) {
+    var dayContents = siklusSection[i].querySelectorAll('.pnc-day-content');
+    for (var j = 0; j < dayContents.length; j++) {
+      contents.push(dayContents[j]);
+    }
   }
-  if (contents[idx]) contents[idx].classList.remove('hidden');
+  
+  var tabBarSiklusIdx = parseInt(tabBar.getAttribute('data-siklus-idx') || '0');
+  var siklusContents = siklusSection[tabBarSiklusIdx] ? siklusSection[tabBarSiklusIdx].querySelectorAll('.pnc-day-content') : [];
+  
+  for (var i = 0; i < siklusContents.length; i++) {
+    siklusContents[i].classList.add('hidden');
+  }
+  if (siklusContents[idx]) siklusContents[idx].classList.remove('hidden');
 }
 
 function fmtPncNum(v) {
