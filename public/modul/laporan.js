@@ -461,6 +461,9 @@ const tabColors = {
               '<input type="date" id="rab-rh-tanggal" value="' + rhTanggal + '" onchange="gantiTanggalRhDiRab()" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">' +
             '</div>' +
             '<span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>RAB Harian</span>' +
+            '<button onclick="exportRabHarianXlsx()" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg shadow-sm transition-colors" title="Export RAB Harian ke Excel (template RAB.xlsx)">' +
+              '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> EXPORT XLSX' +
+            '</button>' +
             (d.hari ? '<span class="text-xs text-stone-400 ml-auto">' + escHtml(d.hari) + ', ' + d.tanggal + '</span>' : '') +
           '</div></div>';
 
@@ -2098,8 +2101,8 @@ function exportXlsxLaporan(name) {
 }
 
 function exportRabHarianXlsx() {
-  const tanggal = (document.getElementById('rh-tanggal') || {}).value;
-  const siklusId = (document.getElementById('rh-filter-siklus') || {}).value || '';
+  const tanggal = (document.getElementById('rh-tanggal') || {}).value || (document.getElementById('rab-rh-tanggal') || {}).value;
+  const siklusId = (document.getElementById('rh-filter-siklus') || {}).value || (document.getElementById('rab-filter-siklus') || {}).value || '';
   if (!tanggal) { showAlert('Pilih tanggal terlebih dahulu', 'warning'); return; }
   const url = '/api/laporan/rab-harian/export?tanggal=' + encodeURIComponent(tanggal) + (siklusId ? '&siklus_id=' + encodeURIComponent(siklusId) : '');
   const a = document.createElement('a');
