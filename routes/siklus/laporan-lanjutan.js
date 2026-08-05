@@ -65,7 +65,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
 
   if (!siklusList.length) {
     return res.json({
-      siklus_list: [], jenjang_list: [], data: [],
+      siklus_list: [], selected_siklus_id: siklusIdParam, jenjang_list: [], data: [],
       _validation: { level: 'no_siklus', message: 'Belum ada siklus aktif', detail: 'Buat siklus baru dengan status Aktif untuk menampilkan perencanaan kebutuhan pangan.' }
     });
   }
@@ -84,7 +84,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   if (!siklusTargetJenjang.size) {
     const siklusNames = siklusList.map(s => s.nama).join(', ');
     return res.json({
-      siklus_list: siklusList, jenjang_list: [], data: [],
+      siklus_list: siklusList, selected_siklus_id: siklusIdParam, jenjang_list: [], data: [],
       _validation: { level: 'no_target', message: 'Siklus belum memiliki target penerima manfaat', detail: 'Edit siklus "' + siklusNames + '" untuk memilih kategori penerima (TK/PAUD, SD, SMP, dll).' }
     });
   }
@@ -106,7 +106,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   if (!activeJenjang.length) {
     const targetList = [...siklusTargetJenjang].join(', ');
     return res.json({
-      siklus_list: siklusList, jenjang_list: [], data: [],
+      siklus_list: siklusList, selected_siklus_id: siklusIdParam, jenjang_list: [], data: [],
       _validation: {
         level: 'no_pm_match',
         message: 'Target penerima di siklus tidak memiliki data penerima manfaat',
