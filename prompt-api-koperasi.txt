@@ -1,0 +1,37 @@
+Tugas: Buat API daftar pesanan dapur
+
+Buat endpoint GET https://koperasi.mealify.id/api/pesanan_koperasi.php yang mengembalikan daftar pesanan bahan baku dari dapur/dapur (unit dapur), lengkap dengan nomor pesanan dan nomor invoice. API ini dipakai sistem dapur untuk menarik nomor PO/Invoice yang diterbitkan oleh koperasi, agar angka dokumennya satu sumber (tidak digenerate di dua sistem).
+
+Persyaratan:
+1. Method GET, bisa diakses tanpa autentikasi (atau pakai key sederhana via query param).
+2. Data diambil dari tabel pesanan yang sama dengan pesanan_dapur.php (yang selama ini dipakai untuk menerima pesanan dari dapur).
+3. Gunakan kode yang sudah tersimpan di field kode_pesanan (yang dikembalikan saat pesanan berhasil dibuat) sebagai pengenal unik pesanan.
+
+Format respons (wajib):
+{
+  "status": "success",
+  "data": [
+    {
+      "id": 123,
+      "kode_pesanan": "PSN-20260805-001",
+      "no_invoice": "INV-20260805-001",
+      "id_unit_dapur": 2,
+      "nama_dapur": "Dapur Sukaluyu",
+      "tanggal_pesanan": "2026-08-05",
+      "status": "Dikirim",
+      "total_nilai": 1850000
+    }
+  ],
+  "last_sync": "2026-08-05 07:30:00"
+}
+
+Keterangan field:
+- kode_pesanan — nomor pesanan koperasi (WAJIB, dipakai untuk mencocokkan dengan PO lokal)
+- no_invoice — nomor invoice koperasi (WAJIB)
+- field lain opsional tapi membantu
+
+Jika belum ada kolom no_invoice, tambahkan kolom tersebut di tabel pesanan dan isi otomatis saat pesanan diubah status menjadi kirim/invoice. Jika status error, balas:
+{
+  "status": "error",
+  "message": "pesan error"
+}

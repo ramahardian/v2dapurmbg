@@ -1485,7 +1485,7 @@ async function createPoFromMenu(menuId) {
     showToast('Membuat PO dari menu...', 'info');
     
     const poRes = await api.post('/purchase_order', {
-      no_po: 'MEN-' + new Date().getTime(),
+      no_po: 'PO-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Date.now().toString().slice(-4),
       tanggal: new Date().toISOString().slice(0, 10),
       supplier_id: supplierId,
       total_nilai: totalRp,
@@ -1619,7 +1619,7 @@ async function createPoFromMenu(menuId) {
     showToast('Membuat PO dari menu...', 'info');
     
     const poRes = await api.post('/purchase_order', {
-      no_po: 'MEN-' + new Date().getTime(),
+      no_po: 'PO-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Date.now().toString().slice(-4),
       tanggal: new Date().toISOString().slice(0, 10),
       supplier_id: supplierId,
       total_nilai: totalRp,
