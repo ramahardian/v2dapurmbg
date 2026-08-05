@@ -898,7 +898,12 @@ async function generatePOFromSiklus() {
   try {
     const result = await api.post('/purchase_order/generate-from-siklus', { siklus_ids: ids });
 
-    if (!result.items || !result.items.length) {
+    let menus = result.menus || [];
+    // Fallback backend lama: tanpa breakdown per menu, tampilkan sebagai satu grup "Gabungan"
+    if (!menus.length && result.items && result.items.length) {
+      menus = [{ hari_ke: 0, menu_nama: 'Gabungan Semua Menu', jumlah_porsi: 0, items: result.items, subtotal: result.total_estimated || 0 }];
+    }
+    if (!menus.length) {
       preview.innerHTML = '<div class="text-amber-700 bg-amber-50 p-3 rounded text-sm">Tidak ada bahan. Siklus dipilih belum memiliki menu.</div>';
       return;
     }
@@ -911,34 +916,51 @@ async function generatePOFromSiklus() {
       siklusSupplierList = [];
     }
 
+    const siklusNama = (result.siklus_refs || []).join(', ') || 'Siklus';
+
     preview.innerHTML = `
-      <div class="rounded-2xl border border-stone-200 overflow-hidden mb-3">
-        <div class="overflow-x-auto"><table class="w-full">
-          <thead><tr class="border-b border-stone-100">
-            <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Bahan</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Total</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">+Buffer 10%</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Harga</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Subtotal</th>
-          </tr></thead>
-          <tbody>
-            ${result.items.map(i => {
-              const kodeNum = i.kode ? (i.kode.match(/EXT[-\s]?(\d+)/i)?.[1] || i.kode) : '';
-              return `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-                <td class="px-4 py-3 text-xs text-stone-700">${kodeNum ? '[' + kodeNum + '] ' : ''}${i.bahan_nama}</td>
-                <td class="px-4 py-3 text-xs text-right mono text-stone-700">${i.total_qty} ${i.satuan}</td>
-                <td class="px-4 py-3 text-xs text-right mono text-stone-700">${i.buffer_10} ${i.satuan}</td>
-                <td class="px-4 py-3 text-xs text-right mono text-stone-600">${fmtIDR(i.harga_satuan)}</td>
-                <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(i.estimated_subtotal)}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-          <tfoot><tr class="bg-gradient-to-r from-stone-50 to-stone-100/60 border-t border-stone-200">
-            <td colspan="4" class="px-4 py-3 text-xs text-right font-bold text-stone-700">Total Estimasi</td>
-            <td class="px-4 py-3 text-xs text-right font-bold mono text-stone-800">${fmtIDR(result.total_estimated)}</td></tr>
-          </tfoot>
-        </table></div>
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Pilih Menu — Buat PO per Menu</div>
+        <label class="flex items-center gap-1.5 text-xs text-stone-500 cursor-pointer hover:text-stone-700">
+          <input type="checkbox" id="menu-po-select-all" checked class="cb-modern" onchange="toggleAllMenuPo(this)">
+          Semua
+        </label>
       </div>
+      <div class="space-y-2 max-h-80 overflow-y-auto pr-1 mb-3">
+        ${menus.map((m, idx) => {
+          const itemsHtml = m.items.map(i => {
+            const kodeNum = i.kode ? (i.kode.match(/EXT[-\s]?(\d+)/i)?.[1] || i.kode) : '';
+            return `<tr class="border-b border-stone-50">
+              <td class="px-3 py-2 text-xs text-stone-700">${kodeNum ? '[' + kodeNum + '] ' : ''}${i.bahan_nama}</td>
+              <td class="px-3 py-2 text-xs text-right mono text-stone-700">${i.buffer_10} ${i.satuan}</td>
+              <td class="px-3 py-2 text-xs text-right mono text-stone-600">${fmtIDR(i.harga_satuan)}</td>
+              <td class="px-3 py-2 text-xs text-right mono font-medium text-stone-700">${fmtIDR(i.estimated_subtotal)}</td>
+            </tr>`;
+          }).join('');
+          return `<div class="border border-stone-200 rounded-xl overflow-hidden bg-white">
+            <label class="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-stone-50/70 transition-colors">
+              <input type="checkbox" class="menu-po-cb cb-modern" value="${idx}" checked data-subtotal="${m.subtotal}" onchange="updateMenuPoSelection()">
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-stone-800 truncate">Hari ${m.hari_ke} — ${m.menu_nama}</div>
+                <div class="text-[10px] text-stone-400 mt-0.5">${m.items.length} bahan · ${fmtIDR(m.subtotal)}${m.jumlah_porsi ? ' · ' + fmtNum(m.jumlah_porsi) + ' porsi' : ''}</div>
+              </div>
+              <button type="button" onclick="event.preventDefault();event.stopPropagation();toggleMenuPoItems(${idx})" class="shrink-0 text-[10px] font-medium text-blue-600 hover:text-blue-800 border border-stone-200 rounded-lg px-2 py-1">Item</button>
+            </label>
+            <div id="menu-po-items-${idx}" class="hidden border-t border-stone-100 bg-stone-50/50">
+              <div class="overflow-x-auto"><table class="w-full">
+                <thead><tr class="border-b border-stone-100">
+                  <th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">Bahan</th>
+                  <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">Qty</th>
+                  <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">Harga</th>
+                  <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">Subtotal</th>
+                </tr></thead>
+                <tbody>${itemsHtml}</tbody>
+              </table></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div id="menu-po-summary" class="flex items-center justify-between text-xs text-stone-500 bg-stone-50 rounded-xl px-3 py-2 mb-3"></div>
       <div class="flex gap-2 mb-3">
         <select id="po-supplier" class="flex-1 h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
           <option value="">— Pilih Supplier —</option>
@@ -946,43 +968,96 @@ async function generatePOFromSiklus() {
         </select>
         <input id="po-unit_dapur-siklus" placeholder="Unit Dapur" class="flex-1 h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
       </div>
-      <button id="confirm-create-po" class="w-full h-11 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all">Konfirmasi & Buat PO</button>`;
+      <button id="confirm-create-po" class="w-full h-11 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all">Buat PO Terpilih</button>`;
 
     document.getElementById('modal-save').style.display = 'none';
+    window._menuPoData = menus;
+    window._menuPoSiklus = siklusNama;
+    updateMenuPoSelection();
+
     document.getElementById('confirm-create-po').onclick = async () => {
       const supplierEl = document.getElementById('po-supplier');
       const supplierNama = supplierEl.value;
       const supplierId = supplierEl.selectedIndex > 0 ? (supplierEl.options[supplierEl.selectedIndex]?.dataset?.id || null) : null;
       const unitDapur = document.getElementById('po-unit_dapur-siklus')?.value?.trim() || '';
-      const tgl = new Date().toISOString().slice(0, 10);
-      const nomor = 'PO-' + tgl.replace(/-/g, '') + '-' + Date.now().toString().slice(-4);
-      const items = result.items.map(i => ({
-        bahan_baku_id: i.bahan_baku_id,
-        id_koperasi: i.id_koperasi,
-        kode: i.kode || '',
-        nama: i.bahan_nama,
-        qty: i.buffer_10,
-        satuan: i.satuan,
-        harga: i.harga_satuan,
-        subtotal: i.estimated_subtotal,
-      }));
+      const selected = Array.from(document.querySelectorAll('.menu-po-cb:checked')).map(cb => window._menuPoData[parseInt(cb.value)]);
+      if (!selected.length) { showAlert('Pilih minimal satu menu', 'warning'); return; }
 
+      const tgl = new Date().toISOString().slice(0, 10);
+      const baseNomor = 'PO-' + tgl.replace(/-/g, '') + '-' + Date.now().toString().slice(-4);
+      const multi = selected.length > 1;
+      const btn = document.getElementById('confirm-create-po');
+      btn.disabled = true;
+      btn.textContent = '⏳ Membuat ' + selected.length + ' PO...';
+
+      let ok = 0;
+      const failed = [];
       try {
-        await api.post('/purchase_order', {
-          no_po: nomor, tanggal: tgl,
-          supplier_id: supplierId, supplier_nama: supplierNama,
-          unit_dapur: unitDapur,
-          item: JSON.stringify(items), total_nilai: result.total_estimated,
-          status: 'Draft', catatan: 'Dibuat dari siklus: ' + result.siklus_refs.join(', '),
-        });
-        closeModal();
-        renderPembelian();
-        showToast('PO berhasil dibuat');
-      } catch (e) {
-        showAlert('Gagal membuat PO: ' + (e.message || 'Terjadi kesalahan'));
+        for (let i = 0; i < selected.length; i++) {
+          const m = selected[i];
+          const nomor = multi ? baseNomor + '-' + (i + 1) : baseNomor;
+          const items = m.items.map(it => ({
+            bahan_baku_id: it.bahan_baku_id,
+            id_koperasi: it.id_koperasi,
+            kode: it.kode || '',
+            nama: it.bahan_nama,
+            qty: it.buffer_10,
+            satuan: it.satuan,
+            harga: it.harga_satuan,
+            subtotal: it.estimated_subtotal,
+          }));
+          try {
+            await api.post('/purchase_order', {
+              no_po: nomor, tanggal: tgl,
+              supplier_id: supplierId, supplier_nama: supplierNama,
+              unit_dapur: unitDapur,
+              item: JSON.stringify(items), total_nilai: m.subtotal,
+              status: 'Draft',
+              catatan: 'Dibuat dari siklus: ' + siklusNama + ' — Menu Hari ' + m.hari_ke + ': ' + m.menu_nama,
+            });
+            ok++;
+          } catch (err) {
+            failed.push('Hari ' + m.hari_ke);
+            console.warn('Gagal membuat PO menu hari ' + m.hari_ke + ':', err);
+          }
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Buat PO Terpilih';
+      }
+      closeModal();
+      renderPembelian();
+      if (ok === selected.length) {
+        showToast('✅ ' + ok + ' PO berhasil dibuat');
+      } else if (ok > 0) {
+        showToast('⚠️ ' + ok + ' PO berhasil, ' + failed.length + ' gagal (' + failed.join(', ') + ')', 'warning');
+      } else {
+        showAlert('Gagal membuat PO: ' + (failed.join(', ') || 'terjadi kesalahan'), 'error');
       }
     };
   } catch (e) {
     preview.innerHTML = `<div class="text-red-700 bg-red-50 p-3 rounded text-sm">Gagal: ${e.message || 'Terjadi kesalahan'}</div>`;
   }
+}
+
+function toggleAllMenuPo(master) {
+  document.querySelectorAll('.menu-po-cb').forEach(cb => cb.checked = master.checked);
+  updateMenuPoSelection();
+}
+function toggleMenuPoItems(idx) {
+  const el = document.getElementById('menu-po-items-' + idx);
+  if (el) el.classList.toggle('hidden');
+}
+function updateMenuPoSelection() {
+  const cbs = Array.from(document.querySelectorAll('.menu-po-cb'));
+  const checked = cbs.filter(cb => cb.checked);
+  const total = checked.reduce((s, cb) => s + (Number(cb.dataset.subtotal) || 0), 0);
+  const sumEl = document.getElementById('menu-po-summary');
+  if (sumEl) {
+    sumEl.innerHTML = '<span>' + checked.length + ' dari ' + cbs.length + ' menu terpilih</span><span class="font-semibold text-stone-700 mono">Total: ' + fmtIDR(total) + '</span>';
+  }
+  const allEl = document.getElementById('menu-po-select-all');
+  if (allEl) allEl.checked = cbs.length > 0 && checked.length === cbs.length;
+  const btn = document.getElementById('confirm-create-po');
+  if (btn) btn.textContent = 'Buat PO Terpilih (' + checked.length + ')';
 }
