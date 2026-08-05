@@ -13,6 +13,8 @@ const {
   loadSpMap,
   loadSiklusItems,
   loadMenuBahan,
+  loadGridBahan,
+  buildGridCellCount,
   isGramSatuan,
 } = require('./helpers');
 
@@ -38,6 +40,15 @@ function registerGenerateRoutes(router) {
       const dbToDisplay = createDbToDisplay();
       const pmMap = buildPmMap(pmByJenjang, dbToDisplay);
 
+      // SP Referensi Bahan untuk BDD (fallback persen BDD yang lebih akurat)
+      const [spRefList] = await db.query(
+        'SELECT nama, bdd_persen FROM sp_referensi_bahan WHERE tenant_id=?', [req.user.tenant_id]
+      );
+      const spRefByName = {};
+      for (const r of spRefList) {
+        spRefByName[r.nama.trim().toLowerCase()] = Math.round(Number(r.bdd_persen || 0) * 100);
+      }
+
       const agg = {};
 
       for (const s of siklusList) {
@@ -55,11 +66,19 @@ function registerGenerateRoutes(router) {
 
         // Load data siklus
         const items = await loadSiklusItems(siklusId);
-        if (!items.length) continue;
 
         // Load menu_bahan per menu_id
         const menuIds = [...new Set(items.map(it => it.menu_id).filter(Boolean))];
         const menuBahanById = await loadMenuBahan(menuIds);
+
+        // Load grid items (siklus tanpa menu assigned — bahan disimpan langsung di grid)
+        let gridBahanRaw = [];
+        if (items.length === 0) {
+          gridBahanRaw = await loadGridBahan(siklusId);
+        }
+        const useGrid = gridBahanRaw.length > 0;
+        const gridCellCount = useGrid ? buildGridCellCount(gridBahanRaw) : {};
+        if (!items.length && !useGrid) continue;
 
         // LOOP PER JENJANG
         for (const jDisplay of matchingDisplay) {
@@ -93,6 +112,41 @@ function registerGenerateRoutes(router) {
               }
               agg[key].total_qty += beratKotor;
               if (!isGramSatuan(br.satuan)) {
+                agg[key].total_porsi += porsiCount;
+                agg[key].non_gram = true;
+              }
+            }
+          }
+
+          // Grid-based calculation (siklus tanpa menu_id, bahan langsung di grid)
+          if (useGrid) {
+            for (const gb of gridBahanRaw) {
+              const spVal = spMap[gb.kategori_sp] || 0;
+              const berat1Sp = Number(gb.berat_1_sp || 0);
+              if (spVal <= 0 || berat1Sp <= 0) continue;
+
+              const cellKey = gb.hari_ke + '-' + gb.kategori_sp;
+              const bagi = gridCellCount[cellKey] || 1;
+              const spPerBahan = spVal / bagi;
+              const beratBersih = berat1Sp * spPerBahan * porsiCount;
+              const spRefBdd = spRefByName[(gb.nama || '').trim().toLowerCase()];
+              const bdd = spRefBdd || Number(gb.persen_bdd || 100);
+              const beratKotor = bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
+
+              const key = gb.bahan_baku_id;
+              if (!agg[key]) {
+                agg[key] = {
+                  bahan_baku_id: gb.bahan_baku_id, bahan_nama: gb.nama,
+                  kode: gb.kode || '', satuan: gb.satuan,
+                  persen_bdd: bdd, harga_satuan: Number(gb.harga_satuan) || 0,
+                  kategori_sp: gb.bb_kategori_sp,
+                  berat_per_satuan: Number(gb.berat_per_satuan) || 0,
+                  berat_1_sp: berat1Sp,
+                  total_qty: 0, total_porsi: 0, non_gram: false,
+                };
+              }
+              agg[key].total_qty += beratKotor;
+              if (!isGramSatuan(gb.satuan)) {
                 agg[key].total_porsi += porsiCount;
                 agg[key].non_gram = true;
               }

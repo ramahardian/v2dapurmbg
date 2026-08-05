@@ -131,7 +131,7 @@ async function loadGridBahan(siklusId) {
   const [gridBahanRaw] = await db.query(
     `SELECT smib.hari_ke, smib.kategori_sp, smib.bahan_baku_id,
             bb.nama, bb.satuan, bb.harga_satuan, bb.persen_bdd, bb.berat_1_sp, bb.berat_per_satuan,
-            bb.kategori_sp AS bb_kategori_sp,
+            bb.kode, bb.kategori_sp AS bb_kategori_sp,
             COALESCE(bb.buffer_persen, 10) AS buffer_persen
      FROM siklus_menu_item_bahan smib
      JOIN bahan_baku bb ON bb.id=smib.bahan_baku_id
