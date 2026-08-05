@@ -849,6 +849,164 @@ router.get('/siklus/laporan/kebutuhan-pangan/export', async (req, res) => {
   }
 });
 
+/**
+ * Helper qty belanja (port dari public/modul/total-kebutuhan.js) —
+ * untuk kolom "Kg/pcs/btl" pada export Total Kebutuhan Pangan.
+ */
+function tkIsSatuanHitung(s) {
+  const t = String(s || '').toLowerCase();
+  return ['pcs', 'btl', 'renceng', 'ctn', 'karton', 'kardus', 'dus', 'pack', 'ikat', 'ekor', 'butir', 'bungkus'].includes(t);
+}
+function tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) {
+  const b = Number(beratPerSatuan) || 0;
+  if (String(kategoriSp || '').toLowerCase() === 'minyak') {
+    const s = String(satuan || '').toLowerCase();
+    if ((s === 'karton' || s === 'ctn' || s === 'kardus' || s === 'dus') && b > 0) return b;
+    return 11000;
+  }
+  return b;
+}
+function tkAutoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
+  const s = String(satuan || 'kg').toLowerCase();
+  if (String(kategoriSp || '').toLowerCase() === 'minyak') {
+    if (!totalKg || totalKg <= 0) return '';
+    const bps = tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
+    return Math.ceil((totalKg * 1000) / bps) + ' karton';
+  }
+  if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
+    if (s === 'kg') return Math.ceil(totalKg) + ' kg';
+    return Math.ceil(totalKg * 1000) + ' g';
+  }
+  if (tkIsSatuanHitung(s)) {
+    const bps = tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
+    if (bps > 0 && totalKg > 0) return Math.ceil((totalKg * 1000) / bps) + ' ' + s;
+    if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') return '';
+    return (Math.ceil(jumlahSiswa) || 0) + ' ' + s;
+  }
+  return '';
+}
+
+/**
+ * GET /siklus/laporan/total-kebutuhan/export
+ * Export Total Kebutuhan Pangan memakai template public/template/total-kebutuhan.xlsx.
+ * Setiap hari menjadi 1 sheet: tanggal → baris per menu → header
+ * (Bahan | Kg/pcs/btl | Ket | Kebutuhan (kg)) → baris bahan.
+ */
+router.get('/siklus/laporan/total-kebutuhan/export', async (req, res) => {
+  try {
+    const data = await buildPerencanaanData({ tenant_id: req.user.tenant_id, query: req.query });
+    const days = (data.hari || []).filter(d => d.bahan && d.bahan.length);
+    if (!days.length) return res.status(400).json({ error: 'Tidak ada data total kebutuhan untuk diexport. Isi menu & bahan siklus terlebih dahulu.' });
+
+    // ── Muat template untuk gaya dasar ──
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.readFile(path.join(__dirname, '..', '..', 'public', 'template', 'total-kebutuhan.xlsx'));
+    const tmpl = wb.getWorksheet(1);
+    if (!tmpl) return res.status(500).json({ error: 'Template total-kebutuhan.xlsx tidak memiliki sheet' });
+
+    const cap = (r, c) => { const cell = tmpl.getCell(r, c); return { style: cell.style, numFmt: cell.numFmt }; };
+    const colWidths = (tmpl.columns || []).slice(0, 4).map(col => (col && col.width) || 12);
+    const tglStyle = cap(1, 1);
+    const menuStyle = cap(2, 1);
+    const hdrStyle = [cap(4, 1), cap(4, 2), cap(4, 3), cap(4, 4)];
+    const dataStyle = [cap(5, 1), cap(5, 2), cap(5, 3), cap(5, 4)];
+    const dataStyle2 = [cap(6, 1), cap(6, 2), cap(6, 3), cap(6, 4)];
+    wb.removeWorksheet(tmpl.id);
+
+    const borderThin = { style: 'thin', color: { argb: 'FFC9C9C9' } };
+    const borderBox = { top: borderThin, left: borderThin, bottom: borderThin, right: borderThin };
+    const MONTHS_ID = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
+
+    const cloneStyle = (s) => JSON.parse(JSON.stringify(s));
+    const put = (ws, r, c, v, styleObj, numFmt) => {
+      const cell = ws.getCell(r, c);
+      cell.value = v;
+      if (styleObj && styleObj.style) cell.style = cloneStyle(styleObj.style);
+      else if (styleObj) cell.style = cloneStyle(styleObj);
+      if (numFmt) cell.numFmt = numFmt;
+      return cell;
+    };
+    const merge = (ws, r1, c1, r2, c2) => { try { ws.mergeCells(r1, c1, r2, c2); } catch (e) {} };
+
+    // ── Bangun sheet per hari ──
+    for (let d = 0; d < days.length; d++) {
+      const day = days[d];
+      const dObj = new Date(String(day.header_tanggal || '').slice(0, 10) + 'T00:00:00');
+      const sheetName = isNaN(dObj.getTime())
+        ? 'Hari ' + (d + 1)
+        : dObj.getDate() + ' ' + MONTHS_ID[dObj.getMonth()] + ' ' + dObj.getFullYear();
+      const ws = wb.addWorksheet(sheetName);
+      ws.columns = colWidths.map(w => ({ width: w }));
+
+      let row = 1;
+      // Tanggal (merged A:D)
+      const label = tkFmtTanggal(day.header_tanggal, day.hari_nama);
+      put(ws, row, 1, label, tglStyle);
+      merge(ws, row, 1, row, 4);
+      ws.getRow(row).height = 22;
+      row++;
+
+      // Menu per baris (merged A:D, bold)
+      const menus = (day.menu_names || []).filter(Boolean);
+      if (!menus.length) menus.push('-');
+      for (const m of menus) {
+        put(ws, row, 1, m, menuStyle);
+        merge(ws, row, 1, row, 4);
+        row++;
+      }
+
+      // Header (row terpisah dari menu)
+      const headers = ['Bahan', 'Kg/pcs/btl', 'Ket', 'Kebutuhan (kg)'];
+      const hRow = ws.getRow(row);
+      headers.forEach((h, i) => put(ws, row, i + 1, h, hdrStyle[i]));
+      hRow.height = 20;
+      row++;
+
+      // Data bahan
+      let any = false;
+      let bi = 0;
+      for (const b of day.bahan) {
+        if (!b.per_jenjang) continue;
+        let rowKg = 0, rowSiswa = 0;
+        for (const jn in b.per_jenjang) {
+          const pj = b.per_jenjang[jn];
+          rowKg += Number(pj.kebutuhan_kg) || 0;
+          rowSiswa += Number(pj.jumlah_siswa) || 0;
+        }
+        const bufferPersen = Number(b.buffer_persen) || 0;
+        const bufferKg = Math.round(rowKg * (1 + bufferPersen / 100) * 100) / 100;
+        const satuan = b.satuan || 'kg';
+        const qtyText = tkAutoQty(satuan, bufferKg, rowSiswa, b.kategori_sp || '', Number(b.berat_per_satuan) || 0);
+        if (!qtyText) continue;
+        any = true;
+
+        const st = (bi % 2 === 0) ? dataStyle : dataStyle2; // variasi baris genap/ganjil
+        bi++;
+        const nama = b.nama_display || b.nama || '-';
+        put(ws, row, 1, nama, st[0]);
+        put(ws, row, 2, qtyText.replace(/\s+/g, ''), st[1]);
+        put(ws, row, 3, b.keterangan || '', st[2]);
+        put(ws, row, 4, Math.round(rowKg * 100) / 100, st[3], '0.00');
+        for (let c = 1; c <= 4; c++) ws.getCell(row, c).border = borderBox;
+        row++;
+      }
+
+      if (!any) {
+        put(ws, row, 1, 'Tidak ada bahan dengan jumlah untuk ditampilkan.', dataStyle[0]);
+      }
+    }
+
+    const mulai = data.tanggal_mulai || new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="TOTAL-KEBUTUHAN-' + mulai + '.xlsx"');
+    await wb.xlsx.write(res);
+  } catch (err) {
+    console.error('Export Total Kebutuhan error:', err);
+    if (!res.headersSent) res.status(500).json({ error: err.message });
+    else res.end();
+  }
+});
+
 // ── Override CRUD ──────────────────────────────────────────────────
 
 /**

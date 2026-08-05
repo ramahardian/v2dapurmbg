@@ -54,9 +54,14 @@ async function loadTotalKebutuhan() {
     html += '<button onclick="tkResetTanggal()" class="h-10 px-3 bg-white border border-stone-200 rounded-xl text-xs text-stone-500 hover:bg-stone-50 transition-colors" title="Reset filter">Reset</button>';
     var tkAdaData = !_validation && hari && hari.length;
     if (tkAdaData) {
-      html += '<button onclick="buatPrDariSiklus()" class="ml-auto h-10 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2">';
+      html += '<div class="ml-auto flex items-center gap-2">';
+      html += '<button onclick="buatPrDariSiklus()" class="h-10 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2">';
       html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> Buat Draft PR';
       html += '</button>';
+      html += '<button onclick="exportTotalKebutuhanXlsx()" class="h-10 px-4 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2" title="Export Total Kebutuhan Pangan ke Excel (template total-kebutuhan.xlsx)">';
+      html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export XLSX';
+      html += '</button>';
+      html += '</div>';
     }
     html += '<div class="text-xs text-stone-400">' + (hari ? hari.length + ' hari' : '0 hari') + ' | Total ' + totalSiswaSemuaJenjang + ' siswa</div>';
     html += '</div>';
@@ -97,6 +102,37 @@ async function loadTotalKebutuhan() {
     wrap.innerHTML = html;
   } catch (err) {
     wrap.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal: ' + err.message + '</div>';
+  }
+}
+
+async function exportTotalKebutuhanXlsx() {
+  const tglMulai = document.getElementById('tk-tanggal-mulai')?.value || '';
+  const tglSelesai = document.getElementById('tk-tanggal-selesai')?.value || '';
+  let url = '/api/siklus/laporan/total-kebutuhan/export';
+  const params = new URLSearchParams();
+  if (tglMulai) params.set('tanggal_mulai', tglMulai);
+  if (tglSelesai) params.set('tanggal_selesai', tglSelesai);
+  const qs = params.toString();
+  if (qs) url += '?' + qs;
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    if (!r.ok) {
+      let msg = 'Gagal export';
+      try { const j = await r.json(); msg = j.error || msg; } catch (e) { /* non-JSON */ }
+      showAlert(msg, 'warning');
+      return;
+    }
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'TOTAL-KEBUTUHAN.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    showAlert('Export Total Kebutuhan Pangan berhasil diunduh', 'success');
+  } catch (err) {
+    showAlert('Gagal export: ' + err.message, 'error');
   }
 }
 
