@@ -65,6 +65,22 @@ function registerDynamicRoutes(router) {
         }
       }
 
+      // Filter produksi: rentang tanggal + status (dipakai halaman Produksi Dapur)
+      if (table === 'produksi') {
+        if (req.query.tanggal_dari) {
+          whereClause += ' AND tanggal_produksi >= ?';
+          params.push(req.query.tanggal_dari);
+        }
+        if (req.query.tanggal_sampai) {
+          whereClause += ' AND tanggal_produksi <= ?';
+          params.push(req.query.tanggal_sampai);
+        }
+        if (req.query.status) {
+          whereClause += ' AND status = ?';
+          params.push(req.query.status);
+        }
+      }
+
       // Filter: untuk purchase_order, bedakan PR vs PO via prefix no_po
       if ((table === 'purchase_order' || table === 'penerimaan_barang') && req.query.tipe) {
         if (req.query.tipe === 'po') {
@@ -353,6 +369,30 @@ function registerDynamicRoutes(router) {
       total_dalam_perjalanan: Number(row.total_dalam_perjalanan),
       total_diterima: Number(row.total_diterima),
       total_gagal: Number(row.total_gagal),
+    });
+  });
+
+  // ─── EXTRA: Stats produksi (kartu ringkasan di halaman Produksi Dapur) ──────
+  router.get('/produksi/total', async (req, res) => {
+    const t = req.user.tenant_id;
+    const [[row]] = await db.query(
+      `SELECT
+         COALESCE(SUM(jumlah_porsi),0) AS total,
+         COALESCE(SUM(CASE WHEN DATE(tanggal_produksi)=CURDATE() THEN jumlah_porsi ELSE 0 END),0) AS total_hari_ini,
+         COALESCE(SUM(CASE WHEN status='Direncanakan' THEN jumlah_porsi ELSE 0 END),0) AS total_direncanakan,
+         COALESCE(SUM(CASE WHEN status='Diproduksi' THEN jumlah_porsi ELSE 0 END),0) AS total_diproduksi,
+         COALESCE(SUM(CASE WHEN status='Packing' THEN jumlah_porsi ELSE 0 END),0) AS total_packing,
+         COALESCE(SUM(CASE WHEN status='Selesai' THEN jumlah_porsi ELSE 0 END),0) AS total_selesai
+       FROM produksi WHERE tenant_id=?`,
+      [t]
+    );
+    res.json({
+      total: Number(row.total),
+      total_hari_ini: Number(row.total_hari_ini),
+      total_direncanakan: Number(row.total_direncanakan),
+      total_diproduksi: Number(row.total_diproduksi),
+      total_packing: Number(row.total_packing),
+      total_selesai: Number(row.total_selesai),
     });
   });
 

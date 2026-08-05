@@ -153,7 +153,7 @@ async function reloadCrud(cfg) {
     }).join('')}
     <td class="px-4 py-3 text-right whitespace-nowrap">
       ${cfg.suratJalan ? '<button onclick="cetakSuratJalan(' + r.id + ')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Cetak Surat Jalan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>' : ''}
-      ${(cfg.statusActions || []).filter(a => a.to !== r.status).map(a => `<button onclick="quickSetStatus('${cfg.endpoint}', ${r.id}, '${a.to}')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 ${a.cls} transition-all" title="${a.title}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">${a.icon}</svg></button>`).join('')}
+      ${(cfg.statusActions || []).filter(a => (!a.from || a.from === r.status) && a.to !== r.status).map(a => `<button onclick="quickSetStatus('${cfg.endpoint}', ${r.id}, '${a.to}')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 ${a.cls} transition-all" title="${a.title}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">${a.icon}</svg></button>`).join('')}
       <button onclick='editRow(${JSON.stringify(cfg).replace(/'/g, "&#39;")}, ${JSON.stringify(r).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
     </td></tr>`).join('');
@@ -384,7 +384,8 @@ function openForm(cfg, editing) {
             }
           });
           if (f.fillApi && item[f.fillApi.param]) {
-            api.get(f.fillApi.url + '?kategori=' + encodeURIComponent(item[f.fillApi.param])).then(r => {
+            const apiParam = f.fillApi.param || 'kategori';
+            api.get(f.fillApi.url + '?' + apiParam + '=' + encodeURIComponent(item[f.fillApi.param])).then(r => {
               const tgt = document.getElementById('f-' + f.fillApi.target);
               if (tgt && r.total) tgt.value = r.total;
             });

@@ -23,8 +23,26 @@ const MODULES = {
   menu: { title: 'Menu & Gizi', sub: 'Resep, gramasi & kandungan gizi', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>', render: renderMenu },
   gudang: { title: 'Gudang & Persediaan', sub: 'Stok, barang masuk, & barang keluar', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><path d="M12 6v12"/></svg>', render: renderGudang },
   produksi: { title: 'Produksi Dapur', sub: 'Catatan produksi harian', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
-    crud: { endpoint: '/produksi', fields: [
-      { k: 'tanggal_produksi', l: 'Tanggal', type: 'date', req: true },
+    crud: { endpoint: '/produksi',
+      stats: { endpoint: '/produksi/total', label: 'Total Porsi', format: 'num', extra: [
+        { field: 'hari_ini', label: 'Porsi Hari Ini', color: 'blue' },
+        { field: 'direncanakan', label: 'Direncanakan', color: 'amber' },
+        { field: 'diproduksi', label: 'Diproduksi', color: 'orange' },
+        { field: 'packing', label: 'Packing', color: 'sky' },
+        { field: 'selesai', label: 'Selesai', color: 'emerald' },
+      ] },
+      filters: [
+        { k: 'tanggal_dari', l: 'Dari Tanggal', type: 'date' },
+        { k: 'tanggal_sampai', l: 'Sampai Tanggal', type: 'date' },
+        { k: 'status', l: 'Status', type: 'select', opts: ['Direncanakan','Diproduksi','Packing','Selesai'] },
+      ],
+      statusActions: [
+        { from: 'Direncanakan', to: 'Diproduksi', label: 'Mulai Produksi', title: 'Mulai produksi menu ini', cls: 'hover:text-orange-600 hover:bg-orange-50', icon: '<path d="M8 5v14l11-7z"/>' },
+        { from: 'Diproduksi', to: 'Packing', label: 'Packing', title: 'Tandai packing', cls: 'hover:text-sky-600 hover:bg-sky-50', icon: '<path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 7L12 12l8.7-5"/>' },
+        { from: 'Packing', to: 'Selesai', label: 'Selesai', title: 'Tandai selesai', cls: 'hover:text-emerald-600 hover:bg-emerald-50', icon: '<path d="M5 13l4 4L19 7"/>' },
+      ],
+      fields: [
+      { k: 'tanggal_produksi', l: 'Tanggal', type: 'date', req: true, default: 'today' },
       { k: 'menu_nama', l: 'Nama Menu', type: 'select-api', source: '/menu?limit=500', valueField: 'nama', labelField: 'nama', req: true,
         fill: { kategori_penerima: 'kategori_penerima', menu_id: 'id' },
         fillApi: { url: '/penerima_manfaat/total', param: 'kategori_penerima', target: 'jumlah_porsi' },
@@ -32,7 +50,8 @@ const MODULES = {
       { k: 'menu_id', l: '', type: 'hidden' },
       { k: 'kategori_penerima', l: 'Kategori Penerima' },
       { k: 'jumlah_porsi', l: 'Jumlah Porsi', type: 'number', fmt: 'num', req: true },
-      { k: 'status', l: 'Status', type: 'select', opts: ['Direncanakan','Diproduksi','Packing','Selesai'] },
+      { k: 'status', l: 'Status', type: 'select', opts: ['Direncanakan','Diproduksi','Packing','Selesai'],
+        badge: { 'Direncanakan': 'bg-stone-100 text-stone-600', 'Diproduksi': 'bg-orange-100 text-orange-700', 'Packing': 'bg-sky-100 text-sky-700', 'Selesai': 'bg-emerald-100 text-emerald-700' } },
       { k: 'catatan', l: 'Catatan', type: 'textarea' },
     ], cols: ['tanggal_produksi','menu_nama','kategori_penerima','jumlah_porsi','status'] }
   },  distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
