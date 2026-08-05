@@ -46,24 +46,26 @@ async function loadTotalKebutuhan() {
     let html = '';
 
     // ── Filter bar ──
-    html += '<div class="bg-white border border-stone-200 rounded-xl p-4 mb-4 flex flex-wrap items-center gap-4 shadow-sm">';
-    html += '<label class="text-sm font-medium text-stone-700">Dari:</label>';
-    html += '<input type="date" id="tk-tanggal-mulai" value="' + (tanggal_mulai || '') + '" onchange="loadTotalKebutuhan()" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
-    html += '<label class="text-sm font-medium text-stone-700">Sampai:</label>';
-    html += '<input type="date" id="tk-tanggal-selesai" value="' + (tanggal_selesai || '') + '" onchange="loadTotalKebutuhan()" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
-    html += '<button onclick="tkResetTanggal()" class="h-10 px-3 bg-white border border-stone-200 rounded-xl text-xs text-stone-500 hover:bg-stone-50 transition-colors" title="Reset filter">Reset</button>';
+    html += '<div class="bg-white border border-stone-200 rounded-xl p-4 mb-4 flex flex-col lg:flex-row lg:items-center gap-3 shadow-sm">';
+    html += '<div class="flex flex-wrap items-center gap-3 flex-1">';
+    html += '<label class="text-sm font-medium text-stone-700 whitespace-nowrap">Dari:</label>';
+    html += '<input type="date" id="tk-tanggal-mulai" value="' + (tanggal_mulai || '') + '" onchange="loadTotalKebutuhan()" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 flex-1 min-w-[140px]">';
+    html += '<label class="text-sm font-medium text-stone-700 whitespace-nowrap">Sampai:</label>';
+    html += '<input type="date" id="tk-tanggal-selesai" value="' + (tanggal_selesai || '') + '" onchange="loadTotalKebutuhan()" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 flex-1 min-w-[140px]">';
+    html += '<button onclick="tkResetTanggal()" class="h-10 px-3 bg-white border border-stone-200 rounded-xl text-xs text-stone-500 hover:bg-stone-50 transition-colors whitespace-nowrap" title="Reset filter">Reset</button>';
+    html += '</div>';
     var tkAdaData = !_validation && hari && hari.length;
     if (tkAdaData) {
-      html += '<div class="ml-auto flex items-center gap-2">';
-      html += '<button onclick="buatPrDariSiklus()" class="h-10 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2">';
+      html += '<div class="flex flex-col lg:flex-row lg:ml-auto gap-2 w-full lg:w-auto">';
+      html += '<button onclick="buatPrDariSiklus()" class="h-10 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 w-full lg:w-auto">';
       html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> Buat Draft PR';
       html += '</button>';
-      html += '<button onclick="exportTotalKebutuhanXlsx()" class="h-10 px-4 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2" title="Export Total Kebutuhan Pangan ke Excel (template total-kebutuhan.xlsx)">';
+      html += '<button onclick="exportTotalKebutuhanXlsx()" class="h-10 px-4 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 w-full lg:w-auto" title="Export Total Kebutuhan Pangan ke Excel (template total-kebutuhan.xlsx)">';
       html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export XLSX';
       html += '</button>';
       html += '</div>';
     }
-    html += '<div class="text-xs text-stone-400">' + (hari ? hari.length + ' hari' : '0 hari') + ' | Total ' + totalSiswaSemuaJenjang + ' siswa</div>';
+    html += '<div class="text-xs text-stone-400 mt-1 lg:mt-0 w-full text-center lg:text-right">' + (hari ? hari.length + ' hari' : '0 hari') + ' | Total ' + totalSiswaSemuaJenjang + ' siswa</div>';
     html += '</div>';
 
     // ── Tampilkan validasi jika ada ──
