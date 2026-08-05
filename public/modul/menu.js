@@ -1245,6 +1245,8 @@ async function openSiklusMenuPicker() {
   }
 }
 async function selectSiklusMenuName(nama, bahanJson, siklusPorsi, kategoriPenerima) {
+  // Tutup picker siklus segera setelah dipilih agar tidak menutupi dialog konfirmasi
+  closeSiklusMenuPicker();
   document.getElementById('m-nama').value = nama;    // Auto-fill kategori_penerima dari siklus
     if (kategoriPenerima) {
       // Parse jika JSON array (siklus bisa multiple jenjang), simpan array lengkap
