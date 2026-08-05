@@ -58,9 +58,6 @@ async function loadTotalKebutuhan() {
     var tkAdaData = !_validation && hari && hari.length;
     if (tkAdaData) {
       html += '<div class="flex flex-wrap items-center gap-2">';
-      html += '<button onclick="buatPrDariSiklus()" class="h-10 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap">';
-      html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> Buat Draft PR';
-      html += '</button>';
       html += '<button onclick="exportTotalKebutuhanXlsx()" class="h-10 px-4 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap" title="Export Total Kebutuhan Pangan ke Excel (template total-kebutuhan.xlsx)">';
       html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export XLSX';
       html += '</button>';
