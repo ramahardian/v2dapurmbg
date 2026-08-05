@@ -17,6 +17,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const { registerGenerateRoutes } = require('./purchase-order/generate');
 const { registerCreatePrRoutes } = require('./purchase-order/create-pr');
 const { registerActionRoutes } = require('./purchase-order/actions');
+const { registerSyncKoperasiRoutes } = require('./purchase-order/sync-koperasi');
 
 const router = express.Router();
 
@@ -31,5 +32,6 @@ router.use((req, res, next) => {
 registerGenerateRoutes(router);
 registerCreatePrRoutes(router);
 registerActionRoutes(router);
+registerSyncKoperasiRoutes(router);
 
 module.exports = router;

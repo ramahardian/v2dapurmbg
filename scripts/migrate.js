@@ -190,6 +190,15 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi id_koperasi)'); }
 
+  // no_po_koperasi & no_invoice_koperasi di purchase_order
+  try {
+    const [npCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_order' AND COLUMN_NAME = 'no_po_koperasi'");
+    if (!npCols.length) {
+      await q("ALTER TABLE purchase_order ADD COLUMN no_po_koperasi VARCHAR(100) NULL AFTER no_po, ADD COLUMN no_invoice_koperasi VARCHAR(100) NULL AFTER no_po_koperasi");
+      log('✓ Migrasi purchase_order: tambah kolom no_po_koperasi + no_invoice_koperasi');
+    }
+  } catch (e) { log('  (skip migrasi no_po_koperasi)'); }
+
   // SP columns di bahan_baku
   try {
     const [spCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'kategori_sp'");

@@ -112,6 +112,8 @@ CREATE TABLE IF NOT EXISTS purchase_order (
   id INT AUTO_INCREMENT PRIMARY KEY,
   tenant_id INT NOT NULL,
   no_po VARCHAR(50) NOT NULL,
+  no_po_koperasi VARCHAR(100) NULL,
+  no_invoice_koperasi VARCHAR(100) NULL,
   tanggal DATE NOT NULL,
   supplier_id INT,
   supplier_nama VARCHAR(200),

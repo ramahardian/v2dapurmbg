@@ -392,6 +392,7 @@ async function renderPoView() {
           Tambah PO
         </button>
         <button id="po-from-siklus-btn" class="h-11 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all">+ Buat dari Siklus</button>
+        <button id="po-sync-koperasi-btn" class="h-11 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all" title="Tarik nomor PO/Invoice dari koperasi">Sinkron dari Koperasi</button>
       </div>
       <div class="relative">
         <input id="po-search" placeholder="Cari PO..." class="w-56 h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
@@ -404,6 +405,7 @@ async function renderPoView() {
 
   document.getElementById('po-add-btn').onclick = () => openPembelianForm(null);
   document.getElementById('po-from-siklus-btn').onclick = openSiklusPicker;
+  document.getElementById('po-sync-koperasi-btn').onclick = syncDariKoperasi;
 
   document.getElementById('po-search').oninput = function() {
     const q = this.value.toLowerCase();
@@ -435,7 +437,9 @@ function renderPoTable(rows) {
         try { items = JSON.parse(r.item); } catch {}
         const statusColors = { 'Draft': 'bg-stone-100 text-stone-700', 'Disetujui': 'bg-blue-100 text-blue-700', 'Dikirim': 'bg-amber-100 text-amber-700', 'Diterima': 'bg-emerald-100 text-emerald-700', 'Dibayar': 'bg-green-100 text-green-700' };
         return `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-          <td class="px-4 py-3 text-xs font-semibold text-stone-700">${r.no_po || '-'}</td>
+          <td class="px-4 py-3 text-xs font-semibold text-stone-700">${r.no_po || '-'}
+            ${(r.no_po_koperasi || r.no_invoice_koperasi) ? `<div class="text-[10px] font-normal text-emerald-600 mt-0.5">Koperasi: ${r.no_po_koperasi || '-'}${r.no_invoice_koperasi ? ' / Inv: ' + r.no_invoice_koperasi : ''}</div>` : ''}
+          </td>
           <td class="px-4 py-3 text-xs text-stone-600">${fmtDate(r.tanggal)}</td>
           <td class="px-4 py-3 text-xs text-stone-600">${r.supplier_nama || '-'}</td>
           <td class="px-4 py-3 text-xs text-stone-600">${r.unit_dapur || '-'}</td>
@@ -459,6 +463,18 @@ function renderPoTable(rows) {
       }).join('')}
     </tbody>
   </table></div>`;
+}
+
+async function syncDariKoperasi() {
+  if (!await showConfirm('Tarik nomor PO/Invoice terbaru dari sistem koperasi?')) return;
+  try {
+    const result = await api.post('/purchase_order/sync-koperasi', {});
+    const msg = result.message || (result.updated + ' PO diupdate');
+    showToast('✅ ' + msg, result.updated > 0 ? 'success' : 'info');
+    renderPembelianPage('po');
+  } catch (e) {
+    showAlert('Gagal sinkronisasi: ' + (e.message || 'Error'), 'error');
+  }
 }
 
 async function deletePo(id) {
@@ -545,7 +561,17 @@ async function kirimKeKoperasi(po) {
     });
     const result = await r.json();
     if (result.success) {
-      showToast('PO berhasil dikirim ke koperasi. Kode: ' + (result.data?.kode_pesanan || '-'), 'success');
+      const kodePesanan = result.data?.kode_pesanan || '';
+      showToast('PO berhasil dikirim ke koperasi. Kode: ' + (kodePesanan || '-'), 'success');
+      if (kodePesanan && po.id) {
+        try {
+          await api.post('/purchase_order/' + po.id + '/kode-koperasi', { no_po_koperasi: kodePesanan });
+          renderPembelianPage('po');
+        } catch (e) {
+          console.warn('Gagal simpan kode pesanan koperasi:', e);
+        }
+      }
+      bukaWaNotifikasiKoperasi(po, items, kodePesanan);
 
     } else {
       showAlert('Gagal: ' + (result.message || 'Respons tidak valid'), 'error');
@@ -553,6 +579,65 @@ async function kirimKeKoperasi(po) {
   } catch (e) {
     showAlert('Gagal terhubung ke koperasi: ' + e.message, 'error');
   }
+}
+
+async function bukaWaNotifikasiKoperasi(po, items, kodePesanan) {
+  const telepon = await cariTeleponSupplier(po);
+  if (!telepon) {
+    showToast('Kiriman sukses, tapi nomor WA petugas koperasi tidak ditemukan di data supplier', 'warning');
+    return;
+  }
+
+  const namaDapur = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama)
+    || (await cariNamaDapur())
+    || po.unit_dapur
+    || '-';
+  const daftar = items.map((i, idx) => (idx + 1) + '. ' + (i.nama || '-') + ' — ' + Number(i.qty || 0) + ' ' + (i.satuan || '')).join('\n');
+  const msg = 'Halo Petugas Koperasi,\n\n' +
+    'Ada PO bahan baku baru dari ' + namaDapur + ':\n\n' +
+    'No PO: ' + (po.no_po || '-') + '\n' +
+    'Tanggal: ' + (po.tanggal || '-') + '\n' +
+    'Kode Pesanan: ' + kodePesanan + '\n\n' +
+    'Item:\n' + daftar + '\n\n' +
+    'Total Nilai: ' + fmtIDR(po.total_nilai || 0) + '\n\n' +
+    'Mohon segera diproses. Terima kasih.';
+
+  const waLink = 'https://wa.me/' + normalizeWaNumber(telepon) + '?text=' + encodeURIComponent(msg);
+  window.open(waLink, '_blank');
+  showToast('WhatsApp dibuka — tekan kirim untuk notifikasi ke petugas koperasi', 'success');
+}
+
+async function cariNamaDapur() {
+  try {
+    const r = await fetch('/api/system/kop-surat', { credentials: 'include' });
+    if (!r.ok) return '';
+    const d = await r.json();
+    return d.kop_nama || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+async function cariTeleponSupplier(po) {
+  try {
+    const supData = await api.get('/supplier');
+    const list = Array.isArray(supData) ? supData : (Array.isArray(supData.data) ? supData.data : []);
+    let sup = null;
+    if (po.supplier_id) sup = list.find(s => Number(s.id) === Number(po.supplier_id));
+    if (!sup && po.supplier_nama) sup = list.find(s => String(s.nama || '').toLowerCase() === String(po.supplier_nama).toLowerCase());
+    if (!sup && po.supplier_nama) sup = list.find(s => String(s.nama || '').toLowerCase().includes(String(po.supplier_nama).toLowerCase()));
+    return sup && sup.telepon ? sup.telepon : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function normalizeWaNumber(num) {
+  let n = String(num || '').replace(/[^0-9]/g, '');
+  if (!n) return '';
+  if (n.startsWith('0')) n = '62' + n.slice(1);
+  else if (!n.startsWith('62')) n = '62' + n;
+  return n;
 }
 
 async function openPembelianForm(editing, prItems, prRef) {
