@@ -1275,7 +1275,7 @@ async function selectSiklusMenuName(nama, bahanJson, siklusPorsi, kategoriPeneri
   
   // Konfirmasi jika sudah ada bahan di form
   if (bahan.length && window._menuBahan.some(function(b) { return b.nama; })) {
-    if (!await showConfirm('Akan mengganti ' + window._menuBahan.filter(function(b){return b.nama;}).length + ' bahan yang sudah ada dengan ' + bahan.length + ' bahan dari siklus. Lanjutkan?')) {
+    if (!await showConfirm('Akan mengganti ' + window._menuBahan.filter(function(b){return b.nama;}).length + ' bahan yang sudah ada dengan ' + bahan.length + ' bahan dari siklus. Lanjutkan?', 'Lanjutkan')) {
       return;
     }
   }
