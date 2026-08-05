@@ -2,10 +2,13 @@ Tugas: Buat API daftar pesanan dapur
 
 Buat endpoint GET https://koperasi.mealify.id/api/pesanan_koperasi.php yang mengembalikan daftar pesanan bahan baku dari dapur/dapur (unit dapur), lengkap dengan nomor pesanan dan nomor invoice. API ini dipakai sistem dapur untuk menarik nomor PO/Invoice yang diterbitkan oleh koperasi, agar angka dokumennya satu sumber (tidak digenerate di dua sistem).
 
+Selain itu, endpoint POST https://koperasi.mealify.id/api/pesanan_dapur.php (yang selama ini dipakai untuk menerima pesanan dari dapur) WAJIB menerima dan menyimpan field no_po yang dikirim dapur di body request (lihat bagian "Field wajib dari POST pesanan_dapur.php").
+
 Persyaratan:
 1. Method GET, bisa diakses tanpa autentikasi (atau pakai key sederhana via query param).
 2. Data diambil dari tabel pesanan yang sama dengan pesanan_dapur.php (yang selama ini dipakai untuk menerima pesanan dari dapur).
 3. Gunakan kode yang sudah tersimpan di field kode_pesanan (yang dikembalikan saat pesanan berhasil dibuat) sebagai pengenal unik pesanan.
+4. Simpan juga nomor PO dari dapur yang dikirim lewat field no_po di body POST pesanan_dapur.php ke kolom no_po (tambahkan kolom bila belum ada). Kolom ini berguna untuk mencocokkan pesanan koperasi dengan PO lokal sistem dapur.
 
 Format respons (wajib):
 {
@@ -15,6 +18,7 @@ Format respons (wajib):
       "id": 123,
       "kode_pesanan": "PSN-20260805-001",
       "no_invoice": "INV-20260805-001",
+      "no_po": "PO-20260805-7946",
       "id_unit_dapur": 2,
       "nama_dapur": "Dapur Sukaluyu",
       "tanggal_pesanan": "2026-08-05",
@@ -28,7 +32,17 @@ Format respons (wajib):
 Keterangan field:
 - kode_pesanan — nomor pesanan koperasi (WAJIB, dipakai untuk mencocokkan dengan PO lokal)
 - no_invoice — nomor invoice koperasi (WAJIB)
+- no_po — nomor PO dari sistem dapur (WAJIB disimpan saat POST pesanan_dapur.php, WAJIB dikembalikan di sini; dipakai sistem dapur untuk mencocokkan pesanan koperasi dengan PO lokal)
 - field lain opsional tapi membantu
+
+Field wajib dari POST pesanan_dapur.php (body JSON yang dikirim sistem dapur):
+- id_unit_dapur — ID unit dapur di sistem koperasi
+- nama_dapur — nama unit dapur
+- supplier_name — nama supplier
+- no_po — NOMOR PO dari sistem dapur, contoh "PO-20260805-7946" (WAJIB disimpan ke kolom no_po)
+- tanggal_pesanan — tanggal pesanan (YYYY-MM-DD)
+- items — array item: [{ ingredient_id, name, qty, unit, price }]
+- notes — catatan bebas (opsional)
 
 Jika belum ada kolom no_invoice, tambahkan kolom tersebut di tabel pesanan dan isi otomatis saat pesanan diubah status menjadi kirim/invoice. Jika status error, balas:
 {

@@ -20,8 +20,10 @@ const db = require('../../db');
 // Field nomor yang dikenali otomatis (lihat KEYS_NO_PO / KEYS_NO_INVOICE).
 const KOPERASI_API_URL = process.env.KOPERASI_API_URL || 'https://koperasi.mealify.id/api/pesanan_koperasi.php';
 
-// Kunci kandidat untuk nomor PO koperasi
-const KEYS_NO_PO = ['kode_pesanan', 'kode_pesanan_koperasi', 'no_po', 'no_po_koperasi', 'kode', 'nomor_pesanan'];
+// Kunci kandidat untuk nomor PO koperasi (kode pesanan dari koperasi)
+// Catatan: 'no_po' TIDAK dimasukkan di sini karena field no_po di respons
+// koperasi adalah nomor PO dari dapur (bukan kode pesanan koperasi).
+const KEYS_NO_PO = ['kode_pesanan', 'kode_pesanan_koperasi', 'no_po_koperasi', 'kode', 'nomor_pesanan'];
 // Kunci kandidat untuk nomor invoice koperasi
 const KEYS_NO_INVOICE = ['no_invoice', 'no_invoice_koperasi', 'nomor_invoice', 'invoice_no', 'invoice'];
 
@@ -95,7 +97,9 @@ function registerSyncKoperasiRoutes(router) {
       for (const rec of records) {
         const noPoKoperasi = getStr(rec, KEYS_NO_PO);
         const noInvoiceKoperasi = getStr(rec, KEYS_NO_INVOICE);
-        if (!noPoKoperasi && !noInvoiceKoperasi) continue;
+        // Nomor PO lokal yang disimpan koperasi (field no_po dari POST pesanan_dapur)
+        const noPoLokal = getStr(rec, ['no_po', 'no_po_dapur', 'kode_po_dapur']);
+        if (!noPoKoperasi && !noInvoiceKoperasi && !noPoLokal) continue;
 
         // Match PO lokal via no_po_koperasi
         let [[po]] = await db.query(
@@ -108,6 +112,14 @@ function registerSyncKoperasiRoutes(router) {
           [[po]] = await db.query(
             'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_invoice_koperasi=?',
             [t, noInvoiceKoperasi]
+          );
+        }
+
+        // Fallback match via no_po lokal (nomor PO dapur yang tersimpan di koperasi)
+        if (!po && noPoLokal) {
+          [[po]] = await db.query(
+            'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_po=?',
+            [t, noPoLokal]
           );
         }
 

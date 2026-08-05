@@ -537,6 +537,7 @@ async function kirimKeKoperasi(po) {
     id_unit_dapur: Number(id_unit_dapur),
     nama_dapur: po.unit_dapur || '',
     supplier_name: po.supplier_nama || '',
+    no_po: po.no_po || '',
     tanggal_pesanan: po.tanggal,
     items: items.map(i => {
       const m = (i.kode || '').match(/EXT[-\s]?(\d+)/i);
