@@ -89,10 +89,11 @@ async function loadPbdData(siklusId) {
 function renderPbdFilter(siklusList, selectedId) {
   var html = '<div class="bg-white border border-stone-200 rounded-lg p-4 mb-4 flex flex-wrap items-center gap-4">';
   html += '<label class="text-sm font-medium text-stone-700">Filter Siklus:</label>';
-  html += '<select onchange="loadPbdData(this.value)" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[200px] focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
+  html += '<select id="pbd-siklus-select" onchange="loadPbdData(this.value)" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[200px] focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
   html += '<option value="">— Semua Siklus Aktif —</option>';
   for (var i = 0; i < siklusList.length; i++) {
     var s = siklusList[i];
+    if (selectedId && Number(selectedId) !== s.id) continue;
     html += '<option value="' + s.id + '" ' + (selectedId && Number(selectedId) === s.id ? 'selected' : '') + '>' + s.nama + ' (' + s.status + ')' + '</option>';
   }
   html += '</select>';
