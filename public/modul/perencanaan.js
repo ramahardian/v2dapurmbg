@@ -51,11 +51,17 @@ async function loadPerencanaanData(siklusId) {
   wrap.innerHTML = '<div class="flex items-center justify-center py-16"><svg class="animate-spin h-8 w-8 text-sky-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
 
   try {
-    const params = siklusId ? '?siklus_id=' + siklusId : '';
-    const res = await api.get('/siklus/laporan/kebutuhan-per-menu' + params);
+    let params = siklusId ? '?siklus_id=' + siklusId : '';
+    let res = await api.get('/siklus/laporan/kebutuhan-per-menu' + params);
+    if (!siklusId && res.siklus_list && res.siklus_list.length) {
+      // Tanpa opsi "Semua Siklus Aktif": default ke siklus pertama (tanpa tampilan gabungan)
+      _pncSiklusId = String(res.siklus_list[0].id);
+      res = await api.get('/siklus/laporan/kebutuhan-per-menu?siklus_id=' + _pncSiklusId);
+    } else if (siklusId) {
+      _pncSiklusId = String(siklusId);
+    }
     const { siklus_list, selected_siklus_id, jenjang_list, data, _validation } = res;
 
-    if (siklusId) _pncSiklusId = siklusId;
     _pncAllJenjangData = data;
     _pncData = { jenjang_list, data };
 
@@ -67,10 +73,9 @@ async function loadPerencanaanData(siklusId) {
     // Siklus filter
     html += '<label class="text-sm font-medium text-stone-700">Filter Siklus:</label>';
     html += '<select onchange="onSiklusFilterChange(this)" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[200px] focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400">';
-    html += '<option value="">— Semua Siklus Aktif —</option>';
     for (var i = 0; i < siklus_list.length; i++) {
       var s = siklus_list[i];
-      var sel = _pncSiklusId && String(_pncSiklusId) === String(s.id);
+      var sel = String(_pncSiklusId) === String(s.id);
       html += '<option value="' + s.id + '" ' + (sel ? 'selected' : '') + '>' + s.nama + ' (' + s.status + ')' + '</option>';
     }
     html += '</select>';
@@ -131,7 +136,7 @@ async function loadPerencanaanData(siklusId) {
     wrap.innerHTML = html;
 
     // Muat tabel matriks Perencanaan Final di bawah Rekap Porsi Besar & Kecil
-    loadPncMatriksPerencanaan(siklusId);
+    loadPncMatriksPerencanaan(_pncSiklusId);
 
     // Adjust export button visibility based on data availability
     setTimeout(adjustExportVisibilityForEmptyData, 100);
