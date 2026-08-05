@@ -90,11 +90,18 @@ function navItemVisible(key, userRole) {
   return true;
 }
 
+// Grup navigasi yang disembunyikan utuh untuk role tertentu (mis. Akuntansi untuk Ahli Gizi).
+function navGroupVisible(g, userRole) {
+  if (g.label === 'Akuntansi' && userRole === 'ahli_gizi') return false;
+  return true;
+}
+
 function renderNav() {
   const nav = document.getElementById('nav');
   const userRole = currentUser?.role || '';
 
   nav.innerHTML = NAV_GROUPS.map(g => {
+    if (!navGroupVisible(g, userRole)) return '';
     const visibleItems = g.items.filter(key =>
       (typeof key === 'object' && key.children)
         ? key.children.some(ck => navItemVisible(ck, userRole))
@@ -134,6 +141,7 @@ function getSidebarNavEntries() {
   const userRole = currentUser?.role || '';
   const entries = [];
   NAV_GROUPS.forEach(g => {
+    if (!navGroupVisible(g, userRole)) return;
     g.items.forEach(key => {
       if (typeof key === 'object' && key.children) {
         key.children.forEach(ck => {
