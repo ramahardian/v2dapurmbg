@@ -101,6 +101,373 @@ function dashMenuRender() {
 }
 
 /**
+ * dashMenuShare — Buat gambar post menu lalu langsung unduh PNG.
+ */
+function dashMenuCurrent() {
+  const list = dashMenuGetList();
+  if (!list.length) return null;
+  if (window._dashMenuIdx == null) window._dashMenuIdx = 0;
+  return list[Math.max(0, Math.min(list.length - 1, window._dashMenuIdx))];
+}
+
+function dashMenuJenjang(m) {
+  let jn = [];
+  try { const p = JSON.parse(m.kategori || '[]'); if (Array.isArray(p)) jn = p; } catch (e) {}
+  return jn.length > 1 ? jn[0] + ' +' + (jn.length - 1) : (jn[0] || '');
+}
+
+async function dashMenuShare() {
+  const m = dashMenuCurrent();
+  if (!m) { showAlert('Belum ada menu untuk dibagikan.', 'warning'); return; }
+  showToast('Membuat gambar menu...', 'info');
+  try {
+    const blob = await dashMenuGenImageBlob(m);
+    if (!blob) throw new Error('Gagal membuat gambar');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'menu-hari-ini.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
+  } catch (e) {
+    showAlert('Gagal mengunduh gambar: ' + (e.message || 'Unknown error'), 'error');
+  }
+}
+
+/**
+ * dashMenuGenImageBlob — Buat gambar post (1080x1350) ala poster infografis gizi.
+ * Layout: background putih + doodle tipis, header logo brand, judul + badge,
+ * foto/tray menu, catatan + tabel gizi, dan footer brand (hijau tua + oranye).
+ */
+function dashMenuGenImageBlob(m) {
+  m = m || dashMenuCurrent();
+  return _dashLogoImg().then(function(logo) {
+    return new Promise(function(resolve) {
+    if (!m) { resolve(null); return; }
+    const W = 1080, H = 1200, PAD = 64;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+
+    const G9 = '#14532D', G7 = '#166534', G6 = '#15803D', OR = '#F97316', OR4 = '#FB923C',
+          INK = '#1C1917', MUT = '#6B7280';
+    const tenant = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama) || 'SPPG Sukaluyu Tamansari';
+    const tenantShort = String(tenant);
+
+    // ── Background putih + doodle makanan sangat tipis ──
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, W, H);
+    _dashDoodle(ctx, PAD + 6, 96, 96, 0.35, 'rgba(21,101,45,0.05)');
+    _dashDoodle(ctx, W - 150, 620, 92, -0.4, 'rgba(249,115,22,0.05)');
+    _dashDoodle(ctx, PAD + 4, 660, 86, 0.22, 'rgba(21,101,45,0.05)');
+    _dashDoodle(ctx, W - 160, 240, 104, -0.28, 'rgba(21,101,45,0.05)');
+
+    // ── Header: logo kiri atas + tagline kanan atas ──
+    if (logo) {
+      ctx.drawImage(logo, PAD, 44, 92, 92);
+      ctx.fillStyle = G9; ctx.font = '800 25px sans-serif'; ctx.fillText('SPPG', PAD + 108, 86);
+      ctx.fillStyle = OR; ctx.font = '700 11px sans-serif'; ctx.fillText(tenantShort.toUpperCase(), PAD + 108, 106);
+    } else {
+      _dashDrawLogo(ctx, PAD, 52, 74);
+      ctx.fillStyle = G9; ctx.font = '800 25px sans-serif'; ctx.fillText('SPPG', PAD + 90, 86);
+      ctx.fillStyle = OR; ctx.font = '700 11px sans-serif'; ctx.fillText(tenantShort.toUpperCase(), PAD + 90, 106);
+    }
+    ctx.fillStyle = MUT; ctx.font = '600 12px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText('Partner Nutrisi & Gaya Hidup Sehat', W - PAD, 88);
+    ctx.textAlign = 'left';
+
+    // ── Judul utama + badge ──
+    ctx.fillStyle = G9; ctx.font = '800 54px sans-serif';
+    ctx.fillText('Informasi Nilai Gizi', PAD, 208);
+    const b1 = '✓   Menu MBG', b2 = 'Makanan Bergizi Gratis';
+    ctx.font = '700 14px sans-serif';
+    const bw1 = ctx.measureText(b1).width + 40;
+    _dashRoundRect(ctx, PAD, 226, bw1, 44, 22);
+    ctx.fillStyle = '#FFFFFF'; ctx.fill();
+    ctx.strokeStyle = G6; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = G7; ctx.fillText(b1, PAD + 20, 255);
+    const bx2 = PAD + bw1 + 14;
+    const bw2 = ctx.measureText(b2).width + 60;
+    const g2 = ctx.createLinearGradient(bx2, 0, bx2 + bw2, 0);
+    g2.addColorStop(0, G6); g2.addColorStop(1, G9);
+    _dashRoundRect(ctx, bx2, 226, bw2, 44, 22);
+    ctx.fillStyle = g2; ctx.fill();
+    ctx.fillStyle = '#FFFFFF'; ctx.fillText(b2, bx2 + 22, 255);
+    ctx.fillStyle = OR4;
+    ctx.beginPath(); ctx.arc(bx2 + 28, 248, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(bx2 + 28, 248, 3, 0, Math.PI * 2); ctx.fill();
+
+    // ── Nama menu ──
+    ctx.fillStyle = INK; ctx.font = '800 36px sans-serif';
+    const nameLines = _dashWrapText(ctx, m.menu_nama || 'Menu hari ini', W - PAD * 2).slice(0, 2);
+    nameLines.forEach(function(l, i) { ctx.fillText(l, PAD, 322 + i * 48); });
+    const nameEnd = 322 + nameLines.length * 48;
+
+    // ── Visual tengah: foto menu atau ilustrasi tray ──
+    const visW = 700, visH = 430;
+    const visX = (W - visW) / 2;
+    const visY = nameEnd + 34;
+
+    const drawLower = function() {
+      // strip tanggal aktual menu
+      ctx.fillStyle = MUT; ctx.font = '700 23px sans-serif';
+      const tgl = _dashFmtTanggal(m.tanggal);
+      ctx.fillText(tgl, PAD, visY + visH + 54);
+
+      // kartu Catatan + tabel gizi
+      const cardY = visY + visH + 84;
+      const cardH = 180;
+      const catW = Math.round((W - PAD * 2) * 0.52);
+      const tblX = PAD + catW + 24;
+      const tblW = W - PAD * 2 - catW - 24;
+
+      _dashCard(ctx, PAD, cardY, catW, cardH);
+      ctx.fillStyle = G9; ctx.font = '800 16px sans-serif'; ctx.fillText('Catatan', PAD + 22, cardY + 34);
+      const bullets = [
+        'Karbohidrat, lauk, sayur & buah dalam satu porsi',
+        'Protein hewani & nabati untuk tumbuh kembang',
+        'Serat tinggi membantu kesehatan pencernaan',
+        'Diolah higienis sesuai standar gizi MBG',
+      ];
+      bullets.forEach(function(b, i) {
+        const by = cardY + 58 + i * 29;
+        ctx.fillStyle = OR; ctx.beginPath(); ctx.arc(PAD + 17, by - 5, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#44403C'; ctx.font = '600 13px sans-serif'; ctx.fillText(b, PAD + 31, by);
+      });
+
+      _dashCard(ctx, tblX, cardY, tblW, cardH);
+      ctx.fillStyle = G9; ctx.font = '800 21px sans-serif'; ctx.fillText('Informasi Gizi', tblX + 22, cardY + 36);
+      ctx.fillStyle = MUT; ctx.font = '600 12px sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText('per porsi', tblX + tblW - 22, cardY + 36); ctx.textAlign = 'left';
+      const rows = [
+        ['Energi', Number(m.kalori || 0).toLocaleString('id-ID') + ' kkal'],
+        ['Protein', Number(m.protein || 0).toLocaleString('id-ID') + ' g'],
+        ['Lemak', Number(m.lemak || 0).toLocaleString('id-ID') + ' g'],
+        ['Karbohidrat', Number(m.karbohidrat || 0).toLocaleString('id-ID') + ' g'],
+        ['Serat', Number(m.serat || 0).toLocaleString('id-ID') + ' g'],
+      ];
+      rows.forEach(function(r, i) {
+        const y0 = cardY + 62 + i * 26;
+        if (i > 0) {
+          ctx.strokeStyle = '#F1EFEC'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(tblX + 22, y0 - 13); ctx.lineTo(tblX + tblW - 22, y0 - 13); ctx.stroke();
+        }
+        ctx.fillStyle = MUT; ctx.font = '600 13px sans-serif'; ctx.fillText(r[0], tblX + 22, y0);
+        ctx.fillStyle = INK; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'right'; ctx.fillText(r[1], tblX + tblW - 22, y0); ctx.textAlign = 'left';
+      });
+
+      cv.toBlob(function(b) { resolve(b); }, 'image/png');
+    };
+
+    if (m.foto) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
+        _dashDrawImageCover(ctx, img, visX, visY, visW, visH, 24);
+        drawLower();
+      };
+      img.onerror = function() { _dashDrawTray(ctx, visX, visY, visW, visH); drawLower(); };
+      img.src = m.foto;
+    } else {
+      _dashDrawTray(ctx, visX, visY, visW, visH);
+      drawLower();
+    }
+    });
+  });
+}
+
+// Logo asli dari public/asset/logo.png (cached)
+var _dashLogoPromise = null;
+function _dashLogoImg() {
+  if (!_dashLogoPromise) {
+    _dashLogoPromise = new Promise(function(resolve) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() { resolve(img); };
+      img.onerror = function() { resolve(null); };
+      img.src = '/asset/logo.png';
+    });
+  }
+  return _dashLogoPromise;
+}
+
+// Format tanggal menu (YYYY-MM-DD) → "Senin, 27 Jul 2026"
+function _dashFmtTanggal(iso) {
+  if (!iso) return '';
+  var parts = String(iso).split('-');
+  if (parts.length !== 3) return String(iso);
+  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  if (isNaN(d.getTime())) return String(iso);
+  var hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][d.getDay()];
+  var bulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][d.getMonth()];
+  return hari + ', ' + d.getDate() + ' ' + bulan + ' ' + d.getFullYear();
+}
+
+// Logo custom SPPG (mangkuk + daun oranye + uap)
+function _dashDrawLogo(ctx, x, y, s) {
+  const r = s * 0.28;
+  const g = ctx.createLinearGradient(x, y, x + s, y + s);
+  g.addColorStop(0, '#15803D'); g.addColorStop(1, '#14532D');
+  _dashRoundRect(ctx, x + s * 0.04, y + s * 0.04, s * 0.92, s * 0.92, r);
+  ctx.fillStyle = g; ctx.fill();
+  ctx.fillStyle = '#FDBA74';
+  ctx.beginPath();
+  ctx.ellipse(x + s * 0.52, y + s * 0.30, s * 0.20, s * 0.13, -0.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.moveTo(x + s * 0.30, y + s * 0.64);
+  ctx.lineTo(x + s * 0.70, y + s * 0.64);
+  ctx.arc(x + s * 0.50, y + s * 0.64, s * 0.20, 0, Math.PI, false);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = Math.max(2, s * 0.05); ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x + s * 0.26, y + s * 0.64); ctx.lineTo(x + s * 0.74, y + s * 0.64); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = Math.max(1.5, s * 0.04);
+  ctx.beginPath(); ctx.moveTo(x + s * 0.60, y + s * 0.16); ctx.quadraticCurveTo(x + s * 0.65, y + s * 0.10, x + s * 0.60, y + s * 0.02); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + s * 0.71, y + s * 0.18); ctx.quadraticCurveTo(x + s * 0.76, y + s * 0.12, x + s * 0.71, y + s * 0.05); ctx.stroke();
+}
+
+// Kartu putih dengan garis tipis + bayangan halus
+function _dashCard(ctx, x, y, w, h) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(20,83,45,0.08)';
+  ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+  _dashRoundRect(ctx, x, y, w, h, 20);
+  ctx.fillStyle = '#FFFFFF'; ctx.fill();
+  ctx.strokeStyle = '#E7E5E4'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.restore();
+}
+
+// Doodle mangkuk + nasi (dekorasi background sangat tipis)
+function _dashDoodle(ctx, cx, cy, size, rot, color) {
+  ctx.save();
+  ctx.translate(cx, cy); ctx.rotate(rot);
+  ctx.strokeStyle = color; ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(2, size * 0.06);
+  ctx.beginPath();
+  ctx.moveTo(-size * 0.5, 0);
+  ctx.lineTo(size * 0.5, 0);
+  ctx.arc(0, 0, size * 0.5, 0, Math.PI, false);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.ellipse(0, -size * 0.18, size * 0.22, size * 0.10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// Ilustrasi tray stainless 4 sekat (dipakai bila menu tanpa foto)
+function _dashDrawTray(ctx, x, y, w, h) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(20,83,45,0.18)';
+  ctx.shadowBlur = 26; ctx.shadowOffsetY = 12;
+  const steel = ctx.createLinearGradient(0, y, 0, y + h);
+  steel.addColorStop(0, '#F4F4F5'); steel.addColorStop(0.55, '#E4E4E7'); steel.addColorStop(1, '#D6D6D9');
+  _dashRoundRect(ctx, x, y, w, h, h * 0.11);
+  ctx.fillStyle = steel; ctx.fill();
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.strokeStyle = '#FBFBFB'; ctx.lineWidth = h * 0.035; ctx.stroke();
+  _dashRoundRect(ctx, x + w * 0.045, y + h * 0.09, w * 0.91, h * 0.82, h * 0.08);
+  ctx.fillStyle = '#DDDDE0'; ctx.fill();
+  const cx = x + w / 2, cy = y + h / 2;
+  ctx.strokeStyle = '#C7C7CB'; ctx.lineWidth = h * 0.035; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(cx, y + h * 0.09); ctx.lineTo(cx, y + h * 0.91); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + w * 0.07, cy); ctx.lineTo(x + w * 0.93, cy); ctx.stroke();
+
+  // Nasi (kiri-atas)
+  ctx.fillStyle = '#FDF6E3';
+  ctx.beginPath(); ctx.ellipse(x + w * 0.275, y + h * 0.32, w * 0.145, h * 0.11, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#FFFBF0';
+  ctx.beginPath(); ctx.ellipse(x + w * 0.275, y + h * 0.26, w * 0.14, h * 0.105, 0, 0, Math.PI * 2); ctx.fill();
+  // Ayam + telur (kiri-bawah)
+  ctx.fillStyle = '#C97F36';
+  ctx.beginPath(); ctx.arc(x + w * 0.36, y + h * 0.66, w * 0.064, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#E3AA63';
+  ctx.beginPath(); ctx.ellipse(x + w * 0.36, y + h * 0.62, w * 0.042, h * 0.045, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#F6E8D4';
+  ctx.beginPath(); ctx.ellipse(x + w * 0.34, y + h * 0.77, w * 0.022, h * 0.075, 0.45, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#FFFDF6';
+  ctx.beginPath(); ctx.arc(x + w * 0.20, y + h * 0.76, w * 0.027, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#F4C33F';
+  ctx.beginPath(); ctx.arc(x + w * 0.20, y + h * 0.76, w * 0.012, 0, Math.PI * 2); ctx.fill();
+  // Sayur + wortel (kanan-atas)
+  ctx.fillStyle = '#4C9A53';
+  ctx.beginPath(); ctx.arc(x + w * 0.70, y + h * 0.29, w * 0.04, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#57A85F';
+  ctx.beginPath(); ctx.arc(x + w * 0.74, y + h * 0.25, w * 0.045, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#4C9A53';
+  ctx.beginPath(); ctx.arc(x + w * 0.78, y + h * 0.29, w * 0.04, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3E7C45';
+  _dashRoundRect(ctx, x + w * 0.695, y + h * 0.34, w * 0.085, h * 0.04, h * 0.02); ctx.fill();
+  ctx.fillStyle = '#F97316';
+  ctx.beginPath(); ctx.arc(x + w * 0.83, y + h * 0.27, w * 0.022, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#FB8A3D';
+  ctx.beginPath(); ctx.arc(x + w * 0.855, y + h * 0.31, w * 0.019, 0, Math.PI * 2); ctx.fill();
+  // Buah (kanan-bawah)
+  ctx.fillStyle = '#F5D24C';
+  ctx.beginPath(); ctx.ellipse(x + w * 0.65, y + h * 0.65, w * 0.065, h * 0.045, -0.35, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#E3B93A'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.ellipse(x + w * 0.65, y + h * 0.65, w * 0.065, h * 0.045, -0.35, 0, Math.PI); ctx.stroke();
+  ctx.fillStyle = '#FBA64C';
+  ctx.beginPath(); ctx.arc(x + w * 0.80, y + h * 0.70, w * 0.042, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#FFDCAF';
+  ctx.beginPath(); ctx.arc(x + w * 0.80, y + h * 0.70, w * 0.03, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function _dashRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(x, y, w, h, r);
+  } else {
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+}
+
+function _dashWrapText(ctx, text, maxWidth) {
+  const words = String(text).split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  words.forEach(function(w) {
+    const t = line ? line + ' ' + w : w;
+    if (line && ctx.measureText(t).width > maxWidth) {
+      lines.push(line);
+      line = w;
+    } else {
+      line = t;
+    }
+  });
+  if (line) lines.push(line);
+  return lines;
+}
+
+function _dashDrawImageCover(ctx, img, x, y, w, h, r) {
+  ctx.save();
+  _dashRoundRect(ctx, x, y, w, h, r);
+  ctx.clip();
+  const ir = img.width / img.height;
+  const ar = w / h;
+  let sw, sh, sx = 0, sy = 0;
+  if (ir > ar) {
+    sh = img.height; sw = sh * ar; sx = (img.width - sw) / 2;
+  } else {
+    sw = img.width; sh = sw / ar; sy = (img.height - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  ctx.restore();
+}
+
+/**
  * animateDashboardCounts - Animasi count-up untuk elemen dengan class .dash-count.
  * Mendukung format angka default dan format Rupiah (data-format="idr").
  */

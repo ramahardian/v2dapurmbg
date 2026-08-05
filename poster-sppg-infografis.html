@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPPG Sukaluyu Tamansari — Poster Infografis Nilai Gizi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+<style>
+  :root{
+    --green-900:#14532D;
+    --green-700:#166534;
+    --green-600:#15803D;
+    --green-100:#EAF7EE;
+    --orange-500:#F97316;
+    --orange-400:#FB923C;
+    --ink:#1C1917;
+    --muted:#6B7280;
+    --line:#E7E5E4;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Inter',-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    background:#E5E4E1;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    padding:70px 24px 48px;
+    display:flex;justify-content:center;
+  }
+
+  /* ── Toolbar pratinjau (tidak ikut dalam gambar) ── */
+  .toolbar{
+    position:fixed;top:12px;left:50%;transform:translateX(-50%);
+    z-index:50;display:flex;align-items:center;gap:10px;
+    background:#fff;border:1px solid var(--line);border-radius:999px;
+    padding:8px 12px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:13px;
+  }
+  .toolbar b{color:var(--green-700);font-weight:700;white-space:nowrap;}
+  .toolbar select{
+    border:1px solid var(--line);border-radius:8px;padding:4px 8px;
+    font-family:inherit;font-size:12px;color:var(--ink);background:#fff;
+  }
+  .toolbar button{
+    border:none;border-radius:8px;background:var(--green-700);color:#fff;
+    font-family:inherit;font-size:12px;font-weight:600;padding:6px 14px;
+    cursor:pointer;transition:background .15s;
+  }
+  .toolbar button:hover{background:var(--green-900);}
+
+  #stage{transform:scale(var(--zoom,1));transform-origin:top center;margin:0 auto;}
+
+  /* ── Poster 1080 x 1350 ── */
+  .poster{
+    width:1080px;height:1350px;background:#fff;
+    position:relative;overflow:hidden;
+    display:flex;flex-direction:column;
+    box-shadow:0 24px 60px rgba(20,83,45,.22);
+  }
+
+  /* Doodle makanan sangat tipis di background */
+  .doodles{position:absolute;inset:0;pointer-events:none;color:var(--green-700);}
+  .doodles svg{position:absolute;opacity:.055;}
+  .doodles .c{color:var(--orange-500);}
+  .doodle-bowl{top:90px;left:60px;width:120px;transform:rotate(-12deg);}
+  .doodle-leaf{top:80px;right:70px;width:110px;transform:rotate(18deg);}
+  .doodle-apple{top:560px;left:40px;width:96px;transform:rotate(-20deg);}
+  .doodle-carrot{top:640px;right:46px;width:90px;transform:rotate(14deg);}
+  .doodle-grain{bottom:240px;left:90px;width:110px;transform:rotate(10deg);}
+  .doodle-leaf2{bottom:250px;right:80px;width:120px;transform:rotate(-16deg);}
+
+  .poster-inner{position:relative;flex:1;display:flex;flex-direction:column;padding:52px 64px 0;}
+
+  /* ── Header ── */
+  .poster-header{display:flex;align-items:center;justify-content:space-between;gap:20px;}
+  .brand{display:flex;align-items:center;gap:16px;}
+  .logo{width:74px;height:74px;flex-shrink:0;}
+  .brand-name{font-size:25px;font-weight:800;letter-spacing:2.5px;color:var(--green-900);line-height:1;}
+  .brand-sub{font-size:11px;font-weight:700;letter-spacing:3px;color:var(--orange-500);margin-top:5px;text-transform:uppercase;}
+  .tagline{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:1.2px;text-align:right;line-height:1.5;max-width:230px;}
+
+  /* ── Judul utama ── */
+  .title-block{margin-top:30px;}
+  .title-block h1{
+    font-size:56px;font-weight:800;letter-spacing:-1px;color:var(--green-900);line-height:1.05;
+  }
+  .badges{display:flex;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap;}
+  .badge{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:9px 18px;border-radius:999px;font-size:14px;font-weight:700;letter-spacing:.3px;
+  }
+  .badge svg{width:16px;height:16px;}
+  .badge-white{background:#fff;border:1.5px solid var(--green-600);color:var(--green-700);}
+  .badge-brand{background:linear-gradient(135deg,var(--green-600),var(--green-900));color:#fff;box-shadow:0 6px 16px rgba(21,101,45,.25);}
+  .badge-brand svg{color:var(--orange-400);}
+
+  /* ── Area tray ── */
+  .meal-area{
+    flex:1;display:flex;align-items:center;gap:16px;
+    padding:18px 0 8px;min-height:0;
+  }
+  .labels{width:252px;display:flex;flex-direction:column;gap:18px;}
+  .labels.left{align-items:flex-end;}
+  .labels.right{align-items:flex-start;}
+  .lbl{display:flex;align-items:center;gap:10px;width:100%;}
+  .lbl.right .arrow{order:-1;}
+  .arrow{flex-shrink:0;display:flex;align-items:center;}
+  .lbl-body{
+    background:#fff;border:1px solid var(--line);border-radius:14px;
+    padding:11px 15px;width:100%;
+    box-shadow:0 3px 10px rgba(20,83,45,.07);
+  }
+  .lbl-cat{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:var(--ink);}
+  .lbl-cat .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .dot-green{background:var(--green-600);}
+  .dot-orange{background:var(--orange-500);}
+  .lbl-desc{font-size:13px;color:var(--muted);margin-top:3px;font-weight:500;}
+  .lbl-desc b{color:var(--ink);font-weight:700;}
+  .tray-wrap{flex:1;min-width:0;display:flex;justify-content:center;align-items:center;}
+  .tray-wrap svg{width:100%;max-width:680px;height:auto;}
+
+  /* ── Kartu bawah ── */
+  .bottom{display:flex;gap:24px;margin-bottom:30px;}
+  .card{
+    background:#fff;border:1px solid var(--line);border-radius:20px;
+    padding:20px 24px;box-shadow:0 4px 14px rgba(20,83,45,.06);
+  }
+  .catatan{flex:1.12;}
+  .nutri{flex:1;}
+  .card-title{
+    display:flex;align-items:center;gap:10px;
+    font-size:15px;font-weight:800;color:var(--green-900);
+    letter-spacing:.3px;margin-bottom:14px;
+  }
+  .card-title .title-dot{width:11px;height:11px;border-radius:50%;background:var(--orange-500);flex-shrink:0;}
+  .card-title .title-dot.green{background:var(--green-600);}
+  .card-title .per{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.5px;}
+  .catatan-list{list-style:none;}
+  .catatan-list li{
+    position:relative;padding:7px 0 7px 26px;
+    font-size:13px;color:#44403C;line-height:1.5;font-weight:500;
+  }
+  .catatan-list li::before{
+    content:"";position:absolute;left:2px;top:13px;
+    width:8px;height:8px;border-radius:50%;background:var(--orange-500);
+  }
+  .nutri table{width:100%;border-collapse:collapse;}
+  .nutri td{padding:8.5px 2px;font-size:13px;border-bottom:1px solid #F1EFEC;}
+  .nutri tr:last-child td{border-bottom:none;}
+  .nutri td:first-child{color:var(--muted);font-weight:500;}
+  .nutri td:last-child{text-align:right;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;}
+
+  /* ── Footer ── */
+  .poster-footer{
+    background:linear-gradient(135deg,var(--green-700),var(--green-900));
+    border-radius:26px 26px 0 0;
+    padding:26px 64px 28px;
+    display:flex;align-items:center;justify-content:space-between;gap:20px;
+  }
+  .foot-brand{display:flex;align-items:center;gap:12px;}
+  .foot-brand .logo{width:44px;height:44px;}
+  .foot-brand .brand-name{color:#fff;font-size:16px;letter-spacing:1.5px;}
+  .foot-brand .brand-sub{color:var(--orange-400);font-size:9px;letter-spacing:2px;margin-top:4px;}
+  .foot-contacts{display:flex;align-items:center;gap:22px;}
+  .foot-item{display:flex;align-items:center;gap:8px;color:#fff;font-size:12.5px;font-weight:500;white-space:nowrap;}
+  .foot-item svg{width:18px;height:18px;color:var(--orange-400);flex-shrink:0;}
+  .foot-divider{width:1px;height:46px;background:rgba(255,255,255,.25);}
+  .foot-social{display:flex;align-items:center;gap:12px;}
+  .soc{
+    width:38px;height:38px;border-radius:50%;
+    background:rgba(255,255,255,.14);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;transition:background .15s;
+  }
+  .soc svg{width:19px;height:19px;}
+
+  @media print{
+    body{background:#fff;padding:0;}
+    .toolbar{display:none;}
+    #stage{transform:none;}
+    .poster{box-shadow:none;}
+    @page{size:1080px 1350px;margin:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <b>SPPG Poster 1080×1350</b>
+  <label style="display:flex;align-items:center;gap:6px;color:#444;">
+    Zoom
+    <select id="zoom" onchange="document.getElementById('stage').style.setProperty('--zoom',this.value)">
+      <option value="1" selected>100%</option>
+      <option value="0.8">80%</option>
+      <option value="0.6">60%</option>
+    </select>
+  </label>
+  <button onclick="downloadPng()">Unduh PNG</button>
+</div>
+
+<div id="stage">
+<div id="poster" class="poster">
+
+  <!-- Background doodles sangat tipis -->
+  <div class="doodles">
+    <svg class="doodle-bowl" viewBox="0 0 24 24" fill="currentColor"><path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M2 11h20" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+    <svg class="doodle-leaf" viewBox="0 0 24 24" fill="currentColor"><path d="M11 20A7 7 0 0 1 4 13c0-4 3-8 9-9 0 6-1 11-2 16z"/></svg>
+    <svg class="doodle-apple c" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="13" r="8"/><path d="M12 5c0-2 1-3 3-3-1 2-1 3 1 4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+    <svg class="doodle-carrot c" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4 4 16a4 4 0 0 0 4 4c2-5 5-9 4-16z"/><path d="M12 4l3-2"/></svg>
+    <svg class="doodle-grain" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c2 4 4 8 4 13 0 3-2 5-4 5s-4-2-4-5c0-5 2-9 4-13z"/></svg>
+    <svg class="doodle-leaf2" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6 22 3 17 3 12 3 6 7 3 12 2c0 6 1 12 0 20z"/><path d="M13 12c1-2 3-4 7-4" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+  </div>
+
+  <div class="poster-inner">
+
+    <!-- Header -->
+    <header class="poster-header">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 74 74">
+          <defs>
+            <linearGradient id="lgMark" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#15803D"/>
+              <stop offset="1" stop-color="#14532D"/>
+            </linearGradient>
+          </defs>
+          <rect x="3" y="3" width="68" height="68" rx="20" fill="url(#lgMark)"/>
+          <path d="M37 22c5-6 14-8 17-1-8 1-14 4-16 10-2-6-9-9-17-10 3-7 12-5 16 1z" fill="#FDBA74"/>
+          <path d="M24 46h26a13 13 0 0 1-26 0z" fill="#fff"/>
+          <path d="M19 46h36" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M44 14c1.5-2.5 1.5-4.5 0-7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>
+          <path d="M50 16c1.5-2.5 1.5-4.5 0-7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".5"/>
+        </svg>
+        <div>
+          <div class="brand-name">SPPG</div>
+          <div class="brand-sub">Sukaluyu&nbsp;Tamansari</div>
+        </div>
+      </div>
+      <div class="tagline">Partner Nutrisi &amp; Gaya Hidup Sehat</div>
+    </header>
+
+    <!-- Judul -->
+    <section class="title-block">
+      <h1>Informasi Nilai Gizi</h1>
+      <div class="badges">
+        <span class="badge badge-white">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          Menu MBG
+        </span>
+        <span class="badge badge-brand">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 20A7 7 0 0 1 4 13c0-4 3-8 9-9 0 6-1 11-2 16z"/></svg>
+          Makanan Bergizi Gratis
+        </span>
+      </div>
+    </section>
+
+    <!-- Tray tengah + label panah -->
+    <section class="meal-area">
+
+      <div class="labels left">
+        <div class="lbl">
+          <div class="lbl-body">
+            <div class="lbl-cat"><span class="dot dot-green"></span>Protein</div>
+            <div class="lbl-desc">Ayam Goreng &mdash; <b>75 g</b></div>
+          </div>
+          <span class="arrow"><svg width="28" height="16" viewBox="0 0 28 16" fill="none"><path d="M0 8h21M17 2l6 6-6 6" stroke="#2D6A4F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="lbl">
+          <div class="lbl-body">
+            <div class="lbl-cat"><span class="dot dot-orange"></span>Karbohidrat</div>
+            <div class="lbl-desc">Nasi Putih &mdash; <b>150 g</b></div>
+          </div>
+          <span class="arrow"><svg width="28" height="16" viewBox="0 0 28 16" fill="none"><path d="M0 8h21M17 2l6 6-6 6" stroke="#C2652D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="lbl">
+          <div class="lbl-body">
+            <div class="lbl-cat"><span class="dot dot-green"></span>Lauk</div>
+            <div class="lbl-desc">Tahu Bacem &mdash; <b>50 g</b></div>
+          </div>
+          <span class="arrow"><svg width="28" height="16" viewBox="0 0 28 16" fill="none"><path d="M0 8h21M17 2l6 6-6 6" stroke="#2D6A4F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+
+      <div class="tray-wrap">
+        <!-- Tray stainless 4 sekat -->
+        <svg viewBox="0 0 720 400" role="img" aria-label="Tray makanan 4 sekat">
+          <defs>
+            <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#F4F4F5"/>
+              <stop offset=".55" stop-color="#E4E4E7"/>
+              <stop offset="1" stop-color="#D6D6D9"/>
+            </linearGradient>
+            <linearGradient id="steelRim" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#FBFBFB"/>
+              <stop offset="1" stop-color="#E2E2E5"/>
+            </linearGradient>
+            <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="12"/>
+              <feOffset dy="8"/>
+              <feComponentTransfer><feFuncA type="linear" slope="0.28"/></feComponentTransfer>
+              <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="foodShadow" x="-40%" y="-40%" width="180%" height="180%">
+              <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#14532D" flood-opacity=".16"/>
+            </filter>
+          </defs>
+
+          <g filter="url(#softShadow)">
+            <rect x="16" y="34" width="688" height="332" rx="40" fill="url(#steel)"/>
+          </g>
+          <rect x="16" y="34" width="688" height="332" rx="40" fill="none" stroke="url(#steelRim)" stroke-width="9"/>
+          <rect x="42" y="60" width="636" height="280" rx="30" fill="#DDDDE0"/>
+
+          <!-- pembatas 4 sekat -->
+          <line x1="360" y1="64" x2="360" y2="336" stroke="#C7C7CB" stroke-width="11" stroke-linecap="round"/>
+          <line x1="46" y1="200" x2="674" y2="200" stroke="#C7C7CB" stroke-width="11" stroke-linecap="round"/>
+
+          <!-- Nasi (TL) -->
+          <g filter="url(#foodShadow)">
+            <ellipse cx="198" cy="128" rx="104" ry="42" fill="#FDF6E3"/>
+            <ellipse cx="198" cy="104" rx="100" ry="40" fill="#FFFBF0"/>
+            <path d="M198 64c-2-4-2-7 0-9" stroke="#E9DDB8" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M150 66c-2-4-2-7 0-9" stroke="#E9DDB8" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M246 66c-2-4-2-7 0-9" stroke="#E9DDB8" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </g>
+
+          <!-- Ayam (BL) -->
+          <g filter="url(#foodShadow)">
+            <circle cx="258" cy="258" r="46" fill="#C97F36"/>
+            <circle cx="258" cy="258" r="46" fill="none" stroke="#B06E2B" stroke-width="3"/>
+            <ellipse cx="258" cy="243" rx="30" ry="17" fill="#E3AA63"/>
+            <path d="M214 282a40 40 0 0 0 44 18" stroke="#B06E2B" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <rect x="230" y="292" width="15" height="28" rx="7.5" fill="#F6E8D4" transform="rotate(26 237 306)"/>
+            <circle cx="150" cy="296" r="19" fill="#FFFDF6"/>
+            <circle cx="150" cy="296" r="19" fill="none" stroke="#EFEAE2" stroke-width="3"/>
+            <circle cx="150" cy="296" r="9" fill="#F4C33F"/>
+          </g>
+
+          <!-- Sayur (TR) -->
+          <g filter="url(#foodShadow)">
+            <circle cx="500" cy="112" r="27" fill="#4C9A53"/>
+            <circle cx="530" cy="96" r="31" fill="#57A85F"/>
+            <circle cx="560" cy="112" r="27" fill="#4C9A53"/>
+            <rect x="498" y="132" width="60" height="16" rx="8" fill="#3E7C45"/>
+            <circle cx="590" cy="102" r="16" fill="#F97316"/>
+            <circle cx="614" cy="116" r="14" fill="#FB8A3D"/>
+            <circle cx="600" cy="134" r="12" fill="#FDBA74"/>
+          </g>
+
+          <!-- Buah (BR) -->
+          <g filter="url(#foodShadow)">
+            <path d="M470 252q48-30 94-4-7 28-48 42-30 12-46-14z" fill="#F5D24C"/>
+            <path d="M470 252q48-30 94-4" stroke="#E3B93A" stroke-width="3" fill="none"/>
+            <circle cx="596" cy="276" r="31" fill="#FBA64C"/>
+            <circle cx="596" cy="276" r="23" fill="#FFDCAF"/>
+            <path d="M596 253a23 23 0 0 1 16 39" stroke="#FBA64C" stroke-width="2.6" fill="none"/>
+            <path d="M596 299a23 23 0 0 1-16-39" stroke="#FBA64C" stroke-width="2.6" fill="none"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="labels right">
+        <div class="lbl right">
+          <span class="arrow"><svg width="28" height="16" viewBox="0 0 28 16" fill="none"><path d="M28 8H7M11 2l-6 6 6 6" stroke="#C2652D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div class="lbl-body">
+            <div class="lbl-cat"><span class="dot dot-orange"></span>Buah</div>
+            <div class="lbl-desc">Pisang Ambon &mdash; <b>100 g</b></div>
+          </div>
+        </div>
+        <div class="lbl right">
+          <span class="arrow"><svg width="28" height="16" viewBox="0 0 28 16" fill="none"><path d="M28 8H7M11 2l-6 6 6 6" stroke="#2D6A4F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div class="lbl-body">
+            <div class="lbl-cat"><span class="dot dot-green"></span>Sayuran</div>
+            <div class="lbl-desc">Tumis Buncis &mdash; <b>80 g</b></div>
+          </div>
+        </div>
+        <div class="lbl right">
+          <span class="arrow"><svg width="28" height="16" viewBox="0 0 28 16" fill="none"><path d="M28 8H7M11 2l-6 6 6 6" stroke="#C2652D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div class="lbl-body">
+            <div class="lbl-cat"><span class="dot dot-orange"></span>Pelengkap</div>
+            <div class="lbl-desc">Telur &mdash; <b>50 g</b></div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Catatan + Tabel gizi -->
+    <section class="bottom">
+      <div class="card catatan">
+        <h3 class="card-title"><span class="title-dot"></span>Catatan</h3>
+        <ul class="catatan-list">
+          <li>Karbohidrat, lauk, sayur, dan buah dalam satu porsi</li>
+          <li>Protein hewani &amp; nabati untuk tumbuh kembang</li>
+          <li>Serat tinggi membantu kesehatan pencernaan</li>
+          <li>Diolah higienis sesuai standar gizi MBG</li>
+        </ul>
+      </div>
+      <div class="card nutri">
+        <h3 class="card-title"><span class="title-dot green"></span>Informasi Gizi<span class="per">per porsi</span></h3>
+        <table>
+          <tbody>
+            <tr><td>Energi</td><td>650 kkal</td></tr>
+            <tr><td>Protein</td><td>32 g</td></tr>
+            <tr><td>Lemak</td><td>18 g</td></tr>
+            <tr><td>Karbohidrat</td><td>90 g</td></tr>
+            <tr><td>Serat</td><td>8 g</td></tr>
+            <tr><td>Natrium</td><td>420 mg</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="poster-footer">
+    <div class="foot-brand">
+      <svg class="logo" viewBox="0 0 74 74">
+        <defs>
+          <linearGradient id="lgMark2" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#22A55E"/>
+            <stop offset="1" stop-color="#166534"/>
+          </linearGradient>
+        </defs>
+        <rect x="3" y="3" width="68" height="68" rx="20" fill="url(#lgMark2)"/>
+        <path d="M37 22c5-6 14-8 17-1-8 1-14 4-16 10-2-6-9-9-17-10 3-7 12-5 16 1z" fill="#FDBA74"/>
+        <path d="M24 46h26a13 13 0 0 1-26 0z" fill="#fff"/>
+        <path d="M19 46h36" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="brand-name">SPPG</div>
+        <div class="brand-sub">Sukaluyu Tamansari</div>
+      </div>
+    </div>
+
+    <div class="foot-contacts">
+      <div class="foot-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <span>+62 xxx xxxx xxxx</span>
+      </div>
+      <div class="foot-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span>www.namabrand.com</span>
+      </div>
+      <div class="foot-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+        <span>info@namabrand.com</span>
+      </div>
+    </div>
+
+    <div class="foot-divider"></div>
+
+    <div class="foot-social">
+      <span class="soc" title="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></svg></span>
+      <span class="soc" title="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></span>
+      <span class="soc" title="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.65-4.7A8.5 8.5 0 1 1 9 20.7L3 21z"/></svg></span>
+    </div>
+  </footer>
+
+</div>
+</div>
+
+<script>
+  function downloadPng() {
+    var node = document.getElementById('poster');
+    var btn = document.querySelector('.toolbar button');
+    if (btn) { btn.disabled = true; btn.textContent = 'Memproses...'; }
+    htmlToImage.toPng(node, { pixelRatio: 1, cacheBust: true })
+      .then(function (dataUrl) {
+        var a = document.createElement('a');
+        a.download = 'sppg-sukaluyu-tamansari-infografis-gizi.png';
+        a.href = dataUrl;
+        a.click();
+        if (btn) { btn.disabled = false; btn.textContent = 'Unduh PNG'; }
+      })
+      .catch(function (err) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Unduh PNG'; }
+        alert('Gagal mengekspor gambar. Periksa koneksi internet lalu coba lagi.\n\n' + (err && err.message));
+      });
+  }
+</script>
+</body>
+</html>

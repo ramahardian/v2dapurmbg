@@ -63,14 +63,22 @@ router.get('/dashboard', async (req, res) => {
         const hk = Number(mi.hari_ke);
         if (!menuByHari[hk]) menuByHari[hk] = mi;
       }
+      const fmtDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       for (let h = 1; h <= totalHari; h++) {
         const mi = menuByHari[h];
+        let tanggal = null;
+        if (s.tanggal_mulai) {
+          const d = new Date(s.tanggal_mulai);
+          d.setDate(d.getDate() + (h - 1));
+          tanggal = fmtDate(d);
+        }
         menuAktifList.push({
           siklus_nama: s.nama,
           kategori: s.kategori_penerima || '',
           jumlah_porsi: Number(s.jumlah_porsi || 0),
           hari_ke: h,
           total_hari: totalHari,
+          tanggal: tanggal,
           menu_id: mi ? mi.menu_id : null,
           menu_nama: mi ? (mi.menu_nama || '-') : null,
           foto: mi ? (mi.foto || null) : null,
