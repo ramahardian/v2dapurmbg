@@ -41,6 +41,7 @@ router.get('/dashboard', async (req, res) => {
       [req.user.tenant_id]
     );
     let menuAktifHariIni = null;
+    let menuAktifList = [];
     if (siklusAktif.length > 0) {
       const s = siklusAktif[0];
       const totalHari = Math.max(1, Number(s.total_hari || 7));
@@ -51,27 +52,37 @@ router.get('/dashboard', async (req, res) => {
         const diffDays = Math.floor((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(mulai.getFullYear(), mulai.getMonth(), mulai.getDate())) / 86400000);
         hariKe = diffDays >= 0 ? (diffDays % totalHari) + 1 : 1;
       }
-      const [menuItem] = await db.query(
-        `SELECT menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, foto
-         FROM siklus_menu_item WHERE siklus_id=? AND hari_ke=? LIMIT 1`,
-        [s.id, hariKe]
+      // Muat menu SEMUA hari sekaligus untuk navigasi prev/next di dashboard
+      const [menuItems] = await db.query(
+        `SELECT hari_ke, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, foto
+         FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke`,
+        [s.id]
       );
-      menuAktifHariIni = {
-        siklus_nama: s.nama,
-        kategori: s.kategori_penerima || '',
-        jumlah_porsi: Number(s.jumlah_porsi || 0),
-        hari_ke: hariKe,
-        total_hari: totalHari,
-        menu_id: menuItem.length ? menuItem[0].menu_id : null,
-        menu_nama: menuItem.length ? (menuItem[0].menu_nama || '-') : null,
-        foto: menuItem.length ? (menuItem[0].foto || null) : null,
-        porsi_item: menuItem.length ? Number(menuItem[0].jumlah_porsi || 0) : 0,
-        kalori: menuItem.length ? Number(menuItem[0].kalori || 0) : 0,
-        protein: menuItem.length ? Number(menuItem[0].protein || 0) : 0,
-        karbohidrat: menuItem.length ? Number(menuItem[0].karbohidrat || 0) : 0,
-        lemak: menuItem.length ? Number(menuItem[0].lemak || 0) : 0,
-        serat: menuItem.length ? Number(menuItem[0].serat || 0) : 0
-      };
+      const menuByHari = {};
+      for (const mi of menuItems) {
+        const hk = Number(mi.hari_ke);
+        if (!menuByHari[hk]) menuByHari[hk] = mi;
+      }
+      for (let h = 1; h <= totalHari; h++) {
+        const mi = menuByHari[h];
+        menuAktifList.push({
+          siklus_nama: s.nama,
+          kategori: s.kategori_penerima || '',
+          jumlah_porsi: Number(s.jumlah_porsi || 0),
+          hari_ke: h,
+          total_hari: totalHari,
+          menu_id: mi ? mi.menu_id : null,
+          menu_nama: mi ? (mi.menu_nama || '-') : null,
+          foto: mi ? (mi.foto || null) : null,
+          porsi_item: mi ? Number(mi.jumlah_porsi || 0) : 0,
+          kalori: mi ? Number(mi.kalori || 0) : 0,
+          protein: mi ? Number(mi.protein || 0) : 0,
+          karbohidrat: mi ? Number(mi.karbohidrat || 0) : 0,
+          lemak: mi ? Number(mi.lemak || 0) : 0,
+          serat: mi ? Number(mi.serat || 0) : 0
+        });
+      }
+      menuAktifHariIni = menuAktifList[hariKe - 1] || (menuAktifList.length ? menuAktifList[0] : null);
     }
     
     const totalBudget = Number(budget[0]?.total_budget || 0);
@@ -113,7 +124,8 @@ router.get('/dashboard', async (req, res) => {
       grafik_produksi: grafikProduksi,
       grafik_max_porsi: maxPorsi,
       grafik_total_7hari: grafikProduksi.reduce((s, g) => s + g.porsi, 0),
-      menu_aktif: menuAktifHariIni
+      menu_aktif: menuAktifHariIni,
+      menu_aktif_list: menuAktifList
     };
     
     res.render('partials/dashboard', { 

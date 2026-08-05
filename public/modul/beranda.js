@@ -11,10 +11,93 @@ async function renderDashboard() {
     animateDashboardCounts(c);
     loadOnlineUsers();
     startOnlineUsersAutoRefresh();
+    dashMenuRender();
   } catch (err) {
     console.error('Dashboard error:', err);
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat dashboard: ${err.message}</div>`;
   }
+}
+
+/**
+ * dashMenuRender + dashMenuNav — Navigasi prev/next "Menu Aktif Hari Ini".
+ * Data semua hari disuntik sebagai JSON di <script type="application/json" id="dash-menu-data">.
+ */
+function escDashMenu(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function dashMenuGetList() {
+  const el = document.getElementById('dash-menu-data');
+  if (!el) return [];
+  try { const p = JSON.parse(el.textContent || '[]'); return Array.isArray(p) ? p : []; } catch (e) { return []; }
+}
+
+function dashMenuNav(dir) {
+  const list = dashMenuGetList();
+  if (!list.length) return;
+  if (window._dashMenuIdx == null) window._dashMenuIdx = 0;
+  const next = window._dashMenuIdx + dir;
+  if (next < 0 || next >= list.length) return;
+  window._dashMenuIdx = next;
+  dashMenuRender();
+}
+
+function dashMenuRender() {
+  const list = dashMenuGetList();
+  const body = document.getElementById('dash-menu-body');
+  const hariEl = document.getElementById('dash-menu-hari');
+  const totalEl = document.getElementById('dash-menu-total');
+  const prevBtn = document.getElementById('dash-menu-prev');
+  const nextBtn = document.getElementById('dash-menu-next');
+  if (!body || !list.length) return;
+
+  if (window._dashMenuIdx == null) {
+    const curHari = parseInt((hariEl && hariEl.textContent) || '1', 10) || 1;
+    window._dashMenuIdx = Math.max(0, Math.min(list.length - 1, curHari - 1));
+  }
+  let i = Math.max(0, Math.min(list.length - 1, window._dashMenuIdx));
+  window._dashMenuIdx = i;
+  const m = list[i];
+
+  if (hariEl) hariEl.textContent = m.hari_ke;
+  if (totalEl) totalEl.textContent = m.total_hari;
+  if (prevBtn) prevBtn.disabled = i <= 0;
+  if (nextBtn) nextBtn.disabled = i >= list.length - 1;
+
+  let jn = [];
+  try { const p = JSON.parse(m.kategori || '[]'); if (Array.isArray(p)) jn = p; } catch (e) {}
+  const jnLabel = jn.length > 1 ? jn[0] + ' +' + (jn.length - 1) : (jn[0] || '');
+
+  let h = '<div class="space-y-4"><div class="flex flex-col sm:flex-row gap-4">';
+  if (m.foto) {
+    h += '<div class="shrink-0 w-full sm:w-32 h-40 sm:h-28 rounded-xl overflow-hidden border border-stone-200 bg-stone-50">';
+    h += '<img src="' + escDashMenu(m.foto) + '" alt="Foto menu" class="w-full h-full object-cover">';
+    h += '</div>';
+  }
+  h += '<div class="flex flex-1 flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">';
+  h += '<div class="min-w-0">';
+  h += '<div class="flex items-center gap-2 flex-wrap mb-1.5">';
+  h += '<span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-md px-2 py-0.5">' + escDashMenu(m.siklus_nama || '') + '</span>';
+  if (jnLabel) h += '<span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">' + escDashMenu(jnLabel) + '</span>';
+  h += '</div>';
+  h += '<div class="text-lg font-bold text-stone-800 leading-relaxed text-pretty">' + escDashMenu(m.menu_nama || 'Menu belum diisi') + '</div>';
+  h += '</div>';
+  h += '<div class="shrink-0">';
+  h += '<div class="text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-1">Porsi</div>';
+  h += '<div class="mono text-sm font-bold text-stone-700">' + Number(m.porsi_item || 0).toLocaleString('id-ID');
+  if (Number(m.jumlah_porsi) > 0) h += ' / ' + Number(m.jumlah_porsi).toLocaleString('id-ID') + ' porsi';
+  h += '</div>';
+  h += '</div></div></div>';
+  if (Number(m.kalori) > 0) {
+    h += '<div class="grid grid-cols-4 gap-2 border-t border-stone-100 pt-3">';
+    h += '<div class="text-center"><div class="mono text-sm font-bold text-orange-700">' + Number(m.kalori).toLocaleString('id-ID') + '</div><div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Kalori</div></div>';
+    h += '<div class="text-center"><div class="mono text-sm font-bold text-blue-700">' + Number(m.protein || 0).toLocaleString('id-ID') + 'g</div><div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Protein</div></div>';
+    h += '<div class="text-center"><div class="mono text-sm font-bold text-amber-700">' + Number(m.karbohidrat || 0).toLocaleString('id-ID') + 'g</div><div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Karbo</div></div>';
+    h += '<div class="text-center"><div class="mono text-sm font-bold text-rose-700">' + Number(m.lemak || 0).toLocaleString('id-ID') + 'g</div><div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Lemak</div></div>';
+    h += '</div>';
+  }
+  h += '</div>';
+  body.innerHTML = h;
 }
 
 /**
