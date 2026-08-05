@@ -317,7 +317,7 @@ async function buildPerencanaanData({ tenant_id, query }) {
      FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
     [tenant_id]
   );
-  const { pmByDisplay } = buildPmDisplayMaps(pmRows);
+  const { pmByDisplay, pmByDisplayBesar, pmByDisplayKecil } = buildPmDisplayMaps(pmRows);
   // Filter by siklus target jenjang — 'Posyandu' dipecah menjadi Bumil/Busui + Balita
   const siklusTargetJenjang = new Set();
   for (const s of siklusList) {
@@ -352,7 +352,7 @@ async function buildPerencanaanData({ tenant_id, query }) {
       inflating: factor !== null && factor > 1.2,
     };
   })();
-  syncPorsiDenganSiklus(siklusList, activeJenjang, pmByDisplay);
+  syncPorsiDenganSiklus(siklusList, activeJenjang, pmByDisplay, pmByDisplayBesar, pmByDisplayKecil);
 
   // SP referensi
   let spRefMap = {};
@@ -554,7 +554,9 @@ async function buildPerencanaanData({ tenant_id, query }) {
   }
 
   const totalPorsi = Object.values(filteredPmMap).reduce((s, v) => s + (Number(v) || 0), 0);
-  return { jenjang_list: activeJenjang, hari, pm_map: filteredPmMap, tanggal_mulai: mulaiStr, tanggal_selesai: selesaiStr, total_porsi: totalPorsi, sync: syncInfo };
+  const totalBesar = activeJenjang.reduce((s, j) => s + (Number(pmByDisplayBesar[j]) || 0), 0);
+  const totalKecil = activeJenjang.reduce((s, j) => s + (Number(pmByDisplayKecil[j]) || 0), 0);
+  return { jenjang_list: activeJenjang, hari, pm_map: filteredPmMap, tanggal_mulai: mulaiStr, tanggal_selesai: selesaiStr, total_porsi: totalPorsi, total_besar: totalBesar, total_kecil: totalKecil, sync: syncInfo };
 }
 
 /**
@@ -689,6 +691,159 @@ router.get('/siklus/laporan/perencanaan/export', async (req, res) => {
     await wb.xlsx.write(res);
   } catch (err) {
     console.error('Export Perencanaan Final error:', err);
+    if (!res.headersSent) res.status(500).json({ error: err.message });
+    else res.end();
+  }
+});
+
+/**
+ * GET /siklus/laporan/kebutuhan-pangan/export
+ * Export Perhitungan Kebutuhan Pangan per hari (format contoh:
+ * MENU | Bahan Pangan | Berat Bersih (gram) | Persen BDD | Berat Kotor (gram) |
+ * Jumlah <kategori> | Kebutuhan Bahan Pangan (kg)) dalam satu workbook berisi
+ * 4 sheet: Bumil Busui, Balita, Porsi Besar, Porsi Kecil.
+ */
+router.get('/siklus/laporan/kebutuhan-pangan/export', async (req, res) => {
+  try {
+    const data = await buildPerencanaanData({ tenant_id: req.user.tenant_id, query: req.query });
+    const days = (data.hari || []).filter(d => d.bahan && d.bahan.length);
+    if (!days.length) return res.status(400).json({ error: 'Tidak ada data kebutuhan pangan untuk diexport. Isi menu & bahan siklus terlebih dahulu.' });
+
+    const pm = data.pm_map || {};
+    const refJenjang = (data.jenjang_list && data.jenjang_list[0]) || null;
+    const totalBesar = Number(data.total_besar) || 0;
+    const totalKecil = Number(data.total_kecil) || 0;
+
+    // ── Definisi 4 sheet ──
+    const sheets = [
+      { name: 'Bumil Busui', title: 'Perhitungan Kebutuhan Pangan Bumil Busui', jumlahLabel: 'Jumlah Bumil Busui', count: Number(pm['Bumil/Busui']) || 0, mode: 'jenjang', jenjang: 'Bumil/Busui' },
+      { name: 'Balita', title: 'Perhitungan Kebutuhan Pangan Balita', jumlahLabel: 'Jumlah Balita', count: Number(pm['Balita']) || 0, mode: 'jenjang', jenjang: 'Balita' },
+      { name: 'Porsi Besar', title: 'Perhitungan Kebutuhan Pangan Porsi Besar', jumlahLabel: 'Jumlah Porsi Besar', count: totalBesar, mode: 'aggregate', jenjang: null },
+      { name: 'Porsi Kecil', title: 'Perhitungan Kebutuhan Pangan Porsi Kecil', jumlahLabel: 'Jumlah Porsi Kecil', count: totalKecil, mode: 'aggregate', jenjang: null },
+    ];
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'MBG';
+    wb.created = new Date();
+
+    // Styling dasar
+    const borderThin = { style: 'thin', color: { argb: 'FFC9C9C9' } };
+    const borderBox = { top: borderThin, left: borderThin, bottom: borderThin, right: borderThin };
+    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+    const menuFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+
+    for (const cfg of sheets) {
+      const ws = wb.addWorksheet(cfg.name);
+      ws.columns = [
+        { width: 10 }, { width: 28 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 18 }, { width: 20 }
+      ];
+
+      // ── Judul (row 1, merged) ──
+      ws.mergeCells(1, 1, 1, 7);
+      const titleCell = ws.getCell(1, 1);
+      titleCell.value = cfg.title;
+      titleCell.font = { bold: true, size: 14 };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getRow(1).height = 26;
+
+      // ── Header (row 2) ──
+      const headers = ['MENU', 'Bahan Pangan', 'Berat Bersih (gram)', 'Persen BDD', 'Berat Kotor (gram)', cfg.jumlahLabel, 'Kebutuhan Bahan Pangan (kg)'];
+      const hRow = ws.getRow(2);
+      headers.forEach((h, i) => {
+        const cell = hRow.getCell(i + 1);
+        cell.value = h;
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = headerFill;
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.border = borderBox;
+      });
+      hRow.height = 32;
+
+      // ── Baris data per hari ──
+      let row = 3;
+      let anyData = false;
+      for (let d = 0; d < days.length; d++) {
+        const day = days[d];
+        const label = tkFmtTanggal(day.header_tanggal, day.hari_nama);
+        const menuNo = 'MENU ' + (d + 1);
+
+        // Kategori tanpa penerima → cukup catatan kosong (jangan deretan 0)
+        if (!cfg.count) continue;
+
+        // Kumpulkan baris bahan untuk kategori ini
+        const bahanRows = [];
+        for (const b of day.bahan) {
+          const pj = b.per_jenjang || {};
+          let rec = null;
+          if (cfg.mode === 'jenjang') {
+            rec = pj[cfg.jenjang] || null;
+          } else {
+            rec = (refJenjang && pj[refJenjang]) || pj[Object.keys(pj)[0]] || null;
+          }
+          if (!rec) continue;
+          const beratBersih = Number(rec.berat_bersih) || 0;
+          const persenBdd = Number(rec.persen_bdd) || 100;
+          const beratKotor = Number(rec.berat_kotor) || 0;
+          const jumlah = cfg.count || 0;
+          const kg = cfg.mode === 'jenjang'
+            ? (Number(rec.kebutuhan_kg) || 0)
+            : Math.round((beratKotor * jumlah / 1000) * 100) / 100;
+          bahanRows.push({ nama: b.nama_display || b.nama || '-', beratBersih, persenBdd, beratKotor, jumlah, kg });
+        }
+        if (!bahanRows.length) continue;
+        anyData = true;
+
+        // Baris MENU
+        const menuRow = ws.getRow(row);
+        menuRow.height = 20;
+        const c1 = menuRow.getCell(1); c1.value = menuNo;
+        const c2 = menuRow.getCell(2); c2.value = label;
+        for (let c = 1; c <= 7; c++) {
+          const cell = menuRow.getCell(c);
+          cell.fill = menuFill;
+          cell.border = borderBox;
+        }
+        c1.font = { bold: true };
+        c2.font = { bold: true };
+        row++;
+
+        // Baris bahan
+        for (const br of bahanRows) {
+          const r = ws.getRow(row);
+          r.getCell(1).value = '';
+          r.getCell(2).value = br.nama;
+          r.getCell(3).value = br.beratBersih;
+          r.getCell(4).value = br.persenBdd + '%';
+          r.getCell(5).value = br.beratKotor;
+          r.getCell(6).value = br.jumlah;
+          r.getCell(7).value = br.kg;
+          for (let c = 1; c <= 7; c++) {
+            const cell = r.getCell(c);
+            cell.border = borderBox;
+            cell.alignment = { vertical: 'middle' };
+          }
+          r.getCell(2).alignment = { vertical: 'middle', wrapText: true };
+          for (let c = 3; c <= 7; c++) r.getCell(c).alignment = { horizontal: 'right', vertical: 'middle' };
+          r.getCell(3).numFmt = '0.##';
+          r.getCell(5).numFmt = '0.##';
+          r.getCell(7).numFmt = '0.00';
+          row++;
+        }
+      }
+
+      if (!anyData) {
+        const note = ws.getCell(3, 2);
+        note.value = 'Belum ada penerima untuk kategori ini.';
+        note.font = { italic: true, color: { argb: 'FF9CA3AF' } };
+      }
+    }
+
+    const fileTag = data.tanggal_mulai || new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="Kebutuhan-Pangan-' + fileTag + '.xlsx"');
+    await wb.xlsx.write(res);
+  } catch (err) {
+    console.error('Export Kebutuhan Pangan error:', err);
     if (!res.headersSent) res.status(500).json({ error: err.message });
     else res.end();
   }

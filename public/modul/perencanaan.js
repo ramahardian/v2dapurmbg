@@ -446,10 +446,14 @@ function renderPncRekapPorsi(allData) {
   var kecilIcon = '<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14l-7 7-7-7"/><path d="M12 21V3"/></svg>';
 
   var html = '<div class="mb-6">';
-  html += '<div class="flex items-center gap-2 mb-3">';
+  html += '<div class="flex items-center gap-2 mb-3 flex-wrap">';
   html += '<svg class="w-5 h-5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>';
   html += '<span class="text-sm font-bold text-stone-700">Rekap Kebutuhan — Porsi Besar & Kecil</span>';
   html += '<span class="text-xs text-stone-400">(Semua jenjang digabung)</span>';
+  html += '<span class="flex-1"></span>';
+  html += '<button onclick="exportPncKebutuhanPangan()" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg shadow-sm transition-colors shrink-0" title="Export Kebutuhan Pangan per hari (4 sheet: Bumil Busui, Balita, Porsi Besar, Porsi Kecil)">';
+  html += '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export Kebutuhan Pangan XLSX';
+  html += '</button>';
   html += '</div>';
 
   // Section 1 — Porsi Besar & Kecil: 2 kolom sejajar (masing-masing 50%) di desktop,
@@ -579,6 +583,36 @@ function exportPncExcel(jenjang) {
   var fileName = 'Perencanaan Kebutuhan Pangan' + getPorsiLabel().replace(/ /g, '_') + '.xlsx';
   XLSX.utils.book_append_sheet(wb, ws, 'Perencanaan');
   XLSX.writeFile(wb, fileName);
+}
+
+/**
+ * exportPncKebutuhanPangan - Export Perhitungan Kebutuhan Pangan per hari
+ * (format contoh) dalam satu workbook 4 sheet: Bumil Busui, Balita,
+ * Porsi Besar, Porsi Kecil. Memakai siklus terpilih (filter).
+ */
+async function exportPncKebutuhanPangan() {
+  let url = '/api/siklus/laporan/kebutuhan-pangan/export';
+  if (_pncSiklusId) url += '?siklus_id=' + encodeURIComponent(_pncSiklusId);
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    if (!r.ok) {
+      let msg = 'Gagal export';
+      try { const j = await r.json(); msg = j.error || msg; } catch (e) { /* non-JSON */ }
+      showAlert(msg, 'warning');
+      return;
+    }
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Kebutuhan-Pangan.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    showAlert('Export Kebutuhan Pangan (4 sheet) berhasil diunduh', 'success');
+  } catch (err) {
+    showAlert('Gagal export: ' + err.message, 'error');
+  }
 }
 
 /**
