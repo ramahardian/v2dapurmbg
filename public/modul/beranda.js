@@ -925,11 +925,15 @@ async function loadOnlineHistory() {
   if (listEl) listEl.innerHTML = renderOhLoading();
 
   const uid = (document.getElementById('oh-user') || {}).value || '';
+  const q = new URLSearchParams({ days: String(ohCurrentRange) });
+  if (uid) q.set('user_id', uid);
   try {
-    const q = new URLSearchParams({ days: String(ohCurrentRange) });
-    if (uid) q.set('user_id', uid);
     const r = await fetch('/api/dashboard/online-history?' + q.toString(), { credentials: 'include' });
-    if (!r.ok) throw new Error('Failed');
+    if (!r.ok) {
+      let msg = 'Gagal memuat riwayat';
+      try { const e = await r.json(); if (e && e.error) msg = e.error; } catch (_) {}
+      throw new Error(msg);
+    }
     const d = await r.json();
     populateOhUserFilter(d.users);
     setText('oh-stat-total', d.total);
@@ -939,7 +943,22 @@ async function loadOnlineHistory() {
     if (summaryEl) summaryEl.innerHTML = renderOhSummary(d);
     if (listEl) listEl.innerHTML = renderOhEntries(d.entries);
   } catch (err) {
-    if (listEl) listEl.innerHTML = renderOhEmpty('Gagal memuat riwayat', true);
+    setTimeout(async () => {
+      try {
+        const r = await fetch('/api/dashboard/online-history?' + q.toString(), { credentials: 'include' });
+        if (!r.ok) throw new Error('Failed');
+        const d = await r.json();
+        populateOhUserFilter(d.users);
+        setText('oh-stat-total', d.total);
+        setText('oh-stat-login', d.logins);
+        setText('oh-stat-user', (d.users || []).length);
+        if (infoEl) infoEl.textContent = d.mulai ? `${d.mulai} → ${d.sampai}` : '';
+        if (summaryEl) summaryEl.innerHTML = renderOhSummary(d);
+        if (listEl) listEl.innerHTML = renderOhEntries(d.entries);
+      } catch (_) {
+        if (listEl) listEl.innerHTML = renderOhEmpty(err.message || 'Gagal memuat riwayat', true);
+      }
+    }, 1200);
   }
 }
 

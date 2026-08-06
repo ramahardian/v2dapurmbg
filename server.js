@@ -105,13 +105,19 @@ if (cluster.isMaster && WORKERS > 1) {
   });
 
   // API limiter umum: 200 request per menit per IP
-  // Skip /api/public/* (tidak dilimit agar publik bisa akses) dan /api/migrate/* (punya limiter sendiri)
+  // Skip /api/public/* (tidak dilimit agar publik bisa akses), /api/migrate/* (punya limiter sendiri),
+  // dan endpoint realtime ringan yang butuh auth (polling chat, online-users, online-history, notifikasi)
+  const isRealtimePoll = (req) =>
+    req.path.startsWith('/api/chat') ||
+    req.path.startsWith('/api/dashboard/online-users') ||
+    req.path.startsWith('/api/dashboard/online-history') ||
+    req.path.startsWith('/api/notifikasi');
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 200,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.path.startsWith('/api/public') || req.path.startsWith('/api/migrate'),
+    skip: (req) => req.path.startsWith('/api/public') || req.path.startsWith('/api/migrate') || isRealtimePoll(req),
     message: { error: 'Terlalu banyak request. Coba lagi nanti.' },
   });
 
