@@ -72,6 +72,24 @@ router.get('/system/migrate', requireRole('admin'), (req, res) => {
 </html>`);
 });
 
+// POST /system/bersihkan-log-aktivitas — hapus log aktivitas user online (admin).
+// Body opsional: { user_id } hanya user tsb, { days } hanya yang lebih tua dari N hari.
+router.post('/system/bersihkan-log-aktivitas', requireRole('admin'), async (req, res) => {
+  const t = req.user.tenant_id;
+  const uid = req.body && req.body.user_id ? parseInt(req.body.user_id, 10) : null;
+  const days = req.body && req.body.days ? parseInt(req.body.days, 10) : null;
+  try {
+    let sql = 'DELETE FROM user_activity_log WHERE tenant_id = ?';
+    const params = [t];
+    if (uid) { sql += ' AND user_id = ?'; params.push(uid); }
+    if (days) { sql += ' AND created_at < DATE_SUB(NOW(), INTERVAL ? DAY)'; params.push(days); }
+    const [r] = await db.query(sql, params);
+    res.json({ ok: true, deleted: r.affectedRows });
+  } catch (e) {
+    res.status(500).json({ error: 'Gagal membersihkan log: ' + e.message });
+  }
+});
+
 // POST /system/seed-sp-referensi — seed SP referensi dari URL atau default
 router.post('/system/seed-sp-referensi', requireRole('admin'), async (req, res) => {
   res.writeHead(200, {

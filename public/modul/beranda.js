@@ -943,6 +943,27 @@ async function loadOnlineHistory() {
   }
 }
 
+async function clearOnlineHistoryLog() {
+  const ok = await showConfirm('Hapus seluruh log aktivitas user online?', 'Ya, Bersihkan');
+  if (!ok) return;
+  try {
+    const uid = (document.getElementById('oh-user') || {}).value || '';
+    const body = uid ? { user_id: Number(uid) } : {};
+    const r = await fetch('/api/system/bersihkan-log-aktivitas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      credentials: 'include',
+    });
+    if (!r.ok) throw new Error('Gagal');
+    const d = await r.json();
+    showToast('Log dibersihkan: ' + d.deleted + ' baris dihapus', 'success');
+    loadOnlineHistory();
+  } catch (err) {
+    showToast('Gagal membersihkan log: ' + err.message, 'error');
+  }
+}
+
 window.openOnlineHistory = openOnlineHistory;
 window.closeOnlineHistory = closeOnlineHistory;
 window.loadOnlineHistory = loadOnlineHistory;

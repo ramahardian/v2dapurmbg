@@ -49,10 +49,25 @@ const heartbeatLog = new Map();
 const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
 
 function logUserActivity(tenantId, userId, nama, role, event) {
-  db.query(
-    'INSERT INTO user_activity_log (tenant_id, user_id, nama, role, event) VALUES (?,?,?,?,?)',
-    [tenantId, userId, nama || '', role || '', event]
-  ).catch(() => {});
+  // Merge: 1 baris per (tenant, user). Aktivitas baru hanya memperbarui baris user tsb.
+  // Login menambah login_count; heartbeat hanya menyegarkan event + waktu.
+  if (event === 'login') {
+    db.query(
+      `INSERT INTO user_activity_log (tenant_id, user_id, nama, role, event, login_count, created_at)
+       VALUES (?,?,?,?,?,1,NOW())
+       ON DUPLICATE KEY UPDATE nama=VALUES(nama), role=VALUES(role), event='login',
+         login_count=login_count+1, created_at=NOW()`,
+      [tenantId, userId, nama || '', role || '', event]
+    ).catch(() => {});
+  } else {
+    db.query(
+      `INSERT INTO user_activity_log (tenant_id, user_id, nama, role, event, login_count, created_at)
+       VALUES (?,?,?,?,?,0,NOW())
+       ON DUPLICATE KEY UPDATE nama=VALUES(nama), role=VALUES(role), event='heartbeat',
+         created_at=NOW()`,
+      [tenantId, userId, nama || '', role || '', event]
+    ).catch(() => {});
+  }
 }
 
 async function trackActivity(req, res, next) {
