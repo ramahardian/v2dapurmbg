@@ -466,7 +466,7 @@ function renderPoTable(rows) {
 }
 
 async function syncDariKoperasi() {
-  if (!await showConfirm('Tarik nomor PO/Invoice terbaru dari sistem koperasi?')) return;
+  if (!await showConfirm('Tarik nomor PO/Invoice terbaru dari sistem koperasi?', 'Lanjutkan', 'Batal')) return;
   try {
     const result = await api.post('/purchase_order/sync-koperasi', {});
     const msg = result.message || (result.updated + ' PO diupdate');
