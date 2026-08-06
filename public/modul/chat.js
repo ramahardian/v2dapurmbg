@@ -33,7 +33,17 @@ function chatRoleLabel(role) {
 
 function chatTime(d) {
   if (!d) return '';
-  const x = d instanceof Date ? d : new Date(d);
+  let x;
+  if (d instanceof Date) {
+    x = d;
+  } else {
+    const s = String(d).trim();
+    if (s.includes('T') || s.includes('Z') || s.includes('+') || s.endsWith(')')) {
+      x = new Date(s);
+    } else {
+      x = new Date(s + 'Z');
+    }
+  }
   if (isNaN(x.getTime())) return '';
   return x.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
 }
