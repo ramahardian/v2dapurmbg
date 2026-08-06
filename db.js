@@ -28,6 +28,21 @@ const pool = mysql.createPool({
   keepAliveInitialDelay: 10000,
 });
 
+// Paksa zona waktu SESI setiap koneksi = WIB (+07:00). Ini yang membuat
+// NOW() / CURRENT_TIMESTAMP (penghasil created_at di banyak tabel, termasuk
+// chat_messages) SELALU menulis jam WIB — tidak bergantung zona waktu engine
+// MySQL / OS server. Kombinasi dengan `timezone: '+07:00'` di atas menjamin
+// siklus tulis-baca timestamp konsisten di semua lingkungan. Tanpa ini, kalau
+// MySQL server diset UTC, created_at tersimpan jam UTC dan dibaca seolah WIB
+// → semua pesan chat (dan timestamp lain) terlihat meleset 7 jam.
+// Catatan: event 'connection' mengirim koneksi gaya callback (bukan promise),
+// jadi pakai callback di sini.
+pool.on('connection', (conn) => {
+  conn.query("SET time_zone = '+07:00'", (err) => {
+    if (err) console.warn('[DB] Gagal set time_zone sesi ke +07:00:', err.message);
+  });
+});
+
 const origQuery = pool.query.bind(pool);
 pool.query = async function(sql, params) {
   const start = Date.now();

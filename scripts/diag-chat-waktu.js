@@ -1,6 +1,6 @@
 // Simulasi rantai penuh: DB -> mysql2 -> wibFields (server) -> JSON -> client chat.js
 process.env.TZ = 'Asia/Jakarta';
-const db = require('./db');
+const db = require('../db');
 
 // ── SALINAN LOGIKA routes/chat.js (wibFields) ──
 const WIB_OFFSET_MS = 7 * 3600 * 1000;
