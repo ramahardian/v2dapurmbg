@@ -298,27 +298,25 @@ function renderChatMsg(m, showDay) {
   if (mine) {
     return dayBlock + `
       <div class="chat-msg-anim flex justify-end">
-        <div class="max-w-[78%] px-3 py-1 rounded-2xl rounded-br-sm chat-bubble-mine text-sm whitespace-pre-wrap break-words relative">
-          ${body}
-          <div class="flex items-center justify-between mt-1">
-            <div class="text-right text-[9px]" style="opacity:.7">${time}</div>
-            <button class="chat-del-btn text-[10px] px-1.5 py-0.5 rounded text-red-500 hover:bg-red-50 transition" data-msg-id="${m.id}" title="Hapus">Hapus</button>
+        <div class="max-w-[78%] flex flex-col items-end">
+          <div class="px-4 py-2 rounded-2xl rounded-br-sm chat-bubble-mine text-sm whitespace-pre-wrap break-words">
+            ${body}
           </div>
+          <div class="chat-time mine mt-1 pr-1">${time}</div>
+          <button class="chat-del-btn text-[10px] px-1.5 py-0.5 rounded text-red-500 hover:bg-red-50 transition mt-1" data-msg-id="${m.id}" title="Hapus">Hapus</button>
         </div>
       </div>`;
   }
   return dayBlock + `
     <div class="chat-msg-anim flex items-end gap-2">
       ${chatAvatarHTML(m.sender_id === chatState.activeUserId ? chatState.activeFoto : null, m.sender_nama, 'w-6 h-6')}
-      <div class="max-w-[78%]">
+      <div class="max-w-[78%] flex flex-col">
         ${m.sender_id !== chatState.activeUserId ? `<div class="text-[10px] font-semibold mb-0.5 px-1" style="color:var(--text-body);opacity:.55">${esc(m.sender_nama || 'User')}</div>` : ''}
-        <div class="px-3 py-1 rounded-2xl rounded-bl-sm chat-bubble-other text-sm whitespace-pre-wrap break-words relative">
+        <div class="px-4 py-2 rounded-2xl rounded-bl-sm chat-bubble-other text-sm whitespace-pre-wrap break-words">
           ${body}
-          <div class="flex items-center justify-between mt-1">
-            <div class="text-right text-[9px]" style="opacity:.55">${time}</div>
-            ${mine ? `<button class="chat-del-btn text-[10px] px-1.5 py-0.5 rounded text-red-500 hover:bg-red-50 transition" data-msg-id="${m.id}" title="Hapus">Hapus</button>` : ''}
-          </div>
         </div>
+        <div class="chat-time other mt-1 pl-1">${time}</div>
+        <button class="chat-del-btn text-[10px] px-1.5 py-0.5 rounded text-red-500 hover:bg-red-50 transition mt-1 ml-1 self-start" data-msg-id="${m.id}" title="Hapus">Hapus</button>
       </div>
     </div>`;
 }

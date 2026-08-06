@@ -371,15 +371,21 @@
   </style>
 
   <style>
-    .chat-bubble-other { background:#f5f5f4; color:#1c1917; }
-    html.dark .chat-bubble-other { background:#57534e; color:#e7e5e4; }
-    .chat-bubble-mine { background:linear-gradient(135deg,#10b981,#059669); color:#fff; }
+    .chat-bubble-other { background:#f5f5f4; color:#1c1917; box-shadow:0 1px 2px rgba(0,0,0,.06),0 1px 1px rgba(0,0,0,.04); }
+    html.dark .chat-bubble-other { background:#44403c; color:#e7e5e4; box-shadow:0 1px 2px rgba(0,0,0,.2),0 1px 1px rgba(0,0,0,.15); }
+    .chat-bubble-mine { background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 1px 2px rgba(16,185,129,.25),0 1px 1px rgba(16,185,129,.15); }
+    .chat-bubble-other, .chat-bubble-mine { border-radius:18px 18px 18px 4px; }
+    .chat-bubble-mine { border-radius:18px 18px 4px 18px; }
     .chat-scroll::-webkit-scrollbar { width:6px; }
     .chat-scroll::-webkit-scrollbar-track { background:transparent; }
     .chat-scroll::-webkit-scrollbar-thumb { background:rgba(0,0,0,.15); border-radius:99px; }
     html.dark .chat-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,.2); }
     @keyframes chatIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
     .chat-msg-anim { animation:chatIn .18s ease-out both; }
+    .chat-time { font-size:10px; opacity:.55; margin-top:4px; }
+    .chat-time.mine { text-align:right; color:rgba(255,255,255,.7); }
+    .chat-time.other { text-align:left; color:var(--text-body); }
+    html.dark .chat-time.other { color:#a8a29e; }
   </style>
 
   <!-- ═══ CHAT ANTAR USER (sidebar melayang kanan) ═══ -->
