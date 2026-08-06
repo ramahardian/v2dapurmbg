@@ -82,7 +82,7 @@ function chatPanelOpen() {
 
 function openChatPanel() {
   const p = document.getElementById('chat-panel');
-  p.classList.remove('-translate-x-full');
+  p.classList.remove('translate-x-full');
   p.classList.add('translate-x-0');
   document.getElementById('chat-btn').classList.add('hidden');
   showChatContacts();
@@ -92,7 +92,7 @@ function openChatPanel() {
 
 function closeChatPanel() {
   const p = document.getElementById('chat-panel');
-  p.classList.add('-translate-x-full');
+  p.classList.add('translate-x-full');
   p.classList.remove('translate-x-0');
   document.getElementById('chat-btn').classList.remove('hidden');
   stopChatMsgTimer();
@@ -326,6 +326,10 @@ async function chatSend() {
 // Buka chat 1-on-1 dengan user tertentu (dipanggil dari klik user online di dashboard).
 async function openChatWithUser(userId) {
   try {
+    if (currentUser && Number(userId) === currentUser.id) {
+      showToast('Itu akun kamu sendiri', 'info');
+      return;
+    }
     const d = await api.get('/chat/contacts');
     chatState.umum = d.umum;
     chatState.contacts = d.contacts || [];
