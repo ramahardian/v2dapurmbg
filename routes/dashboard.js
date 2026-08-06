@@ -253,6 +253,9 @@ router.get('/dashboard/siklus-notif', async (req, res) => {
  */
 router.get('/dashboard/online-users', async (req, res) => {
   const t = req.user.tenant_id;
+  // Tandai user yang sedang request sebagai aktif SEBELUM query, agar dirinya sendiri
+  // langsung muncul di daftar online (tanpa menunggu auto-refresh 30 detik).
+  await db.query('UPDATE users SET last_activity = NOW() WHERE id = ?', [req.user.id]);
   const [users] = await db.query(
     `SELECT id, nama, email, role, foto, last_activity,
             TIMESTAMPDIFF(SECOND, last_activity, NOW()) as seconds_ago

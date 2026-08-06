@@ -44,8 +44,18 @@ function requireRole(...roles) {
 }
 
 async function trackActivity(req, res, next) {
-  if (req.user?.uid) {
-    await db.query('UPDATE users SET last_activity = NOW() WHERE id = ?', [req.user.uid]).catch(() => {});
+  // Middleware ini dipasang SEBELUM requireAuth (app.use('/api', trackActivity, apiRoutes)),
+  // jadi req.user belum ada. Verifikasi JWT langsung di sini (field uid dari payload, sama
+  // dengan requireAuth) lalu update last_activity — tanpa menunggu hasilnya agar request
+  // tidak terblokir oleh write ini.
+  const token = req.cookies?.access_token || (req.headers.authorization || '').replace('Bearer ', '');
+  if (token) {
+    try {
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      if (payload && payload.uid) {
+        db.query('UPDATE users SET last_activity = NOW() WHERE id = ?', [payload.uid]).catch(() => {});
+      }
+    } catch { /* token tidak valid — abaikan */ }
   }
   next();
 }
