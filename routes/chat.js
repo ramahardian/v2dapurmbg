@@ -38,8 +38,12 @@ router.get('/chat/contacts', async (req, res) => {
       `SELECT id, nama, role, foto, last_activity,
               TIMESTAMPDIFF(SECOND, last_activity, NOW()) AS seconds_ago
        FROM users
-       WHERE tenant_id = ? AND id <> ?
-       ORDER BY (TIMESTAMPDIFF(SECOND, last_activity, NOW()) <= 300) DESC, nama ASC`,
+       WHERE tenant_id = ?
+         AND id <> ?
+         AND role IN ('admin','ahli_gizi','keuangan','gudang')
+         AND last_activity IS NOT NULL
+         AND TIMESTAMPDIFF(SECOND, last_activity, NOW()) <= 300
+       ORDER BY nama ASC`,
       [t, me]
     );
 

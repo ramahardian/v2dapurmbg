@@ -311,11 +311,11 @@ router.get('/dashboard/online-users', async (req, res) => {
     `SELECT id, nama, email, role, foto, last_activity,
             TIMESTAMPDIFF(SECOND, last_activity, NOW()) as seconds_ago
      FROM users 
-     WHERE tenant_id = ? AND id <> ?
+     WHERE tenant_id = ? 
        AND last_activity IS NOT NULL 
        AND TIMESTAMPDIFF(SECOND, last_activity, NOW()) <= 300
      ORDER BY last_activity DESC`,
-    [t, req.user.id]
+    [t]
   );
   
   const onlineUsers = users.map(u => ({

@@ -58,15 +58,17 @@ function chatTotalUnread() {
 }
 
 function chatUpdateBadge() {
-  const badge = document.getElementById('chat-btn-badge');
   const n = chatTotalUnread();
-  if (!badge) return;
-  if (n > 0) {
-    badge.textContent = n > 99 ? '99+' : n;
-    badge.classList.remove('hidden');
-  } else {
-    badge.classList.add('hidden');
-  }
+  ['chat-badge', 'chat-badge-mobile'].forEach(id => {
+    const badge = document.getElementById(id);
+    if (!badge) return;
+    if (n > 0) {
+      badge.textContent = n > 99 ? '99+' : n;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  });
 }
 
 function chatSetSubtitle() {
@@ -84,20 +86,16 @@ function openChatPanel() {
   const p = document.getElementById('chat-panel');
   p.classList.remove('translate-x-full');
   p.classList.add('translate-x-0');
-  document.getElementById('chat-btn').classList.add('hidden');
   showChatContacts();
   chatRefreshContacts();
-  startChatContactsTimer();
 }
 
 function closeChatPanel() {
   const p = document.getElementById('chat-panel');
   p.classList.add('translate-x-full');
   p.classList.remove('translate-x-0');
-  document.getElementById('chat-btn').classList.remove('hidden');
   stopChatMsgTimer();
   chatState.convOpen = false;
-  stopChatContactsTimer();
   chatUpdateBadge();
 }
 
@@ -169,7 +167,7 @@ function renderChatContacts() {
   cv.innerHTML = `
     <div class="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-body);opacity:.45">Obrolan</div>
     ${umumHtml}
-    <div class="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-body);opacity:.45">Anggota (${contacts.length})</div>
+    <div class="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-body);opacity:.45">User Online (${contacts.length})</div>
     ${sorted.length ? contactHtml : '<div class="text-sm text-center py-6" style="color:var(--text-body);opacity:.4">Belum ada anggota lain</div>'}
   `;
 }
@@ -347,6 +345,10 @@ function initChat() {
   if (inp) {
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); chatSend(); } });
   }
+  // Polling kontak berjalan di latar agar badge chat baru selalu segar
+  // meski panel tertutup (badge = total chat masuk yang belum dibaca).
+  startChatContactsTimer();
+  chatRefreshContacts(true);
 }
 
 window.toggleChatPanel = toggleChatPanel;

@@ -175,8 +175,14 @@
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
     <div class="font-bold text-lg flex-1 truncate" style="color:var(--text-body)">Dapur Sukaluyu</div>
-    <div class="flex items-center gap-1">
-      <div class="relative" id="stock-notif-wrap-mobile">
+        <div class="flex items-center gap-1">
+          <div class="relative">
+            <button id="chat-header-btn-mobile" onclick="toggleChatPanel()" class="p-2 rounded-lg relative" style="color:var(--text-body)" title="Chat">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+              <span id="chat-badge-mobile" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 hidden" style="box-shadow:0 0 0 2px var(--bg-header)">0</span>
+            </button>
+          </div>
+          <div class="relative" id="stock-notif-wrap-mobile">
         <button id="stock-notif-btn-mobile" onclick="toggleStockNotif()" class="p-2 rounded-lg relative" style="color:var(--text-body)" title="Notifikasi">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
           <span id="stock-notif-badge-mobile" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 hidden" style="box-shadow:0 0 0 2px var(--bg-header)">0</span>
@@ -239,6 +245,12 @@
           <p id="page-sub" class="text-sm mt-1" style="opacity:.6">Ringkasan operasional dapur</p>
         </div>
         <div class="flex items-center gap-1">
+          <div class="relative">
+            <button id="chat-header-btn" onclick="toggleChatPanel()" class="p-2 rounded-lg relative" style="color:var(--text-body)" title="Chat antar user">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+              <span id="chat-badge" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 hidden" style="box-shadow:0 0 0 2px var(--bg-header)">0</span>
+            </button>
+          </div>
           <div class="relative" id="stock-notif-wrap">
             <button id="stock-notif-btn" onclick="toggleStockNotif()" class="p-2 rounded-lg relative" style="color:var(--text-body)" title="Notifikasi">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
@@ -370,14 +382,7 @@
     .chat-msg-anim { animation:chatIn .18s ease-out both; }
   </style>
 
-  <!-- ═══ CHAT ANTAR USER (sidebar melayang kiri) ═══ -->
-  <button id="chat-btn" onclick="toggleChatPanel()" title="Chat antar user"
-    class="fixed bottom-4 right-4 z-[55] w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transition-transform hover:scale-105"
-    style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 8px 24px -6px rgba(5,150,105,.5)">
-    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-    <span id="chat-btn-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1" style="box-shadow:0 0 0 2px #fff">0</span>
-  </button>
-
+  <!-- ═══ CHAT ANTAR USER (sidebar melayang kanan) ═══ -->
   <div id="chat-panel" class="fixed inset-y-0 right-0 z-[56] w-[360px] max-w-[94vw] flex-col translate-x-full transition-transform duration-200"
     style="background:var(--bg-card);border-left:1px solid var(--border);box-shadow:-16px 0 40px -16px rgba(0,0,0,.28)">
     <div class="flex items-center gap-3 px-4 py-3.5 border-b shrink-0" style="border-color:var(--border);background:var(--bg-header)">
