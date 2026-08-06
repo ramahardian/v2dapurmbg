@@ -375,16 +375,23 @@ router.get('/dashboard/online-history', async (req, res) => {
       loginParams
     );
 
+    // Ringkasan per user: logins dijumlahkan & waktu diambil yang terbaru.
+    // (user_activity_log kini menyimpan baris per kejadian login/heartbeat,
+    //  bukan 1 baris per user, jadi dipakai GROUP BY + agregasi.)
+    // Nama/role pakai nilai SAAT INI dari tabel users (u2) — bukan MAX dari
+    // baris historis — agar chip ringkasan selalu menampilkan nama terbaru.
     const [users] = await db.query(
-      `SELECT al.user_id, al.nama, al.role, u2.foto AS foto,
-              ${hasLoginCountCol ? 'al.login_count' : 'SUM(al.event = \'login\')'} AS logins,
-              ${hasLoginCountCol ? 'al.event' : 'MAX(al.event)'} AS event,
-              ${hasLoginCountCol ? 'al.created_at' : 'MAX(al.created_at)'} AS last_activity
+      `SELECT al.user_id,
+              COALESCE(MAX(u2.nama), MAX(al.nama)) AS nama,
+              COALESCE(MAX(u2.role), MAX(al.role)) AS role,
+              MAX(u2.foto) AS foto,
+              ${hasLoginCountCol ? 'COALESCE(SUM(al.login_count),0)' : 'COALESCE(SUM(al.event = \'login\'),0)'} AS logins,
+              MAX(al.created_at) AS last_activity
        FROM user_activity_log al
        LEFT JOIN users u2 ON u2.id = al.user_id
        ${where}
-       ${hasLoginCountCol ? '' : 'GROUP BY al.user_id, al.nama, al.role, u2.foto'}
-       ORDER BY ${hasLoginCountCol ? 'al.created_at' : 'MAX(al.created_at)'} DESC`,
+       GROUP BY al.user_id
+       ORDER BY last_activity DESC`,
       params
     );
 

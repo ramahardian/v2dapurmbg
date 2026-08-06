@@ -49,25 +49,16 @@ const heartbeatLog = new Map();
 const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
 
 function logUserActivity(tenantId, userId, nama, role, event) {
-  // Merge: 1 baris per (tenant, user). Aktivitas baru hanya memperbarui baris user tsb.
-  // Login menambah login_count; heartbeat hanya menyegarkan event + waktu.
-  if (event === 'login') {
-    db.query(
-      `INSERT INTO user_activity_log (tenant_id, user_id, nama, role, event, login_count, created_at)
-       VALUES (?,?,?,?,?,1,NOW())
-       ON DUPLICATE KEY UPDATE nama=VALUES(nama), role=VALUES(role), event='login',
-         login_count=login_count+1, created_at=NOW()`,
-      [tenantId, userId, nama || '', role || '', event]
-    ).catch(() => {});
-  } else {
-    db.query(
-      `INSERT INTO user_activity_log (tenant_id, user_id, nama, role, event, login_count, created_at)
-       VALUES (?,?,?,?,?,0,NOW())
-       ON DUPLICATE KEY UPDATE nama=VALUES(nama), role=VALUES(role), event='heartbeat',
-         created_at=NOW()`,
-      [tenantId, userId, nama || '', role || '', event]
-    ).catch(() => {});
-  }
+  // Riwayat PER KEJADIAN: setiap login & heartbeat dicatat sebagai BARIS BARU
+  // (bukan merge 1 baris per user), sehingga modal "Riwayat User Online"
+  // menampilkan kronologi aktivitas yang sebenarnya. Heartbeat tetap di-throttle
+  // (maks 1 baris per 5 menit per user) di trackActivity, jadi tabel tidak membengkak.
+  const isLogin = event === 'login';
+  db.query(
+    `INSERT INTO user_activity_log (tenant_id, user_id, nama, role, event, login_count, created_at)
+     VALUES (?,?,?,?,?,?,NOW())`,
+    [tenantId, userId, nama || '', role || '', event, isLogin ? 1 : 0]
+  ).catch(() => {});
 }
 
 async function trackActivity(req, res, next) {

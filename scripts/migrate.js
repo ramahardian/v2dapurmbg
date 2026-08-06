@@ -650,9 +650,12 @@ async function runMigration() {
     log('✓ Migrasi user_activity_log: tabel dibuat');
   } catch (e) { log('  (skip user_activity_log): ' + e.message); }
 
-  // Upgrade user_activity_log → 1 baris PER USER (merge). Aktivitas baru hanya
-  // memperbarui baris user tsb (bukan menambah baris), agar riwayat tidak membengkak.
-  // Ditambah kolom login_count untuk tetap menghitung total login per user.
+  // Upgrade user_activity_log → riwayat PER KEJADIAN (log kronologis).
+  // Sebelumnya desain 1 baris per user (merge) dengan unique key uk_activity_user;
+  // sekarang setiap login/heartbeat dicatat sebagai baris BARU agar modal
+  // "Riwayat User Online" menampilkan kronologi yang sebenarnya.
+  // Data lama yang sudah ter-merge dibiarkan (tidak bisa direkonstruksi
+  // per-kejadian); hitungan login lamanya tetap tersimpan di login_count.
   try {
     const [[col]] = await q(`SELECT COUNT(*) AS n FROM INFORMATION_SCHEMA.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_activity_log' AND COLUMN_NAME = 'login_count'`);
@@ -660,25 +663,14 @@ async function runMigration() {
       await q(`ALTER TABLE user_activity_log ADD COLUMN login_count INT NOT NULL DEFAULT 0`);
       log('✓ user_activity_log: kolom login_count ditambahkan');
     }
-    // Lipat data lama: hitung total login tiap user, sisakan 1 baris per user (id terbesar).
-    await q(`UPDATE user_activity_log al
-      JOIN (SELECT x.tenant_id, x.user_id, MAX(x.id) AS keep,
-                   (SELECT COUNT(*) FROM user_activity_log y
-                     WHERE y.tenant_id = x.tenant_id AND y.user_id = x.user_id AND y.event = 'login') AS lc
-            FROM user_activity_log x GROUP BY x.tenant_id, x.user_id) t
-        ON t.tenant_id = al.tenant_id AND t.user_id = al.user_id AND al.id = t.keep
-      SET al.login_count = t.lc`);
-    await q(`DELETE al FROM user_activity_log al
-      JOIN user_activity_log al2
-        ON al2.tenant_id = al.tenant_id AND al2.user_id = al.user_id AND al2.id > al.id`);
     const [[uk]] = await q(`SELECT COUNT(*) AS n FROM INFORMATION_SCHEMA.STATISTICS
       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_activity_log' AND INDEX_NAME = 'uk_activity_user'`);
-    if (!uk.n) {
-      await q(`ALTER TABLE user_activity_log ADD UNIQUE KEY uk_activity_user (tenant_id, user_id)`);
-      log('✓ user_activity_log: unique key uk_activity_user dibuat');
+    if (uk.n) {
+      await q(`ALTER TABLE user_activity_log DROP INDEX uk_activity_user`);
+      log('✓ user_activity_log: unique key uk_activity_user dihapus (banyak baris per user diperbolehkan)');
     }
-    log('✓ user_activity_log: merge 1-baris-per-user selesai');
-  } catch (e) { log('  (skip merge user_activity_log): ' + e.message); }
+    log('✓ user_activity_log: mode riwayat per kejadian siap');
+  } catch (e) { log('  (skip upgrade user_activity_log): ' + e.message); }
 
   // Tabel chat — pesan antar user online (room 'umum' bersama + privat 1-on-1 'uA:uB')
   try {
