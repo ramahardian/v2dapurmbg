@@ -414,8 +414,23 @@ function renderNotifList(stock, siklus) {
 
   let html = '';
 
+  // Menu hari ini (belum diisi) — prioritas pertama
+  const menuHariIni = (siklus.items || []).find(it => it.tipe === 'hari_ini');
+  if (menuHariIni) {
+    html += `<div class="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider" style="opacity:0.5">Menu Hari Ini</div>`;
+    html += `<div class="px-4 py-2.5 flex items-center justify-between border-b cursor-pointer hover:opacity-80" style="border-color:var(--border)" onclick="navigateTo('siklus')">
+      <div class="min-w-0 flex-1">
+        <div class="text-sm font-medium truncate">Menu belum diisi — Hari ${menuHariIni.hari_ke}/${menuHariIni.total_hari}</div>
+        <div class="text-[10px] truncate" style="opacity:0.5">${escHtml(menuHariIni.nama)}</div>
+      </div>
+      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 ml-3 shrink-0">Belum diisi</span>
+    </div>`;
+    siklus.items = siklus.items.filter(it => it.tipe !== 'hari_ini');
+  }
+
   // Siklus section
-  if (siklus.count > 0) {
+  if (siklus.items.length > 0) {
+    if (html) html += `<div class="border-t" style="border-color:var(--border)"></div>`;
     html += `<div class="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider" style="opacity:0.5">Siklus Menu</div>`;
     html += siklus.items.slice(0, 5).map(it => {
       const pct = it.coverage;

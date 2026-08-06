@@ -222,7 +222,7 @@ router.get('/dashboard/siklus-notif', async (req, res) => {
     }
   }
 
-  const notifItems = [];
+  let notifItems = [];
   for (const r of rows) {
     const menuFilled = Number(r.with_menu) || 0;
     const manualDays = filledBySiklus[r.id] ? filledBySiklus[r.id].size : 0;
@@ -243,7 +243,58 @@ router.get('/dashboard/siklus-notif', async (req, res) => {
     }
   }
 
-  notifItems.sort((a, b) => a.coverage - b.coverage);
+  // Notif khusus: menu aktif HARI INI belum diisi (prioritas pertama).
+  const [siklusAktif] = await db.query(
+    `SELECT id, nama, kategori_penerima, total_hari, status, tanggal_mulai
+     FROM siklus_menu WHERE tenant_id=? AND status='Aktif' ORDER BY tanggal_mulai DESC`,
+    [t]
+  );
+  const todayKey = (d) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const todayUtc = todayKey(new Date());
+  let sAktif = null;
+  let hariKe = 1;
+  for (const sc of siklusAktif) {
+    if (!sc.tanggal_mulai) continue;
+    const totalHari = Math.max(1, Number(sc.total_hari || 7));
+    const diff = Math.floor((todayUtc - todayKey(new Date(sc.tanggal_mulai))) / 86400000);
+    if (diff >= 0 && diff < totalHari) { sAktif = sc; hariKe = diff + 1; break; }
+  }
+  if (!sAktif) {
+    for (const sc of siklusAktif) {
+      if (!sc.tanggal_mulai) continue;
+      if (todayUtc - todayKey(new Date(sc.tanggal_mulai)) < 0) { sAktif = sc; hariKe = 1; break; }
+    }
+  }
+  if (sAktif) {
+    const [dayItems] = await db.query(
+      `SELECT si.id, si.menu_id,
+              (SELECT COUNT(*) FROM siklus_menu_item_bahan sb WHERE sb.siklus_id=si.siklus_id AND sb.hari_ke=si.hari_ke) AS bahan_count
+       FROM siklus_menu_item si WHERE si.siklus_id=? AND si.hari_ke=? LIMIT 1`,
+      [sAktif.id, hariKe]
+    );
+    const terisi = dayItems.length && (dayItems[0].menu_id || Number(dayItems[0].bahan_count) > 0);
+    if (!terisi) {
+      notifItems.push({
+        id: 'hari_ini',
+        tipe: 'hari_ini',
+        nama: sAktif.nama,
+        kategori_penerima: sAktif.kategori_penerima,
+        total_hari: Math.max(1, Number(sAktif.total_hari || 7)),
+        filled: 0,
+        kosong: 1,
+        coverage: 0,
+        status: sAktif.status,
+        hari_ke: hariKe,
+      });
+      notifItems = notifItems.filter(it => String(it.id) !== String(sAktif.id));
+    }
+  }
+
+  notifItems.sort((a, b) => {
+    if (a.tipe === 'hari_ini') return -1;
+    if (b.tipe === 'hari_ini') return 1;
+    return a.coverage - b.coverage;
+  });
   res.json({ count: notifItems.length, items: notifItems.slice(0, 20) });
 });
 
