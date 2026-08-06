@@ -3,6 +3,7 @@ var _pncData = null;
 var _pncSelectedJenjang = 'SEMUA';
 var _pncSelectedPorsi = 'TOTAL';
 var _pncSiklusId = '';
+var _pncSiklusList = []; // daftar SEMUA siklus aktif untuk dropdown (respons per-siklus hanya berisi 1 siklus)
 var _pncAllJenjangData = null;
 
 
@@ -51,16 +52,23 @@ async function loadPerencanaanData(siklusId) {
   wrap.innerHTML = '<div class="flex items-center justify-center py-16"><svg class="animate-spin h-8 w-8 text-sky-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
 
   try {
-    let params = siklusId ? '?siklus_id=' + siklusId : '';
-    let res = await api.get('/siklus/laporan/kebutuhan-per-menu' + params);
-    if (!siklusId && res.siklus_list && res.siklus_list.length) {
-      // Tanpa opsi "Semua Siklus Aktif": default ke siklus pertama (tanpa tampilan gabungan)
-      _pncSiklusId = String(res.siklus_list[0].id);
-      res = await api.get('/siklus/laporan/kebutuhan-per-menu?siklus_id=' + _pncSiklusId);
-    } else if (siklusId) {
+    let res;
+    if (siklusId) {
+      // Ganti filter: muat data untuk siklus terpilih
+      res = await api.get('/siklus/laporan/kebutuhan-per-menu?siklus_id=' + siklusId);
       _pncSiklusId = String(siklusId);
+    } else {
+      // Muat daftar SEMUA siklus aktif (untuk dropdown), lalu default ke siklus pertama
+      res = await api.get('/siklus/laporan/kebutuhan-per-menu');
+      _pncSiklusList = res.siklus_list || [];
+      if (_pncSiklusList.length) _pncSiklusId = String(_pncSiklusList[0].id);
+      if (!res._validation && _pncSiklusList.length) {
+        res = await api.get('/siklus/laporan/kebutuhan-per-menu?siklus_id=' + _pncSiklusId);
+      }
     }
-    const { siklus_list, selected_siklus_id, jenjang_list, data, _validation } = res;
+    // Dropdown selalu memakai daftar SEMUA siklus aktif, bukan hanya siklus terpilih
+    const siklus_list = _pncSiklusList.length ? _pncSiklusList : (res.siklus_list || []);
+    const { selected_siklus_id, jenjang_list, data, _validation } = res;
 
     _pncAllJenjangData = data;
     _pncData = { jenjang_list, data };
