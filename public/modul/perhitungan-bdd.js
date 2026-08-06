@@ -24,14 +24,31 @@ async function loadPbdData(siklusId) {
   wrap.innerHTML = '<div class="flex items-center justify-center py-16"><svg class="animate-spin h-8 w-8 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
 
   try {
+    // Daftar siklus untuk dropdown — semua siklus Aktif (+ siklus terpilih bila non-aktif)
+    let aktifSiklus = [];
+    try {
+      const semua = await api.get('/siklus');
+      aktifSiklus = (semua || []).filter(s => s.status === 'Aktif');
+    } catch (e) {}
+
+    // Tanpa pilihan → otomatis pilih siklus aktif pertama (bukan mode "semua siklus")
+    if (!siklusId && aktifSiklus.length) {
+      return loadPbdData(aktifSiklus[0].id);
+    }
+
     const params = siklusId ? '?siklus_id=' + siklusId : '';
     const res = await api.get('/siklus/laporan/kebutuhan-per-menu' + params);
     const { siklus_list, selected_siklus_id, jenjang_list, data, _validation } = res;
 
+    // Gabungkan agar dropdown selalu memuat semua siklus aktif (bisa pindah antar siklus)
+    const optMap = new Map();
+    (aktifSiklus || []).concat(siklus_list || []).forEach(s => optMap.set(s.id, s));
+    const options = [...optMap.values()].sort((a, b) => a.id - b.id);
+
     let html = '';
 
     // Filter Siklus
-    html += renderPbdFilter(siklus_list, selected_siklus_id);
+    html += renderPbdFilter(options, selected_siklus_id);
 
     // ── Tampilkan validasi jika ada ──
     if (_validation) {
@@ -88,16 +105,14 @@ async function loadPbdData(siklusId) {
 
 function renderPbdFilter(siklusList, selectedId) {
   var html = '<div class="bg-white border border-stone-200 rounded-lg p-4 mb-4 flex flex-wrap items-center gap-4">';
-  html += '<label class="text-sm font-medium text-stone-700">Filter Siklus:</label>';
+  html += '<label class="text-sm font-medium text-stone-700">Pilih Siklus:</label>';
   html += '<select id="pbd-siklus-select" onchange="loadPbdData(this.value)" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[200px] focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
-  html += '<option value="">— Semua Siklus Aktif —</option>';
   for (var i = 0; i < siklusList.length; i++) {
     var s = siklusList[i];
-    if (selectedId && Number(selectedId) !== s.id) continue;
-    html += '<option value="' + s.id + '" ' + (selectedId && Number(selectedId) === s.id ? 'selected' : '') + '>' + s.nama + ' (' + s.status + ')' + '</option>';
+    html += '<option value="' + s.id + '" ' + (selectedId && Number(selectedId) === s.id ? 'selected' : '') + '>' + escHtml(s.nama) + ' (' + escHtml(s.status) + ')' + '</option>';
   }
   html += '</select>';
-  html += '<div class="text-xs text-stone-400 ml-auto">' + siklusList.length + ' siklus tersedia</div>';
+  html += '<div class="text-xs text-stone-400 ml-auto">' + siklusList.length + ' siklus aktif</div>';
   html += '</div>';
   return html;
 }
