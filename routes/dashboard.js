@@ -5,6 +5,22 @@ const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Deteksi kolom login_count (migrasi user_activity_log) — dicek sekali lalu di-cache.
+let hasLoginCountCol = null;
+async function loginCountExpr() {
+  if (hasLoginCountCol === null) {
+    try {
+      const [[c]] = await db.query(
+        "SELECT COUNT(*) AS n FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_activity_log' AND COLUMN_NAME = 'login_count'"
+      );
+      hasLoginCountCol = !!c.n;
+    } catch (e) {
+      hasLoginCountCol = false;
+    }
+  }
+  return hasLoginCountCol ? 'al.login_count' : 'al.event = ?';
+}
+
 // Terapkan middleware requireAuth agar seluruh data dashboard aman dan terisolasi per tenant
 router.use(requireAuth);
 
@@ -350,20 +366,25 @@ router.get('/dashboard/online-history', async (req, res) => {
   if (uid) { where += ' AND al.user_id = ?'; params.push(uid); }
 
   try {
+    const lcExpr = await loginCountExpr();
+    const loginParams = hasLoginCountCol ? params : [...params, 'login'];
     const [[range]] = await db.query(
       `SELECT MIN(DATE(al.created_at)) AS awal, MAX(DATE(al.created_at)) AS akhir, COUNT(*) AS total,
-              COALESCE(SUM(al.login_count), 0) AS logins
+              COALESCE(SUM(${lcExpr}), 0) AS logins
        FROM user_activity_log al ${where}`,
-      params
+      loginParams
     );
 
     const [users] = await db.query(
       `SELECT al.user_id, al.nama, al.role, u2.foto AS foto,
-              al.login_count AS logins, al.event, al.created_at AS last_activity
+              ${hasLoginCountCol ? 'al.login_count' : 'SUM(al.event = \'login\')'} AS logins,
+              ${hasLoginCountCol ? 'al.event' : 'MAX(al.event)'} AS event,
+              ${hasLoginCountCol ? 'al.created_at' : 'MAX(al.created_at)'} AS last_activity
        FROM user_activity_log al
        LEFT JOIN users u2 ON u2.id = al.user_id
        ${where}
-       ORDER BY al.created_at DESC`,
+       ${hasLoginCountCol ? '' : 'GROUP BY al.user_id, al.nama, al.role, u2.foto'}
+       ORDER BY ${hasLoginCountCol ? 'al.created_at' : 'MAX(al.created_at)'} DESC`,
       params
     );
 
