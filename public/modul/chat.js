@@ -72,6 +72,41 @@ function chatTime(d) {
   return String(wib.getUTCHours()).padStart(2, '0') + '.' + String(wib.getUTCMinutes()).padStart(2, '0');
 }
 
+// Stempel waktu lengkap WIB untuk tooltip (mis. "Kamis, 6 Agu 2026 15.28").
+function chatFullStamp(d) {
+  const x = chatParseDate(d);
+  if (!x) return '';
+  const wib = chatToWib(x);
+  return CHAT_HARI_ID[wib.getUTCDay()] + ', ' + wib.getUTCDate() + ' ' + CHAT_BULAN_ID[wib.getUTCMonth()] + ' ' + wib.getUTCFullYear() + ' ' + chatTime(d);
+}
+
+// Label waktu pintar: relatif untuk pesan baru, tanggal penuh untuk pesan lama.
+// Semua dibandingkan/dihitung dalam WIB agar konsisten di semua zona perangkat.
+function chatSmartTime(d) {
+  const x = chatParseDate(d);
+  if (!x) return '';
+  const MIN = 60 * 1000, HOUR = 60 * MIN, DAY = 24 * HOUR;
+  const diff = Date.now() - x.getTime();
+  if (diff < MIN) return 'Baru saja';
+  if (diff < HOUR) return Math.floor(diff / MIN) + ' menit lalu';
+  if (diff < DAY) return Math.floor(diff / HOUR) + ' jam lalu';
+  const now = new Date();
+  const key = chatWibDate(x);
+  if (key === chatWibDate(new Date(now.getTime() - DAY))) return 'Kemarin';
+  const wib = chatToWib(x);
+  return CHAT_HARI_ID[wib.getUTCDay()] + ', ' + wib.getUTCDate() + ' ' + CHAT_BULAN_ID[wib.getUTCMonth()] + ' ' + wib.getUTCFullYear();
+}
+
+// Segarkan label waktu relatif pada pesan yang sudah dirender (dipanggil tiap polling).
+function chatRefreshTimes() {
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+  container.querySelectorAll('.chat-time[data-ts]').forEach(el => {
+    const label = chatSmartTime(el.getAttribute('data-ts'));
+    if (el.textContent !== label) el.textContent = label;
+  });
+}
+
 function chatDayKey(d) {
   const x = chatParseDate(d);
   return x ? chatWibDate(x) : '';
@@ -286,6 +321,8 @@ async function loadChatMessages(room, after, reset) {
   }
   try {
     const d = await api.get('/chat/messages?room=' + encodeURIComponent(room) + '&after=' + (after || 0));
+    // Segarkan label "x menit lalu" pada pesan lama tiap polling walau tak ada pesan baru.
+    chatRefreshTimes();
     const msgs = d.messages || [];
     if (!msgs.length) {
       if (reset) {
@@ -331,7 +368,8 @@ function renderChatMsg(m, showDay) {
   const dayBlock = showDay
     ? `<div data-day="${day}" class="text-center text-[10px] font-medium my-2" style="color:var(--text-body);opacity:.4">${chatDayLabel(m.created_at)}</div>`
     : '';
-  const time = chatTime(m.created_at);
+  const time = chatSmartTime(m.created_at);
+  const stamp = chatFullStamp(m.created_at);
   const body = m.body.replace(/\n/g, '<br>');
 
   if (mine) {
@@ -341,7 +379,7 @@ function renderChatMsg(m, showDay) {
           <div class="px-4 py-2 rounded-2xl rounded-br-sm chat-bubble-mine text-sm whitespace-pre-wrap break-words">
             ${body}
           </div>
-          <div class="chat-time mine mt-1 pr-1">${time}</div>
+          <div class="chat-time mine mt-1 pr-1" data-ts="${esc(m.created_at)}" title="${stamp}">${time}</div>
           <button class="chat-del-btn text-[10px] px-1.5 py-0.5 rounded text-red-500 hover:bg-red-50 transition mt-1" data-msg-id="${m.id}" title="Hapus">Hapus</button>
         </div>
       </div>`;
@@ -354,7 +392,7 @@ function renderChatMsg(m, showDay) {
         <div class="px-4 py-2 rounded-2xl rounded-bl-sm chat-bubble-other text-sm whitespace-pre-wrap break-words">
           ${body}
         </div>
-        <div class="chat-time other mt-1 pl-1">${time}</div>
+        <div class="chat-time other mt-1 pl-1" data-ts="${esc(m.created_at)}" title="${stamp}">${time}</div>
         <button class="chat-del-btn text-[10px] px-1.5 py-0.5 rounded text-red-500 hover:bg-red-50 transition mt-1 ml-1 self-start" data-msg-id="${m.id}" title="Hapus">Hapus</button>
       </div>
     </div>`;
