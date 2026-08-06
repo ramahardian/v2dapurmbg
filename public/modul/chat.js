@@ -238,20 +238,32 @@ function chatMarkRead(room) {
 }
 
 async function loadChatMessages(room, after, reset) {
+  const container = document.getElementById('chat-messages');
+  const ph = (msg) => `<div class="text-center text-xs py-8" style="color:var(--text-body);opacity:.4">${msg}</div>`;
+  if (reset) {
+    container.innerHTML = ph('Memuat...');
+    chatState.lastMsgId = 0;
+    chatState.msgsLoaded = false;
+  }
   try {
     const d = await api.get('/chat/messages?room=' + encodeURIComponent(room) + '&after=' + (after || 0));
     const msgs = d.messages || [];
-    if (!msgs.length) return;
-    const container = document.getElementById('chat-messages');
-    if (reset) {
+    if (!msgs.length) {
+      if (reset) {
+        container.innerHTML = ph('Belum ada pesan. Mulai obrolan!');
+        chatState.msgsLoaded = true;
+        chatMarkRead(room);
+      }
+      return;
+    }
+    if (reset || !chatState.msgsLoaded) {
       container.innerHTML = '';
+      chatState.msgsLoaded = true;
       chatState.lastMsgId = 0;
     }
     let lastRenderedDay = null;
-    if (!reset) {
-      const first = container.querySelector('[data-day]');
-      lastRenderedDay = first ? first.getAttribute('data-day') : null;
-    }
+    const first = container.querySelector('[data-day]');
+    lastRenderedDay = first ? first.getAttribute('data-day') : null;
     let appendHtml = '';
     msgs.forEach(m => {
       if (m.id <= chatState.lastMsgId) return;
@@ -268,7 +280,9 @@ async function loadChatMessages(room, after, reset) {
     }
     chatMarkRead(room);
   } catch (err) {
-    // Polling gagal sesekali — abaikan diam-diam agar tidak spam toast.
+    if (reset) {
+      container.innerHTML = ph('Gagal memuat pesan');
+    }
   }
 }
 
@@ -313,6 +327,7 @@ async function chatSend() {
     inp.value = '';
     const container = document.getElementById('chat-messages');
     chatState.lastMsgId = d.message.id;
+    chatState.msgsLoaded = true;
     container.insertAdjacentHTML('beforeend', renderChatMsg(d.message, true));
     container.scrollTop = container.scrollHeight;
     inp.focus();
