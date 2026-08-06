@@ -112,13 +112,13 @@ function chatDayKey(d) {
   return x ? chatWibDate(x) : '';
 }
 
-function chatDayLabel(d) {
+function chatDayLabel(d, wibDate) {
   const x = chatParseDate(d);
   if (!x) return '';
   const now = new Date();
   const todayWib = chatWibDate(now);
   const yesterdayWib = chatWibDate(new Date(now.getTime() - 86400000));
-  const key = chatWibDate(x);
+  const key = wibDate || chatWibDate(x);
   if (key === todayWib) return 'Hari ini';
   if (key === yesterdayWib) return 'Kemarin';
   const wib = chatToWib(x);
@@ -364,12 +364,15 @@ async function loadChatMessages(room, after, reset) {
 
 function renderChatMsg(m, showDay) {
   const mine = currentUser && m.sender_id === currentUser.id;
-  const day = chatDayKey(m.created_at);
+  const day = m.created_at_wib_date || chatDayKey(m.created_at);
   const dayBlock = showDay
-    ? `<div data-day="${day}" class="text-center text-[10px] font-medium my-2" style="color:var(--text-body);opacity:.4">${chatDayLabel(m.created_at)}</div>`
+    ? `<div data-day="${day}" class="text-center text-[10px] font-medium my-2" style="color:var(--text-body);opacity:.4">${chatDayLabel(m.created_at, m.created_at_wib_date)}</div>`
     : '';
-  const time = chatSmartTime(m.created_at);
-  const stamp = chatFullStamp(m.created_at);
+  // Stempel penuh & kunci tanggal memakai nilai WIB dari server bila tersedia
+  // (anti-ketergantungan parsing browser). Label relatif ("x menit lalu") tetap
+  // dihitung client — semuanya WIB, dan saling melengkapi sebagai fallback.
+  const time = chatSmartTime(m.created_at) || m.created_at_wib_time || '';
+  const stamp = m.created_at_wib_stamp || chatFullStamp(m.created_at);
   const body = m.body.replace(/\n/g, '<br>');
 
   if (mine) {

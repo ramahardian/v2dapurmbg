@@ -16,6 +16,26 @@ router.use(requireAuth);
 const ROOM_UMUM = 'umum';
 const ONLINE_WINDOW_SEC = 300;
 
+// ── Waktu WIB (UTC+7) — dihitung MANUAL di server agar konsisten,
+//    tidak bergantung zona engine/browser. ──
+const WIB_OFFSET_MS = 7 * 3600 * 1000;
+const WIB_HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const WIB_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+// Ubah nilai created_at (Date/string/ISO) menjadi objek WIB siap kirim.
+function wibFields(d) {
+  if (d == null) return {};
+  const x = d instanceof Date ? d : new Date(d);
+  if (isNaN(x.getTime())) return {};
+  const w = new Date(x.getTime() + WIB_OFFSET_MS);
+  const p = n => String(n).padStart(2, '0');
+  return {
+    created_at_wib_time: p(w.getUTCHours()) + '.' + p(w.getUTCMinutes()),
+    created_at_wib_stamp: WIB_HARI[w.getUTCDay()] + ', ' + w.getUTCDate() + ' ' + WIB_BULAN[w.getUTCMonth()] + ' ' + w.getUTCFullYear() + ' ' + p(w.getUTCHours()) + '.' + p(w.getUTCMinutes()),
+    created_at_wib_date: w.getUTCFullYear() + '-' + p(w.getUTCMonth() + 1) + '-' + p(w.getUTCDate()),
+  };
+}
+
 function pairRoom(a, b) {
   const lo = Math.min(a, b);
   const hi = Math.max(a, b);
@@ -136,6 +156,7 @@ router.get('/chat/messages', async (req, res) => {
       );
       rows.reverse();
     }
+    rows = rows.map(r => ({ ...r, ...wibFields(r.created_at) }));
     res.json({ room, messages: rows });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -177,6 +198,7 @@ router.post('/chat/messages', async (req, res) => {
        FROM chat_messages WHERE id = ?`,
       [r.insertId]
     );
+    Object.assign(msg, wibFields(msg.created_at));
     // Tandai pesan sendiri sebagai sudah dibaca.
     await db.query(
       `INSERT INTO chat_reads (tenant_id, user_id, room, last_read_id)
