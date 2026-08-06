@@ -31,8 +31,15 @@ function chatRoleLabel(role) {
   return { admin: 'Admin', ahli_gizi: 'Ahli Gizi', gudang: 'Gudang', keuangan: 'Keuangan', produksi: 'Produksi' }[role] || role || '';
 }
 
-function chatTime(d) {
-  if (!d) return '';
+// Waktu & tanggal chat disajikan dalam WIB (UTC+7) yang dihitung MANUAL.
+// Tidak bergantung pada opsi timeZone toLocaleTimeString/toLocaleDateString,
+// agar konsisten walau perangkat/browser memakai zona waktu lain (mis. UTC).
+const CHAT_WIB_OFFSET_MS = 7 * 3600 * 1000;
+const CHAT_HARI_ID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const CHAT_BULAN_ID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+function chatParseDate(d) {
+  if (d == null) return null;
   let x;
   if (d instanceof Date) {
     x = d;
@@ -41,25 +48,46 @@ function chatTime(d) {
     if (s.includes('T') || s.includes('Z') || s.includes('+') || s.endsWith(')')) {
       x = new Date(s);
     } else {
-      x = new Date(s + 'Z');
+      x = new Date(s + 'Z'); // string tanpa penanda zona dianggap UTC
     }
   }
-  if (isNaN(x.getTime())) return '';
-  return x.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+  return isNaN(x.getTime()) ? null : x;
+}
+
+// Geser instan ke jam WIB (UTC+7) lalu baca via getUTC* — konsisten di semua zona perangkat.
+function chatToWib(x) {
+  return new Date(x.getTime() + CHAT_WIB_OFFSET_MS);
+}
+
+// Kunci tanggal (YYYY-MM-DD) dalam zona WIB.
+function chatWibDate(x) {
+  const wib = chatToWib(x);
+  return wib.getUTCFullYear() + '-' + String(wib.getUTCMonth() + 1).padStart(2, '0') + '-' + String(wib.getUTCDate()).padStart(2, '0');
+}
+
+function chatTime(d) {
+  const x = chatParseDate(d);
+  if (!x) return '';
+  const wib = chatToWib(x);
+  return String(wib.getUTCHours()).padStart(2, '0') + '.' + String(wib.getUTCMinutes()).padStart(2, '0');
 }
 
 function chatDayKey(d) {
-  const x = new Date(d);
-  return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+  const x = chatParseDate(d);
+  return x ? chatWibDate(x) : '';
 }
 
 function chatDayLabel(d) {
-  const x = new Date(d);
-  const today = new Date();
-  const y = new Date(); y.setDate(today.getDate() - 1);
-  if (chatDayKey(x) === chatDayKey(today)) return 'Hari ini';
-  if (chatDayKey(x) === chatDayKey(y)) return 'Kemarin';
-  return x.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+  const x = chatParseDate(d);
+  if (!x) return '';
+  const now = new Date();
+  const todayWib = chatWibDate(now);
+  const yesterdayWib = chatWibDate(new Date(now.getTime() - 86400000));
+  const key = chatWibDate(x);
+  if (key === todayWib) return 'Hari ini';
+  if (key === yesterdayWib) return 'Kemarin';
+  const wib = chatToWib(x);
+  return CHAT_HARI_ID[wib.getUTCDay()] + ', ' + wib.getUTCDate() + ' ' + CHAT_BULAN_ID[wib.getUTCMonth()] + ' ' + wib.getUTCFullYear();
 }
 
 function chatTotalUnread() {

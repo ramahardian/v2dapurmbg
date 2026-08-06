@@ -797,20 +797,52 @@ function userAvatarHTML(foto, nama, sizeClass) {
 function ohRoleLabel(role) {
   return { admin: 'Admin', ahli_gizi: 'Ahli Gizi', gudang: 'Gudang', keuangan: 'Keuangan', produksi: 'Produksi' }[role] || role || '-';
 }
+// Waktu & tanggal riwayat user online disajikan dalam WIB (UTC+7) manual,
+// agar konsisten walau perangkat/browser memakai zona waktu lain (mis. UTC).
+const OH_WIB_OFFSET_MS = 7 * 3600 * 1000;
+const OH_HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const OH_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+function ohParseDate(d) {
+  if (d == null) return null;
+  let x;
+  if (d instanceof Date) {
+    x = d;
+  } else {
+    const s = String(d).trim();
+    if (s.includes('T') || s.includes('Z') || s.includes('+') || s.endsWith(')')) {
+      x = new Date(s);
+    } else {
+      x = new Date(s + 'Z'); // string tanpa penanda zona dianggap UTC
+    }
+  }
+  return isNaN(x.getTime()) ? null : x;
+}
+function ohToWib(x) {
+  return new Date(x.getTime() + OH_WIB_OFFSET_MS);
+}
 function ohDateKey(d) {
-  const x = new Date(d);
-  return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+  const x = ohParseDate(d);
+  if (!x) return '';
+  const wib = ohToWib(x);
+  return wib.getUTCFullYear() + '-' + String(wib.getUTCMonth() + 1).padStart(2, '0') + '-' + String(wib.getUTCDate()).padStart(2, '0');
 }
 function ohDateLabel(d) {
-  const x = new Date(d);
-  const today = new Date();
-  const y = new Date(); y.setDate(today.getDate() - 1);
-  if (ohDateKey(x) === ohDateKey(today)) return 'Hari ini';
-  if (ohDateKey(x) === ohDateKey(y)) return 'Kemarin';
-  return x.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+  const x = ohParseDate(d);
+  if (!x) return '';
+  const now = new Date();
+  const todayWib = ohDateKey(now);
+  const yesterdayWib = ohDateKey(new Date(now.getTime() - 86400000));
+  const key = ohDateKey(x);
+  if (key === todayWib) return 'Hari ini';
+  if (key === yesterdayWib) return 'Kemarin';
+  const wib = ohToWib(x);
+  return OH_HARI[wib.getUTCDay()] + ', ' + wib.getUTCDate() + ' ' + OH_BULAN[wib.getUTCMonth()] + ' ' + wib.getUTCFullYear();
 }
 function ohTime(d) {
-  return new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const x = ohParseDate(d);
+  if (!x) return '—';
+  const wib = ohToWib(x);
+  return String(wib.getUTCHours()).padStart(2, '0') + '.' + String(wib.getUTCMinutes()).padStart(2, '0');
 }
 
 let ohCurrentRange = 7;
