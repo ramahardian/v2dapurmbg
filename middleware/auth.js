@@ -43,6 +43,18 @@ function requireRole(...roles) {
   };
 }
 
+// Riwayat aktivitas: throttle heartbeat per user (maks 1 baris per 5 menit).
+// Disimpan di memory (per proses) agar tidak menambah query DB di tiap request.
+const heartbeatLog = new Map();
+const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
+
+function logUserActivity(tenantId, userId, nama, role, event) {
+  db.query(
+    'INSERT INTO user_activity_log (tenant_id, user_id, nama, role, event) VALUES (?,?,?,?,?)',
+    [tenantId, userId, nama || '', role || '', event]
+  ).catch(() => {});
+}
+
 async function trackActivity(req, res, next) {
   // Middleware ini dipasang SEBELUM requireAuth (app.use('/api', trackActivity, apiRoutes)),
   // jadi req.user belum ada. Verifikasi JWT langsung di sini (field uid dari payload, sama
@@ -54,10 +66,15 @@ async function trackActivity(req, res, next) {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
       if (payload && payload.uid) {
         db.query('UPDATE users SET last_activity = NOW() WHERE id = ?', [payload.uid]).catch(() => {});
+        const now = Date.now();
+        if ((heartbeatLog.get(payload.uid) || 0) <= now - HEARTBEAT_INTERVAL_MS) {
+          heartbeatLog.set(payload.uid, now);
+          logUserActivity(payload.tenant_id, payload.uid, payload.nama, payload.role, 'heartbeat');
+        }
       }
     } catch { /* token tidak valid — abaikan */ }
   }
   next();
 }
 
-module.exports = { sign, requireAuth, requireRole, trackActivity };
+module.exports = { sign, requireAuth, requireRole, trackActivity, logUserActivity };

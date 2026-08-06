@@ -784,3 +784,122 @@ function stopOnlineUsersAutoRefresh() {
 // Expose for manual refresh button
 window.loadOnlineUsers = loadOnlineUsers;
 window.stopOnlineUsersAutoRefresh = stopOnlineUsersAutoRefresh;
+
+// ===== Riwayat User Online =====
+
+function ohInitials(n) {
+  return (n || '?').split(' ').map(w => (w[0] || '')).join('').toUpperCase().slice(0, 2) || '?';
+}
+function ohRoleLabel(role) {
+  return { admin: 'Admin', ahli_gizi: 'Ahli Gizi', gudang: 'Gudang', keuangan: 'Keuangan', produksi: 'Produksi' }[role] || role || '-';
+}
+function ohDateKey(d) {
+  const x = new Date(d);
+  return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+}
+function ohDateLabel(d) {
+  const x = new Date(d);
+  const today = new Date();
+  const y = new Date(); y.setDate(today.getDate() - 1);
+  if (ohDateKey(x) === ohDateKey(today)) return 'Hari ini';
+  if (ohDateKey(x) === ohDateKey(y)) return 'Kemarin';
+  return x.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+}
+function ohTime(d) {
+  return new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+
+function openOnlineHistory() {
+  const m = document.getElementById('online-history-modal');
+  if (!m) return;
+  m.classList.remove('hidden');
+  m.classList.add('flex');
+  loadOnlineHistory();
+}
+
+function closeOnlineHistory() {
+  const m = document.getElementById('online-history-modal');
+  if (!m) return;
+  m.classList.add('hidden');
+  m.classList.remove('flex');
+}
+
+function populateOhUserFilter(users) {
+  const sel = document.getElementById('oh-user');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Semua user</option>' + (users || []).map(u => `<option value="${u.user_id}">${escDashMenu(u.nama)}</option>`).join('');
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+function renderOhSummary(d) {
+  const users = d.users || [];
+  const chips = users.slice(0, 8).map(u => `
+    <div class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-stone-50 border border-stone-200 whitespace-nowrap">
+      <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style="background: linear-gradient(135deg, #10b981, #059669);">${ohInitials(u.nama)}</div>
+      <div class="leading-tight min-w-0">
+        <div class="text-xs font-medium text-stone-700 truncate">${escDashMenu(u.nama || '—')}</div>
+        <div class="text-[9px] text-stone-400">${u.logins} login · ${u.last_activity ? 'aktif ' + ohTime(u.last_activity) : '—'}</div>
+      </div>
+    </div>`).join('');
+  return `
+    <div class="flex gap-2 flex-wrap mb-2">
+      <div class="text-[10px] px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold">${d.total} aktivitas</div>
+      <div class="text-[10px] px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold">${d.logins} login</div>
+      <div class="text-[10px] px-2.5 py-1.5 rounded-lg bg-stone-100 text-stone-600 font-bold">${users.length} user</div>
+    </div>
+    <div class="flex gap-2 overflow-x-auto pb-1">${chips}${users.length > 8 ? `<span class="text-[10px] text-stone-400 self-center whitespace-nowrap">+${users.length - 8} lagi</span>` : ''}</div>`;
+}
+
+function renderOhEntries(entries) {
+  if (!entries || !entries.length) return '<div class="text-sm text-stone-400 text-center py-8">Belum ada aktivitas pada rentang ini.</div>';
+  const groups = {};
+  entries.forEach(e => { const k = ohDateKey(e.created_at); (groups[k] = groups[k] || []).push(e); });
+  let html = '';
+  Object.keys(groups).sort((a, b) => (a < b ? 1 : -1)).forEach(k => {
+    const rows = groups[k];
+    html += `<div class="text-[10px] font-bold uppercase tracking-wider text-stone-400 mt-3 mb-1.5">${ohDateLabel(rows[0].created_at)}</div>`;
+    rows.forEach(e => {
+      const isLogin = e.event === 'login';
+      html += `<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-stone-50 transition-colors">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style="background: linear-gradient(135deg, #10b981, #059669);">${ohInitials(e.nama)}</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="font-medium text-stone-800 truncate">${escDashMenu(e.nama || '—')}</span>
+            <span class="px-1.5 py-0.5 rounded bg-stone-100 text-[9px] font-medium">${ohRoleLabel(e.role)}</span>
+          </div>
+          <div class="text-[10px] text-stone-400">${ohTime(e.created_at)}</div>
+        </div>
+        <span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${isLogin ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}">${isLogin ? 'Login' : 'Aktif'}</span>
+      </div>`;
+    });
+  });
+  return html;
+}
+
+async function loadOnlineHistory() {
+  const listEl = document.getElementById('oh-list');
+  const infoEl = document.getElementById('oh-range-info');
+  const summaryEl = document.getElementById('oh-summary');
+  if (listEl) listEl.innerHTML = '<div class="text-sm text-stone-400 text-center py-8">Memuat...</div>';
+
+  const range = (document.getElementById('oh-range') || {}).value || '7';
+  const uid = (document.getElementById('oh-user') || {}).value || '';
+  try {
+    const q = new URLSearchParams({ days: range });
+    if (uid) q.set('user_id', uid);
+    const r = await fetch('/api/dashboard/online-history?' + q.toString(), { credentials: 'include' });
+    if (!r.ok) throw new Error('Failed');
+    const d = await r.json();
+    populateOhUserFilter(d.users);
+    if (infoEl) infoEl.textContent = `${d.total} aktivitas · ${d.logins} login${d.mulai ? ` · ${d.mulai} s/d ${d.sampai}` : ''}`;
+    if (summaryEl) summaryEl.innerHTML = renderOhSummary(d);
+    if (listEl) listEl.innerHTML = renderOhEntries(d.entries);
+  } catch (err) {
+    if (listEl) listEl.innerHTML = '<div class="text-sm text-red-500 text-center py-8">Gagal memuat riwayat</div>';
+  }
+}
+
+window.openOnlineHistory = openOnlineHistory;
+window.closeOnlineHistory = closeOnlineHistory;
+window.loadOnlineHistory = loadOnlineHistory;

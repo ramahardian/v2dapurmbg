@@ -632,6 +632,24 @@ async function runMigration() {
     log('✓ Event hapus_foto_absensi dibuat (setiap Minggu 23:59)');
   } catch (e) { log('  (skip event hapus foto): ' + e.message); }
 
+  // Tabel user_activity_log — riwayat user online (login & heartbeat)
+  try {
+    await q(`CREATE TABLE IF NOT EXISTS user_activity_log (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id INT NOT NULL,
+      user_id INT NOT NULL,
+      nama VARCHAR(200) DEFAULT NULL,
+      role VARCHAR(50) DEFAULT NULL,
+      event ENUM('login','heartbeat') NOT NULL DEFAULT 'heartbeat',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_activity_tenant_created (tenant_id, created_at),
+      INDEX idx_activity_user (user_id, created_at)
+    ) ENGINE=InnoDB`);
+    log('✓ Migrasi user_activity_log: tabel dibuat');
+  } catch (e) { log('  (skip user_activity_log): ' + e.message); }
+
   log('✓ Migrasi selesai!');
   return logs;
 }

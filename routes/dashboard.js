@@ -334,5 +334,60 @@ router.get('/dashboard/online-users', async (req, res) => {
   });
 });
 
+/**
+ * GET /dashboard/online-history
+ * Riwayat aktivitas user online (login + heartbeat) untuk modal Riwayat di kartu User Online.
+ * Query: ?days=7 (default, maks 90) & user_id (opsional, filter per user)
+ */
+router.get('/dashboard/online-history', async (req, res) => {
+  const t = req.user.tenant_id;
+  const days = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 7));
+  const uid = req.query.user_id ? parseInt(req.query.user_id, 10) : null;
+
+  let where = 'WHERE al.tenant_id = ? AND al.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)';
+  const params = [t, days];
+  if (uid) { where += ' AND al.user_id = ?'; params.push(uid); }
+
+  try {
+    const [[range]] = await db.query(
+      `SELECT MIN(DATE(al.created_at)) AS awal, MAX(DATE(al.created_at)) AS akhir, COUNT(*) AS total,
+              COALESCE(SUM(al.event = 'login'), 0) AS logins
+       FROM user_activity_log al ${where}`,
+      params
+    );
+
+    const [users] = await db.query(
+      `SELECT al.user_id, al.nama, al.role, COUNT(*) AS events,
+              COALESCE(SUM(al.event = 'login'), 0) AS logins,
+              MAX(al.created_at) AS last_activity
+       FROM user_activity_log al ${where}
+       GROUP BY al.user_id, al.nama, al.role
+       ORDER BY last_activity DESC`,
+      params
+    );
+
+    const [entries] = await db.query(
+      `SELECT al.id, al.user_id, al.nama, al.role, al.event, al.created_at
+       FROM user_activity_log al ${where}
+       ORDER BY al.created_at DESC, al.id DESC
+       LIMIT 500`,
+      params
+    );
+
+    res.json({
+      range_days: days,
+      mulai: range.awal,
+      sampai: range.akhir,
+      total: range.total,
+      logins: range.logins,
+      users,
+      entries,
+    });
+  } catch (e) {
+    console.error('Gagal ambil riwayat aktivitas:', e.message);
+    res.status(500).json({ error: 'Gagal memuat riwayat: ' + e.message });
+  }
+});
+
 module.exports = router;
 

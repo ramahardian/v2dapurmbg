@@ -94,6 +94,8 @@
     <div class="mt-3 text-center">
       <button onclick="loadOnlineUsers()" class="text-xs font-medium text-blue-600 hover:underline">Refresh</button>
       <span class="mx-2 text-stone-300">|</span>
+      <button onclick="openOnlineHistory()" class="text-xs font-medium text-blue-600 hover:underline">Riwayat</button>
+      <span class="mx-2 text-stone-300">|</span>
       <span class="text-[10px] text-stone-400">Auto-refresh tiap 30 detik</span>
     </div>
   </div>
@@ -157,8 +159,8 @@
               <div class="text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-1">Porsi</div>
               <div class="mono text-sm font-bold text-stone-700"><%= ma.porsi_item.toLocaleString('id-ID') %><% if (ma.jumlah_porsi > 0) { %> / <%= ma.jumlah_porsi.toLocaleString('id-ID') %> porsi<% } %></div>
             </div>
-          </div>
-        </div>
+  </div>
+</div>
         <% if (ma.kalori > 0) { %>
           <div class="grid grid-cols-4 gap-2 border-t border-stone-100 pt-3">
             <div class="text-center">
@@ -214,5 +216,46 @@
 <% } else { %>
       <div class="text-sm text-stone-400 py-8 text-center">Belum ada data produksi dalam 7 hari terakhir.</div>
     <% } %>
+  </div>
+</div>
+
+<!-- Modal Riwayat User Online -->
+<div id="online-history-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <h3 class="font-bold text-stone-800">Riwayat User Online</h3>
+      </div>
+      <button onclick="closeOnlineHistory()" class="w-8 h-8 flex items-center justify-center rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="px-5 py-3 border-b border-stone-100 flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2 text-xs text-stone-500">
+        <span class="font-semibold text-stone-400">Rentang</span>
+        <select id="oh-range" onchange="loadOnlineHistory()" class="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">
+          <option value="1">Hari ini</option>
+          <option value="7" selected>7 hari</option>
+          <option value="30">30 hari</option>
+          <option value="90">90 hari</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-xs text-stone-500">
+        <span class="font-semibold text-stone-400">User</span>
+        <select id="oh-user" onchange="loadOnlineHistory()" class="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">
+          <option value="">Semua user</option>
+        </select>
+      </label>
+      <button onclick="loadOnlineHistory()" class="text-xs font-medium text-blue-600 hover:underline">Refresh</button>
+      <span id="oh-range-info" class="ml-auto text-[10px] text-stone-400"></span>
+    </div>
+
+    <div id="oh-summary" class="px-5 py-3 border-b border-stone-100"></div>
+
+    <div id="oh-list" class="flex-1 overflow-y-auto px-5 py-4 space-y-1">
+      <div class="text-sm text-stone-400 text-center py-8">Memuat...</div>
+    </div>
   </div>
 </div>

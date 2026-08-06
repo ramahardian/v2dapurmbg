@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
-const { sign, requireAuth } = require('../middleware/auth');
+const { sign, requireAuth, logUserActivity } = require('../middleware/auth');
 function saveBase64Foto(base64Data) {
   if (!base64Data || !base64Data.startsWith('data:image')) return null;
   const matches = base64Data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);
@@ -46,6 +46,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Email atau password salah' });
     const token = sign(u);
     res.cookie('access_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 8 * 3600 * 1000, path: '/' });
+    logUserActivity(u.tenant_id, u.id, u.nama, u.role, 'login');
     res.json({ user: { id: u.id, tenant_id: u.tenant_id, email: u.email, nama: u.nama, role: u.role, foto: u.foto } });
   } catch (e) {
     console.error('Login error:', e);
@@ -146,6 +147,8 @@ router.post('/login-phone', loginLimiter, async (req, res) => {
     });
 
     console.log('🔐 [Login-Phone] ✅ Login BERHASIL — redirect ke dashboard untuk:', k.nama);
+
+    logUserActivity(u.tenant_id, u.id, u.nama, u.role, 'login');
 
     // Response sesuai format yang diharapkan frontend
     res.json({
