@@ -382,10 +382,12 @@
     html.dark .chat-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,.2); }
     @keyframes chatIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
     .chat-msg-anim { animation:chatIn .18s ease-out both; }
-    .chat-time { font-size:10px; opacity:.55; margin-top:4px; }
-    .chat-time.mine { text-align:right; color:rgba(255,255,255,.7); }
-    .chat-time.other { text-align:left; color:var(--text-body); }
-    html.dark .chat-time.other { color:#a8a29e; }
+    .chat-time { font-size:10px; margin-top:4px; }
+    /* Light mode: jam harus jelas terbaca — putih solid di atas bubble hijau, abu-abu gelap di atas latar terang */
+    .chat-time.mine { text-align:right; color:#fff; opacity:.92; font-weight:600; }
+    .chat-time.other { text-align:left; color:#57534e; opacity:.9; }
+    html.dark .chat-time.mine { color:#fff; opacity:.85; }
+    html.dark .chat-time.other { color:#a8a29e; opacity:.85; }
   </style>
 
   <!-- ═══ CHAT ANTAR USER (sidebar melayang kanan) ═══ -->
