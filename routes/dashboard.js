@@ -357,18 +357,22 @@ router.get('/dashboard/online-history', async (req, res) => {
     );
 
     const [users] = await db.query(
-      `SELECT al.user_id, al.nama, al.role, COUNT(*) AS events,
+      `SELECT al.user_id, al.nama, al.role, u2.foto AS foto, COUNT(*) AS events,
               COALESCE(SUM(al.event = 'login'), 0) AS logins,
               MAX(al.created_at) AS last_activity
-       FROM user_activity_log al ${where}
-       GROUP BY al.user_id, al.nama, al.role
+       FROM user_activity_log al
+       LEFT JOIN users u2 ON u2.id = al.user_id
+       ${where}
+       GROUP BY al.user_id, al.nama, al.role, u2.foto
        ORDER BY last_activity DESC`,
       params
     );
 
     const [entries] = await db.query(
-      `SELECT al.id, al.user_id, al.nama, al.role, al.event, al.created_at
-       FROM user_activity_log al ${where}
+      `SELECT al.id, al.user_id, al.nama, al.role, u2.foto AS foto, al.event, al.created_at
+       FROM user_activity_log al
+       LEFT JOIN users u2 ON u2.id = al.user_id
+       ${where}
        ORDER BY al.created_at DESC, al.id DESC
        LIMIT 500`,
       params

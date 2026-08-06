@@ -737,7 +737,6 @@ async function loadOnlineUsers() {
     
     if (listEl) {
       listEl.innerHTML = data.users.map(u => {
-        const initials = u.nama?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || '?';
         const mins = Math.floor(u.seconds_ago / 60);
         const secs = u.seconds_ago % 60;
         const timeAgo = mins > 0 ? `${mins}m ${secs}s lalu` : `${secs}s lalu`;
@@ -745,9 +744,7 @@ async function loadOnlineUsers() {
         
         return `
           <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-stone-50 transition-colors">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style="background: linear-gradient(135deg, #10b981, #059669);">
-              ${initials}
-            </div>
+            ${userAvatarHTML(u.foto, u.nama, 'w-8 h-8')}
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <span class="font-medium text-stone-800 truncate">${u.nama}</span>
@@ -790,6 +787,13 @@ window.stopOnlineUsersAutoRefresh = stopOnlineUsersAutoRefresh;
 function ohInitials(n) {
   return (n || '?').split(' ').map(w => (w[0] || '')).join('').toUpperCase().slice(0, 2) || '?';
 }
+// Avatar: pakai foto user jika ada (data URL), jika tidak pakai inisial nama.
+function userAvatarHTML(foto, nama, sizeClass) {
+  if (foto && typeof foto === 'string' && /^data:image\//.test(foto)) {
+    return `<img src="${foto}" alt="" class="${sizeClass} rounded-full object-cover border border-stone-200 shrink-0">`;
+  }
+  return `<div class="${sizeClass} rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style="background: linear-gradient(135deg, #10b981, #059669);">${ohInitials(nama)}</div>`;
+}
 function ohRoleLabel(role) {
   return { admin: 'Admin', ahli_gizi: 'Ahli Gizi', gudang: 'Gudang', keuangan: 'Keuangan', produksi: 'Produksi' }[role] || role || '-';
 }
@@ -809,11 +813,19 @@ function ohTime(d) {
   return new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 }
 
+let ohCurrentRange = 7;
+
+function setText(id, v) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = v;
+}
+
 function openOnlineHistory() {
   const m = document.getElementById('online-history-modal');
   if (!m) return;
   m.classList.remove('hidden');
   m.classList.add('flex');
+  ohSyncPills();
   loadOnlineHistory();
 }
 
@@ -822,6 +834,18 @@ function closeOnlineHistory() {
   if (!m) return;
   m.classList.add('hidden');
   m.classList.remove('flex');
+}
+
+function ohSetRange(days) {
+  ohCurrentRange = days;
+  ohSyncPills();
+  loadOnlineHistory();
+}
+
+function ohSyncPills() {
+  document.querySelectorAll('#oh-range-pills .oh-pill').forEach(b => {
+    b.classList.toggle('oh-pill-active', String(b.dataset.days) === String(ohCurrentRange));
+  });
 }
 
 function populateOhUserFilter(users) {
@@ -834,43 +858,59 @@ function populateOhUserFilter(users) {
 
 function renderOhSummary(d) {
   const users = d.users || [];
-  const chips = users.slice(0, 8).map(u => `
-    <div class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-stone-50 border border-stone-200 whitespace-nowrap">
-      <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style="background: linear-gradient(135deg, #10b981, #059669);">${ohInitials(u.nama)}</div>
+  if (!users.length) return '';
+  const chips = users.slice(0, 10).map(u => `
+    <div class="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-stone-50 border border-stone-200 whitespace-nowrap">
+      ${userAvatarHTML(u.foto, u.nama, 'w-6 h-6')}
       <div class="leading-tight min-w-0">
-        <div class="text-xs font-medium text-stone-700 truncate">${escDashMenu(u.nama || '—')}</div>
-        <div class="text-[9px] text-stone-400">${u.logins} login · ${u.last_activity ? 'aktif ' + ohTime(u.last_activity) : '—'}</div>
+        <div class="text-[11px] font-semibold text-stone-700 truncate">${escDashMenu(u.nama || '—')}</div>
+        <div class="text-[9px] text-stone-400">${ohRoleLabel(u.role)} · ${u.logins} login · ${u.last_activity ? ohTime(u.last_activity) : '—'}</div>
       </div>
     </div>`).join('');
-  return `
-    <div class="flex gap-2 flex-wrap mb-2">
-      <div class="text-[10px] px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold">${d.total} aktivitas</div>
-      <div class="text-[10px] px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold">${d.logins} login</div>
-      <div class="text-[10px] px-2.5 py-1.5 rounded-lg bg-stone-100 text-stone-600 font-bold">${users.length} user</div>
-    </div>
-    <div class="flex gap-2 overflow-x-auto pb-1">${chips}${users.length > 8 ? `<span class="text-[10px] text-stone-400 self-center whitespace-nowrap">+${users.length - 8} lagi</span>` : ''}</div>`;
+  const more = users.length > 10 ? `<span class="text-[10px] text-stone-400 self-center whitespace-nowrap">+${users.length - 10} lagi</span>` : '';
+  return `<div class="flex gap-2 overflow-x-auto pb-0.5">${chips}${more}</div>`;
+}
+
+function renderOhLoading() {
+  return `<div class="px-5 py-12 flex flex-col items-center gap-2">
+    <div class="w-6 h-6 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
+    <span class="text-xs text-stone-400">Memuat...</span>
+  </div>`;
+}
+
+function renderOhEmpty(msg, isError) {
+  return `<div class="px-5 py-12 text-center text-sm ${isError ? 'text-red-500' : 'text-stone-400'}">${msg}</div>`;
 }
 
 function renderOhEntries(entries) {
-  if (!entries || !entries.length) return '<div class="text-sm text-stone-400 text-center py-8">Belum ada aktivitas pada rentang ini.</div>';
+  if (!entries || !entries.length) return renderOhEmpty('Belum ada aktivitas pada rentang ini.');
   const groups = {};
   entries.forEach(e => { const k = ohDateKey(e.created_at); (groups[k] = groups[k] || []).push(e); });
+  const keys = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
   let html = '';
-  Object.keys(groups).sort((a, b) => (a < b ? 1 : -1)).forEach(k => {
+  keys.forEach((k, gi) => {
     const rows = groups[k];
-    html += `<div class="text-[10px] font-bold uppercase tracking-wider text-stone-400 mt-3 mb-1.5">${ohDateLabel(rows[0].created_at)}</div>`;
-    rows.forEach(e => {
+    const lastGroup = gi === keys.length - 1;
+    html += `<div class="sticky top-0 z-10 bg-white/95 backdrop-blur px-5 py-2 flex items-center justify-between border-b border-stone-100">
+      <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400">${ohDateLabel(rows[0].created_at)}</span>
+      <span class="text-[9px] text-stone-300">${rows.length} aktivitas</span>
+    </div>`;
+    rows.forEach((e, ri) => {
       const isLogin = e.event === 'login';
-      html += `<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-stone-50 transition-colors">
-        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style="background: linear-gradient(135deg, #10b981, #059669);">${ohInitials(e.nama)}</div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2">
-            <span class="font-medium text-stone-800 truncate">${escDashMenu(e.nama || '—')}</span>
-            <span class="px-1.5 py-0.5 rounded bg-stone-100 text-[9px] font-medium">${ohRoleLabel(e.role)}</span>
-          </div>
-          <div class="text-[10px] text-stone-400">${ohTime(e.created_at)}</div>
+      const isLast = lastGroup && ri === rows.length - 1;
+      html += `<div class="flex items-center gap-3 px-5 py-2.5 ${isLast ? '' : 'border-b border-stone-50'} hover:bg-stone-50/70 transition-colors">
+        ${userAvatarHTML(e.foto, e.nama, 'w-8 h-8')}
+        <div class="flex-1 min-w-0 flex items-center gap-2">
+          <span class="font-medium text-stone-800 text-sm truncate">${escDashMenu(e.nama || '—')}</span>
+          <span class="px-1.5 py-0.5 rounded bg-stone-100 text-[9px] font-medium text-stone-500 shrink-0">${ohRoleLabel(e.role)}</span>
         </div>
-        <span class="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${isLogin ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}">${isLogin ? 'Login' : 'Aktif'}</span>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="mono text-[10px] text-stone-400">${ohTime(e.created_at)}</span>
+          <span class="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full ${isLogin ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}">
+            <span class="w-1 h-1 rounded-full ${isLogin ? 'bg-blue-500' : 'bg-emerald-500'}"></span>
+            ${isLogin ? 'Login' : 'Aktif'}
+          </span>
+        </div>
       </div>`;
     });
   });
@@ -878,28 +918,32 @@ function renderOhEntries(entries) {
 }
 
 async function loadOnlineHistory() {
+  ohSyncPills();
   const listEl = document.getElementById('oh-list');
   const infoEl = document.getElementById('oh-range-info');
   const summaryEl = document.getElementById('oh-summary');
-  if (listEl) listEl.innerHTML = '<div class="text-sm text-stone-400 text-center py-8">Memuat...</div>';
+  if (listEl) listEl.innerHTML = renderOhLoading();
 
-  const range = (document.getElementById('oh-range') || {}).value || '7';
   const uid = (document.getElementById('oh-user') || {}).value || '';
   try {
-    const q = new URLSearchParams({ days: range });
+    const q = new URLSearchParams({ days: String(ohCurrentRange) });
     if (uid) q.set('user_id', uid);
     const r = await fetch('/api/dashboard/online-history?' + q.toString(), { credentials: 'include' });
     if (!r.ok) throw new Error('Failed');
     const d = await r.json();
     populateOhUserFilter(d.users);
-    if (infoEl) infoEl.textContent = `${d.total} aktivitas · ${d.logins} login${d.mulai ? ` · ${d.mulai} s/d ${d.sampai}` : ''}`;
+    setText('oh-stat-total', d.total);
+    setText('oh-stat-login', d.logins);
+    setText('oh-stat-user', (d.users || []).length);
+    if (infoEl) infoEl.textContent = d.mulai ? `${d.mulai} → ${d.sampai}` : '';
     if (summaryEl) summaryEl.innerHTML = renderOhSummary(d);
     if (listEl) listEl.innerHTML = renderOhEntries(d.entries);
   } catch (err) {
-    if (listEl) listEl.innerHTML = '<div class="text-sm text-red-500 text-center py-8">Gagal memuat riwayat</div>';
+    if (listEl) listEl.innerHTML = renderOhEmpty('Gagal memuat riwayat', true);
   }
 }
 
 window.openOnlineHistory = openOnlineHistory;
 window.closeOnlineHistory = closeOnlineHistory;
 window.loadOnlineHistory = loadOnlineHistory;
+window.ohSetRange = ohSetRange;

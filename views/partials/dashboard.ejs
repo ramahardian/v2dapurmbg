@@ -220,42 +220,61 @@
 </div>
 
 <!-- Modal Riwayat User Online -->
+<style>
+  #oh-range-pills .oh-pill { color: #78716c; }
+  #oh-range-pills .oh-pill:hover { color: #1c1917; }
+  #oh-range-pills .oh-pill-active { background: #fff; color: #047857; box-shadow: 0 1px 2px rgba(0,0,0,.08); font-weight: 600; }
+</style>
 <div id="online-history-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
   <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-stone-100">
-      <div class="flex items-center gap-2">
-        <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        <h3 class="font-bold text-stone-800">Riwayat User Online</h3>
+    <div class="flex items-start justify-between px-5 py-4 border-b border-stone-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <h3 class="font-bold text-stone-800 leading-tight">Riwayat User Online</h3>
+          <p class="text-[10px] text-stone-400 mt-0.5">Log login & aktivitas user pada rentang terpilih</p>
+        </div>
       </div>
-      <button onclick="closeOnlineHistory()" class="w-8 h-8 flex items-center justify-center rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors">
+      <button onclick="closeOnlineHistory()" class="w-8 h-8 flex items-center justify-center rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors" aria-label="Tutup">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
 
-    <div class="px-5 py-3 border-b border-stone-100 flex flex-wrap items-center gap-3">
-      <label class="flex items-center gap-2 text-xs text-stone-500">
-        <span class="font-semibold text-stone-400">Rentang</span>
-        <select id="oh-range" onchange="loadOnlineHistory()" class="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">
-          <option value="1">Hari ini</option>
-          <option value="7" selected>7 hari</option>
-          <option value="30">30 hari</option>
-          <option value="90">90 hari</option>
-        </select>
-      </label>
-      <label class="flex items-center gap-2 text-xs text-stone-500">
-        <span class="font-semibold text-stone-400">User</span>
-        <select id="oh-user" onchange="loadOnlineHistory()" class="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">
-          <option value="">Semua user</option>
-        </select>
-      </label>
-      <button onclick="loadOnlineHistory()" class="text-xs font-medium text-blue-600 hover:underline">Refresh</button>
-      <span id="oh-range-info" class="ml-auto text-[10px] text-stone-400"></span>
+    <div class="px-5 py-3 border-b border-stone-100 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div class="flex items-center gap-1 p-1 bg-stone-100 rounded-xl" id="oh-range-pills">
+        <button onclick="ohSetRange(1)" data-days="1" class="oh-pill px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors">Hari ini</button>
+        <button onclick="ohSetRange(7)" data-days="7" class="oh-pill px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors">7 hari</button>
+        <button onclick="ohSetRange(30)" data-days="30" class="oh-pill px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors">30 hari</button>
+        <button onclick="ohSetRange(90)" data-days="90" class="oh-pill px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors">90 hari</button>
+      </div>
+      <div class="flex items-center gap-2 ml-auto">
+        <div class="relative">
+          <select id="oh-user" onchange="loadOnlineHistory()" class="text-xs border border-stone-200 rounded-lg pl-3 pr-8 py-1.5 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 appearance-none cursor-pointer">
+            <option value="">Semua user</option>
+          </select>
+          <svg class="w-3.5 h-3.5 text-stone-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+        <button onclick="loadOnlineHistory()" title="Muat ulang" class="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-stone-700 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+      </div>
     </div>
 
-    <div id="oh-summary" class="px-5 py-3 border-b border-stone-100"></div>
-
-    <div id="oh-list" class="flex-1 overflow-y-auto px-5 py-4 space-y-1">
-      <div class="text-sm text-stone-400 text-center py-8">Memuat...</div>
+    <div class="px-5 py-2.5 border-b border-stone-100 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2 text-[11px] text-stone-500">
+        <span class="font-bold text-emerald-600"><span id="oh-stat-total">0</span> aktivitas</span>
+        <span class="text-stone-300">·</span>
+        <span class="font-bold text-blue-600"><span id="oh-stat-login">0</span> login</span>
+        <span class="text-stone-300">·</span>
+        <span class="font-bold text-stone-600"><span id="oh-stat-user">0</span> user</span>
+      </div>
+      <span id="oh-range-info" class="text-[10px] text-stone-400 whitespace-nowrap"></span>
     </div>
+
+    <div id="oh-summary" class="px-5 py-2.5 border-b border-stone-100"></div>
+
+    <div id="oh-list" class="flex-1 overflow-y-auto"></div>
   </div>
 </div>
