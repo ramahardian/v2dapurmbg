@@ -285,9 +285,9 @@ async function loadChatMessages(room, after, reset) {
       appendHtml += renderChatMsg(m, showDay);
     });
     if (appendHtml) {
-      const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+      const wasNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
       container.insertAdjacentHTML('beforeend', appendHtml);
-      if (reset || nearBottom) container.scrollTop = container.scrollHeight;
+      if (reset || wasNearBottom) container.scrollTop = container.scrollHeight;
     }
     chatMarkRead(room);
   } catch (err) {
