@@ -216,4 +216,27 @@ router.post('/chat/read', async (req, res) => {
   }
 });
 
+/**
+ * POST /chat/delete
+ * Body: { room, msg_id } — hapus pesan sendiri (sender_id = user login).
+ */
+router.post('/chat/delete', async (req, res) => {
+  const t = req.user.tenant_id;
+  const me = req.user.id;
+  const room = String((req.body && req.body.room) || '');
+  const msgId = parseInt((req.body && req.body.msg_id), 10);
+  if (!isValidRoom(room)) return res.status(400).json({ error: 'Room tidak valid' });
+  if (!msgId) return res.status(400).json({ error: 'msg_id wajib' });
+  try {
+    const [r] = await db.query(
+      'DELETE FROM chat_messages WHERE tenant_id = ? AND room = ? AND id = ? AND sender_id = ?',
+      [t, room, msgId, me]
+    );
+    if (r.affectedRows === 0) return res.status(403).json({ error: 'Tidak bisa hapus pesan orang lain' });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;

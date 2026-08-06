@@ -34,7 +34,7 @@ function chatRoleLabel(role) {
 function chatTime(d) {
   const x = new Date(d);
   if (isNaN(x.getTime())) return '';
-  return x.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  return x.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
 }
 
 function chatDayKey(d) {
@@ -298,9 +298,12 @@ function renderChatMsg(m, showDay) {
   if (mine) {
     return dayBlock + `
       <div class="chat-msg-anim flex justify-end">
-        <div class="max-w-[78%] px-3 py-1.5 rounded-2xl rounded-br-sm chat-bubble-mine text-sm whitespace-pre-wrap break-words">
+        <div class="max-w-[78%] px-3 py-1 rounded-2xl rounded-br-sm chat-bubble-mine text-sm whitespace-pre-wrap break-words relative">
           ${body}
-          <div class="text-right text-[9px] mt-0.5" style="opacity:.7">${time}</div>
+          <div class="flex items-center justify-between mt-1">
+            <div class="text-right text-[9px]" style="opacity:.7">${time}</div>
+            <button class="chat-del-btn text-[10px] px-1.5 py-0.5 rounded text-red-500 hover:bg-red-50 transition" data-msg-id="${m.id}" title="Hapus">Hapus</button>
+          </div>
         </div>
       </div>`;
   }
@@ -309,9 +312,12 @@ function renderChatMsg(m, showDay) {
       ${chatAvatarHTML(m.sender_id === chatState.activeUserId ? chatState.activeFoto : null, m.sender_nama, 'w-6 h-6')}
       <div class="max-w-[78%]">
         ${m.sender_id !== chatState.activeUserId ? `<div class="text-[10px] font-semibold mb-0.5 px-1" style="color:var(--text-body);opacity:.55">${esc(m.sender_nama || 'User')}</div>` : ''}
-        <div class="px-3 py-1.5 rounded-2xl rounded-bl-sm chat-bubble-other text-sm whitespace-pre-wrap break-words">
+        <div class="px-3 py-1 rounded-2xl rounded-bl-sm chat-bubble-other text-sm whitespace-pre-wrap break-words relative">
           ${body}
-          <div class="text-right text-[9px] mt-0.5" style="opacity:.55">${time}</div>
+          <div class="flex items-center justify-between mt-1">
+            <div class="text-right text-[9px]" style="opacity:.55">${time}</div>
+            ${mine ? `<button class="chat-del-btn text-[10px] px-1.5 py-0.5 rounded text-red-500 hover:bg-red-50 transition" data-msg-id="${m.id}" title="Hapus">Hapus</button>` : ''}
+          </div>
         </div>
       </div>
     </div>`;
@@ -354,6 +360,31 @@ async function openChatWithUser(userId) {
     showToast('Gagal membuka chat: ' + err.message, 'error');
   }
 }
+
+async function chatDelete(msgId) {
+  if (!chatState.activeRoom) return;
+  const ok = await showConfirm('Hapus pesan ini?', 'Hapus');
+  if (!ok) return;
+  try {
+    await api.post('/chat/delete', { room: chatState.activeRoom, msg_id: msgId });
+    const el = document.querySelector(`[data-msg-id="${msgId}"]`);
+    if (el) {
+      const bubble = el.closest('.chat-msg-anim');
+      if (bubble) bubble.remove();
+    }
+  } catch (err) {
+    showToast('Gagal hapus: ' + err.message, 'error');
+  }
+}
+
+// Event delegation untuk tombol hapus
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.chat-del-btn');
+  if (btn) {
+    const msgId = parseInt(btn.dataset.msgId, 10);
+    if (msgId) chatDelete(msgId);
+  }
+});
 
 function initChat() {
   const inp = document.getElementById('chat-input');

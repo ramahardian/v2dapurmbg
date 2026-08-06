@@ -108,10 +108,10 @@ if (cluster.isMaster && WORKERS > 1) {
   // Skip /api/public/* (tidak dilimit agar publik bisa akses), /api/migrate/* (punya limiter sendiri),
   // dan endpoint realtime ringan yang butuh auth (polling chat, online-users, online-history, notifikasi)
   const isRealtimePoll = (req) =>
-    req.path.startsWith('/api/chat') ||
-    req.path.startsWith('/api/dashboard/online-users') ||
-    req.path.startsWith('/api/dashboard/online-history') ||
-    req.path.startsWith('/api/notifikasi');
+    req.path.startsWith('/chat') ||
+    req.path.startsWith('/dashboard/online-users') ||
+    req.path.startsWith('/dashboard/online-history') ||
+    req.path.startsWith('/notifikasi');
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 200,
