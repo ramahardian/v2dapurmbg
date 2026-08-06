@@ -268,7 +268,7 @@ function renderMenuBySiklusHtml(data) {
                   <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${m.karbohidrat}</td>
                  <td class="px-4 py-3 text-xs text-right">
                     <button onclick="switchMenuView('list');editMenuById(${m.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                    <button onclick="switchMenuView('list');saveCurrentMenuForPO({id: ${m.id}, nama: '${m.nama}', kategori_penerima: '${m.kategori_penerima}', jumlah_porsi: ${m.jumlah_porsi || 0}, gramasi_total: ${m.gramasi_total}, kalori: ${m.kalori}, protein: ${m.protein}, karbohidrat: ${m.karbohidrat}, lemak: ${m.lemak}, serat: ${m.serat}, bahan: ${JSON.stringify(m.bahan || [])}, status: '${m.status}'}); openMenuPoModal();" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Buat PO"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                    ${currentUser?.role !== 'ahli_gizi' ? `<button onclick="switchMenuView('list');saveCurrentMenuForPO({id: ${m.id}, nama: '${m.nama}', kategori_penerima: '${m.kategori_penerima}', jumlah_porsi: ${m.jumlah_porsi || 0}, gramasi_total: ${m.gramasi_total}, kalori: ${m.kalori}, protein: ${m.protein}, karbohidrat: ${m.karbohidrat}, lemak: ${m.lemak}, serat: ${m.serat}, bahan: ${JSON.stringify(m.bahan || [])}, status: '${m.status}'}); openMenuPoModal();" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Buat PO"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
                  </td>
                </tr>
               `).join('') : ''}
@@ -518,10 +518,10 @@ async function openMenuForm(editing) {
         <div class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Bahan</div>
         <div class="flex items-center gap-2">
           <button type="button" onclick="addBahanRow()" class="text-xs font-medium border border-stone-200 px-3 py-1.5 rounded-lg hover:bg-stone-50 shadow-sm transition-all">+ Tambah Bahan</button>
-          <button type="button" onclick="saveCurrentMenuFromForm(); openMenuPoModal()" class="text-xs font-medium border border-emerald-300 text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5" title="Buat PO dari Menu">
+          ${currentUser?.role !== 'ahli_gizi' ? `<button type="button" onclick="saveCurrentMenuFromForm(); openMenuPoModal()" class="text-xs font-medium border border-emerald-300 text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5" title="Buat PO dari Menu">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             Buat PO
-          </button>
+          </button>` : ''}
         </div>
       </div>
       <div class="flex items-center gap-2 mb-2 text-xs text-stone-500">

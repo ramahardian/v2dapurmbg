@@ -743,7 +743,7 @@ async function loadOnlineUsers() {
         const roleLabel = { admin: 'Admin', ahli_gizi: 'Ahli Gizi', gudang: 'Gudang', keuangan: 'Keuangan', produksi: 'Produksi' }[u.role] || u.role;
         
         return `
-          <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-stone-50 transition-colors">
+          <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-stone-50 transition-colors cursor-pointer" onclick="openChatWithUser(${u.id})" title="Buka chat dengan ${u.nama}">
             ${userAvatarHTML(u.foto, u.nama, 'w-8 h-8')}
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">

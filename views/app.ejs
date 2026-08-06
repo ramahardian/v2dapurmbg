@@ -358,6 +358,72 @@
     html.dark [class*="bg-gradient"] .text-\[#1e40af\] { color: #e7e5e4 !important; }
   </style>
 
+  <style>
+    .chat-bubble-other { background:#f5f5f4; color:#1c1917; }
+    html.dark .chat-bubble-other { background:#57534e; color:#e7e5e4; }
+    .chat-bubble-mine { background:linear-gradient(135deg,#10b981,#059669); color:#fff; }
+    .chat-scroll::-webkit-scrollbar { width:6px; }
+    .chat-scroll::-webkit-scrollbar-track { background:transparent; }
+    .chat-scroll::-webkit-scrollbar-thumb { background:rgba(0,0,0,.15); border-radius:99px; }
+    html.dark .chat-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,.2); }
+    @keyframes chatIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+    .chat-msg-anim { animation:chatIn .18s ease-out both; }
+  </style>
+
+  <!-- ═══ CHAT ANTAR USER (sidebar melayang kiri) ═══ -->
+  <button id="chat-btn" onclick="toggleChatPanel()" title="Chat antar user"
+    class="fixed bottom-4 left-4 z-[55] w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transition-transform hover:scale-105"
+    style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 8px 24px -6px rgba(5,150,105,.5)">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+    <span id="chat-btn-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1" style="box-shadow:0 0 0 2px #fff">0</span>
+  </button>
+
+  <div id="chat-panel" class="fixed inset-y-0 left-0 z-[56] w-[360px] max-w-[94vw] flex-col -translate-x-full transition-transform duration-200"
+    style="background:var(--bg-card);border-right:1px solid var(--border);box-shadow:16px 0 40px -16px rgba(0,0,0,.28)">
+    <div class="flex items-center gap-3 px-4 py-3.5 border-b shrink-0" style="border-color:var(--border);background:var(--bg-header)">
+      <div class="w-9 h-9 rounded-full flex items-center justify-center text-white shrink-0" style="background:linear-gradient(135deg,#10b981,#059669)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="font-bold text-sm leading-tight" style="color:var(--text-body)">Chat</div>
+        <div id="chat-panel-subtitle" class="text-[11px] truncate" style="color:var(--text-body);opacity:.55">—</div>
+      </div>
+      <button onclick="closeChatPanel()" class="p-2 rounded-lg hover:bg-stone-100 shrink-0" style="color:var(--text-body)" title="Tutup">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Daftar kontak / room -->
+    <div id="chat-contacts-view" class="chat-scroll flex-1 overflow-y-auto"></div>
+
+    <!-- Percakapan -->
+    <div id="chat-conversation-view" class="hidden flex-col min-h-0 flex-1">
+      <div class="flex items-center gap-2 px-3 py-2.5 border-b shrink-0" style="border-color:var(--border)">
+        <button onclick="chatBackToContacts()" class="p-1.5 -ml-1.5 rounded-lg hover:bg-stone-100" style="color:var(--text-body)" title="Kembali">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <div class="flex-1 min-w-0">
+          <div id="chat-conv-title" class="font-semibold text-sm truncate" style="color:var(--text-body)">—</div>
+          <div id="chat-conv-sub" class="text-[10px] flex items-center gap-1" style="color:var(--text-body);opacity:.55">
+            <span id="chat-conv-dot" class="w-1.5 h-1.5 rounded-full bg-stone-300 inline-block"></span>
+            <span id="chat-conv-online">—</span>
+          </div>
+        </div>
+      </div>
+      <div id="chat-messages" class="chat-scroll flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-1.5"></div>
+      <div class="p-3 border-t shrink-0" style="border-color:var(--border)">
+        <div class="flex items-end gap-2">
+          <input id="chat-input" type="text" maxlength="2000" placeholder="Tulis pesan..." autocomplete="off"
+            class="flex-1 text-sm px-3 py-2 rounded-xl outline-none"
+            style="background:var(--bg-sidebar-hover);color:var(--text-body);border:1px solid var(--border)" />
+          <button onclick="chatSend()" class="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform" style="background:linear-gradient(135deg,#10b981,#059669)" title="Kirim">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Alert Modal -->
   <div id="alert-modal" class="fixed inset-0 modal-backdrop hidden items-center justify-center z-[60] p-4">
     <div class="alert-content rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-alert-in" style="background:var(--bg-card)">

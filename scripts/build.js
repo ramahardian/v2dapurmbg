@@ -33,6 +33,7 @@ const FILES = [
   'definisi.js',
   'idle-timeout.js',
   'ticker.js',
+  'chat.js',
   'inti.js',
 ];
 

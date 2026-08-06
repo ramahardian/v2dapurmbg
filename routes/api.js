@@ -131,5 +131,8 @@ router.use(require('./system'));
 // Mengimpor dan mendaftarkan router Hari Libur dengan prefix path '/hari-libur'
 router.use('/hari-libur', require('./hariLibur'));
 
+// Mengimpor dan mendaftarkan router Chat antar user (URL root /)
+router.use(require('./chat'));
+
 // Mengekspor router utama agar dapat digunakan oleh aplikasi Express utama (app.js / server.js)
 module.exports = router;

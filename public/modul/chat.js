@@ -1,0 +1,354 @@
+// ── CHAT ANTAR USER ──
+// Tanpa WebSocket/SSE: polling daftar kontak 15 dtk, polling pesan 3 dtk saat obrolan terbuka.
+// Room 'umum' = obrolan bersama satu tenant; room 'uA:uB' = privat 1-on-1.
+
+let chatState = {
+  activeRoom: null,
+  activeName: '',
+  activeUserId: null,
+  activeOnline: null,
+  lastMsgId: 0,
+  umum: null,
+  contacts: [],
+  activeFoto: null,
+  contactsTimer: null,
+  msgTimer: null,
+  convOpen: false,
+};
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function chatAvatarHTML(foto, nama, sizeClass) {
+  if (foto && typeof foto === 'string' && /^data:image\//.test(foto)) {
+    return `<img src="${foto}" alt="" class="${sizeClass} rounded-full object-cover border shrink-0" style="border-color:var(--border)">`;
+  }
+  return `<div class="${sizeClass} rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style="background:linear-gradient(135deg,#10b981,#059669)">${getInitials(nama)}</div>`;
+}
+
+function chatRoleLabel(role) {
+  return { admin: 'Admin', ahli_gizi: 'Ahli Gizi', gudang: 'Gudang', keuangan: 'Keuangan', produksi: 'Produksi' }[role] || role || '';
+}
+
+function chatTime(d) {
+  const x = new Date(d);
+  if (isNaN(x.getTime())) return '';
+  return x.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+
+function chatDayKey(d) {
+  const x = new Date(d);
+  return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+}
+
+function chatDayLabel(d) {
+  const x = new Date(d);
+  const today = new Date();
+  const y = new Date(); y.setDate(today.getDate() - 1);
+  if (chatDayKey(x) === chatDayKey(today)) return 'Hari ini';
+  if (chatDayKey(x) === chatDayKey(y)) return 'Kemarin';
+  return x.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function chatTotalUnread() {
+  let n = (chatState.umum && chatState.umum.unread) || 0;
+  (chatState.contacts || []).forEach(c => { n += (c.unread || 0); });
+  return n;
+}
+
+function chatUpdateBadge() {
+  const badge = document.getElementById('chat-btn-badge');
+  const n = chatTotalUnread();
+  if (!badge) return;
+  if (n > 0) {
+    badge.textContent = n > 99 ? '99+' : n;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+function chatSetSubtitle() {
+  const el = document.getElementById('chat-panel-subtitle');
+  if (!el) return;
+  const on = (chatState.umum && chatState.umum.online_count) || 0;
+  el.textContent = on > 0 ? `${on} user online` : 'Tidak ada user online';
+}
+
+function chatPanelOpen() {
+  return document.getElementById('chat-panel').classList.contains('translate-x-0');
+}
+
+function openChatPanel() {
+  const p = document.getElementById('chat-panel');
+  p.classList.remove('-translate-x-full');
+  p.classList.add('translate-x-0');
+  document.getElementById('chat-btn').classList.add('hidden');
+  showChatContacts();
+  chatRefreshContacts();
+  startChatContactsTimer();
+}
+
+function closeChatPanel() {
+  const p = document.getElementById('chat-panel');
+  p.classList.add('-translate-x-full');
+  p.classList.remove('translate-x-0');
+  document.getElementById('chat-btn').classList.remove('hidden');
+  stopChatMsgTimer();
+  chatState.convOpen = false;
+  stopChatContactsTimer();
+  chatUpdateBadge();
+}
+
+function toggleChatPanel() {
+  if (chatPanelOpen()) closeChatPanel();
+  else openChatPanel();
+}
+
+function startChatContactsTimer() {
+  stopChatContactsTimer();
+  chatState.contactsTimer = setInterval(() => {
+    if (chatState.convOpen) return;
+    chatRefreshContacts(true);
+  }, 15000);
+}
+function stopChatContactsTimer() {
+  if (chatState.contactsTimer) { clearInterval(chatState.contactsTimer); chatState.contactsTimer = null; }
+}
+
+async function chatRefreshContacts(silent) {
+  try {
+    const d = await api.get('/chat/contacts');
+    chatState.umum = d.umum;
+    chatState.contacts = d.contacts || [];
+    chatUpdateBadge();
+    chatSetSubtitle();
+    const cv = document.getElementById('chat-contacts-view');
+    if (cv && !cv.classList.contains('hidden')) renderChatContacts();
+  } catch (err) {
+    if (!silent) showToast('Gagal memuat kontak: ' + err.message, 'error');
+  }
+}
+
+function renderChatContacts() {
+  const cv = document.getElementById('chat-contacts-view');
+  if (!cv) return;
+  const um = chatState.umum;
+  const contacts = chatState.contacts || [];
+
+  const umumHtml = `
+    <div class="p-2 mx-2 mt-2 rounded-xl cursor-pointer hover:bg-stone-50 flex items-center gap-3" style="border:1px solid var(--border);background:var(--bg-sidebar-hover)" onclick="openChatRoom('umum','Ngobrol Semua',null)">
+      <div class="w-9 h-9 rounded-full flex items-center justify-center text-white shrink-0" style="background:linear-gradient(135deg,#059669,#10b981)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-sm" style="color:var(--text-body)">Ngobrol Semua</div>
+        <div class="text-[11px]" style="color:var(--text-body);opacity:.55">${um && um.online_count ? um.online_count + ' user online' : 'Room bersama'}</div>
+      </div>
+      ${um && um.unread ? `<span class="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1.5 shrink-0">${um.unread}</span>` : ''}
+    </div>`;
+
+  const sorted = [...contacts].sort((a, b) => (b.is_online ? 1 : 0) - (a.is_online ? 1 : 0) || a.nama.localeCompare(b.nama));
+  const contactHtml = sorted.map(c => `
+    <div class="flex items-center gap-3 p-2 mx-2 rounded-lg cursor-pointer hover:bg-stone-50 transition-colors" onclick="openChatRoom('${esc(c.room)}','${esc(c.nama)}',${c.user_id})">
+      <div class="relative shrink-0">
+        ${chatAvatarHTML(c.foto, c.nama, 'w-9 h-9')}
+        <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 ${c.is_online ? 'bg-emerald-500' : 'bg-stone-300'}" style="border-color:var(--bg-card)" title="${c.is_online ? 'Online' : 'Offline'}"></span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-1.5">
+          <span class="font-medium text-sm truncate" style="color:var(--text-body)">${esc(c.nama)}</span>
+          ${c.is_online ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>' : ''}
+        </div>
+        <div class="text-[10px] truncate" style="color:var(--text-body);opacity:.55">${esc(chatRoleLabel(c.role)) || 'Anggota'}</div>
+      </div>
+      ${c.unread ? `<span class="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1.5 shrink-0">${c.unread}</span>` : ''}
+    </div>`).join('');
+
+  cv.innerHTML = `
+    <div class="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-body);opacity:.45">Obrolan</div>
+    ${umumHtml}
+    <div class="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-body);opacity:.45">Anggota (${contacts.length})</div>
+    ${sorted.length ? contactHtml : '<div class="text-sm text-center py-6" style="color:var(--text-body);opacity:.4">Belum ada anggota lain</div>'}
+  `;
+}
+
+function showChatContacts() {
+  document.getElementById('chat-conversation-view').classList.add('hidden');
+  document.getElementById('chat-contacts-view').classList.remove('hidden');
+  chatState.convOpen = false;
+  stopChatMsgTimer();
+  chatUpdateBadge();
+}
+
+function chatBackToContacts() {
+  showChatContacts();
+  renderChatContacts();
+  chatRefreshContacts(true);
+}
+
+function openChatRoom(room, name, userId) {
+  document.getElementById('chat-contacts-view').classList.add('hidden');
+  document.getElementById('chat-conversation-view').classList.remove('hidden');
+  document.getElementById('chat-conversation-view').classList.add('flex');
+
+  chatState.activeRoom = room;
+  chatState.activeName = name;
+  chatState.activeUserId = userId;
+  chatState.lastMsgId = 0;
+  const _c = (chatState.contacts || []).find(x => x.room === room);
+  chatState.activeFoto = userId ? (_c && _c.foto) || null : null;
+
+  document.getElementById('chat-conv-title').textContent = name;
+  const dot = document.getElementById('chat-conv-dot');
+  const subEl = document.getElementById('chat-conv-online');
+  const isOnline = room === 'umum' ? true : !!(_c && _c.is_online);
+  dot.className = 'w-1.5 h-1.5 rounded-full inline-block ' + (isOnline ? 'bg-emerald-500' : 'bg-stone-300');
+  subEl.textContent = room === 'umum' ? 'Room bersama' : (isOnline ? 'Online' : 'Offline');
+
+  // Clear unread untuk room ini
+  if (room === 'umum' && chatState.umum) chatState.umum.unread = 0;
+  const cc = (chatState.contacts || []).find(x => x.room === room);
+  if (cc) cc.unread = 0;
+  chatUpdateBadge();
+
+  const msgs = document.getElementById('chat-messages');
+  msgs.innerHTML = '<div class="text-center text-xs py-8" style="color:var(--text-body);opacity:.4">Memuat...</div>';
+  chatState.convOpen = true;
+
+  loadChatMessages(room, 0, true);
+  startChatMsgTimer();
+  setTimeout(() => { const inp = document.getElementById('chat-input'); if (inp) inp.focus(); }, 150);
+}
+
+function startChatMsgTimer() {
+  stopChatMsgTimer();
+  chatState.msgTimer = setInterval(() => {
+    if (chatState.convOpen && chatState.activeRoom) {
+      loadChatMessages(chatState.activeRoom, chatState.lastMsgId, false);
+    }
+  }, 3000);
+}
+function stopChatMsgTimer() {
+  if (chatState.msgTimer) { clearInterval(chatState.msgTimer); chatState.msgTimer = null; }
+}
+
+function chatMarkRead(room) {
+  if (!room) return;
+  api.post('/chat/read', { room }).catch(() => {});
+}
+
+async function loadChatMessages(room, after, reset) {
+  try {
+    const d = await api.get('/chat/messages?room=' + encodeURIComponent(room) + '&after=' + (after || 0));
+    const msgs = d.messages || [];
+    if (!msgs.length) return;
+    const container = document.getElementById('chat-messages');
+    if (reset) {
+      container.innerHTML = '';
+      chatState.lastMsgId = 0;
+    }
+    let lastRenderedDay = null;
+    if (!reset) {
+      const first = container.querySelector('[data-day]');
+      lastRenderedDay = first ? first.getAttribute('data-day') : null;
+    }
+    let appendHtml = '';
+    msgs.forEach(m => {
+      if (m.id <= chatState.lastMsgId) return;
+      chatState.lastMsgId = m.id;
+      const day = chatDayKey(m.created_at);
+      const showDay = day !== lastRenderedDay;
+      lastRenderedDay = day;
+      appendHtml += renderChatMsg(m, showDay);
+    });
+    if (appendHtml) {
+      const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+      container.insertAdjacentHTML('beforeend', appendHtml);
+      if (reset || nearBottom) container.scrollTop = container.scrollHeight;
+    }
+    chatMarkRead(room);
+  } catch (err) {
+    // Polling gagal sesekali — abaikan diam-diam agar tidak spam toast.
+  }
+}
+
+function renderChatMsg(m, showDay) {
+  const mine = currentUser && m.sender_id === currentUser.id;
+  const day = chatDayKey(m.created_at);
+  const dayBlock = showDay
+    ? `<div data-day="${day}" class="text-center text-[10px] font-medium my-2" style="color:var(--text-body);opacity:.4">${chatDayLabel(m.created_at)}</div>`
+    : '';
+  const time = chatTime(m.created_at);
+  const body = m.body.replace(/\n/g, '<br>');
+
+  if (mine) {
+    return dayBlock + `
+      <div class="chat-msg-anim flex justify-end">
+        <div class="max-w-[78%] px-3 py-1.5 rounded-2xl rounded-br-sm chat-bubble-mine text-sm whitespace-pre-wrap break-words">
+          ${body}
+          <div class="text-right text-[9px] mt-0.5" style="opacity:.7">${time}</div>
+        </div>
+      </div>`;
+  }
+  return dayBlock + `
+    <div class="chat-msg-anim flex items-end gap-2">
+      ${chatAvatarHTML(m.sender_id === chatState.activeUserId ? chatState.activeFoto : null, m.sender_nama, 'w-6 h-6')}
+      <div class="max-w-[78%]">
+        ${m.sender_id !== chatState.activeUserId ? `<div class="text-[10px] font-semibold mb-0.5 px-1" style="color:var(--text-body);opacity:.55">${esc(m.sender_nama || 'User')}</div>` : ''}
+        <div class="px-3 py-1.5 rounded-2xl rounded-bl-sm chat-bubble-other text-sm whitespace-pre-wrap break-words">
+          ${body}
+          <div class="text-right text-[9px] mt-0.5" style="opacity:.55">${time}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function chatSend() {
+  const inp = document.getElementById('chat-input');
+  const body = (inp.value || '').trim();
+  if (!body) return;
+  if (!chatState.activeRoom) { showToast('Pilih room dulu', 'error'); return; }
+  try {
+    const d = await api.post('/chat/messages', { room: chatState.activeRoom, body });
+    inp.value = '';
+    const container = document.getElementById('chat-messages');
+    chatState.lastMsgId = d.message.id;
+    container.insertAdjacentHTML('beforeend', renderChatMsg(d.message, true));
+    container.scrollTop = container.scrollHeight;
+    inp.focus();
+  } catch (err) {
+    showToast('Gagal mengirim: ' + err.message, 'error');
+  }
+}
+
+// Buka chat 1-on-1 dengan user tertentu (dipanggil dari klik user online di dashboard).
+async function openChatWithUser(userId) {
+  try {
+    const d = await api.get('/chat/contacts');
+    chatState.umum = d.umum;
+    chatState.contacts = d.contacts || [];
+    const c = (d.contacts || []).find(x => x.user_id === Number(userId));
+    if (!c) { showToast('User tidak ditemukan', 'error'); return; }
+    openChatPanel();
+    openChatRoom(c.room, c.nama, c.user_id);
+  } catch (err) {
+    showToast('Gagal membuka chat: ' + err.message, 'error');
+  }
+}
+
+function initChat() {
+  const inp = document.getElementById('chat-input');
+  if (inp) {
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); chatSend(); } });
+  }
+}
+
+window.toggleChatPanel = toggleChatPanel;
+window.closeChatPanel = closeChatPanel;
+window.chatSend = chatSend;
+window.chatBackToContacts = chatBackToContacts;
+window.openChatRoom = openChatRoom;
+window.openChatWithUser = openChatWithUser;
+window.initChat = initChat;

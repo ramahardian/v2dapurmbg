@@ -650,6 +650,42 @@ async function runMigration() {
     log('✓ Migrasi user_activity_log: tabel dibuat');
   } catch (e) { log('  (skip user_activity_log): ' + e.message); }
 
+  // Tabel chat — pesan antar user online (room 'umum' bersama + privat 1-on-1 'uA:uB')
+  try {
+    await q(`CREATE TABLE IF NOT EXISTS chat_messages (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id INT NOT NULL,
+      room VARCHAR(60) NOT NULL,
+      sender_id INT NOT NULL,
+      sender_nama VARCHAR(150) DEFAULT NULL,
+      sender_role VARCHAR(50) DEFAULT NULL,
+      body TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+      FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_chat_room_id (tenant_id, room, id),
+      INDEX idx_chat_sender (sender_id)
+    ) ENGINE=InnoDB`);
+    log('✓ Migrasi chat_messages: tabel dibuat');
+  } catch (e) { log('  (skip chat_messages): ' + e.message); }
+
+  // Tabel chat_reads — penanda pesan terakhir yang sudah dibaca tiap user per room
+  try {
+    await q(`CREATE TABLE IF NOT EXISTS chat_reads (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id INT NOT NULL,
+      user_id INT NOT NULL,
+      room VARCHAR(60) NOT NULL,
+      last_read_id INT NOT NULL DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE KEY uk_chat_read (tenant_id, user_id, room),
+      INDEX idx_chat_read_room (tenant_id, room)
+    ) ENGINE=InnoDB`);
+    log('✓ Migrasi chat_reads: tabel dibuat');
+  } catch (e) { log('  (skip chat_reads): ' + e.message); }
+
   log('✓ Migrasi selesai!');
   return logs;
 }

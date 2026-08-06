@@ -40,6 +40,7 @@ async function init() {
 
     splashStep('Memuat halaman...');
     route();
+    initChat();
     
     window.addEventListener('popstate', route);
     document.addEventListener('click', function(e) {
