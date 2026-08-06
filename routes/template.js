@@ -33,64 +33,84 @@ router.get('/dashboard', async (req, res) => {
       [req.user.tenant_id]
     );
 
-    // Menu aktif hari ini: ambil siklus status Aktif, hitung hari_ke = selisih
-    // hari dari tanggal_mulai (mod total_hari) + 1
+    // Menu aktif hari ini: pilih siklus status Aktif. Siklus yang periodenya sudah
+    // habis TIDAK dipakai ulang (tidak dimodulo / diulang dari hari pertama).
+    // Prioritas: siklus yang periodenya mencakup hari ini → preview siklus terdekat
+    // yang akan datang → jika semua sudah selesai, tampilkan "Belum ada siklus aktif".
     const [siklusAktif] = await db.query(
       `SELECT id, nama, kategori_penerima, jumlah_porsi, total_hari, tanggal_mulai
-       FROM siklus_menu WHERE tenant_id=? AND status='Aktif' ORDER BY tanggal_mulai ASC LIMIT 1`,
+       FROM siklus_menu WHERE tenant_id=? AND status='Aktif'
+       ORDER BY tanggal_mulai DESC`,
       [req.user.tenant_id]
     );
     let menuAktifHariIni = null;
     let menuAktifList = [];
     if (siklusAktif.length > 0) {
-      const s = siklusAktif[0];
-      const totalHari = Math.max(1, Number(s.total_hari || 7));
+      const todayKey = (d) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+      const todayUtc = todayKey(new Date());
+      const diffDay = (sc) => {
+        const mulai = new Date(sc.tanggal_mulai);
+        return Math.floor((todayUtc - todayKey(mulai)) / 86400000);
+      };
+      // 1) Siklus yang sedang berjalan (periodenya mencakup hari ini)
+      let s = null;
       let hariKe = 1;
-      if (s.tanggal_mulai) {
-        const mulai = new Date(s.tanggal_mulai);
-        const today = new Date();
-        const diffDays = Math.floor((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(mulai.getFullYear(), mulai.getMonth(), mulai.getDate())) / 86400000);
-        hariKe = diffDays >= 0 ? (diffDays % totalHari) + 1 : 1;
+      for (const sc of siklusAktif) {
+        if (!sc.tanggal_mulai) continue;
+        const totalHari = Math.max(1, Number(sc.total_hari || 7));
+        const diff = diffDay(sc);
+        if (diff >= 0 && diff < totalHari) { s = sc; hariKe = diff + 1; break; }
       }
-      // Muat menu SEMUA hari sekaligus untuk navigasi prev/next di dashboard
-      const [menuItems] = await db.query(
-        `SELECT hari_ke, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, foto
-         FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke`,
-        [s.id]
-      );
-      const menuByHari = {};
-      for (const mi of menuItems) {
-        const hk = Number(mi.hari_ke);
-        if (!menuByHari[hk]) menuByHari[hk] = mi;
-      }
-      const fmtDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-      for (let h = 1; h <= totalHari; h++) {
-        const mi = menuByHari[h];
-        let tanggal = null;
-        if (s.tanggal_mulai) {
-          const d = new Date(s.tanggal_mulai);
-          d.setDate(d.getDate() + (h - 1));
-          tanggal = fmtDate(d);
+      // 2) Belum ada yang berjalan → preview siklus terdekat yang akan datang
+      if (!s) {
+        for (const sc of siklusAktif) {
+          if (!sc.tanggal_mulai) continue;
+          if (diffDay(sc) < 0) { s = sc; hariKe = 1; break; }
         }
-        menuAktifList.push({
-          siklus_nama: s.nama,
-          kategori: s.kategori_penerima || '',
-          jumlah_porsi: Number(s.jumlah_porsi || 0),
-          hari_ke: h,
-          total_hari: totalHari,
-          tanggal: tanggal,
-          menu_id: mi ? mi.menu_id : null,
-          menu_nama: mi ? (mi.menu_nama || '-') : null,
-          foto: mi ? (mi.foto || null) : null,
-          porsi_item: mi ? Number(mi.jumlah_porsi || 0) : 0,
-          kalori: mi ? Number(mi.kalori || 0) : 0,
-          protein: mi ? Number(mi.protein || 0) : 0,
-          karbohidrat: mi ? Number(mi.karbohidrat || 0) : 0,
-          lemak: mi ? Number(mi.lemak || 0) : 0,
-          serat: mi ? Number(mi.serat || 0) : 0
-        });
       }
-      menuAktifHariIni = menuAktifList[hariKe - 1] || (menuAktifList.length ? menuAktifList[0] : null);
+      // 3) Semua siklus Aktif sudah selesai → jangan tampilkan siklus lama (tanpa loop)
+      if (s) {
+        const totalHari = Math.max(1, Number(s.total_hari || 7));
+        // Muat menu SEMUA hari sekaligus untuk navigasi prev/next di dashboard
+        const [menuItems] = await db.query(
+          `SELECT hari_ke, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, foto
+           FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke`,
+          [s.id]
+        );
+        const menuByHari = {};
+        for (const mi of menuItems) {
+          const hk = Number(mi.hari_ke);
+          if (!menuByHari[hk]) menuByHari[hk] = mi;
+        }
+        const fmtDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        for (let h = 1; h <= totalHari; h++) {
+          const mi = menuByHari[h];
+          let tanggal = null;
+          if (s.tanggal_mulai) {
+            const d = new Date(s.tanggal_mulai);
+            d.setDate(d.getDate() + (h - 1));
+            tanggal = fmtDate(d);
+          }
+          menuAktifList.push({
+            siklus_nama: s.nama,
+            kategori: s.kategori_penerima || '',
+            jumlah_porsi: Number(s.jumlah_porsi || 0),
+            hari_ke: h,
+            total_hari: totalHari,
+            tanggal: tanggal,
+            menu_id: mi ? mi.menu_id : null,
+            menu_nama: mi ? (mi.menu_nama || '-') : null,
+            foto: mi ? (mi.foto || null) : null,
+            porsi_item: mi ? Number(mi.jumlah_porsi || 0) : 0,
+            kalori: mi ? Number(mi.kalori || 0) : 0,
+            protein: mi ? Number(mi.protein || 0) : 0,
+            karbohidrat: mi ? Number(mi.karbohidrat || 0) : 0,
+            lemak: mi ? Number(mi.lemak || 0) : 0,
+            serat: mi ? Number(mi.serat || 0) : 0
+          });
+        }
+        menuAktifHariIni = menuAktifList[hariKe - 1] || (menuAktifList.length ? menuAktifList[0] : null);
+      }
     }
     
     const totalBudget = Number(budget[0]?.total_budget || 0);
