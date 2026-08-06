@@ -38,6 +38,23 @@ const CHAT_WIB_OFFSET_MS = 7 * 3600 * 1000;
 const CHAT_HARI_ID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const CHAT_BULAN_ID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
+// Selisih jam perangkat terhadap jam server (ms). Diisi dari field `server_now`
+// pada tiap respons chat, agar label relatif ("x menit lalu", "Hari ini/Kemarin")
+// memakai jam server yang akurat — bukan jam perangkat yang bisa meleset
+// (mis. zona waktu diset salah sehingga Date.now() meleset 7 jam dari WIB).
+let chatClockOffsetMs = 0;
+
+// Simpan selisih jam perangkat vs jam server dari field `server_now`.
+function chatApplyServerNow(serverNow) {
+  const ms = serverNow ? Date.parse(serverNow) : NaN;
+  if (!isNaN(ms)) chatClockOffsetMs = ms - Date.now();
+}
+
+// "Sekarang" versi server (ms) — dipakai semua perhitungan waktu relatif.
+function chatNowMs() {
+  return Date.now() + chatClockOffsetMs;
+}
+
 function chatParseDate(d) {
   if (d == null) return null;
   let x;
@@ -86,11 +103,11 @@ function chatSmartTime(d) {
   const x = chatParseDate(d);
   if (!x) return '';
   const MIN = 60 * 1000, HOUR = 60 * MIN, DAY = 24 * HOUR;
-  const diff = Date.now() - x.getTime();
+  const diff = chatNowMs() - x.getTime();
   if (diff < MIN) return 'Baru saja';
   if (diff < HOUR) return Math.floor(diff / MIN) + ' menit lalu';
   if (diff < DAY) return Math.floor(diff / HOUR) + ' jam lalu';
-  const now = new Date();
+  const now = new Date(chatNowMs());
   const key = chatWibDate(x);
   if (key === chatWibDate(new Date(now.getTime() - DAY))) return 'Kemarin';
   const wib = chatToWib(x);
@@ -115,7 +132,7 @@ function chatDayKey(d) {
 function chatDayLabel(d, wibDate) {
   const x = chatParseDate(d);
   if (!x) return '';
-  const now = new Date();
+  const now = new Date(chatNowMs());
   const todayWib = chatWibDate(now);
   const yesterdayWib = chatWibDate(new Date(now.getTime() - 86400000));
   const key = wibDate || chatWibDate(x);
@@ -321,6 +338,9 @@ async function loadChatMessages(room, after, reset) {
   }
   try {
     const d = await api.get('/chat/messages?room=' + encodeURIComponent(room) + '&after=' + (after || 0));
+    // Acuan "sekarang" memakai jam server (server_now) agar label relatif akurat
+    // walau jam perangkat meleset. Dipanggil sebelum render/refresh label.
+    chatApplyServerNow(d.server_now);
     // Segarkan label "x menit lalu" pada pesan lama tiap polling walau tak ada pesan baru.
     chatRefreshTimes();
     const msgs = d.messages || [];
@@ -369,8 +389,8 @@ function renderChatMsg(m, showDay) {
     ? `<div data-day="${day}" class="text-center text-[10px] font-medium my-2" style="color:var(--text-body);opacity:.4">${chatDayLabel(m.created_at, m.created_at_wib_date)}</div>`
     : '';
   // Stempel penuh & kunci tanggal memakai nilai WIB dari server bila tersedia
-  // (anti-ketergantungan parsing browser). Label relatif ("x menit lalu") tetap
-  // dihitung client — semuanya WIB, dan saling melengkapi sebagai fallback.
+  // (anti-ketergantungan parsing browser). Label relatif ("x menit lalu") dihitung
+  // client tapi diancokkan ke jam server (server_now) agar akurat walau jam perangkat meleset.
   const time = chatSmartTime(m.created_at) || m.created_at_wib_time || '';
   const stamp = m.created_at_wib_stamp || chatFullStamp(m.created_at);
   const body = m.body.replace(/\n/g, '<br>');
@@ -408,6 +428,7 @@ async function chatSend() {
   if (!chatState.activeRoom) { showToast('Pilih room dulu', 'error'); return; }
   try {
     const d = await api.post('/chat/messages', { room: chatState.activeRoom, body });
+    chatApplyServerNow(d.server_now);
     inp.value = '';
     const container = document.getElementById('chat-messages');
     chatState.lastMsgId = d.message.id;

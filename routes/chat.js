@@ -157,7 +157,9 @@ router.get('/chat/messages', async (req, res) => {
       rows.reverse();
     }
     rows = rows.map(r => ({ ...r, ...wibFields(r.created_at) }));
-    res.json({ room, messages: rows });
+    // `server_now` = jam server (instan) — dipakai client sebagai acuan label
+    // relatif ("x menit lalu") agar tidak bergantung jam perangkat yang bisa meleset.
+    res.json({ room, server_now: new Date().toISOString(), messages: rows });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -206,7 +208,9 @@ router.post('/chat/messages', async (req, res) => {
        ON DUPLICATE KEY UPDATE last_read_id = GREATEST(last_read_id, VALUES(last_read_id))`,
       [t, me.id, room, r.insertId]
     ).catch(() => {});
-    res.json({ message: msg });
+    // `server_now` dikirim agar pesan yang baru dikirim langsung tampil "Baru saja"
+    // walau jam perangkat meleset.
+    res.json({ server_now: new Date().toISOString(), message: msg });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
