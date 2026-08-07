@@ -183,11 +183,11 @@ async function renderSiklus() {
 
     reloadSiklusList();
 
-    // Dari notifikasi: buka detail siklus yang diminta setelah list dirender.
+    // Dari notifikasi: buka edit siklus yang diminta setelah halaman dirender.
     if (window._siklusPendingDetailId) {
       const pid = window._siklusPendingDetailId;
       window._siklusPendingDetailId = null;
-      loadSiklusDetail(pid);
+      editSiklus(pid);
     }
   } catch (err) {
     console.error('Siklus error:', err);
@@ -1007,7 +1007,7 @@ function openProduksiModal(siklusId, mode) {
 
     var m = document.createElement('div');
     m.id = 'produksi-modal';
-    m.className = 'fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4';
+    m.className = 'fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4';
     m.innerHTML =
       '<div class="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden transform transition-all duration-200 scale-95 opacity-0">' +
         '<div class="flex items-center gap-3 px-5 py-4 border-b border-stone-100 dark:border-stone-800 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white">' +
@@ -1256,40 +1256,144 @@ function generateProduksiBatch(siklusId) {
   openProduksiModal(siklusId, 'range');
 }
 
-async function hitungBudgetSiklus(siklusId) {
-  var periode = prompt('Periode budget (YYYY-MM):', new Date().toISOString().slice(0, 7));
-  if (!periode) return;
+// Dialog "Hitung Budget / Buat PR" modern — input periode YYYY-MM (gantikan prompt()).
+function openBudgetModal(siklusId, mode) {
+  var existing = document.getElementById('budget-modal');
+  if (existing) existing.remove();
+
+  var defPeriode = new Date().toISOString().slice(0, 7);
+  var isSemua = mode === 'semua';
+  var isPR = mode === 'pr';
+
+  var header = isPR
+    ? { title: 'Buat Purchase Request', sub: siklusId ? 'PR dari semua siklus Aktif' : 'PR dari semua siklus Aktif', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><polyline points="9 14 11 16 15 12"/></svg>', grad: 'from-violet-600 to-violet-500', label: 'Buat PR' }
+    : isSemua
+      ? { title: 'Hitung Budget Semua Siklus', sub: 'Hitung kebutuhan bahan semua siklus Aktif', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><polyline points="14 7 21 7 21 14"/></svg>', grad: 'from-blue-600 to-blue-500', label: 'Hitung Budget' }
+      : { title: 'Hitung Budget Siklus', sub: 'Rincian kebutuhan bahan untuk siklus ini', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', grad: 'from-blue-600 to-blue-500', label: 'Hitung Budget' };
+
+  var m = document.createElement('div');
+  m.id = 'budget-modal';
+  m.className = 'fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4';
+  m.innerHTML =
+    '<div class="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-hidden transform transition-all duration-200 scale-95 opacity-0">' +
+      '<div class="flex items-center gap-3 px-5 py-4 border-b border-stone-100 dark:border-stone-800 bg-gradient-to-r ' + header.grad + ' text-white">' +
+        '<div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">' + header.icon + '</div>' +
+        '<div class="flex-1 min-w-0"><h3 class="font-bold text-sm leading-tight">' + header.title + '</h3>' +
+          '<p class="text-white/80 text-xs truncate mt-0.5">' + header.sub + '</p></div>' +
+        '<button onclick="closeBudgetModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/15 text-white/80 hover:text-white transition-colors" title="Tutup"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+      '</div>' +
+      '<div class="p-5 space-y-4">' +
+        '<div>' +
+          '<label class="block text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Periode Budget</label>' +
+          '<input type="month" id="bd-periode" value="' + defPeriode + '" class="mt-1.5 w-full h-11 px-3 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">' +
+          '<div id="bd-hint" class="mt-2"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="px-5 py-4 border-t border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/60 flex items-center justify-end gap-2">' +
+        '<button onclick="closeBudgetModal()" class="h-11 px-4 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">Batal</button>' +
+        '<button id="bd-submit" onclick="bdSubmit(' + (siklusId || 'null') + ', \'' + mode + '\')" class="h-11 px-5 rounded-xl text-sm font-semibold text-white shadow-sm transition-colors inline-flex items-center gap-2 ' + (isPR ? 'bg-violet-600 hover:bg-violet-700' : 'bg-blue-600 hover:bg-blue-700') + '">' +
+          header.icon + header.label +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(m);
+  m.onclick = function(e) { if (e.target === m) closeBudgetModal(); };
+  document.addEventListener('keydown', _bdKeyHandler);
+
+  var bd = document.getElementById('bd-periode');
+  if (bd) {
+    bd.addEventListener('input', bdUpdateHint);
+    bd.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('bd-submit').click(); });
+    setTimeout(function() { bd.focus(); }, 100);
+  }
+  bdUpdateHint();
+
+  requestAnimationFrame(function() {
+    var content = m.querySelector('.transform');
+    if (content) {
+      content.classList.remove('opacity-0', 'scale-95');
+      content.classList.add('opacity-100', 'scale-100');
+    }
+  });
+  document.body.style.overflow = 'hidden';
+}
+
+function _bdKeyHandler(e) {
+  if (e.key === 'Escape') closeBudgetModal();
+}
+
+function closeBudgetModal() {
+  var m = document.getElementById('budget-modal');
+  if (!m) return;
+  document.removeEventListener('keydown', _bdKeyHandler);
+  var content = m.querySelector('.transform');
+  if (content) {
+    content.classList.add('opacity-0', 'scale-95');
+    content.classList.remove('opacity-100', 'scale-100');
+  }
+  setTimeout(function() {
+    m.remove();
+    document.body.style.overflow = '';
+  }, 180);
+}
+
+function bdUpdateHint() {
+  var el = document.getElementById('bd-periode');
+  var hint = document.getElementById('bd-hint');
+  if (!el || !hint) return;
+  var v = el.value;
+  if (!v) {
+    hint.innerHTML = '<div class="text-xs text-amber-600">Pilih periode terlebih dahulu.</div>';
+    return;
+  }
+  if (!/^\d{4}-\d{2}$/.test(v)) {
+    hint.innerHTML = '<div class="text-xs text-red-600">Format periode salah. Gunakan YYYY-MM.</div>';
+    return;
+  }
+  var nama = { '01': 'Januari', '02': 'Februari', '03': 'Maret', '04': 'April', '05': 'Mei', '06': 'Juni', '07': 'Juli', '08': 'Agustus', '09': 'September', '10': 'Oktober', '11': 'November', '12': 'Desember' };
+  hint.innerHTML = '<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-medium border border-blue-200/70 dark:border-blue-800">' + (nama[v.slice(5)] || v.slice(5)) + ' ' + v.slice(0, 4) + '</div>';
+}
+
+async function bdSubmit(siklusId, mode) {
+  var el = document.getElementById('bd-periode');
+  var btn = document.getElementById('bd-submit');
+  var periode = el ? el.value : '';
+  if (!periode) { showAlert('Periode wajib diisi', 'warning'); return; }
   if (!/^\d{4}-\d{2}$/.test(periode)) { showAlert('Format periode salah. Gunakan YYYY-MM', 'error'); return; }
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Memproses...';
+  }
   try {
-    var r = await api.post('/siklus/hitung-budget', { siklus_id: siklusId, periode: periode });
+    var r;
+    if (mode === 'pr') {
+      r = await api.post('/siklus/buat-pr', { periode: periode });
+    } else if (mode === 'semua') {
+      r = await api.post('/siklus/hitung-budget-semua', { periode: periode });
+    } else {
+      r = await api.post('/siklus/hitung-budget', { siklus_id: siklusId, periode: periode });
+    }
+    closeBudgetModal();
     showAlert('✅ ' + r.message, 'success');
   } catch (e) {
     showAlert('❌ ' + (e.message || 'Gagal'), 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><polyline points="14 7 21 7 21 14"/></svg>' + (mode === 'pr' ? 'Buat PR' : 'Hitung Budget');
+    }
   }
+}
+
+async function hitungBudgetSiklus(siklusId) {
+  openBudgetModal(siklusId, 'siklus');
 }
 
 async function hitungBudgetSemuaSiklus() {
-  var periode = prompt('Periode budget (YYYY-MM):', new Date().toISOString().slice(0, 7));
-  if (!periode) return;
-  if (!/^\d{4}-\d{2}$/.test(periode)) { showAlert('Format periode salah. Gunakan YYYY-MM', 'error'); return; }
-  try {
-    var r = await api.post('/siklus/hitung-budget-semua', { periode: periode });
-    showAlert('✅ ' + r.message, 'success');
-  } catch (e) {
-    showAlert('❌ ' + (e.message || 'Gagal'), 'error');
-  }
+  openBudgetModal(null, 'semua');
 }
 
 async function buatPRSiklus() {
-  var periode = prompt('Periode PR (YYYY-MM):', new Date().toISOString().slice(0, 7));
-  if (!periode) return;
-  if (!confirm('Buat Purchase Request untuk periode ' + periode + ' dari semua siklus Aktif?')) return;
-  try {
-    var r = await api.post('/siklus/buat-pr', { periode: periode });
-    showAlert('✅ ' + r.message, 'success');
-  } catch (e) {
-    showAlert('❌ ' + (e.message || 'Gagal'), 'error');
-  }
+  openBudgetModal(null, 'pr');
 }
 
 async function deleteSelectedSiklus() {
@@ -1320,7 +1424,7 @@ function bukaKebutuhanPangan(id) {
   navigate('perhitungan-bdd');
 }
 
-// Dari notifikasi (dropdown bel): navigasi ke halaman siklus lalu buka detail/edit siklus tsb.
+// Dari notifikasi (dropdown bel): navigasi ke halaman siklus lalu langsung buka halaman edit siklus tsb.
 function bukaSiklusDariNotif(id) {
   window._siklusPendingDetailId = id;
   navigate('siklus');
