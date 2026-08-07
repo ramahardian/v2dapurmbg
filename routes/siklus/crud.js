@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../../db');
-const { parseKategoriPenerima, expandJenjangToDbValues, autoHitungPorsi } = require('./helpers');
+const { parseKategoriPenerima, expandJenjangToDbValues, autoHitungPorsi, computeTanggalSelesai, autoArchiveSiklus } = require('./helpers');
 
 const router = express.Router();
 
@@ -9,6 +9,7 @@ const router = express.Router();
  * Mengambil semua data siklus menu milik tenant yang sedang login.
  */
 router.get('/siklus', async (req, res) => {
+  await autoArchiveSiklus();
   const [rows] = await db.query(
     'SELECT * FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
     [req.user.tenant_id]
@@ -65,6 +66,7 @@ router.get('/siklus', async (req, res) => {
  * Mengambil data header siklus beserta detail item per hari.
  */
 router.get('/siklus/:id', async (req, res) => {
+  await autoArchiveSiklus();
   const [[siklus]] = await db.query(
     'SELECT * FROM siklus_menu WHERE id=? AND tenant_id=?',
     [req.params.id, req.user.tenant_id]
@@ -133,7 +135,7 @@ router.get('/siklus/:id', async (req, res) => {
  * Membuat siklus menu baru beserta item-itemnya.
  */
 router.post('/siklus', async (req, res) => {
-  const { nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai, items } = req.body;
+  const { nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai, tanggal_selesai, items } = req.body;
   if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama siklus wajib diisi' });
 
   // Auto-hitung total_hari dari tanggal_mulai jika tidak disediakan
@@ -148,14 +150,15 @@ router.post('/siklus', async (req, res) => {
   if (existing.length) return res.status(409).json({ error: 'Siklus dengan nama "' + nama.trim() + '" sudah ada' });
 
   const finalPorsi = await autoHitungPorsi(req.user.tenant_id, kategori_penerima, jumlah_porsi);
+  const finalTanggalSelesai = computeTanggalSelesai(tanggal_mulai, tanggal_selesai, finalTotalHari);
 
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
     const [r] = await conn.query(
-      `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai)
-       VALUES (?,?,?,?,?,?,?,?)`,
-      [req.user.tenant_id, nama, kategori_penerima || null, finalPorsi, finalTotalHari, status || 'Draft', catatan || null, tanggal_mulai || null]
+      `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai, tanggal_selesai)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [req.user.tenant_id, nama, kategori_penerima || null, finalPorsi, finalTotalHari, status || 'Draft', catatan || null, tanggal_mulai || null, finalTanggalSelesai]
     );
     if (Array.isArray(items) && items.length) {
       for (const it of items) {
@@ -186,7 +189,7 @@ router.put('/siklus/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) return res.status(400).json({ error: 'ID siklus tidak valid' });
 
-  const { nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai, items } = req.body;
+  const { nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai, tanggal_selesai, items } = req.body;
   if (nama !== undefined && (!nama || !nama.trim())) return res.status(400).json({ error: 'Nama siklus wajib diisi' });
 
   if (nama !== undefined) {
@@ -203,13 +206,14 @@ router.put('/siklus/:id', async (req, res) => {
   if (!finalTotalHari) finalTotalHari = 30;
 
   const finalPorsi = await autoHitungPorsi(req.user.tenant_id, kategori_penerima, jumlah_porsi);
+  const finalTanggalSelesai = computeTanggalSelesai(tanggal_mulai, tanggal_selesai, finalTotalHari);
 
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
     await conn.query(
-      `UPDATE siklus_menu SET nama=?, kategori_penerima=?, jumlah_porsi=?, total_hari=?, status=?, catatan=?, tanggal_mulai=? WHERE id=? AND tenant_id=?`,
-      [nama, kategori_penerima || null, finalPorsi, finalTotalHari, status || 'Draft', catatan || null, tanggal_mulai || null, id, req.user.tenant_id]
+      `UPDATE siklus_menu SET nama=?, kategori_penerima=?, jumlah_porsi=?, total_hari=?, status=?, catatan=?, tanggal_mulai=?, tanggal_selesai=? WHERE id=? AND tenant_id=?`,
+      [nama, kategori_penerima || null, finalPorsi, finalTotalHari, status || 'Draft', catatan || null, tanggal_mulai || null, finalTanggalSelesai, id, req.user.tenant_id]
     );
     await conn.query('DELETE FROM siklus_menu_item WHERE siklus_id=?', [id]);
     if (Array.isArray(items) && items.length) {
@@ -297,9 +301,9 @@ router.post('/siklus/:id/duplicate', async (req, res) => {
 
     // 1. Duplikasi header siklus (status selalu Draft, total_hari = range)
     const [r] = await conn.query(
-      `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai)
-       VALUES (?,?,?,?,?,?,?,?)`,
-      [req.user.tenant_id, newNama, siklus.kategori_penerima, siklus.jumlah_porsi, rangeTotal, 'Draft', siklus.catatan, siklus.tanggal_mulai]
+      `INSERT INTO siklus_menu (tenant_id, nama, kategori_penerima, jumlah_porsi, total_hari, status, catatan, tanggal_mulai, tanggal_selesai)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [req.user.tenant_id, newNama, siklus.kategori_penerima, siklus.jumlah_porsi, rangeTotal, 'Draft', siklus.catatan, siklus.tanggal_mulai, computeTanggalSelesai(siklus.tanggal_mulai, siklus.tanggal_selesai, rangeTotal)]
     );
     const newId = r.insertId;
 

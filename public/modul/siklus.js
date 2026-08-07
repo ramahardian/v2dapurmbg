@@ -1,6 +1,31 @@
 // ===== Siklus Menu =====
 const HARI_OPTIONS = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
 
+// Format nilai tanggal (Date / ISO string / "YYYY-MM-DD") menjadi DD/MM/YYYY.
+// Nilai dari mysql2 adalah DATE bertipe Date = tengah malam WIB yang disimpan
+// sebagai UTC (T17:00:00.000Z); tambah 7 jam lalu baca komponen UTC agar hasilnya
+// konsisten di semua zona waktu browser.
+function fmtSiklusTanggal(v) {
+  if (!v) return '';
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    var p = v.split('-');
+    return p[2] + '/' + p[1] + '/' + p[0];
+  }
+  var d = v instanceof Date ? v : new Date(v);
+  if (isNaN(d.getTime())) return '';
+  var dd = new Date(d.getTime() + 7 * 3600 * 1000);
+  return String(dd.getUTCDate()).padStart(2, '0') + '/' + String(dd.getUTCMonth() + 1).padStart(2, '0') + '/' + dd.getUTCFullYear();
+}
+
+// Rentang tanggal siklus: "01/08/2026 – 31/08/2026" (atau kosong jika belum ada)
+function fmtSiklusRentang(s) {
+  var a = fmtSiklusTanggal(s && s.tanggal_mulai);
+  var b = fmtSiklusTanggal(s && s.tanggal_selesai);
+  if (!a && !b) return '';
+  if (a && b) return a + ' – ' + b;
+  return a || b;
+}
+
 function formatPerPorsi(b) {
   if (b.sp_value == null || b.sp_value <= 0) return '—';
   var gram = Math.round(b.berat_1_sp * b.sp_value);
@@ -220,6 +245,7 @@ async function reloadSiklusList() {
       <div class="flex items-center gap-4 text-xs text-stone-500 mb-3 min-w-0">
         <span class="flex items-center gap-1 overflow-hidden min-w-0"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="truncate block">${fmtJenjangBadge(s.kategori_penerima)}</span></span>
         <span class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${s.total_hari} hari</span>
+        ${fmtSiklusRentang(s) ? `<span class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${fmtSiklusRentang(s)}</span>` : ''}
       </div>
       ${s.catatan ? `<div class="text-xs text-stone-400 italic mb-3 line-clamp-1">${s.catatan}</div>` : ''}
       <div class="flex items-center justify-between pt-3 border-t border-stone-100">
@@ -1054,8 +1080,9 @@ async function openSiklusForm(editing) {
     status: editing.status || 'Draft',
     catatan: editing.catatan || '',
     tanggal_mulai: editing.tanggal_mulai || '',
+    tanggal_selesai: editing.tanggal_selesai || '',
     items: Array.isArray(editing.items) ? editing.items : []
-  } : { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 0, status: 'Draft', catatan: '', tanggal_mulai: '', items: [] };
+  } : { nama: '', kategori_penerima: '', jumlah_porsi: 0, total_hari: 0, status: 'Draft', catatan: '', tanggal_mulai: '', tanggal_selesai: '', items: [] };
   // Preserve existing metadata when re-rendering (e.g. from saveGridPicker / hariChange)
   const prevMeta = window._siklusMeta;
   if (prevMeta) {
@@ -1063,6 +1090,7 @@ async function openSiklusForm(editing) {
     if ((!s.jumlah_porsi || s.jumlah_porsi === 0) && prevMeta.jumlah_porsi) s.jumlah_porsi = prevMeta.jumlah_porsi;
     if (!s.catatan && prevMeta.catatan) s.catatan = prevMeta.catatan;
     if (!s.tanggal_mulai && prevMeta.tanggal_mulai) s.tanggal_mulai = prevMeta.tanggal_mulai;
+    if (!s.tanggal_selesai && prevMeta.tanggal_selesai) s.tanggal_selesai = prevMeta.tanggal_selesai;
   }
   const formData = JSON.parse(JSON.stringify(s));
 
@@ -1085,10 +1113,23 @@ async function openSiklusForm(editing) {
   }
   var _totalHariFromData = Math.max(1, s.total_hari || 7);
   function fmtDateInput(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  // Normalisasi tanggal_selesai tersimpan (Date / ISO / "YYYY-MM-DD") → "YYYY-MM-DD".
+  // Nilai Date/ISO dari mysql2 = tengah malam WIB disimpan UTC; tambah 7 jam lalu
+  // baca komponen UTC agar tidak bergantung zona waktu browser.
+  var _rawTglSelesai = s.tanggal_selesai || '';
+  if (_rawTglSelesai) {
+    var _dS = _rawTglSelesai instanceof Date ? _rawTglSelesai : new Date(_rawTglSelesai);
+    if (!isNaN(_dS.getTime())) {
+      var _wibS = new Date(_dS.getTime() + 7 * 3600 * 1000);
+      _rawTglSelesai = _wibS.getUTCFullYear() + '-' + String(_wibS.getUTCMonth()+1).padStart(2,'0') + '-' + String(_wibS.getUTCDate()).padStart(2,'0');
+    } else {
+      _rawTglSelesai = String(_rawTglSelesai).replace(/T.*$/g, '');
+    }
+  }
   var _tglMulai = _rawTglMulai ? new Date(_rawTglMulai + 'T00:00:00') : null;
   if (_tglMulai) _tglMulai.setHours(0,0,0,0);
   var _tglMulaiStr = _tglMulai ? fmtDateInput(_tglMulai) : '';
-  var _tglSelesaiStr = _tglMulai ? (function() { var d = new Date(_tglMulai); d.setDate(d.getDate() + _totalHariFromData - 1); return fmtDateInput(d); })() : '';
+  var _tglSelesaiStr = _rawTglSelesai || (_tglMulai ? (function() { var d = new Date(_tglMulai); d.setDate(d.getDate() + _totalHariFromData - 1); return fmtDateInput(d); })() : '');
   function getDate(hk) { return _tglMulai ? new Date(_tglMulai.getTime() + (hk - 1) * 86400000) : null; }
 
   var hariCount = _tglMulai ? Math.floor((new Date(_tglSelesaiStr) - _tglMulai) / 86400000) + 1 : _totalHariFromData;
@@ -1239,7 +1280,7 @@ async function openSiklusForm(editing) {
     </div>`;
 
   window._siklusFormId = s.id || null;
-  window._siklusMeta = { kategori_penerima: s.kategori_penerima || '', jumlah_porsi: Number(s.jumlah_porsi) || 0, catatan: s.catatan || '', tanggal_mulai: _tglMulaiStr };
+  window._siklusMeta = { kategori_penerima: s.kategori_penerima || '', jumlah_porsi: Number(s.jumlah_porsi) || 0, catatan: s.catatan || '', tanggal_mulai: _tglMulaiStr, tanggal_selesai: _tglSelesaiStr };
   document.getElementById('sk-btn-save').onclick = async function() {
     var nama = document.getElementById('sk-nama').value.trim();
     if (!nama) { showAlert('Nama siklus harus diisi', 'warning'); return; }
@@ -1302,11 +1343,12 @@ async function openSiklusForm(editing) {
 
     }
     var tanggalMulai = document.getElementById('sk-tgl-mulai').value || null;
+    var tanggalSelesai = document.getElementById('sk-tgl-selesai').value || null;
     var jenjangCbs = document.querySelectorAll('.jenjang-cb:checked');
     var jenjangVal = [];
     for (var jci = 0; jci < jenjangCbs.length; jci++) jenjangVal.push(jenjangCbs[jci].value);
     var kategori_penerima = jenjangVal.length === 0 ? '' : (jenjangVal.length === 1 ? jenjangVal[0] : JSON.stringify(jenjangVal));
-    var payload = { nama, kategori_penerima, total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', tanggal_mulai: tanggalMulai, items };
+    var payload = { nama, kategori_penerima, total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', tanggal_mulai: tanggalMulai, tanggal_selesai: tanggalSelesai, items };
     try {
       var savedId = window._siklusFormId;
       if (isEdit) await api.put('/siklus/' + savedId, payload);

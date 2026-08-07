@@ -23,6 +23,29 @@ function buildDbToDisplay() {
   return map;
 }
 
+// Hitung tanggal_selesai dari tanggal_mulai + total_hari (aman zona waktu WIB).
+function computeTanggalSelesai(tanggalMulai, tanggalSelesai, totalHari) {
+  if (tanggalSelesai) return String(tanggalSelesai).slice(0, 10);
+  if (!tanggalMulai || !totalHari) return null;
+  const [y, m, d] = String(tanggalMulai).slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const dt = new Date(y, m - 1, d + (Number(totalHari) - 1));
+  return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+}
+
+// Auto-arsip: siklus non-Arsip yang sudah lewat tanggal_selesai otomatis
+// berstatus Arsip. Idempotent — aman dipanggil berulang kali.
+async function autoArchiveSiklus() {
+  try {
+    await db.query(
+      `UPDATE siklus_menu SET status='Arsip'
+       WHERE status != 'Arsip' AND tanggal_selesai IS NOT NULL AND tanggal_selesai < CURDATE()`
+    );
+  } catch (e) {
+    console.warn('[autoArchiveSiklus] gagal:', e.message);
+  }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────
 
 function parseKategoriPenerima(kp) {
@@ -331,6 +354,8 @@ module.exports = {
   JENJANG_DB_MAP,
   KAT_ORDER,
   buildDbToDisplay,
+  computeTanggalSelesai,
+  autoArchiveSiklus,
   parseKategoriPenerima,
   escHtml,
   expandSiklusTargetJenjang,

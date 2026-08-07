@@ -173,16 +173,25 @@ function registerQueryRoutes(router) {
 
   // GET /menu/by-siklus — menu dikelompokkan per siklus + standalone
   router.get('/menu/by-siklus', async (req, res) => {
+    // Auto-arsip siklus yang sudah lewat rentang waktu, lalu sembunyikan dari pilihan
+    const { autoArchiveSiklus } = require('../siklus/helpers');
+    await autoArchiveSiklus();
+
     const [siklusList] = await db.query(
-      'SELECT id, nama, kategori_penerima, jumlah_porsi, total_hari, status FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
+      'SELECT id, nama, kategori_penerima, jumlah_porsi, total_hari, status, tanggal_mulai, tanggal_selesai FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
       [req.user.tenant_id]
     );
+
+    // Siklus yang masih tampil: bukan Arsip (sudah auto-arsip / diarsipkan manual)
+    const visibleSiklus = siklusList.filter(s => s.status !== 'Arsip');
 
     const [allMenus] = await db.query(
       'SELECT id, nama, kategori_penerima, deskripsi, gramasi_total, kalori, protein, karbohidrat, lemak, serat FROM menu WHERE tenant_id=? ORDER BY nama ASC',
       [req.user.tenant_id]
     );
 
+    // Item diambil dari SEMUA siklus (termasuk yang sudah arsip) agar menu yang
+    // dipakai di siklus arsip tidak jatuh ke daftar "Menu Tidak Terpakai".
     const siklusIds = siklusList.map(s => s.id);
     const allItems = {};
     const usedMenuIds = new Set();
@@ -224,7 +233,7 @@ function registerQueryRoutes(router) {
 
     const KAT_ORDER = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu', 'Minyak'];
     const siklusGroups = [];
-    for (const s of siklusList) {
+    for (const s of visibleSiklus) {
       const items = allItems[s.id] || [];
       const days = items.map(it => {
         let menuNama = it.menu_id ? (it.menu_nama || it.menu_nama_lengkap || null) : null;

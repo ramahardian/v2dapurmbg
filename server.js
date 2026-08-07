@@ -1161,5 +1161,11 @@ CREATE TABLE menu_bahan (
     const label = isWorker ? `⚡ Worker ${process.pid}` : '🚀 Server';
     console.log(`${label} — http://localhost:${PORT}`);
 
+    // Auto-arsip siklus menu yang sudah lewat tanggal_selesai (idempotent).
+    // Selain berjalan berkala, juga dipanggil lazy saat GET /siklus & /menu/by-siklus.
+    const { autoArchiveSiklus } = require('./routes/siklus/helpers');
+    const archiveRun = () => autoArchiveSiklus().catch(() => {});
+    setInterval(archiveRun, 60 * 60 * 1000).unref();
+    setTimeout(archiveRun, 15 * 1000).unref();
   });
 }

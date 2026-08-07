@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../../db');
-const { batchLoadItems, batchLoadGridBahanBySiklus, escHtml } = require('./helpers');
+const { batchLoadItems, batchLoadGridBahanBySiklus, escHtml, autoArchiveSiklus } = require('./helpers');
 
 const router = express.Router();
 
@@ -9,8 +9,10 @@ const router = express.Router();
  * Mengambil semua siklus dengan daftar nama menu/resep dari setiap item.
  */
 router.get('/siklus/recipe-names', async (req, res) => {
+  // Auto-arsip + sembunyikan siklus yang sudah lewat rentang waktu
+  await autoArchiveSiklus();
   const [siklusList] = await db.query(
-        'SELECT id, nama, kategori_penerima, total_hari, status, jumlah_porsi FROM siklus_menu WHERE tenant_id=? ORDER BY id DESC',
+        'SELECT id, nama, kategori_penerima, total_hari, status, jumlah_porsi FROM siklus_menu WHERE tenant_id=? AND status != \'Arsip\' ORDER BY id DESC',
     [req.user.tenant_id]
   );
 

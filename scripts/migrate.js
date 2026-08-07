@@ -389,6 +389,22 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip resep_map)'); }
 
+  // tanggal_selesai di siklus_menu — akhir rentang waktu siklus.
+  // Dipakai untuk auto-arsip: siklus yang sudah lewat rentang waktu
+  // otomatis berstatus Arsip dan disembunyikan dari pilihan /menu.
+  try {
+    const [tsCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'siklus_menu' AND COLUMN_NAME = 'tanggal_selesai'");
+    if (!tsCol.length) {
+      await q("ALTER TABLE siklus_menu ADD COLUMN tanggal_selesai DATE DEFAULT NULL AFTER tanggal_mulai");
+      log('✓ Migrasi siklus_menu: tambah kolom tanggal_selesai');
+    }
+    // Backfill: tanggal_selesai = tanggal_mulai + total_hari - 1 untuk siklus lama
+    const [upd] = await q(
+      "UPDATE siklus_menu SET tanggal_selesai = DATE_ADD(tanggal_mulai, INTERVAL total_hari - 1 DAY) WHERE tanggal_selesai IS NULL AND tanggal_mulai IS NOT NULL AND total_hari > 0"
+    );
+    if (upd.affectedRows > 0) log(`✓ Migrasi siklus_menu: backfill tanggal_selesai ${upd.affectedRows} baris`);
+  } catch (e) { log('  (skip migrasi tanggal_selesai): ' + e.message); }
+
   // ijin_cuti dokumen
   try {
     const [dokCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ijin_cuti' AND COLUMN_NAME = 'dokumen'");

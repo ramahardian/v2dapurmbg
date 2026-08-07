@@ -10,6 +10,28 @@ function menuSatuanTampil(b) {
   return (b && b.satuan) || 'g';
 }
 
+// Rentang tanggal siklus: "01/08/2026 – 31/08/2026" (kosong jika belum ada)
+// Nilai dari mysql2 adalah DATE bertipe Date = tengah malam WIB yang disimpan
+// sebagai UTC (T17:00:00.000Z); tambah 7 jam lalu baca komponen UTC agar
+// hasilnya konsisten di semua zona waktu browser.
+function fmtSiklusRentang(s) {
+  function f(v) {
+    if (!v) return '';
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      var p = v.split('-');
+      return p[2] + '/' + p[1] + '/' + p[0];
+    }
+    var d = v instanceof Date ? v : new Date(v);
+    if (isNaN(d.getTime())) return '';
+    var dd = new Date(d.getTime() + 7 * 3600 * 1000);
+    return String(dd.getUTCDate()).padStart(2, '0') + '/' + String(dd.getUTCMonth() + 1).padStart(2, '0') + '/' + dd.getUTCFullYear();
+  }
+  var a = f(s && s.tanggal_mulai), b = f(s && s.tanggal_selesai);
+  if (!a && !b) return '';
+  if (a && b) return a + ' – ' + b;
+  return a || b;
+}
+
 // Resolusi satuan & faktor konversi untuk kalkulator. Master bahan_baku adalah
 // sumber kebenaran (dicari by id, lalu by nama — case-insensitive + trim); nilai
 // baris hanya fallback. Ini menutup kasus bahan diketik manual / data lama / baris
@@ -179,6 +201,7 @@ function renderMenuBySiklusHtml(data) {
               <span>${s.kategori_penerima ? kategoriBadge(s.kategori_penerima) : 'Semua'}</span>
               <span>${s.jumlah_porsi} porsi/hari</span>
               <span>${s.total_hari} hari</span>
+              ${fmtSiklusRentang(s) ? `<span>${fmtSiklusRentang(s)}</span>` : ''}
               <span class="${coverage >= 100 ? 'text-emerald-600 font-semibold' : coverage > 0 ? 'text-amber-600' : 'text-stone-400'}">${coverage}% terisi</span>
               <span>${s.menu_count} menu unik</span>
             </div>

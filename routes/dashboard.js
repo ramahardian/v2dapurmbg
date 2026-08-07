@@ -260,6 +260,9 @@ router.get('/dashboard/siklus-notif', async (req, res) => {
   }
 
   // Notif khusus: menu aktif HARI INI belum diisi (prioritas pertama).
+  // Auto-arsip dulu agar siklus yang sudah lewat rentang waktu tidak dianggap aktif.
+  const { autoArchiveSiklus } = require('./siklus/helpers');
+  await autoArchiveSiklus();
   const [siklusAktif] = await db.query(
     `SELECT id, nama, kategori_penerima, total_hari, status, tanggal_mulai
      FROM siklus_menu WHERE tenant_id=? AND status='Aktif' ORDER BY tanggal_mulai DESC`,
