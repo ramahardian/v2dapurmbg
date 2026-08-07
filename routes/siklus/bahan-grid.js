@@ -145,7 +145,17 @@ router.post('/siklus/tambah-bahan', async (req, res) => {
   if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama bahan wajib diisi' });
 
   const [existing] = await db.query('SELECT id FROM bahan_baku WHERE nama=? AND tenant_id=?', [nama.trim(), req.user.tenant_id]);
-  if (existing.length) return res.json({ id: existing[0].id, existing: true });
+  if (existing.length) {
+    // Bahan sudah ada di master — ikuti kategori baris tempat bahan ditambahkan
+    // di siklus agar kategori & kategori_sp master selalu konsisten.
+    if (kategori_sp) {
+      await db.query(
+        'UPDATE bahan_baku SET kategori=?, kategori_sp=? WHERE id=? AND tenant_id=?',
+        [kategori_sp, kategori_sp, existing[0].id, req.user.tenant_id]
+      );
+    }
+    return res.json({ id: existing[0].id, existing: true });
+  }
 
   // Map kategori_sp to proper kategori
   const katLabel = kategori_sp || 'Lainnya';
