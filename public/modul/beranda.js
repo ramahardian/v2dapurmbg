@@ -955,9 +955,11 @@ function renderOhEntries(entries) {
 async function loadOnlineHistory() {
   ohSyncPills();
   const listEl = document.getElementById('oh-list');
+  const pagEl = document.getElementById('oh-pagination');
   const infoEl = document.getElementById('oh-range-info');
   const summaryEl = document.getElementById('oh-summary');
   if (listEl) listEl.innerHTML = renderOhLoading();
+  if (pagEl) pagEl.innerHTML = '';
 
   const uid = (document.getElementById('oh-user') || {}).value || '';
   const q = new URLSearchParams({ days: String(ohCurrentRange), page: String(ohCurrentPage), limit: String(OH_PAGE_SIZE) });
@@ -969,7 +971,14 @@ async function loadOnlineHistory() {
     setText('oh-stat-user', (d.users || []).length);
     if (infoEl) infoEl.textContent = d.mulai ? `${ohDateLabel(d.mulai)} → ${ohDateLabel(d.sampai)}` : '';
     if (summaryEl) summaryEl.innerHTML = renderOhSummary(d);
-    if (listEl) listEl.innerHTML = renderOhEntries(d.entries) + renderOhPagination(d);
+    if (listEl) listEl.innerHTML = renderOhEntries(d.entries);
+    // Bar pagination dirender di elemen terpisah di bawah area scroll (sticky footer),
+    // sehingga tetap terlihat walau daftar panjang. Sembunyikan saat tidak ada data.
+    if (pagEl) {
+      const ph = renderOhPagination(d);
+      pagEl.innerHTML = ph;
+      pagEl.classList.toggle('hidden', !ph);
+    }
   };
   try {
     const r = await fetch('/api/dashboard/online-history?' + q.toString(), { credentials: 'include' });
@@ -987,6 +996,7 @@ async function loadOnlineHistory() {
         render(await r.json());
       } catch (_) {
         if (listEl) listEl.innerHTML = renderOhEmpty(err.message || 'Gagal memuat riwayat', true);
+        if (pagEl) { pagEl.innerHTML = ''; pagEl.classList.add('hidden'); }
       }
     }, 1200);
   }
@@ -995,6 +1005,9 @@ async function loadOnlineHistory() {
 function ohSetPage(page) {
   if (page < 1) return;
   ohCurrentPage = page;
+  // Reset scroll ke atas agar user langsung melihat awal daftar halaman baru.
+  const l = document.getElementById('oh-list');
+  if (l) l.scrollTop = 0;
   loadOnlineHistory();
 }
 
