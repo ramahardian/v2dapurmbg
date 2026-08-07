@@ -518,10 +518,6 @@ async function openMenuForm(editing) {
         <div class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Bahan</div>
         <div class="flex items-center gap-2">
           <button type="button" onclick="addBahanRow()" class="text-xs font-medium border border-stone-200 px-3 py-1.5 rounded-lg hover:bg-stone-50 shadow-sm transition-all">+ Tambah Bahan</button>
-          ${currentUser?.role !== 'ahli_gizi' ? `<button type="button" onclick="saveCurrentMenuFromForm(); openMenuPoModal()" class="text-xs font-medium border border-emerald-300 text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5" title="Buat PO dari Menu">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            Buat PO
-          </button>` : ''}
         </div>
       </div>
       <div class="flex items-center gap-2 mb-2 text-xs text-stone-500">
@@ -745,6 +741,10 @@ function openBahanKalkulator(i) {
         '<input id="bk-gram" type="number" step="any" value="' + (Math.round(curGram * 100) / 100) + '" oninput="bkSyncGram()" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>' +
       '<div><label class="text-xs font-medium text-stone-600">Kilogram</label>' +
         '<input id="bk-kg" type="number" step="any" value="' + (Math.round((curGram / 1000) * 10000) / 10000) + '" oninput="bkSyncKg()" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>' +
+      '<div class="rounded-xl bg-emerald-50 border border-emerald-200/70 px-3 py-2.5 text-xs text-emerald-800">' +
+        '<div class="flex items-center justify-between"><span class="font-semibold uppercase tracking-wider text-emerald-700">Per Porsi' + (porsi > 0 ? ' — ' + porsi + ' porsi' : '') + '</span></div>' +
+        '<div class="mt-1 flex items-baseline gap-1.5 flex-wrap"><span class="text-base font-bold mono" id="bk-per-porsi">0</span><span class="text-emerald-600">g</span><span class="text-stone-400">=</span><span class="mono text-emerald-700" id="bk-per-porsi-kg">0</span><span class="text-emerald-600">kg</span></div>' +
+      '</div>' +
     '</div>' +
     '<div class="mt-4 pt-3 border-t border-stone-100 flex justify-end gap-2">' +
       '<button onclick="document.getElementById(\'bahan-kalkulator-modal\').remove()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Tutup</button>' +
@@ -753,6 +753,7 @@ function openBahanKalkulator(i) {
   '</div>';
   m.onclick = function() { m.remove(); };
   document.body.appendChild(m);
+  bkPerPorsiUpdate();
   (document.getElementById('bk-unit') || document.getElementById('bk-gram')).focus();
 }
 
@@ -762,6 +763,18 @@ function bkGetFactor() {
 }
 // Kolom terakhir yang diedit user di modal — sumber kebenaran saat faktor berubah.
 function bkLastInput() { return window._bkLastInput || ''; }
+// Perbarui tampilan perkiraan kebutuhan per porsi dari nilai gram saat ini.
+function bkPerPorsiUpdate() {
+  var g = document.getElementById('bk-gram');
+  var el = document.getElementById('bk-per-porsi');
+  var elk = document.getElementById('bk-per-porsi-kg');
+  if (!g || !el) return;
+  var porsi = Number(window._menuPorsi) || 0;
+  var gram = Number(g.value) || 0;
+  var perPorsi = porsi > 0 ? gram / porsi : gram;
+  el.textContent = perPorsi ? (Math.round(perPorsi * 100) / 100) : '0';
+  if (elk) elk.textContent = perPorsi ? (Math.round((perPorsi / 1000) * 10000) / 10000) : '0';
+}
 function bkSyncUnit() {
   var g = document.getElementById('bk-gram');
   var k = document.getElementById('bk-kg');
@@ -773,6 +786,7 @@ function bkSyncUnit() {
   g.value = gram ? Math.round(gram * 100) / 100 : '';
   k.value = gram ? Math.round((gram / 1000) * 10000) / 10000 : '';
   window._bkLastInput = 'unit';
+  bkPerPorsiUpdate();
 }
 function bkSyncFactor() {
   // Faktor konversi diubah → hitung ulang dari kolom yang TERAKHIR diedit user
@@ -800,6 +814,7 @@ function bkSyncGram() {
     }
   }
   window._bkLastInput = 'gram';
+  bkPerPorsiUpdate();
 }
 function bkSyncKg() {
   var g = document.getElementById('bk-gram');
@@ -818,6 +833,7 @@ function bkSyncKg() {
     }
   }
   window._bkLastInput = 'kg';
+  bkPerPorsiUpdate();
 }
 
 // Baca komposisi kemasan dari modal: jumlah isi × volume per isi + berat jenis (g/L).
