@@ -210,13 +210,16 @@ router.get('/dashboard/low-stock', async (req, res) => {
  */
 router.get('/dashboard/siklus-notif', async (req, res) => {
   const t = req.user.tenant_id;
+  // Auto-arsip dulu agar siklus yang sudah lewat rentang waktu tidak tampil di notifikasi.
+  const { autoArchiveSiklus } = require('./siklus/helpers');
+  await autoArchiveSiklus();
   const [rows] = await db.query(
     `SELECT s.id, s.nama, s.kategori_penerima, s.total_hari, s.status,
             COUNT(si.id) as item_count,
             SUM(CASE WHEN si.menu_id IS NOT NULL THEN 1 ELSE 0 END) as with_menu
      FROM siklus_menu s
      LEFT JOIN siklus_menu_item si ON si.siklus_id = s.id
-     WHERE s.tenant_id = ?
+     WHERE s.tenant_id = ? AND s.status <> 'Arsip'
      GROUP BY s.id`,
     [t]
   );
@@ -260,9 +263,6 @@ router.get('/dashboard/siklus-notif', async (req, res) => {
   }
 
   // Notif khusus: menu aktif HARI INI belum diisi (prioritas pertama).
-  // Auto-arsip dulu agar siklus yang sudah lewat rentang waktu tidak dianggap aktif.
-  const { autoArchiveSiklus } = require('./siklus/helpers');
-  await autoArchiveSiklus();
   const [siklusAktif] = await db.query(
     `SELECT id, nama, kategori_penerima, total_hari, status, tanggal_mulai
      FROM siklus_menu WHERE tenant_id=? AND status='Aktif' ORDER BY tanggal_mulai DESC`,
@@ -295,6 +295,7 @@ router.get('/dashboard/siklus-notif', async (req, res) => {
     if (!terisi) {
       notifItems.push({
         id: 'hari_ini',
+        siklus_id: sAktif.id,
         tipe: 'hari_ini',
         nama: sAktif.nama,
         kategori_penerima: sAktif.kategori_penerima,

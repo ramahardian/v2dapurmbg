@@ -182,6 +182,13 @@ async function renderSiklus() {
     }
 
     reloadSiklusList();
+
+    // Dari notifikasi: buka detail siklus yang diminta setelah list dirender.
+    if (window._siklusPendingDetailId) {
+      const pid = window._siklusPendingDetailId;
+      window._siklusPendingDetailId = null;
+      loadSiklusDetail(pid);
+    }
   } catch (err) {
     console.error('Siklus error:', err);
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat siklus: ${err.message}</div>`;
@@ -1311,6 +1318,12 @@ async function editSiklus(id) {
 function bukaKebutuhanPangan(id) {
   window._pbdPendingSiklusId = id;
   navigate('perhitungan-bdd');
+}
+
+// Dari notifikasi (dropdown bel): navigasi ke halaman siklus lalu buka detail/edit siklus tsb.
+function bukaSiklusDariNotif(id) {
+  window._siklusPendingDetailId = id;
+  navigate('siklus');
 }
 
 function fmtJenjang(kp) {

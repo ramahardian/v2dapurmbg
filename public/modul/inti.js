@@ -419,7 +419,7 @@ function renderNotifList(stock, siklus) {
   const menuHariIni = (siklus.items || []).find(it => it.tipe === 'hari_ini');
   if (menuHariIni) {
     html += `<div class="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider" style="opacity:0.5">Menu Hari Ini</div>`;
-    html += `<div class="px-4 py-2.5 flex items-center justify-between border-b cursor-pointer hover:opacity-80" style="border-color:var(--border)" onclick="navigateTo('siklus')">
+    html += `<div class="px-4 py-2.5 flex items-center justify-between border-b cursor-pointer hover:opacity-80" style="border-color:var(--border)" onclick="bukaSiklusDariNotif(${menuHariIni.siklus_id})">
       <div class="min-w-0 flex-1">
         <div class="text-sm font-medium truncate">Menu belum diisi — Hari ${menuHariIni.hari_ke}/${menuHariIni.total_hari}</div>
         <div class="text-[10px] truncate" style="opacity:0.5">${escHtml(menuHariIni.nama)}</div>
@@ -436,7 +436,7 @@ function renderNotifList(stock, siklus) {
     html += siklus.items.slice(0, 5).map(it => {
       const pct = it.coverage;
       const barColor = pct < 50 ? 'bg-red-500' : pct < 80 ? 'bg-amber-500' : 'bg-blue-500';
-      return `<div class="px-4 py-2.5 border-b cursor-pointer hover:opacity-80" style="border-color:var(--border)" onclick="navigateTo('siklus')">
+      return `<div class="px-4 py-2.5 border-b cursor-pointer hover:opacity-80" style="border-color:var(--border)" onclick="bukaSiklusDariNotif(${it.id})">
         <div class="flex items-center justify-between">
           <div class="text-sm font-medium truncate flex-1">${escHtml(it.nama)}</div>
           <span class="text-xs font-bold ${pct < 50 ? 'text-red-600' : 'text-amber-600'} ml-2">${pct}%</span>

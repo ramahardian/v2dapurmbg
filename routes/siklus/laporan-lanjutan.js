@@ -317,10 +317,10 @@ async function buildPerencanaanData({ tenant_id, query }) {
   const [siklusList] = await db.query(siklusSql, siklusParams);
 
   if (!siklusList.length) {
-    return res.json({
+    return {
       jenjang_list: [], hari: [], pm_map: {},
       _validation: { level: 'no_siklus', message: 'Belum ada siklus aktif', detail: 'Buat siklus baru dengan status Aktif untuk menampilkan total kebutuhan pangan.' }
-    });
+    };
   }
 
   // PM totals — split paket_besar & paket_kecil; kategori 'Posyandu' dipecah
