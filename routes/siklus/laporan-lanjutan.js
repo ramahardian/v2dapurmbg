@@ -7,43 +7,45 @@ const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, pars
 
 const router = express.Router();
 
-// ── Helper: sinkronkan total porsi dgn jumlah_porsi tersimpan di siklus ──
-// /menu menampilkan siklus.jumlah_porsi (tersimpan). Agar /total-kebutuhan dan
-// /perencanaan konsisten, total porsi live (dari penerima_manfaat) diskala
-// proporsional per jenjang sehingga total = SUM(jumlah_porsi) siklus terpilih/aktif.
-function syncPorsiDenganSiklus(siklusList, activeJenjang, pmByDisplay, pmBesar, pmKecil) {
-  const storedTotal = siklusList.reduce((sum, s) => sum + (Number(s.jumlah_porsi) || 0), 0);
-  if (storedTotal <= 0) return; // tidak ada acuan tersimpan → pakai live PM
-  const liveTotal = activeJenjang.reduce((sum, j) => sum + (Number(pmByDisplay[j]) || 0), 0);
-  if (liveTotal <= 0) return;
-  const factor = storedTotal / liveTotal;
+// ── Helper: peta PM terskala PER SIKLUS ──
+// Jumlah porsi yang tersimpan di siklus adalah porsi PER HARI dari siklus tsb.
+// Karena suatu hari hanya dilayani oleh siklus yang menutupinya (bukan semua
+// siklus aktif sekaligus), PM harian diskala ke jumlah_porsi SIKLUS YANG
+// MELIPUTI hari itu — bukan ke SUM(jumlah_porsi) semua siklus aktif.
+// Tanpa ini, ketika ada 2 siklus aktif (mis. periode 1 + periode 2), tiap hari
+// ikut diskala ke total gabungan dan kebutuhan jadi berlipat (mis. 2839→5678).
+function buildScaledPmBySiklus(siklusList, activeJenjang, pmByDisplay, pmByDisplayBesar, pmByDisplayKecil) {
   const scaled = {};
-  let acc = 0;
-  for (const j of activeJenjang) {
-    if (pmByDisplay[j] === undefined || pmByDisplay[j] === null) continue;
-    scaled[j] = Math.round(Number(pmByDisplay[j]) * factor);
-    acc += scaled[j];
-  }
-  // Koreksi selisih pembulatan pada jenjang pertama agar total selalu pas
-  const diff = storedTotal - acc;
-  for (const j of activeJenjang) {
-    if (scaled[j] === undefined) continue;
-    scaled[j] += diff;
-    break;
-  }
-  for (const j of activeJenjang) {
-    if (scaled[j] === undefined) continue;
-    const oldVal = Number(pmByDisplay[j]) || 0;
-    pmByDisplay[j] = scaled[j];
-    // Ikutkan skala ke pecahan besar/kecil agar jumlah_besar + jumlah_kecil = jumlah_siswa
-    if (pmBesar && pmKecil && oldVal > 0) {
-      const bf = scaled[j] / oldVal;
-      const nb = Math.round((Number(pmBesar[j]) || 0) * bf);
-      const nk = Math.round((Number(pmKecil[j]) || 0) * bf);
-      pmBesar[j] = nb;
-      pmKecil[j] = nk + (scaled[j] - (nb + nk)); // jaga besar+kecil = total
+  const liveTotal = activeJenjang.reduce((sum, j) => sum + (Number(pmByDisplay[j]) || 0), 0);
+  for (const s of siklusList) {
+    const target = Number(s.jumlah_porsi) || 0;
+    let pm = pmByDisplay;
+    let besar = pmByDisplayBesar;
+    let kecil = pmByDisplayKecil;
+    if (target > 0 && liveTotal > 0 && target !== liveTotal) {
+      const factor = target / liveTotal;
+      pm = {};
+      if (pmByDisplayBesar && pmByDisplayKecil) { besar = {}; kecil = {}; }
+      for (const j of activeJenjang) {
+        const v = Number(pmByDisplay[j]) || 0;
+        if (!v) continue;
+        const sv = Math.round(v * factor);
+        pm[j] = sv;
+        if (pmByDisplayBesar && pmByDisplayKecil && besar && kecil) {
+          const bf = sv / v;
+          besar[j] = Math.round((Number(pmByDisplayBesar[j]) || 0) * bf);
+          kecil[j] = Math.round((Number(pmByDisplayKecil[j]) || 0) * bf);
+        }
+      }
+      // Koreksi selisih pembulatan pada jenjang pertama agar total pas
+      const diff = target - Object.values(pm).reduce((a, b) => a + b, 0);
+      for (const j of activeJenjang) {
+        if (pm[j] !== undefined) { pm[j] += diff; break; }
+      }
     }
+    scaled[s.id] = { pm, besar, kecil };
   }
+  return scaled;
 }
 
 /**
@@ -115,8 +117,10 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
     });
   }
 
-  // Sinkronkan total porsi dgn jumlah_porsi tersimpan siklus (konsisten dgn /menu)
-  syncPorsiDenganSiklus(siklusList, activeJenjang, pmByDisplay, pmByDisplayBesar, pmByDisplayKecil);
+  // Sinkronkan total porsi dgn jumlah_porsi tersimpan siklus (konsisten dgn /menu).
+  // PER SIKLUS: tiap siklus memakai jumlah_porsi-nya sendiri, bukan gabungan semua
+  // siklus aktif, agar porsi tidak berlipat saat siklus periode berikutnya aktif.
+  const scaledPmBySiklus = buildScaledPmBySiklus(siklusList, activeJenjang, pmByDisplay, pmByDisplayBesar, pmByDisplayKecil);
 
   // SP referensi
   let spRefMap = {};
@@ -141,10 +145,12 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   // Item tanpa menu_id tapi menu_nama cocok dgn menu → ikuti resep menu (live)
   const { menuIdByName, menuBahanByNameMap } = await loadMenuBahanByName(itemsBySiklus, req.user.tenant_id);
 
-  // Helper: build siklus data for a given PM count
-  function buildSiklusData(jmlPm) {
+  // Helper: build siklus data — porsi per siklus memakai jumlah_porsi siklus tsb
+  function buildSiklusData(jmlPm, jenjangKey) {
     const siklusData = [];
     for (const s of siklusList) {
+      const sPmMap = (scaledPmBySiklus[s.id] || {}).pm || {};
+      const jmlPmSiklus = jenjangKey ? (sPmMap[jenjangKey] || Number(s.jumlah_porsi) || 0) : (Number(jmlPm) || 0);
       const allItems = itemsBySiklus[s.id] || [];
       const menuItems = allItems.filter(it => lookupMenuIdByName(menuIdByName, it));
       const gridItems = allItems.filter(it => !lookupMenuIdByName(menuIdByName, it));
@@ -164,7 +170,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
         for (const br of bahanRows) coveredBahan.add(it.hari_ke + '::' + (br.bahan_baku_id || ''));
         const bahanItems = bahanRows.map(br => {
           const resolved = resolveGridBeratPerSiswa(br, spRefMap);
-          const beratBersih = resolved.beratPerSiswa * jmlPm;
+          const beratBersih = resolved.beratPerSiswa * jmlPmSiklus;
           const beratKotor = hitungBDD(beratBersih, resolved.persenBdd);
           return { bahan_baku_id: br.bahan_baku_id, nama: br.nama, nama_display: br.nama, satuan: br.satuan, kategori_sp: br.kategori_sp, persen_bdd: resolved.persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 };
         });
@@ -178,7 +184,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
         const hariNama = gridItem ? gridItem.hari_nama : 'Hari ' + hk;
         const menuNama = gridItem ? (gridItem.menu_nama || '-') : '-';
         const { beratPerSiswa: berat1sp, persenBdd } = resolveGridBeratPerSiswa(g, spRefMap);
-        const beratBersih = berat1sp * jmlPm;
+        const beratBersih = berat1sp * jmlPmSiklus;
         const beratKotor = hitungBDD(beratBersih, persenBdd);
         const label = processedDays.has(hk) ? 'Bahan Tambahan' : 'Menu';
 
@@ -196,12 +202,20 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
     return siklusData;
   }
 
-  // Build data per jenjang — split by total, besar, kecil
+  // Build data per jenjang — split by total, besar, kecil.
+  // Total jenjang memakai porsi terskala siklus PERTAMA (halaman /perencanaan
+  // selalu mem-filter per siklus_id), agar rekap porsi konsisten dgn tabel matriks.
+  const primarySkl = siklusList[0];
+  const primaryPm = (primarySkl && scaledPmBySiklus[primarySkl.id]) || {};
+  const headerPmMap = (primaryPm.pm && Object.keys(primaryPm.pm).length) ? primaryPm.pm : pmByDisplay;
+  const headerBesarMap = (primaryPm.besar && Object.keys(primaryPm.besar).length) ? primaryPm.besar : pmByDisplayBesar;
+  const headerKecilMap = (primaryPm.kecil && Object.keys(primaryPm.kecil).length) ? primaryPm.kecil : pmByDisplayKecil;
+
   const dataByJenjang = {};
   for (const j of activeJenjang) {
-    const jmlPm = pmByDisplay[j] || 0;
-    const jmlBesar = pmByDisplayBesar[j] || 0;
-    const jmlKecil = pmByDisplayKecil[j] || 0;
+    const jmlPm = headerPmMap[j] || 0;
+    const jmlBesar = headerBesarMap[j] || 0;
+    const jmlKecil = headerKecilMap[j] || 0;
     if (!jmlPm) continue;
 
     const dbVals = JENJANG_DB_MAP[j] || [j];
@@ -213,7 +227,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
       jumlah_besar: jmlBesar,
       jumlah_kecil: jmlKecil,
       sp_target: spTarget,
-      siklus: buildSiklusData(jmlPm)
+      siklus: buildSiklusData(jmlPm, j)
     };
   }
 
@@ -235,8 +249,9 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
       for (const j of activeJenjang) {
         const jData = dataByJenjang[j];
         if (!jData) continue;
-        const jmlPm = pmByDisplay[j] || 0;
         for (const sData of jData.siklus) {
+          const sPmMap = (scaledPmBySiklus[sData.siklus_id] || {}).pm || {};
+          const jmlPm = sPmMap[j] || Number(sData.jumlah_porsi) || (pmByDisplay[j] || 0);
           for (const day of sData.hari) {
             const newBahan = [];
             for (const b of day.bahan) {
@@ -339,20 +354,11 @@ async function buildPerencanaanData({ tenant_id, query }) {
     activeJenjang = targetArr;
   }
 
-  // Sinkronkan total porsi dgn jumlah_porsi tersimpan siklus (konsisten dgn /menu)
-  const syncInfo = (() => {
-    const storedTotal = siklusList.reduce((sum, s) => sum + (Number(s.jumlah_porsi) || 0), 0);
-    const pmTotal = activeJenjang.reduce((sum, j) => sum + (Number(pmByDisplay[j]) || 0), 0);
-    let factor = null;
-    if (storedTotal > 0 && pmTotal > 0) factor = Math.round((storedTotal / pmTotal) * 100) / 100;
-    return {
-      stored_total: storedTotal,
-      pm_total: pmTotal,
-      factor,
-      inflating: factor !== null && factor > 1.2,
-    };
-  })();
-  syncPorsiDenganSiklus(siklusList, activeJenjang, pmByDisplay, pmByDisplayBesar, pmByDisplayKecil);
+  // Sinkronkan total porsi dgn jumlah_porsi tersimpan siklus (konsisten dgn /menu).
+  // PER SIKLUS: setiap hari hanya dilayani siklus yang menutupinya, jadi PM harian
+  // diskala ke jumlah_porsi siklus itu — bukan ke SUM(jumlah_porsi) semua siklus
+  // aktif (agar saat ada siklus periode 1 + periode 2 aktif, kebutuhan tidak berlipat).
+  const scaledPmBySiklus = buildScaledPmBySiklus(siklusList, activeJenjang, pmByDisplay, pmByDisplayBesar, pmByDisplayKecil);
 
   // SP referensi
   let spRefMap = {};
@@ -462,8 +468,9 @@ async function buildPerencanaanData({ tenant_id, query }) {
           const bahanRows = (it.menu_id ? menuBahanMap : menuBahanByNameMap)[matchedMenuId] || [];
           for (const br of bahanRows) {
             coveredBahan.add(String(br.bahan_baku_id));
+            const sPm = (scaledPmBySiklus[s.id] || {}).pm || {};
             for (const b of activeJenjang) {
-              const jmlPm = pmByDisplay[b] || Number(s.jumlah_porsi) || 0;
+              const jmlPm = sPm[b] || Number(s.jumlah_porsi) || 0;
               if (!jmlPm) continue;
 
               // Check override
@@ -506,8 +513,9 @@ async function buildPerencanaanData({ tenant_id, query }) {
 
       for (const g of gridDay) {
         if (coveredBahan.has(String(g.bahan_baku_id))) continue; // sudah dihitung dari resep menu
+        const sPm = (scaledPmBySiklus[s.id] || {}).pm || {};
         for (const b of activeJenjang) {
-          const jmlPm = pmByDisplay[b] || Number(s.jumlah_porsi) || 0;
+          const jmlPm = sPm[b] || Number(s.jumlah_porsi) || 0;
           if (!jmlPm) continue;
 
           // Check override
@@ -547,15 +555,52 @@ async function buildPerencanaanData({ tenant_id, query }) {
     curDate.setDate(curDate.getDate() + 1);
   }
 
-  // Filter pm_map to only include active jenjang
+  // Filter pm_map to only include active jenjang. Header total memakai porsi
+  // siklus yang menutupi awal rentang (bukan gabungan semua siklus aktif), agar
+  // "Total siswa" tidak terlihat berlipat saat ada siklus periode berikutnya.
+  const headerStart = hari.length ? parseYmd(hari[0].tanggal) : mulai;
+  let headerPm = pmByDisplay;
+  let headerBesar = pmByDisplayBesar;
+  let headerKecil = pmByDisplayKecil;
+  let headerSiklus = null;
+  for (const s of siklusList) {
+    const siklusStart = s.tanggal_mulai ? parseYmd(ymd(new Date(s.tanggal_mulai))) : headerStart;
+    const diffDays = Math.floor((headerStart - siklusStart) / (1000 * 60 * 60 * 24));
+    const hariKe = diffDays + 1;
+    if (hariKe >= 1 && hariKe <= (s.total_hari || 30)) {
+      const spm = scaledPmBySiklus[s.id] || {};
+      if (spm.pm && Object.keys(spm.pm).length) {
+        headerPm = spm.pm;
+        headerBesar = spm.besar || headerBesar;
+        headerKecil = spm.kecil || headerKecil;
+        headerSiklus = s;
+      }
+      break;
+    }
+  }
+
   const filteredPmMap = {};
   for (const j of activeJenjang) {
-    if (pmByDisplay[j]) filteredPmMap[j] = pmByDisplay[j];
+    if (headerPm[j]) filteredPmMap[j] = headerPm[j];
   }
 
   const totalPorsi = Object.values(filteredPmMap).reduce((s, v) => s + (Number(v) || 0), 0);
-  const totalBesar = activeJenjang.reduce((s, j) => s + (Number(pmByDisplayBesar[j]) || 0), 0);
-  const totalKecil = activeJenjang.reduce((s, j) => s + (Number(pmByDisplayKecil[j]) || 0), 0);
+  const totalBesar = activeJenjang.reduce((s, j) => s + (Number(headerBesar[j]) || 0), 0);
+  const totalKecil = activeJenjang.reduce((s, j) => s + (Number(headerKecil[j]) || 0), 0);
+  // Info sinkronisasi memakai porsi SIKLUS HEADER (bukan gabungan semua siklus aktif),
+  // supaya peringatan "menggembung" tidak salah nyala saat ada siklus periode berikutnya.
+  const syncInfo = (() => {
+    const storedTotal = headerSiklus ? (Number(headerSiklus.jumlah_porsi) || 0) : totalPorsi;
+    const pmTotal = activeJenjang.reduce((sum, j) => sum + (Number(pmByDisplay[j]) || 0), 0);
+    let factor = null;
+    if (storedTotal > 0 && pmTotal > 0) factor = Math.round((storedTotal / pmTotal) * 100) / 100;
+    return {
+      stored_total: storedTotal,
+      pm_total: pmTotal,
+      factor,
+      inflating: factor !== null && factor > 1.2,
+    };
+  })();
   return { jenjang_list: activeJenjang, hari, pm_map: filteredPmMap, tanggal_mulai: mulaiStr, tanggal_selesai: selesaiStr, total_porsi: totalPorsi, total_besar: totalBesar, total_kecil: totalKecil, sync: syncInfo };
 }
 
