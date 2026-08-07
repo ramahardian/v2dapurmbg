@@ -846,6 +846,8 @@ function ohTime(d) {
 }
 
 let ohCurrentRange = 7;
+let ohCurrentPage = 1;
+const OH_PAGE_SIZE = 20;
 
 function setText(id, v) {
   const el = document.getElementById(id);
@@ -870,6 +872,7 @@ function closeOnlineHistory() {
 
 function ohSetRange(days) {
   ohCurrentRange = days;
+  ohCurrentPage = 1;
   ohSyncPills();
   loadOnlineHistory();
 }
@@ -957,8 +960,17 @@ async function loadOnlineHistory() {
   if (listEl) listEl.innerHTML = renderOhLoading();
 
   const uid = (document.getElementById('oh-user') || {}).value || '';
-  const q = new URLSearchParams({ days: String(ohCurrentRange) });
+  const q = new URLSearchParams({ days: String(ohCurrentRange), page: String(ohCurrentPage), limit: String(OH_PAGE_SIZE) });
   if (uid) q.set('user_id', uid);
+  const render = (d) => {
+    populateOhUserFilter(d.users);
+    setText('oh-stat-total', d.total);
+    setText('oh-stat-login', d.logins);
+    setText('oh-stat-user', (d.users || []).length);
+    if (infoEl) infoEl.textContent = d.mulai ? `${ohDateLabel(d.mulai)} → ${ohDateLabel(d.sampai)}` : '';
+    if (summaryEl) summaryEl.innerHTML = renderOhSummary(d);
+    if (listEl) listEl.innerHTML = renderOhEntries(d.entries) + renderOhPagination(d);
+  };
   try {
     const r = await fetch('/api/dashboard/online-history?' + q.toString(), { credentials: 'include' });
     if (!r.ok) {
@@ -966,32 +978,48 @@ async function loadOnlineHistory() {
       try { const e = await r.json(); if (e && e.error) msg = e.error; } catch (_) {}
       throw new Error(msg);
     }
-    const d = await r.json();
-    populateOhUserFilter(d.users);
-    setText('oh-stat-total', d.total);
-    setText('oh-stat-login', d.logins);
-    setText('oh-stat-user', (d.users || []).length);
-    if (infoEl) infoEl.textContent = d.mulai ? `${d.mulai} → ${d.sampai}` : '';
-    if (summaryEl) summaryEl.innerHTML = renderOhSummary(d);
-    if (listEl) listEl.innerHTML = renderOhEntries(d.entries);
+    render(await r.json());
   } catch (err) {
     setTimeout(async () => {
       try {
         const r = await fetch('/api/dashboard/online-history?' + q.toString(), { credentials: 'include' });
         if (!r.ok) throw new Error('Failed');
-        const d = await r.json();
-        populateOhUserFilter(d.users);
-        setText('oh-stat-total', d.total);
-        setText('oh-stat-login', d.logins);
-        setText('oh-stat-user', (d.users || []).length);
-        if (infoEl) infoEl.textContent = d.mulai ? `${d.mulai} → ${d.sampai}` : '';
-        if (summaryEl) summaryEl.innerHTML = renderOhSummary(d);
-        if (listEl) listEl.innerHTML = renderOhEntries(d.entries);
+        render(await r.json());
       } catch (_) {
         if (listEl) listEl.innerHTML = renderOhEmpty(err.message || 'Gagal memuat riwayat', true);
       }
     }, 1200);
   }
+}
+
+function ohSetPage(page) {
+  if (page < 1) return;
+  ohCurrentPage = page;
+  loadOnlineHistory();
+}
+
+function renderOhPagination(d) {
+  const page = d.page || 1;
+  const totalPages = d.total_pages || 1;
+  const total = d.total_entries || 0;
+  if (!total) return '';
+  const from = (page - 1) * (d.limit || OH_PAGE_SIZE) + 1;
+  const to = Math.min(page * (d.limit || OH_PAGE_SIZE), total);
+  const btn = 'inline-flex items-center justify-center h-8 px-3 rounded-lg text-xs font-medium border transition-colors';
+  const disabled = ' text-stone-300 border-stone-100 cursor-not-allowed';
+  const active = ' text-stone-600 border-stone-200 hover:bg-stone-50 hover:text-stone-800';
+  return `<div class="px-5 py-3 border-t border-stone-100 flex items-center justify-between gap-3">
+    <span class="text-[10px] text-stone-400">Menampilkan <b class="text-stone-600">${from}–${to}</b> dari <b class="text-stone-600">${total}</b> aktivitas</span>
+    <div class="flex items-center gap-1.5">
+      <button onclick="ohSetPage(${page - 1})" ${page <= 1 ? 'disabled' : ''} class="${btn}${page <= 1 ? disabled : active}">
+        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>Prev
+      </button>
+      <span class="text-[11px] font-semibold text-stone-500 px-2">${page} / ${totalPages}</span>
+      <button onclick="ohSetPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''} class="${btn}${page >= totalPages ? disabled : active}">
+        Next<svg class="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>`;
 }
 
 async function clearOnlineHistoryLog() {

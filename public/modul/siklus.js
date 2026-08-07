@@ -252,7 +252,6 @@ async function reloadSiklusList() {
       <div class="flex items-center gap-4 text-xs text-stone-500 mb-3 min-w-0">
         <span class="flex items-center gap-1 overflow-hidden min-w-0"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="truncate block">${fmtJenjangBadge(s.kategori_penerima)}</span></span>
         <span class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${s.total_hari} hari</span>
-        ${fmtSiklusRentang(s) ? `<span class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${fmtSiklusRentang(s)}</span>` : ''}
       </div>
       ${s.catatan ? `<div class="text-xs text-stone-400 italic mb-3 line-clamp-1">${s.catatan}</div>` : ''}
       <div class="flex items-center justify-between pt-3 border-t border-stone-100">

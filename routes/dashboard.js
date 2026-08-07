@@ -364,6 +364,9 @@ router.get('/dashboard/online-history', async (req, res) => {
   const t = req.user.tenant_id;
   const days = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 7));
   const uid = req.query.user_id ? parseInt(req.query.user_id, 10) : null;
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(5, parseInt(req.query.limit, 10) || 20));
+  const offset = (page - 1) * limit;
 
   let where = 'WHERE al.tenant_id = ? AND al.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)';
   const params = [t, days];
@@ -399,14 +402,21 @@ router.get('/dashboard/online-history', async (req, res) => {
       params
     );
 
+    const [countRows] = await db.query(
+      `SELECT COUNT(*) AS total_entries FROM user_activity_log al ${where}`,
+      params
+    );
+    const totalEntries = countRows[0].total_entries;
+    const totalPages = Math.max(1, Math.ceil(totalEntries / limit));
+
     const [entries] = await db.query(
       `SELECT al.id, al.user_id, al.nama, al.role, u2.foto AS foto, al.event, al.created_at
        FROM user_activity_log al
        LEFT JOIN users u2 ON u2.id = al.user_id
        ${where}
        ORDER BY al.created_at DESC, al.id DESC
-       LIMIT 500`,
-      params
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
 
     res.json({
@@ -417,6 +427,10 @@ router.get('/dashboard/online-history', async (req, res) => {
       logins: range.logins,
       users,
       entries,
+      page,
+      limit,
+      total_entries: totalEntries,
+      total_pages: totalPages,
     });
   } catch (e) {
     console.error('Gagal ambil riwayat aktivitas:', e.message);
