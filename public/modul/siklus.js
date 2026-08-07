@@ -948,36 +948,305 @@ function updateSelectedCount() {
   }
 }
 
-// ===== Siklus → Keuangan Integration =====
-async function generateProduksi(siklusId) {
-  var tanggal = prompt('Tanggal produksi (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
-  if (!tanggal) return;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) { showAlert('Format tanggal salah. Gunakan YYYY-MM-DD', 'error'); return; }
+// ===== Siklus → Produksi (modal modern) =====
+
+// Konversi nilai tanggal (Date / ISO / "YYYY-MM-DD") menjadi "YYYY-MM-DD" lokal WIB.
+function _pmYmdFromValue(v) {
+  if (!v) return '';
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  var d = v instanceof Date ? v : new Date(v);
+  if (isNaN(d.getTime())) return '';
+  var wib = new Date(d.getTime() + 7 * 3600 * 1000);
+  return wib.getUTCFullYear() + '-' + String(wib.getUTCMonth() + 1).padStart(2, '0') + '-' + String(wib.getUTCDate()).padStart(2, '0');
+}
+function _pmYmd(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function _pmParse(s) {
+  var p = String(s).split('-');
+  return new Date(+p[0], +p[1] - 1, +p[2]);
+}
+function _pmAddDays(ymd, days) {
+  var d = _pmParse(ymd);
+  d.setDate(d.getDate() + days);
+  return _pmYmd(d);
+}
+function _pmDayDiff(a, b) { // b - a in days
+  return Math.round((_pmParse(b) - _pmParse(a)) / 86400000);
+}
+function _pmClamp(ymd, min, max) {
+  if (min && ymd < min) return min;
+  if (max && ymd > max) return max;
+  return ymd;
+}
+
+// Dialog "Buat Produksi" modern — mode 1 hari atau rentang tanggal.
+function openProduksiModal(siklusId, mode) {
+  var existing = document.getElementById('produksi-modal');
+  if (existing) existing.remove();
+
+  api.get('/siklus/' + siklusId).then(function(siklus) {
+    var mulai = _pmYmdFromValue(siklus.tanggal_mulai);
+    var selesai = _pmYmdFromValue(siklus.tanggal_selesai);
+    var totalHari = Math.max(1, Number(siklus.total_hari) || 7);
+    var today = _pmYmd(new Date());
+
+    var defSingle = today;
+    if (mulai && selesai) defSingle = _pmClamp(today, mulai, selesai);
+    else if (mulai) defSingle = today >= mulai ? today : mulai;
+    var defStart = defSingle;
+    var defEnd = selesai && selesai >= today ? (selesai < _pmAddDays(today, 6) ? selesai : _pmAddDays(today, 6)) : (selesai || _pmAddDays(today, 6));
+    if (defEnd < defStart) defEnd = defStart;
+
+    var m = document.createElement('div');
+    m.id = 'produksi-modal';
+    m.className = 'fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4';
+    m.innerHTML =
+      '<div class="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden transform transition-all duration-200 scale-95 opacity-0">' +
+        '<div class="flex items-center gap-3 px-5 py-4 border-b border-stone-100 dark:border-stone-800 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white">' +
+          '<div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+          '<div class="flex-1 min-w-0"><h3 class="font-bold text-sm leading-tight">Buat Produksi</h3>' +
+            '<p class="text-emerald-100 text-xs truncate mt-0.5">' + escHtml(siklus.nama || '') + '</p></div>' +
+          '<button onclick="closeProduksiModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/15 text-white/80 hover:text-white transition-colors" title="Tutup"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+        '</div>' +
+        '<div class="p-5 space-y-4 overflow-y-auto" style="max-height:calc(92vh - 132px)">' +
+          '<div class="flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800/60 border border-stone-200/70 dark:border-stone-700/60 text-xs text-stone-600 dark:text-stone-300">' +
+            '<span class="inline-flex items-center gap-1"><svg class="w-3.5 h-3.5 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>' + (mulai && selesai ? fmtSiklusRentang(siklus) : (mulai || selesai || 'Tanpa rentang')) + '</span></span>' +
+            '<span class="text-stone-300 dark:text-stone-600">•</span>' +
+            '<span>' + totalHari + ' hari siklus</span>' +
+            '<span class="text-stone-300 dark:text-stone-600">•</span>' +
+            '<span>' + (Number(siklus.jumlah_porsi) || 0) + ' porsi/hari</span>' +
+          '</div>' +
+
+          '<div>' +
+            '<div class="flex items-center gap-1 p-1 rounded-xl bg-stone-100 dark:bg-stone-800 w-fit border border-stone-200 dark:border-stone-700">' +
+              '<button id="pm-tab-single" onclick="pmSwitchMode(\'single\')" class="px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all">1 Hari</button>' +
+              '<button id="pm-tab-range" onclick="pmSwitchMode(\'range\')" class="px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all">Rentang Tanggal</button>' +
+            '</div>' +
+            '<div id="pm-mode-single" class="mt-3">' +
+              '<label class="block text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Tanggal Produksi</label>' +
+              '<div class="flex items-center gap-2 mt-1.5">' +
+                '<input type="date" id="pm-tgl-single" value="' + defSingle + '" oninput="pmUpdateSummary()" min="' + (mulai || '') + '" max="' + (selesai || '') + '" class="flex-1 h-11 px-3 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all">' +
+                '<button onclick="pmSetSingleToday()" class="shrink-0 h-11 px-3 rounded-xl text-xs font-medium border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 transition-colors">Hari Ini</button>' +
+              '</div>' +
+              '<div id="pm-single-info" class="mt-2"></div>' +
+            '</div>' +
+            '<div id="pm-mode-range" class="mt-3 hidden">' +
+              '<div class="grid grid-cols-2 gap-3">' +
+                '<div><label class="block text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Tanggal Mulai</label>' +
+                  '<input type="date" id="pm-tgl-mulai" value="' + defStart + '" oninput="pmSyncRange()" min="' + (mulai || '') + '" max="' + (selesai || '') + '" class="mt-1.5 w-full h-11 px-3 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"></div>' +
+                '<div><label class="block text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Tanggal Selesai</label>' +
+                  '<input type="date" id="pm-tgl-selesai" value="' + defEnd + '" oninput="pmSyncRange()" min="' + (mulai || '') + '" max="' + (selesai || '') + '" class="mt-1.5 w-full h-11 px-3 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"></div>' +
+              '</div>' +
+              '<div class="flex flex-wrap items-center gap-1.5 mt-3">' +
+                '<span class="text-[11px] text-stone-400 mr-1">Cepat:</span>' +
+                '<button onclick="pmQuick(\'1\')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">Hari Ini</button>' +
+                '<button onclick="pmQuick(\'3\')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">3 Hari</button>' +
+                '<button onclick="pmQuick(\'7\')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">7 Hari</button>' +
+                '<button onclick="pmQuick(\'siklus\')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">Siklus Penuh</button>' +
+              '</div>' +
+              '<div id="pm-range-info" class="mt-2"></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="px-5 py-4 border-t border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/60 flex items-center justify-between gap-3">' +
+          '<div class="text-xs text-stone-500 dark:text-stone-400"><span id="pm-summary" class="font-semibold text-stone-700 dark:text-stone-200"></span></div>' +
+          '<div class="flex items-center gap-2">' +
+            '<button onclick="closeProduksiModal()" class="h-11 px-4 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">Batal</button>' +
+            '<button id="pm-submit" onclick="pmSubmit(' + siklusId + ')" class="h-11 px-5 rounded-xl text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors inline-flex items-center gap-2">' +
+              '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Buat Produksi' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(m);
+    m.onclick = function(e) { if (e.target === m) closeProduksiModal(); };
+    document.addEventListener('keydown', _pmKeyHandler);
+
+    window._pmSiklus = { siklusId: siklusId, mulai: mulai, selesai: selesai, totalHari: totalHari, today: today };
+    pmSwitchMode(mode || 'single');
+
+    requestAnimationFrame(function() {
+      var content = m.querySelector('.transform');
+      content.classList.remove('opacity-0', 'scale-95');
+      content.classList.add('opacity-100', 'scale-100');
+    });
+    document.body.style.overflow = 'hidden';
+  }).catch(function(e) {
+    showAlert('Gagal memuat siklus: ' + (e.message || 'Unknown error'), 'error');
+  });
+}
+
+function _pmKeyHandler(e) {
+  if (e.key === 'Escape') closeProduksiModal();
+}
+
+function closeProduksiModal() {
+  var m = document.getElementById('produksi-modal');
+  if (!m) return;
+  document.removeEventListener('keydown', _pmKeyHandler);
+  var content = m.querySelector('.transform');
+  if (content) {
+    content.classList.add('opacity-0', 'scale-95');
+    content.classList.remove('opacity-100', 'scale-100');
+  }
+  setTimeout(function() {
+    m.remove();
+    document.body.style.overflow = '';
+  }, 180);
+}
+
+function pmSwitchMode(mode) {
+  var single = document.getElementById('pm-mode-single');
+  var range = document.getElementById('pm-mode-range');
+  var t1 = document.getElementById('pm-tab-single');
+  var t2 = document.getElementById('pm-tab-range');
+  if (!single || !range) return;
+  var on = 'bg-white dark:bg-stone-900 text-emerald-700 dark:text-emerald-300 shadow-sm border border-stone-200 dark:border-stone-600';
+  var off = 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200';
+  t1.className = 'px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all ' + (mode === 'single' ? on : off);
+  t2.className = 'px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all ' + (mode === 'range' ? on : off);
+  single.classList.toggle('hidden', mode !== 'single');
+  range.classList.toggle('hidden', mode !== 'range');
+  pmUpdateSummary();
+}
+
+function pmSetSingleToday() {
+  var el = document.getElementById('pm-tgl-single');
+  if (!el) return;
+  var meta = window._pmSiklus || {};
+  el.value = _pmClamp(meta.today || _pmYmd(new Date()), meta.mulai, meta.selesai);
+  pmUpdateSummary();
+}
+
+function pmSyncRange() {
+  var s = document.getElementById('pm-tgl-mulai');
+  var e = document.getElementById('pm-tgl-selesai');
+  if (!s || !e) return;
+  if (e.value && e.value < s.value) e.value = s.value;
+  pmUpdateSummary();
+}
+
+function pmQuick(kind) {
+  var meta = window._pmSiklus || {};
+  var s = document.getElementById('pm-tgl-mulai');
+  var e = document.getElementById('pm-tgl-selesai');
+  if (!s || !e) return;
+  var today = meta.today || _pmYmd(new Date());
+  var start, end;
+  if (kind === 'siklus') {
+    start = meta.mulai || today;
+    end = meta.selesai || start;
+  } else {
+    var n = parseInt(kind, 10) || 1;
+    start = _pmClamp(today, meta.mulai, meta.selesai);
+    end = _pmAddDays(start, n - 1);
+    if (meta.selesai && end > meta.selesai) end = meta.selesai;
+  }
+  s.value = start;
+  e.value = end;
+  pmSyncRange();
+}
+
+// Tampilkan info "hari ke-N" (mode 1 hari) atau jumlah hari (mode rentang).
+function pmUpdateSummary() {
+  var meta = window._pmSiklus || {};
+  var singleInfo = document.getElementById('pm-single-info');
+  var rangeInfo = document.getElementById('pm-range-info');
+  var summary = document.getElementById('pm-summary');
+  var modeRange = document.getElementById('pm-mode-range') && !document.getElementById('pm-mode-range').classList.contains('hidden');
+
+  if (!modeRange && singleInfo) {
+    var v = document.getElementById('pm-tgl-single') ? document.getElementById('pm-tgl-single').value : '';
+    if (!v) {
+      singleInfo.innerHTML = '<div class="text-xs text-amber-600">Pilih tanggal produksi terlebih dahulu.</div>';
+    } else if (meta.mulai) {
+      var hk = _pmDayDiff(meta.mulai, v) + 1;
+      if (hk >= 1 && hk <= meta.totalHari) {
+        singleInfo.innerHTML = '<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium border border-emerald-200/70 dark:border-emerald-800">Hari ke-' + hk + ' dari ' + meta.totalHari + ' hari</div>';
+      } else {
+        singleInfo.innerHTML = '<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-300 text-xs font-medium border border-red-200/70 dark:border-red-800">Tanggal di luar rentang siklus (hari ke-' + hk + ')</div>';
+      }
+    }
+    if (summary) summary.textContent = v ? '1 hari produksi' : '';
+    return;
+  }
+
+  if (modeRange && rangeInfo) {
+    var s = document.getElementById('pm-tgl-mulai') ? document.getElementById('pm-tgl-mulai').value : '';
+    var e = document.getElementById('pm-tgl-selesai') ? document.getElementById('pm-tgl-selesai').value : '';
+    if (s && e) {
+      var n = _pmDayDiff(s, e) + 1;
+      var label = n + ' hari produksi';
+      if (meta.mulai && meta.selesai) {
+        var daysInRange = 0;
+        var totalDays = _pmDayDiff(meta.mulai, meta.selesai) + 1;
+        for (var i = 0; i < totalDays; i++) {
+          var d = _pmAddDays(meta.mulai, i);
+          if (d >= s && d <= e) daysInRange++;
+        }
+        label = n + ' hari dipilih • ' + daysInRange + ' hari valid dalam siklus';
+      }
+      rangeInfo.innerHTML = '<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium border border-emerald-200/70 dark:border-emerald-800">' + label + '</div>';
+      if (summary) summary.textContent = n + ' hari';
+      return;
+    }
+  }
+
+  if (summary) summary.textContent = '';
+}
+
+async function pmSubmit(siklusId) {
+  var modeRange = !document.getElementById('pm-mode-range').classList.contains('hidden');
+  var btn = document.getElementById('pm-submit');
+  var payload;
+  if (modeRange) {
+    var mulai = document.getElementById('pm-tgl-mulai').value;
+    var selesai = document.getElementById('pm-tgl-selesai').value;
+    if (!mulai || !selesai) { showAlert('Tanggal mulai & selesai wajib diisi', 'warning'); return; }
+    if (selesai < mulai) { showAlert('Tanggal selesai tidak boleh sebelum tanggal mulai', 'warning'); return; }
+    payload = { siklus_id: siklusId, tanggal_mulai: mulai, tanggal_selesai: selesai };
+  } else {
+    var tanggal = document.getElementById('pm-tgl-single').value;
+    if (!tanggal) { showAlert('Tanggal produksi wajib diisi', 'warning'); return; }
+    payload = { siklus_id: siklusId, tanggal_produksi: tanggal };
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Memproses...';
+    btn.className = btn.className.replace('bg-emerald-600', 'bg-emerald-500');
+  }
+
   try {
-    var r = await api.post('/siklus/generate-produksi', { siklus_id: siklusId, tanggal_produksi: tanggal });
-    showAlert('✅ ' + r.message, 'success');
+    var r;
+    if (modeRange) {
+      r = await api.post('/siklus/generate-produksi-batch', payload);
+      var msg = r.created_count + ' produksi berhasil dibuat';
+      if (r.skipped_count > 0) msg += ', ' + r.skipped_count + ' sudah ada & dilewati';
+      showToast(msg, r.created_count > 0 ? 'success' : 'warning');
+    } else {
+      r = await api.post('/siklus/generate-produksi', payload);
+      showToast(r.message || 'Produksi berhasil dibuat', 'success');
+    }
+    closeProduksiModal();
   } catch (e) {
-    showAlert('❌ ' + (e.message || 'Gagal'), 'error');
+    showAlert('❌ ' + (e.message || 'Gagal membuat produksi'), 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Buat Produksi';
+      btn.className = btn.className.replace('bg-emerald-500', 'bg-emerald-600');
+    }
   }
 }
 
-async function generateProduksiBatch(siklusId) {
-  var mulai = prompt('Tanggal mulai (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
-  if (!mulai) return;
-  var selesai = prompt('Tanggal selesai (YYYY-MM-DD):', new Date(new Date().getTime() + 7*86400000).toISOString().slice(0, 10));
-  if (!selesai) return;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(mulai) || !/^\d{4}-\d{2}-\d{2}$/.test(selesai)) {
-    showAlert('Format tanggal salah. Gunakan YYYY-MM-DD', 'error'); return;
-  }
-  if (!confirm('Buat produksi dari ' + mulai + ' sampai ' + selesai + '?')) return;
-  try {
-    var r = await api.post('/siklus/generate-produksi-batch', { siklus_id: siklusId, tanggal_mulai: mulai, tanggal_selesai: selesai });
-    var msg = '✅ ' + r.created_count + ' produksi berhasil dibuat';
-    if (r.skipped_count > 0) msg += ', ' + r.skipped_count + ' dilewati';
-    showAlert(msg, r.created_count > 0 ? 'success' : 'warning');
-  } catch (e) {
-    showAlert('❌ ' + (e.message || 'Gagal'), 'error');
-  }
+// Wrapper — tetap dipakai tombol "Buat Produksi" di detail siklus.
+function generateProduksi(siklusId) {
+  openProduksiModal(siklusId, 'single');
+}
+
+function generateProduksiBatch(siklusId) {
+  openProduksiModal(siklusId, 'range');
 }
 
 async function hitungBudgetSiklus(siklusId) {
