@@ -21,7 +21,7 @@ const pool = mysql.createPool({
   // (termasuk chat) meleset 7 jam.
   timezone: '+07:00',
   waitForConnections: true,
-  connectionLimit: Math.min(parseInt(process.env.DB_POOL_LIMIT) || 5, 50),
+  connectionLimit: Math.min(parseInt(process.env.DB_POOL_LIMIT) || 15, 50),
   queueLimit: 0,
   decimalNumbers: true,
   enableKeepAlive: true,

@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const db = require('../db');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requireAuth, requireRole, invalidateUserCache } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -57,6 +57,7 @@ router.put('/users/:id', requireRole('admin'), async (req, res) => {
     if (!sets.length) return res.status(400).json({ error: 'Tidak ada data diupdate' });
     vals.push(req.params.id, req.user.tenant_id);
     await db.query(`UPDATE users SET ${sets.join(',')} WHERE id=? AND tenant_id=?`, vals);
+    invalidateUserCache(Number(req.params.id));
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: 'Gagal update user' });

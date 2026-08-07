@@ -16,6 +16,16 @@ function sign(user) {
   );
 }
 
+// Cache user per-request agar tidak SELECT users di TITAP request API.
+// TTL singkat (30 dtk) jadi perubahan role/profil tetap cepat terlihat,
+// tanpa membebani DB di tiap request.
+const userCache = new Map();
+const USER_CACHE_TTL_MS = 30 * 1000;
+
+function invalidateUserCache(userId) {
+  userCache.delete(userId);
+}
+
 async function requireAuth(req, res, next) {
   const token = req.cookies?.access_token || (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) {
@@ -23,10 +33,17 @@ async function requireAuth(req, res, next) {
   }
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const now = Date.now();
+    const cached = userCache.get(payload.uid);
+    if (cached && cached.expires > now) {
+      req.user = cached.user;
+      return next();
+    }
     const [rows] = await db.query('SELECT id, tenant_id, email, nama, role, foto, karyawan_id FROM users WHERE id=?', [payload.uid]);
     if (!rows.length) {
       return res.status(401).json({ error: 'User tidak ditemukan' });
     }
+    userCache.set(payload.uid, { user: rows[0], expires: now + USER_CACHE_TTL_MS });
     req.user = rows[0];
     next();
   } catch (e) {
@@ -47,6 +64,10 @@ function requireRole(...roles) {
 // Disimpan di memory (per proses) agar tidak menambah query DB di tiap request.
 const heartbeatLog = new Map();
 const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
+
+// Throttle UPDATE last_activity: maks 1x per 60 dtk per user (sebelumnya TITAP request).
+const lastActivityLog = new Map();
+const LAST_ACTIVITY_INTERVAL_MS = 60 * 1000;
 
 function logUserActivity(tenantId, userId, nama, role, event) {
   // Riwayat PER KEJADIAN: setiap login & heartbeat dicatat sebagai BARIS BARU
@@ -71,8 +92,11 @@ async function trackActivity(req, res, next) {
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
       if (payload && payload.uid) {
-        db.query('UPDATE users SET last_activity = NOW() WHERE id = ?', [payload.uid]).catch(() => {});
         const now = Date.now();
+        if ((lastActivityLog.get(payload.uid) || 0) <= now - LAST_ACTIVITY_INTERVAL_MS) {
+          lastActivityLog.set(payload.uid, now);
+          db.query('UPDATE users SET last_activity = NOW() WHERE id = ?', [payload.uid]).catch(() => {});
+        }
         if ((heartbeatLog.get(payload.uid) || 0) <= now - HEARTBEAT_INTERVAL_MS) {
           heartbeatLog.set(payload.uid, now);
           logUserActivity(payload.tenant_id, payload.uid, payload.nama, payload.role, 'heartbeat');
@@ -83,4 +107,4 @@ async function trackActivity(req, res, next) {
   next();
 }
 
-module.exports = { sign, requireAuth, requireRole, trackActivity, logUserActivity };
+module.exports = { sign, requireAuth, requireRole, trackActivity, logUserActivity, invalidateUserCache };

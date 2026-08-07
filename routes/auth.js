@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
-const { sign, requireAuth, logUserActivity } = require('../middleware/auth');
+const { sign, requireAuth, logUserActivity, invalidateUserCache } = require('../middleware/auth');
 function saveBase64Foto(base64Data) {
   if (!base64Data || !base64Data.startsWith('data:image')) return null;
   const matches = base64Data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);
@@ -216,6 +216,7 @@ router.put('/profile', requireAuth, async (req, res) => {
     }
     vals.push(req.user.id, req.user.tenant_id);
     await db.query(`UPDATE users SET ${sets.join(',')} WHERE id=? AND tenant_id=?`, vals);
+    invalidateUserCache(req.user.id);
     const updated = { ...req.user, nama: nama || req.user.nama, email: (email || req.user.email).toLowerCase() };
     if (foto === 'hapus') updated.foto = null;
     else if (fotoUrl) updated.foto = fotoUrl;
