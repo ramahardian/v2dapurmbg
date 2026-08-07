@@ -525,7 +525,7 @@ async function renderProduksiHarian(id) {
       '</div>' +
       '<div class="flex gap-2">' +
         '<button onclick="loadSiklusDetail(' + id + ')" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50">← Kembali ke Siklus</button>' +
-        '<button onclick="window.print()" class="px-3 py-1.5 text-sm border border-stone-300 rounded hover:bg-stone-50"><svg class="w-4 h-4 -mt-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2 2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print</button>' +
+        '<button onclick="exportProduksiHarian(' + id + ')" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg shadow-sm transition-colors" title="Export Laporan Produksi Harian ke Excel"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export XLSX</button>' +
       '</div>' +
     '</div>';
     
@@ -648,6 +648,7 @@ async function renderProduksiHarian(id) {
     html += '</div>'; // close wrapper
     
     wrap.innerHTML = html;
+    window['_produksiHarian_' + id] = { siklus, ringkasan, days };
     
   } catch (e) {
     console.error('Produksi harian render error:', e);
@@ -728,6 +729,62 @@ function exportSiklusLaporan(id) {
   const csv = rows.map(r => r.map(c => `"${(c ?? '').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'laporan-siklus-' + (items[0]?.siklus_id || id) + '.csv'; a.click();
+}
+
+function exportProduksiHarian(id) {
+  const { siklus, ringkasan, days } = window['_produksiHarian_' + id] || {};
+  if (!siklus) return showAlert('Data laporan produksi belum dimuat', 'warning');
+
+  function displayNet(b) {
+    const satuan = b.satuan || 'g';
+    const perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+    const netGram = Number(b.berat_bersih) || 0;
+    if (satuan === 'Kg') return (netGram / 1000);
+    if (satuan === 'g' || satuan === 'gram') return Math.round(netGram);
+    if (perUnit > 0) { const v = netGram / perUnit; return v >= 10 ? Math.round(v) : v; }
+    return netGram / 1000;
+  }
+  function displayGross(b) {
+    const satuan = b.satuan || 'g';
+    const perUnit = Number(b.berat_per_satuan) || Number(b.berat_1_sp) || 1;
+    const grossGram = Number(b.berat_kotor) || 0;
+    if (satuan === 'Kg') return (grossGram / 1000);
+    if (satuan === 'g' || satuan === 'gram') return Math.round(grossGram);
+    if (perUnit > 0) { const v = grossGram / perUnit; return v >= 10 ? Math.round(v) : v; }
+    return grossGram / 1000;
+  }
+
+  const rows = [
+    ['LAPORAN PRODUKSI HARIAN', siklus.nama],
+    ['Status', siklus.status],
+    ['Jumlah Porsi', siklus.jumlah_porsi],
+    ['Total Hari', ringkasan.total_hari],
+    ['Hari Terisi', ringkasan.hari_terisi],
+    ['Total Penerima', ringkasan.total_penerima],
+    ['Total Kebutuhan (kg)', ringkasan.total_kebutuhan_kg],
+    [],
+  ];
+  for (const d of (days || [])) {
+    const bahan = [];
+    if (d.bahan_by_kat) for (const katGroup of d.bahan_by_kat) for (const item of katGroup.items) bahan.push(item);
+    if (!bahan.length) continue;
+    rows.push(['HARI ' + d.hari_ke + ' — ' + d.hari_nama, d.menu_nama, 'Porsi: ' + d.jumlah_porsi, 'Total: ' + d.total_kebutuhan_kg + ' kg']);
+    rows.push(['Bahan', 'Kg/pcs/btl (net)', 'Gross', 'Keterangan']);
+    for (const b of bahan) {
+      const ketParts = [];
+      if (b.keterangan) ketParts.push(b.keterangan);
+      if (Number(b.persen_bdd) < 100) ketParts.push((b.satuan === 'Kg' ? '' : 'Gross ') + displayGross(b) + (b.satuan === 'Kg' ? ' kg' : ' ' + b.satuan));
+      if (Number(b.buffer_persen) > 0) ketParts.push('Buffer ' + b.buffer_persen + '%');
+      rows.push([b.nama, displayNet(b), displayGross(b), ketParts.join(' • ')]);
+    }
+    rows.push([]);
+  }
+  rows.push(['GRAND TOTAL', '', '', '', '', '', ringkasan.total_kebutuhan_kg + ' kg untuk ' + ringkasan.total_hari + ' hari (' + ringkasan.hari_terisi + ' hari terisi)']);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Produksi Harian');
+  XLSX.writeFile(wb, 'laporan-produksi-harian-' + siklus.id + '.xlsx');
 }
 
 async function deleteSiklus(id) {
