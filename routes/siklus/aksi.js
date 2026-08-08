@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../../db');
-const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, hitungEstimasiGiziManual } = require('./helpers');
+const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, hitungEstimasiGiziManual, resolveGridBeratPerSiswa } = require('./helpers');
+const { loadSpRefMap, calculateNutrition } = require('../menu/helpers');
 const { hitungBDD } = require('../../services/spBddCalculator');
 
 const router = express.Router();
@@ -403,6 +404,154 @@ router.post('/siklus/buat-pr', async (req, res) => {
     budget_warning: budgetWarning,
     items,
   });
+});
+
+// menu.kategori_penerima adalah VARCHAR(50) — siklus bisa punya array jenjang
+// yang lebih panjang, jadi normalisasi: ambil jenjang pertama jika terlalu panjang.
+function normalizeMenuKategori(kp) {
+  if (!kp) return null;
+  const s = String(kp);
+  if (s.length <= 50) return s;
+  try {
+    const arr = JSON.parse(s);
+    if (Array.isArray(arr) && arr.length) return String(arr[0]).slice(0, 50);
+  } catch (e) { /* bukan JSON */ }
+  return s.slice(0, 50);
+}
+
+/**
+ * POST /siklus/:id/jadikan-resep
+ * Konversi menu manual (bahan grid + identifikasi resep) pada satu hari menjadi
+ * resep master di Menu & Gizi, lalu hubungkan hari tsb ke menu yang baru dibuat.
+ * Berat per porsi diambil dari resolveGridBeratPerSiswa (jumlah → berat_1_sp → referensi SP),
+ * gizi dihitung ulang konsisten dengan modul Menu (calculateNutrition).
+ */
+router.post('/siklus/:id/jadikan-resep', async (req, res) => {
+  const siklusId = parseInt(req.params.id, 10);
+  const hariKe = parseInt(req.body.hari_ke, 10);
+  if (!siklusId || !hariKe) return res.status(400).json({ error: 'siklus_id dan hari_ke wajib diisi' });
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [[siklus]] = await conn.query('SELECT * FROM siklus_menu WHERE id=? AND tenant_id=?', [siklusId, req.user.tenant_id]);
+    if (!siklus) { await conn.rollback(); return res.status(404).json({ error: 'Siklus tidak ditemukan' }); }
+
+    const [items] = await conn.query('SELECT * FROM siklus_menu_item WHERE siklus_id=? AND hari_ke=?', [siklusId, hariKe]);
+    if (!items.length) { await conn.rollback(); return res.status(404).json({ error: 'Hari ke-' + hariKe + ' tidak ada di siklus ini' }); }
+    const item = items[0];
+
+    // Sudah terhubung ke menu master → idempotent
+    if (item.menu_id) {
+      await conn.rollback();
+      return res.json({ ok: true, id: item.menu_id, nama: item.menu_nama || '', linked: true, already: true });
+    }
+
+    const nama = String(req.body.nama || '').trim() || String(item.menu_nama || '').trim() || ('Menu Hari ' + hariKe);
+
+    const [existing] = await conn.query('SELECT id FROM menu WHERE nama=? AND tenant_id=?', [nama, req.user.tenant_id]);
+    if (existing.length) {
+      await conn.rollback();
+      return res.status(409).json({ error: 'Menu dengan nama "' + nama + '" sudah ada di Menu & Gizi', existing_menu_id: existing[0].id });
+    }
+
+    const [gridRows] = await conn.query(
+      `SELECT sb.bahan_baku_id, b.nama, b.satuan, b.kategori_sp, b.berat_1_sp, b.persen_bdd,
+              b.kalori, b.protein, b.karbohidrat, b.lemak, b.serat
+       FROM siklus_menu_item_bahan sb
+       JOIN bahan_baku b ON b.id = sb.bahan_baku_id
+       WHERE sb.siklus_id=? AND sb.hari_ke=?`,
+      [siklusId, hariKe]
+    );
+    if (!gridRows.length) {
+      await conn.rollback();
+      return res.status(400).json({ error: 'Hari ke-' + hariKe + ' belum punya bahan grid — isi bahan lewat form Edit terlebih dahulu' });
+    }
+
+    const spRefMap = await loadSpRefMap(req.user.tenant_id);
+
+    // Resolusi berat per porsi per bahan (sama seperti di laporan/perencanaan)
+    const bahanList = [];
+    for (const g of gridRows) {
+      const { beratPerSiswa } = resolveGridBeratPerSiswa(g, spRefMap);
+      if (beratPerSiswa <= 0) continue;
+      bahanList.push({ ...g, jumlah: beratPerSiswa });
+    }
+    if (!bahanList.length) {
+      await conn.rollback();
+      return res.status(400).json({ error: 'Tidak ada bahan dengan berat valid untuk hari ke-' + hariKe });
+    }
+
+    const nut = calculateNutrition(bahanList, spRefMap);
+    const jumlahPorsi = Number(siklus.jumlah_porsi) || 0;
+    const kategoriPenerima = normalizeMenuKategori(req.body.kategori_penerima !== undefined ? req.body.kategori_penerima : (siklus.kategori_penerima || null));
+    const deskripsi = req.body.deskripsi || ('Dibuat dari siklus "' + siklus.nama + '" — hari ke-' + hariKe + ' (' + item.hari_nama + ')');
+
+    // Insert header menu master (foto ikut disalin dari hari siklus jika ada)
+    const [r] = await conn.query(
+      `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, jumlah_porsi, foto)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [req.user.tenant_id, nama, kategoriPenerima, deskripsi, nut.gramasi, 0, 0,
+       nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, jumlahPorsi, item.foto || null]
+    );
+
+    // Insert komposisi bahan
+    for (const b of bahanList) {
+      await conn.query(
+        'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, keterangan) VALUES (?,?,?,?)',
+        [r.insertId, b.bahan_baku_id, b.jumlah, null]
+      );
+    }
+
+    // Hubungkan hari ke menu master + sinkronkan nilai gizi item
+    await conn.query(
+      'UPDATE siklus_menu_item SET menu_id=?, menu_nama=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE siklus_id=? AND hari_ke=?',
+      [r.insertId, nama, nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, siklusId, hariKe]
+    );
+
+    await conn.commit();
+    res.json({
+      ok: true,
+      id: r.insertId,
+      nama,
+      linked: true,
+      message: 'Menu "' + nama + '" berhasil dijadikan resep master di Menu & Gizi dan dihubungkan ke hari ke-' + hariKe,
+    });
+  } catch (e) {
+    await conn.rollback();
+    console.error(e);
+    res.status(400).json({ error: 'Gagal menjadikan resep: ' + (e.message || '') });
+  } finally {
+    conn.release();
+  }
+});
+
+/**
+ * POST /siklus/:id/link-menu
+ * Hubungkan satu hari siklus ke menu master yang sudah ada (tanpa menulis ulang),
+ * lalu sinkronkan nama & nilai gizi item dari menu tersebut.
+ */
+router.post('/siklus/:id/link-menu', async (req, res) => {
+  const siklusId = parseInt(req.params.id, 10);
+  const hariKe = parseInt(req.body.hari_ke, 10);
+  const menuId = parseInt(req.body.menu_id, 10);
+  if (!siklusId || !hariKe || !menuId) return res.status(400).json({ error: 'siklus_id, hari_ke, dan menu_id wajib diisi' });
+
+  const [[siklus]] = await db.query('SELECT id FROM siklus_menu WHERE id=? AND tenant_id=?', [siklusId, req.user.tenant_id]);
+  if (!siklus) return res.status(404).json({ error: 'Siklus tidak ditemukan' });
+
+  const [items] = await db.query('SELECT id FROM siklus_menu_item WHERE siklus_id=? AND hari_ke=?', [siklusId, hariKe]);
+  if (!items.length) return res.status(404).json({ error: 'Hari ke-' + hariKe + ' tidak ada di siklus ini' });
+
+  const [[menu]] = await db.query('SELECT id, nama, kalori, protein, karbohidrat, lemak, serat FROM menu WHERE id=? AND tenant_id=?', [menuId, req.user.tenant_id]);
+  if (!menu) return res.status(404).json({ error: 'Menu tidak ditemukan' });
+
+  await db.query(
+    'UPDATE siklus_menu_item SET menu_id=?, menu_nama=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE siklus_id=? AND hari_ke=?',
+    [menu.id, menu.nama, menu.kalori || 0, menu.protein || 0, menu.karbohidrat || 0, menu.lemak || 0, menu.serat || 0, siklusId, hariKe]
+  );
+  res.json({ ok: true, message: 'Hari ke-' + hariKe + ' dihubungkan ke menu "' + menu.nama + '"' });
 });
 
 module.exports = router;

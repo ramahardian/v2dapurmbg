@@ -298,6 +298,7 @@ async function loadSiklusDetail(id) {
               <div class="bg-stone-50 rounded-lg p-1 text-center"><div class="text-stone-400">Ser</div><div class="mono font-semibold">${fmtNum(it.serat)}</div></div>
             </div>` : ''}
             <div id="sk-dtl-bd-${it.hari_ke}" class="text-[10px] text-stone-400 animate-pulse">Memuat kategori...</div>
+            ${(!it.menu_id && it._has_bahan) ? `<button onclick="jadikanResep(${data.id}, ${it.hari_ke}, '${escHtml(it.menu_nama || '')}')" class="mt-2.5 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors" title="Simpan sebagai resep master di Menu & Gizi"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Jadikan Resep</button>` : ''}
           </div>`;
         }).join('')}
       </div>
@@ -2361,4 +2362,97 @@ function pilihSemuaResepDariSiklus(hariKe, resepJson) {
     refreshGridSection(hariKe, resepList[ri].kategori_sp);
   }
   showToast('Menu Hari ' + hariKe + ' diisi dari siklus', 'success');
+}
+
+// ===== Jadikan Resep Master (menu manual → Menu & Gizi) =====
+// Konversi satu hari yang diisi manual (bahan grid + identifikasi resep) menjadi
+// menu master di Menu & Gizi. Hari tsb otomatis dihubungkan ke resep baru.
+function jadikanResep(siklusId, hariKe, namaDefault) {
+  var existing = document.getElementById('jadikan-resep-modal');
+  if (existing) existing.remove();
+  var m = document.createElement('div');
+  m.id = 'jadikan-resep-modal';
+  m.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-black/40';
+  m.innerHTML =
+    '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">' +
+      '<div class="flex items-center justify-between px-5 py-3 border-b border-stone-200">' +
+        '<h3 class="font-bold text-stone-700 text-sm">💾 Jadikan Resep Master</h3>' +
+        '<button onclick="closeJadikanResep()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-colors">&times;</button>' +
+      '</div>' +
+      '<div class="p-5 space-y-4">' +
+        '<div class="flex items-start gap-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 leading-relaxed">' +
+          '<svg class="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+          '<div>Resep <b>Hari ' + hariKe + '</b> akan disimpan sebagai menu master di <b>Menu & Gizi</b>. Hari ini otomatis dihubungkan ke resep baru itu, jadi bahan & gizi tetap sinkron.</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Resep *</label>' +
+          '<input id="jr-nama" value="' + escHtml(namaDefault || '') + '" placeholder="cth: Nasi Ayam Sayur" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all" />' +
+        '</div>' +
+        '<div class="flex gap-2 pt-1">' +
+          '<button onclick="closeJadikanResep()" class="flex-1 h-10 rounded-lg border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 transition-colors">Batal</button>' +
+          '<button id="jr-submit" onclick="submitJadikanResep(' + siklusId + ', ' + hariKe + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors inline-flex items-center justify-center gap-2">💾 Simpan Resep</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(m);
+  m.addEventListener('click', function(e) { if (e.target === m) closeJadikanResep(); });
+  var inp = document.getElementById('jr-nama');
+  if (inp) {
+    inp.focus();
+    inp.select();
+    inp.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); submitJadikanResep(siklusId, hariKe); }
+      if (ev.key === 'Escape') closeJadikanResep();
+    });
+  }
+}
+
+function closeJadikanResep() {
+  var m = document.getElementById('jadikan-resep-modal');
+  if (m) m.remove();
+}
+
+async function submitJadikanResep(siklusId, hariKe) {
+  var inp = document.getElementById('jr-nama');
+  var nama = ((inp && inp.value) || '').trim();
+  if (!nama) { showAlert('Nama resep wajib diisi', 'warning'); if (inp) inp.focus(); return; }
+  var btn = document.getElementById('jr-submit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan…'; }
+  try {
+    var r = await fetch('/api/siklus/' + siklusId + '/jadikan-resep', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hari_ke: hariKe, nama: nama }),
+      credentials: 'include'
+    });
+    var data = await r.json().catch(function() { return {}; });
+    if (!r.ok) {
+      if (r.status === 409 && data.existing_menu_id) {
+        closeJadikanResep();
+        var ok = await showConfirm('Menu &quot;' + escHtml(nama) + '&quot; sudah ada di Menu & Gizi.<br><br>Hubungkan <b>Hari ' + hariKe + '</b> ke menu yang sudah ada itu?', 'Ya, Hubungkan', 'Batal', '', 'info');
+        if (ok) await linkSiklusToMenu(siklusId, hariKe, data.existing_menu_id);
+        return;
+      }
+      showToast(data.error || 'Gagal menjadikan resep', 'error');
+      return;
+    }
+    closeJadikanResep();
+    showToast(data.message || 'Menu "' + nama + '" berhasil dijadikan resep master', 'success');
+    loadSiklusDetail(siklusId);
+  } catch (e) {
+    showToast('Gagal menjadikan resep: ' + (e.message || ''), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Simpan Resep'; }
+  }
+}
+
+// Hubungkan hari siklus ke menu master yang sudah ada (penyelesaian konflik nama duplikat)
+async function linkSiklusToMenu(siklusId, hariKe, menuId) {
+  try {
+    var r = await api.post('/siklus/' + siklusId + '/link-menu', { hari_ke: hariKe, menu_id: menuId });
+    showToast(r.message || 'Hari dihubungkan ke menu master', 'success');
+    loadSiklusDetail(siklusId);
+  } catch (e) {
+    showToast('Gagal menghubungkan menu: ' + (e.message || ''), 'error');
+  }
 }
