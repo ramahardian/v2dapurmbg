@@ -299,7 +299,7 @@ async function loadSiklusDetail(id) {
               <div class="bg-stone-50 rounded-lg p-1 text-center"><div class="text-stone-400">Ser</div><div class="mono font-semibold">${fmtNum(it.serat)}</div></div>
             </div>` : ''}
             <div id="sk-dtl-bd-${it.hari_ke}" class="text-[10px] text-stone-400 animate-pulse">Memuat kategori...</div>
-            ${(!it.menu_id && it._has_bahan) ? `<button onclick="jadikanResep(${data.id}, ${it.hari_ke}, '${escHtml(it.menu_nama || '')}')" class="mt-2.5 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors" title="Simpan sebagai resep master di Menu & Gizi"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Jadikan Resep</button>` : ''}
+            ${(!it.menu_id && it._has_bahan) ? `<div class="mt-2.5 grid grid-cols-2 gap-1.5"><button onclick="jadikanResep(${data.id}, ${it.hari_ke}, '${escHtml(it.menu_nama || '')}')" class="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors" title="Simpan sebagai resep master di Menu & Gizi"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Jadikan Resep</button><button onclick="simpanTemplateHari(${data.id}, ${it.hari_ke}, '${escHtml(it.menu_nama || '')}')" class="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors" title="Simpan sebagai template agar bisa dipakai ulang di siklus lain"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 7v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 11h6"/></svg> Simpan Template</button></div>` : ''}
           </div>`;
         }).join('')}
       </div>
@@ -1614,7 +1614,7 @@ async function openSiklusForm(editing) {
             const dt = getDate(it.hari_ke);
             var _mn = it.menu_nama || (gridData[it.hari_ke] && gridData[it.hari_ke].menu_nama) || '';
             var _ft = (gridData[it.hari_ke] && gridData[it.hari_ke].foto) || '';
-            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top"><div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div><div class="inline-block my-1 px-2 py-0.5 rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">Menu ' + it.hari_ke + '</div>' + (dt ? '<div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div>' : '') + (_mn ? '<div class="text-[9px] text-stone-500 mt-0.5 truncate max-w-[120px] mx-auto" title="' + escHtml(_mn) + '">' + escHtml(_mn) + '</div>' : '') + '<div id="sk-foto-' + it.hari_ke + '" class="mt-1.5">' + renderSiklusFoto(it.hari_ke, _ft) + '</div><button onclick="openMenuPickerHari(' + it.hari_ke + ')" class="mt-1.5 w-full px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors" title="Pilih dari Menu & Gizi">📋 Pilih Menu</button></th>';
+            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top"><div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div><div class="inline-block my-1 px-2 py-0.5 rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">Menu ' + it.hari_ke + '</div>' + (dt ? '<div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div>' : '') + (_mn ? '<div class="text-[9px] text-stone-500 mt-0.5 truncate max-w-[120px] mx-auto" title="' + escHtml(_mn) + '">' + escHtml(_mn) + '</div>' : '') + '<div id="sk-foto-' + it.hari_ke + '" class="mt-1.5">' + renderSiklusFoto(it.hari_ke, _ft) + '</div><div class="mt-1.5 flex gap-1"><button onclick="openMenuPickerHari(' + it.hari_ke + ')" class="flex-1 px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors" title="Pilih dari Menu & Gizi">📋 Pilih Menu</button><button onclick="bukaTemplatePickerHari(' + it.hari_ke + ')" class="flex-1 px-2 py-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors" title="Pakai template menu manual yang sudah disimpan">🗂 Template</button></div></th>';
           }).join('')}
         </tr></thead><tbody>
           ${ROW_KEYS.map(rk => {
@@ -1696,9 +1696,13 @@ async function openSiklusForm(editing) {
       // Simpan hari yang punya foto walau belum ada menu/bahan — supaya foto tidak hilang setelah disimpan
       if (!hasAnyBahan && !hasMenu && !day.foto) continue;
       items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: day.menu_id || '', menu_nama: day.menu_nama || '', jumlah_porsi: meta.jumlah_porsi || 0, kalori: day.kalori || 0, protein: day.protein || 0, karbohidrat: day.karbohidrat || 0, lemak: day.lemak || 0, serat: day.serat || 0, foto: day.foto || '' });
-      for (var ri = 0; ri < rowKeys.length; ri++) {
-        var rk = rowKeys[ri], ids = (day.bahan[rk] || []).map(function(b) { return b.id; });
-        gridPayload.push({ hari_ke: hk, kategori_sp: rk, bahan_baku_ids: ids });
+      // Kirim SEMUA kategori yang terisi (bukan hanya rowKeys) agar bahan dari
+      // template — termasuk kategori di luar ROW_KEYS mis. 'Minyak' — ikut tersimpan.
+      var dayBahanKeys = Object.keys(day.bahan || {});
+      for (var dbi = 0; dbi < dayBahanKeys.length; dbi++) {
+        var rk = dayBahanKeys[dbi];
+        var ids = (day.bahan[rk] || []).map(function(b) { return b.id; });
+        if (ids.length) gridPayload.push({ hari_ke: hk, kategori_sp: rk, bahan_baku_ids: ids });
       }
     }
     // Collect resep_map from Identifikasi Resep inputs
@@ -2680,4 +2684,222 @@ async function pilihMenuHari(hk, menuId) {
   });
   openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, tanggal_mulai: curTglMulai, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, tanggal_mulai: curTglMulai, items: items });
   showToast('Menu "' + m.nama + '" dipasang ke Hari ' + hk, 'success');
+}
+
+// ===== Template Menu Manual (simpan & pakai ulang di siklus lain) =====
+
+// Simpan satu hari yang berisi menu manual (bahan grid) sebagai template.
+function simpanTemplateHari(siklusId, hariKe, namaDefault) {
+  var existing = document.getElementById('simpan-template-modal');
+  if (existing) existing.remove();
+  var m = document.createElement('div');
+  m.id = 'simpan-template-modal';
+  m.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-black/40';
+  m.innerHTML =
+    '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">' +
+      '<div class="flex items-center justify-between px-5 py-3 border-b border-stone-200">' +
+        '<h3 class="font-bold text-stone-700 text-sm">🗂 Simpan sebagai Template</h3>' +
+        '<button onclick="closeSimpanTemplate()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-colors">&times;</button>' +
+      '</div>' +
+      '<div class="p-5 space-y-4">' +
+        '<div class="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">' +
+          '<svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 7v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 11h6"/></svg>' +
+          '<div>Menu manual <b>Hari ' + hariKe + '</b> akan disimpan sebagai template terpisah dari siklus. Nanti bisa dipakai ulang di siklus aktif maupun siklus mendatang lewat tombol <b>🗂 Template</b> saat mengisi hari.</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Template *</label>' +
+          '<input id="st-nama" value="' + escHtml(namaDefault || '') + '" placeholder="cth: Nasi Ayam Sayur" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" />' +
+        '</div>' +
+        '<div class="flex gap-2 pt-1">' +
+          '<button onclick="closeSimpanTemplate()" class="flex-1 h-10 rounded-lg border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 transition-colors">Batal</button>' +
+          '<button id="st-submit" onclick="submitSimpanTemplate(' + siklusId + ', ' + hariKe + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition-colors inline-flex items-center justify-center gap-2">🗂 Simpan Template</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(m);
+  m.addEventListener('click', function(e) { if (e.target === m) closeSimpanTemplate(); });
+  var inp = document.getElementById('st-nama');
+  if (inp) {
+    inp.focus();
+    inp.select();
+    inp.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); submitSimpanTemplate(siklusId, hariKe); }
+      if (ev.key === 'Escape') closeSimpanTemplate();
+    });
+  }
+}
+
+function closeSimpanTemplate() {
+  var m = document.getElementById('simpan-template-modal');
+  if (m) m.remove();
+}
+
+async function submitSimpanTemplate(siklusId, hariKe) {
+  var inp = document.getElementById('st-nama');
+  var nama = ((inp && inp.value) || '').trim();
+  if (!nama) { showAlert('Nama template wajib diisi', 'warning'); if (inp) inp.focus(); return; }
+  var btn = document.getElementById('st-submit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan…'; }
+  try {
+    var r = await fetch('/api/siklus/templates/dari-hari', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ siklus_id: siklusId, hari_ke: hariKe, nama: nama }),
+      credentials: 'include'
+    });
+    var data = await r.json().catch(function() { return {}; });
+    if (!r.ok) {
+      if (r.status === 409 && data.existing_template_id) {
+        closeSimpanTemplate();
+        showToast('Template dengan nama "' + nama + '" sudah ada — gunakan nama lain', 'warning');
+        return;
+      }
+      showToast(data.error || 'Gagal menyimpan template', 'error');
+      return;
+    }
+    _templatePickerCache = null;
+    closeSimpanTemplate();
+    showToast('Template "' + data.nama + '" berhasil disimpan', 'success');
+    loadSiklusDetail(siklusId);
+  } catch (e) {
+    showToast('Gagal menyimpan template: ' + (e.message || ''), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🗂 Simpan Template'; }
+  }
+}
+
+// ===== Picker Template (pakai template saat mengisi hari di form) =====
+var _templatePickerCache = null;
+
+async function bukaTemplatePickerHari(hk) {
+  var existing = document.getElementById('template-picker-modal');
+  if (existing) existing.remove();
+  var list;
+  if (_templatePickerCache) list = _templatePickerCache;
+  else {
+    try { list = await api.get('/siklus/templates'); } catch (e) { list = []; }
+    _templatePickerCache = list;
+  }
+  if (!list.length) {
+    showAlert('Belum ada template tersimpan. Isi menu manual (bahan grid) lalu klik "Simpan Template" pada detail siklus untuk menyimpannya.', 'warning');
+    return;
+  }
+  window._templatePickerHk = hk;
+  var m = document.createElement('div');
+  m.id = 'template-picker-modal';
+  m.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-black/40';
+  m.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">' +
+    '<div class="flex items-center justify-between px-5 py-3 border-b border-stone-200">' +
+      '<h3 class="font-bold text-stone-700 text-sm">🗂 Pilih Template — Hari ' + hk + '</h3>' +
+      '<button onclick="closeTemplatePickerHari()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-colors">&times;</button>' +
+    '</div>' +
+    '<div class="p-4">' +
+      '<div class="mb-3"><input id="tpl-search" placeholder="Cari template..." oninput="filterTemplatePickerHari()" class="w-full h-10 px-3 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400" /></div>' +
+      '<div id="tpl-list" class="max-h-[340px] overflow-y-auto space-y-1"></div>' +
+      '<div class="flex justify-end gap-2 mt-4 pt-3 border-t border-stone-100">' +
+        '<button onclick="closeTemplatePickerHari()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Tutup</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  document.body.appendChild(m);
+  m.addEventListener('click', function(e) { if (e.target === m) closeTemplatePickerHari(); });
+  filterTemplatePickerHari();
+  var inp = document.getElementById('tpl-search');
+  if (inp) { inp.focus(); inp.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') closeTemplatePickerHari(); }); }
+}
+
+function closeTemplatePickerHari() {
+  var m = document.getElementById('template-picker-modal');
+  if (m) m.remove();
+}
+
+function filterTemplatePickerHari() {
+  var q = (document.getElementById('tpl-search')?.value || '').toLowerCase();
+  var list = _templatePickerCache || [];
+  var wrap = document.getElementById('tpl-list');
+  if (!wrap) return;
+  var hk = window._templatePickerHk;
+  var gd = window._gridData;
+  wrap.innerHTML = '';
+  var shown = 0;
+  for (var i = 0; i < list.length; i++) {
+    var t = list[i];
+    if (q && !(t.nama || '').toLowerCase().includes(q)) continue;
+    var terpakai = gd && gd[hk] && gd[hk].menu_nama === t.nama;
+    var sel = terpakai ? ' border-amber-400 bg-amber-50' : '';
+    wrap.innerHTML += '<div class="flex items-center gap-2 rounded-xl border border-stone-200 hover:border-amber-300 transition-colors' + sel + '">' +
+      '<button type="button" onclick="terapkanTemplateKeHari(' + hk + ',' + t.id + ')" class="flex-1 text-left px-3 py-2 min-w-0">' +
+        '<div class="flex items-center justify-between gap-2">' +
+          '<div class="text-sm font-medium text-stone-800 truncate">' + escHtml(t.nama) + '</div>' +
+          '<div class="text-[10px] text-stone-400 shrink-0">' + (Number(t.kalori) || 0) + ' kkal</div>' +
+        '</div>' +
+        '<div class="text-[10px] text-stone-400 mt-0.5">' + (Number(t.bahan_count) || 0) + ' bahan · Template</div>' +
+      '</button>' +
+      '<button onclick="hapusTemplate(' + t.id + ')" title="Hapus template" class="w-8 h-8 mr-1 flex items-center justify-center text-red-500 hover:bg-red-50 rounded-lg shrink-0 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
+    '</div>';
+    shown++;
+  }
+  if (!shown) wrap.innerHTML = '<div class="text-center py-8 text-stone-400 text-sm">Tidak ada template yang cocok</div>';
+}
+
+// Terapkan template ke hari tertentu: isi grid bahan + nama + gizi, lalu re-render form.
+async function terapkanTemplateKeHari(hk, templateId) {
+  try {
+    var t = await api.get('/siklus/templates/' + templateId);
+    if (!t || !t.id) { showToast('Template tidak ditemukan', 'error'); return; }
+    var gd = window._gridData;
+    if (!gd[hk]) { showToast('Hari ' + hk + ' tidak tersedia', 'error'); return; }
+    var rowKeys = window._rowKeys || ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu'];
+    // Reset bahan hari tsb lalu isi dari template
+    gd[hk].bahan = {};
+    for (var ri = 0; ri < rowKeys.length; ri++) gd[hk].bahan[rowKeys[ri]] = [];
+    if (!gd[hk].resep_map) gd[hk].resep_map = {};
+    var bahanObj = t.bahan || {};
+    Object.keys(bahanObj).forEach(function(kat) {
+      gd[hk].bahan[kat] = (bahanObj[kat] || []).map(function(b) { return { id: b.bahan_baku_id, nama: b.nama }; });
+      if (rowKeys.indexOf(kat) !== -1 && !gd[hk].resep_map[kat]) {
+        gd[hk].resep_map[kat] = (bahanObj[kat] || []).map(function(b) { return b.nama; }).join(', ');
+      }
+    });
+    gd[hk].menu_id = '';
+    gd[hk].menu_nama = t.nama;
+    gd[hk].kalori = Number(t.kalori) || 0;
+    gd[hk].protein = Number(t.protein) || 0;
+    gd[hk].karbohidrat = Number(t.karbohidrat) || 0;
+    gd[hk].lemak = Number(t.lemak) || 0;
+    gd[hk].serat = Number(t.serat) || 0;
+    gd[hk].foto = t.foto || '';
+    if (t.resep_map) gd[hk].resep_map = Object.assign({}, gd[hk].resep_map, t.resep_map);
+    window._gridDirty = true;
+    closeTemplatePickerHari();
+    // Re-render form (pola sama dengan pilihMenuHari)
+    var curNama = (document.getElementById('sk-nama')?.value) || '';
+    var curStatus = (document.getElementById('sk-status')?.value) || 'Draft';
+    var curTglMulai = document.getElementById('sk-tgl-mulai')?.value || '';
+    var meta = window._siklusMeta || {};
+    var curKat = meta.kategori_penerima || '';
+    var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
+    var items = hkKeys.map(function(k) {
+      var d = window._gridData[Number(k)];
+      return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: meta.jumlah_porsi || 0, kalori: d.kalori || 0, protein: d.protein || 0, karbohidrat: d.karbohidrat || 0, lemak: d.lemak || 0, serat: d.serat || 0, foto: d.foto || '' };
+    });
+    openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, tanggal_mulai: curTglMulai, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, tanggal_mulai: curTglMulai, items: items });
+    showToast('Template "' + t.nama + '" diterapkan ke Hari ' + hk, 'success');
+  } catch (e) {
+    showToast('Gagal menerapkan template: ' + (e.message || ''), 'error');
+  }
+}
+
+async function hapusTemplate(templateId) {
+  var ok = await showConfirm('Hapus template ini? Template tidak akan bisa dipakai lagi.', 'Hapus', 'Batal', '', 'warning');
+  if (!ok) return;
+  try {
+    await api.del('/siklus/templates/' + templateId);
+    _templatePickerCache = null;
+    showToast('Template dihapus', 'success');
+    var hk = window._templatePickerHk;
+    if (hk) bukaTemplatePickerHari(hk);
+  } catch (e) {
+    showToast('Gagal menghapus template: ' + (e.message || ''), 'error');
+  }
 }

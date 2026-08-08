@@ -42,6 +42,38 @@ async function runMigration() {
   ) ENGINE=InnoDB`);
   log('[OK] Tabel siklus_menu_item_bahan tersedia');
 
+  // Tabel Template Menu Manual — menu manual (bahan grid) yang disimpan terpisah
+  // dari siklus agar bisa dipakai ulang di siklus aktif maupun siklus mendatang.
+  await q(`CREATE TABLE IF NOT EXISTS siklus_menu_template (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    nama VARCHAR(200) NOT NULL,
+    jumlah_porsi INT DEFAULT 0,
+    kalori DECIMAL(10,2) DEFAULT 0,
+    protein DECIMAL(10,2) DEFAULT 0,
+    karbohidrat DECIMAL(10,2) DEFAULT 0,
+    lemak DECIMAL(10,2) DEFAULT 0,
+    serat DECIMAL(10,2) DEFAULT 0,
+    foto LONGTEXT DEFAULT NULL,
+    resep_map TEXT DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    INDEX idx_template_tenant (tenant_id)
+  ) ENGINE=InnoDB`);
+  log('[OK] Tabel siklus_menu_template tersedia');
+
+  await q(`CREATE TABLE IF NOT EXISTS siklus_menu_template_bahan (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    template_id INT NOT NULL,
+    kategori_sp VARCHAR(50) NOT NULL,
+    bahan_baku_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (template_id) REFERENCES siklus_menu_template(id) ON DELETE CASCADE,
+    FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id),
+    INDEX idx_template_bahan (template_id)
+  ) ENGINE=InnoDB`);
+  log('[OK] Tabel siklus_menu_template_bahan tersedia');
+
   // Tabel Snapshot PM Harian (jumlah porsi besar/kecil per tanggal per titik)
   await q(`CREATE TABLE IF NOT EXISTS pm_harian (
     id INT AUTO_INCREMENT PRIMARY KEY,
