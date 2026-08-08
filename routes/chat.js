@@ -9,6 +9,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { CHAT_ROLES_SQL } = require('./chatRoles');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -63,7 +64,7 @@ router.get('/chat/contacts', async (req, res) => {
        FROM users
        WHERE tenant_id = ?
          AND id <> ?
-         AND role IN ('admin','ahli_gizi','keuangan','gudang')
+         AND role IN ${CHAT_ROLES_SQL}
          AND last_activity IS NOT NULL
          AND TIMESTAMPDIFF(SECOND, last_activity, NOW()) <= ${ONLINE_WINDOW_SEC}
        ORDER BY nama ASC`,

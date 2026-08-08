@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 // Mengimpor middleware autentikasi untuk memvalidasi user dan mendapatkan identitas tenant
 const { requireAuth } = require('../middleware/auth');
+const { CHAT_ROLES_SQL } = require('./chatRoles');
 
 const router = express.Router();
 
@@ -320,7 +321,9 @@ router.get('/dashboard/siklus-notif', async (req, res) => {
 
 /**
  * GET /dashboard/online-users
- * Mendapatkan daftar user yang online (aktivitas < 5 menit lalu)
+ * Mendapatkan daftar user yang online (aktivitas ≤ 10 menit lalu).
+ * Hanya user dengan role layak yang ditampilkan — konsisten dengan filter
+ * kontak chat di routes/chat.js. User ber-role kosong ('') tidak ikut tampil.
  */
 router.get('/dashboard/online-users', async (req, res) => {
   const t = req.user.tenant_id;
@@ -332,6 +335,7 @@ router.get('/dashboard/online-users', async (req, res) => {
             TIMESTAMPDIFF(SECOND, last_activity, NOW()) as seconds_ago
      FROM users 
      WHERE tenant_id = ? 
+       AND role IN ${CHAT_ROLES_SQL}
        AND last_activity IS NOT NULL 
        AND TIMESTAMPDIFF(SECOND, last_activity, NOW()) <= 600
      ORDER BY last_activity DESC`,
@@ -370,6 +374,11 @@ router.get('/dashboard/online-history', async (req, res) => {
 
   let where = 'WHERE al.tenant_id = ? AND al.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)';
   const params = [t, days];
+  // Hanya tampilkan user yang masih punya role layak (berdasarkan role SAAT INI di
+  // tabel users) — konsisten dengan filter kontak chat. User ber-role kosong ('') tidak
+  // ikut di riwayat online.
+  where += ` AND al.user_id IN (SELECT id FROM users WHERE tenant_id = ? AND role IN ${CHAT_ROLES_SQL})`;
+  params.push(t);
   if (uid) { where += ' AND al.user_id = ?'; params.push(uid); }
 
   try {
