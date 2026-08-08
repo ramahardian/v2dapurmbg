@@ -3,9 +3,13 @@ const db = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
-router.use(requireAuth, requireRole('admin'));
+// PENTING: jangan pasang requireRole('admin') di router.use() tanpa path — itu
+// akan memblokir SEMUA endpoint /api lain yang tidak tertangkap router sebelumnya
+// (termasuk /chat/*) dengan 403 "Akses ditolak" untuk user non-admin.
+// Batasi gerbang admin HANYA pada rute file ini.
+router.use(requireAuth);
 
-router.get('/alter-bahan-sumber', async (req, res) => {
+router.get('/alter-bahan-sumber', requireRole('admin'), async (req, res) => {
   try {
     const [cols] = await db.query(
       `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS

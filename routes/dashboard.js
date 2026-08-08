@@ -333,7 +333,7 @@ router.get('/dashboard/online-users', async (req, res) => {
      FROM users 
      WHERE tenant_id = ? 
        AND last_activity IS NOT NULL 
-       AND TIMESTAMPDIFF(SECOND, last_activity, NOW()) <= 300
+       AND TIMESTAMPDIFF(SECOND, last_activity, NOW()) <= 600
      ORDER BY last_activity DESC`,
     [t]
   );
@@ -346,7 +346,7 @@ router.get('/dashboard/online-users', async (req, res) => {
     foto: u.foto,
     last_activity: u.last_activity,
     seconds_ago: u.seconds_ago,
-    is_online: u.seconds_ago <= 300
+    is_online: u.seconds_ago <= 600
   }));
 
   res.json({ 

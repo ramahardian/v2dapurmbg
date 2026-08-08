@@ -452,7 +452,7 @@ async function openChatWithUser(userId) {
     chatState.umum = d.umum;
     chatState.contacts = d.contacts || [];
     const c = (d.contacts || []).find(x => x.user_id === Number(userId));
-    if (!c) { showToast('User tidak ditemukan', 'error'); return; }
+    if (!c) { showToast('User ini tidak dapat diajak chat (bukan kontak chat)', 'error'); return; }
     openChatPanel();
     openChatRoom(c.room, c.nama, c.user_id);
   } catch (err) {

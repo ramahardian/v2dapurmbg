@@ -14,7 +14,10 @@ const router = express.Router();
 router.use(requireAuth);
 
 const ROOM_UMUM = 'umum';
-const ONLINE_WINDOW_SEC = 300;
+// Jendela "online": user dianggap online jika last_activity ≤ 10 menit lalu.
+// (Sebelumnya 5 menit — terlalu ketat sehingga user layak sering "hilang"
+//  dari list chat walau sesinya masih aktif.)
+const ONLINE_WINDOW_SEC = 600;
 
 // ── Waktu WIB (UTC+7) — dihitung MANUAL di server agar konsisten,
 //    tidak bergantung zona engine/browser. ──
@@ -62,7 +65,7 @@ router.get('/chat/contacts', async (req, res) => {
          AND id <> ?
          AND role IN ('admin','ahli_gizi','keuangan','gudang')
          AND last_activity IS NOT NULL
-         AND TIMESTAMPDIFF(SECOND, last_activity, NOW()) <= 300
+         AND TIMESTAMPDIFF(SECOND, last_activity, NOW()) <= ${ONLINE_WINDOW_SEC}
        ORDER BY nama ASC`,
       [t, me]
     );
