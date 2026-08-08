@@ -2780,10 +2780,6 @@ async function bukaTemplatePickerHari(hk) {
     try { list = await api.get('/siklus/templates'); } catch (e) { list = []; }
     _templatePickerCache = list;
   }
-  if (!list.length) {
-    showAlert('Belum ada template tersimpan. Isi menu manual (bahan grid) lalu klik "Simpan Template" pada detail siklus untuk menyimpannya.', 'warning');
-    return;
-  }
   window._templatePickerHk = hk;
   var m = document.createElement('div');
   m.id = 'template-picker-modal';
@@ -2793,10 +2789,11 @@ async function bukaTemplatePickerHari(hk) {
       '<h3 class="font-bold text-stone-700 text-sm">🗂 Pilih Template — Hari ' + hk + '</h3>' +
       '<button onclick="closeTemplatePickerHari()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-colors">&times;</button>' +
     '</div>' +
-    '<div class="p-4">' +
+      '<div class="p-4">' +
       '<div class="mb-3"><input id="tpl-search" placeholder="Cari template..." oninput="filterTemplatePickerHari()" class="w-full h-10 px-3 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400" /></div>' +
       '<div id="tpl-list" class="max-h-[340px] overflow-y-auto space-y-1"></div>' +
-      '<div class="flex justify-end gap-2 mt-4 pt-3 border-t border-stone-100">' +
+      '<div class="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-stone-100">' +
+        '<button onclick="simpanTemplateDariForm(' + hk + ')" title="Simpan menu manual (bahan grid) Hari ' + hk + ' sebagai template" class="inline-flex items-center gap-1 px-3 py-2 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Simpan Hari Ini</button>' +
         '<button onclick="closeTemplatePickerHari()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Tutup</button>' +
       '</div>' +
     '</div>' +
@@ -2811,6 +2808,99 @@ async function bukaTemplatePickerHari(hk) {
 function closeTemplatePickerHari() {
   var m = document.getElementById('template-picker-modal');
   if (m) m.remove();
+}
+
+// Simpan satu hari dari form siklus (bahan grid di window._gridData) sebagai template
+function simpanTemplateDariForm(hk) {
+  var gd = window._gridData;
+  if (!gd || !gd[hk]) { showToast('Hari ' + hk + ' tidak tersedia', 'error'); return; }
+  var bahan = gd[hk].bahan || {};
+  var hasBahan = Object.keys(bahan).some(function(k) { return (bahan[k] || []).length > 0; });
+  if (!hasBahan) { showAlert('Hari ' + hk + ' belum ada bahan. Isi Bahan Grid (klik sel pada tabel) lalu simpan sebagai template.', 'warning'); return; }
+  var existing = document.getElementById('simpan-template-form-modal');
+  if (existing) existing.remove();
+  var m = document.createElement('div');
+  m.id = 'simpan-template-form-modal';
+  m.className = 'fixed inset-0 z-[75] flex items-center justify-center bg-black/40';
+  m.innerHTML =
+    '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">' +
+      '<div class="flex items-center justify-between px-5 py-3 border-b border-stone-200">' +
+        '<h3 class="font-bold text-stone-700 text-sm">💾 Simpan Menu Hari ' + hk + ' sebagai Template</h3>' +
+        '<button onclick="closeSimpanTemplateForm()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-colors">&times;</button>' +
+      '</div>' +
+      '<div class="p-5 space-y-4">' +
+        '<div class="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">' +
+          '<svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 7v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 11h6"/></svg>' +
+          '<div>Bahan grid <b>Hari ' + hk + '</b> akan disimpan sebagai template terpisah dari siklus. Nanti bisa dipakai ulang lewat tombol <b>🗂 Template</b> saat mengisi hari lain.</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Template *</label>' +
+          '<input id="stf-nama" value="' + escHtml(gd[hk].menu_nama || '') + '" placeholder="cth: Nasi Ayam Sayur" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" />' +
+        '</div>' +
+        '<div class="flex gap-2 pt-1">' +
+          '<button onclick="closeSimpanTemplateForm()" class="flex-1 h-10 rounded-lg border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 transition-colors">Batal</button>' +
+          '<button id="stf-submit" onclick="submitSimpanTemplateForm(' + hk + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition-colors inline-flex items-center justify-center gap-2">💾 Simpan Template</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(m);
+  m.addEventListener('click', function(e) { if (e.target === m) closeSimpanTemplateForm(); });
+  var inp = document.getElementById('stf-nama');
+  if (inp) {
+    inp.focus();
+    inp.select();
+    inp.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); submitSimpanTemplateForm(hk); }
+      if (ev.key === 'Escape') closeSimpanTemplateForm();
+    });
+  }
+}
+
+function closeSimpanTemplateForm() {
+  var m = document.getElementById('simpan-template-form-modal');
+  if (m) m.remove();
+}
+
+async function submitSimpanTemplateForm(hk) {
+  var inp = document.getElementById('stf-nama');
+  var nama = ((inp && inp.value) || '').trim();
+  if (!nama) { showAlert('Nama template wajib diisi', 'warning'); if (inp) inp.focus(); return; }
+  var gd = window._gridData;
+  if (!gd || !gd[hk]) { showToast('Hari ' + hk + ' tidak tersedia', 'error'); return; }
+  var bahan = gd[hk].bahan || {};
+  var gridPayload = Object.keys(bahan).map(function(kat) {
+    return { kategori_sp: kat, bahan_baku_ids: (bahan[kat] || []).map(function(b) { return b.id; }).filter(function(id) { return Number(id) > 0; }) };
+  }).filter(function(e) { return e.bahan_baku_ids.length > 0; });
+  if (!gridPayload.length) { showAlert('Hari ' + hk + ' belum ada bahan grid', 'warning'); return; }
+  var btn = document.getElementById('stf-submit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan…'; }
+  try {
+    var r = await fetch('/api/siklus/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nama: nama,
+        grid: gridPayload,
+        resep_map: gd[hk].resep_map || null,
+        foto: gd[hk].foto || null,
+        jumlah_porsi: (window._siklusMeta && window._siklusMeta.jumlah_porsi) || 0
+      }),
+      credentials: 'include'
+    });
+    var data = await r.json().catch(function() { return {}; });
+    if (!r.ok) {
+      if (r.status === 409) { closeSimpanTemplateForm(); showToast('Template dengan nama "' + nama + '" sudah ada — gunakan nama lain', 'warning'); return; }
+      showToast(data.error || 'Gagal menyimpan template', 'error');
+      return;
+    }
+    _templatePickerCache = null;
+    closeSimpanTemplateForm();
+    showToast('Template "' + data.nama + '" berhasil disimpan', 'success');
+  } catch (e) {
+    showToast('Gagal menyimpan template: ' + (e.message || ''), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Simpan Template'; }
+  }
 }
 
 function filterTemplatePickerHari() {
@@ -2839,7 +2929,7 @@ function filterTemplatePickerHari() {
     '</div>';
     shown++;
   }
-  if (!shown) wrap.innerHTML = '<div class="text-center py-8 text-stone-400 text-sm">Tidak ada template yang cocok</div>';
+  if (!shown) wrap.innerHTML = '<div class="text-center py-8 px-4 text-stone-400 text-sm">Belum ada template tersimpan.<br>Isi menu manual (bahan grid) lalu klik <b>💾 Simpan Hari Ini</b> di bawah.</div>';
 }
 
 // Terapkan template ke hari tertentu: isi grid bahan + nama + gizi, lalu re-render form.
