@@ -259,6 +259,7 @@ async function reloadSiklusList() {
         <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onclick="event.stopPropagation();loadSiklusDetail(${s.id})" class="w-7 h-7 flex items-center justify-center text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Detail"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button onclick="event.stopPropagation();bukaKebutuhanPangan(${s.id})" class="w-7 h-7 flex items-center justify-center text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Kebutuhan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></button>
+          ${s.status === 'Arsip' ? `<button onclick="event.stopPropagation();reaktivasiSiklus(${s.id}, ${s.total_hari}, '${escHtml(s.nama)}')" class="w-7 h-7 flex items-center justify-center text-sky-600 hover:bg-sky-50 rounded-lg transition-colors" title="Reaktivasi — pakai ulang untuk periode baru"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>` : ''}
           <button onclick="event.stopPropagation();editSiklus(${s.id})" class="w-7 h-7 flex items-center justify-center text-stone-600 hover:bg-stone-100 rounded-lg transition-colors" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button onclick="event.stopPropagation();duplikasiSiklus(${s.id}, ${s.total_hari})" class="w-7 h-7 flex items-center justify-center text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Duplikat"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
           <button onclick="event.stopPropagation();deleteSiklus(${s.id})" class="w-7 h-7 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
@@ -1613,7 +1614,7 @@ async function openSiklusForm(editing) {
             const dt = getDate(it.hari_ke);
             var _mn = it.menu_nama || (gridData[it.hari_ke] && gridData[it.hari_ke].menu_nama) || '';
             var _ft = (gridData[it.hari_ke] && gridData[it.hari_ke].foto) || '';
-            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top"><div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div><div class="inline-block my-1 px-2 py-0.5 rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">Menu ' + it.hari_ke + '</div>' + (dt ? '<div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div>' : '') + (_mn ? '<div class="text-[9px] text-stone-500 mt-0.5 truncate max-w-[120px] mx-auto" title="' + escHtml(_mn) + '">' + escHtml(_mn) + '</div>' : '') + '<div id="sk-foto-' + it.hari_ke + '" class="mt-1.5">' + renderSiklusFoto(it.hari_ke, _ft) + '</div></th>';
+            return '<th class="px-2 py-2.5 text-center bg-stone-50 border-b border-r border-stone-200 align-top"><div class="text-xs font-bold text-stone-700">' + it.hari_nama + '</div><div class="inline-block my-1 px-2 py-0.5 rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">Menu ' + it.hari_ke + '</div>' + (dt ? '<div class="text-[10px] text-stone-400">' + fmtDate(dt) + '</div>' : '') + (_mn ? '<div class="text-[9px] text-stone-500 mt-0.5 truncate max-w-[120px] mx-auto" title="' + escHtml(_mn) + '">' + escHtml(_mn) + '</div>' : '') + '<div id="sk-foto-' + it.hari_ke + '" class="mt-1.5">' + renderSiklusFoto(it.hari_ke, _ft) + '</div><button onclick="openMenuPickerHari(' + it.hari_ke + ')" class="mt-1.5 w-full px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors" title="Pilih dari Menu & Gizi">📋 Pilih Menu</button></th>';
           }).join('')}
         </tr></thead><tbody>
           ${ROW_KEYS.map(rk => {
@@ -1694,7 +1695,7 @@ async function openSiklusForm(editing) {
       var hasMenu = !!day.menu_id;
       // Simpan hari yang punya foto walau belum ada menu/bahan — supaya foto tidak hilang setelah disimpan
       if (!hasAnyBahan && !hasMenu && !day.foto) continue;
-      items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: day.menu_id || '', menu_nama: day.menu_nama || '', jumlah_porsi: meta.jumlah_porsi || 0, foto: day.foto || '' });
+      items.push({ hari_ke: hk, hari_nama: day.hari_nama, menu_id: day.menu_id || '', menu_nama: day.menu_nama || '', jumlah_porsi: meta.jumlah_porsi || 0, kalori: day.kalori || 0, protein: day.protein || 0, karbohidrat: day.karbohidrat || 0, lemak: day.lemak || 0, serat: day.serat || 0, foto: day.foto || '' });
       for (var ri = 0; ri < rowKeys.length; ri++) {
         var rk = rowKeys[ri], ids = (day.bahan[rk] || []).map(function(b) { return b.id; });
         gridPayload.push({ hari_ke: hk, kategori_sp: rk, bahan_baku_ids: ids });
@@ -1735,6 +1736,12 @@ async function openSiklusForm(editing) {
     for (var jci = 0; jci < jenjangCbs.length; jci++) jenjangVal.push(jenjangCbs[jci].value);
     var kategori_penerima = jenjangVal.length === 0 ? '' : (jenjangVal.length === 1 ? jenjangVal[0] : JSON.stringify(jenjangVal));
     var payload = { nama, kategori_penerima, total_hari: totalHari, status: document.getElementById('sk-status').value, catatan: meta.catatan || '', tanggal_mulai: tanggalMulai, tanggal_selesai: tanggalSelesai, items };
+    // Peringatan dini: siklus Aktif wajib punya tanggal selesai ≥ hari ini —
+    // kalau tidak, auto-arsip akan langsung membaliknya ke Arsip tanpa peringatan.
+    if (payload.status === 'Aktif' && payload.tanggal_selesai && String(payload.tanggal_selesai).slice(0, 10) < siklusTodayYmd()) {
+      showAlert('Siklus Aktif wajib memiliki tanggal selesai ≥ hari ini. Ubah rentang tanggal ke periode baru, atau gunakan tombol "Reaktivasi" untuk memakai ulang siklus arsip.', 'warning');
+      return;
+    }
     try {
       var savedId = window._siklusFormId;
       if (isEdit) await api.put('/siklus/' + savedId, payload);
@@ -1746,7 +1753,14 @@ async function openSiklusForm(editing) {
         showToast('Siklus menu berhasil ' + (isEdit ? 'diperbarui' : 'disimpan'), 'success');
       }
       renderSiklus();
-    } catch (e) { showToast('Gagal: ' + (e.message || 'Unknown error'), 'error'); }
+    } catch (e) {
+      // Bentrok dengan siklus aktif lain (409) → tampilkan modal peringatan modern, bukan toast
+      if (e && e.status === 409) {
+        showAlert('⚠️ ' + (e.message || 'Rentang waktu bentrok dengan siklus aktif lain. Arsipkan siklus itu terlebih dahulu atau pilih rentang waktu yang lain.'), 'warning');
+        return;
+      }
+      showToast('Gagal: ' + (e.message || 'Unknown error'), 'error');
+    }
   };
 }
 
@@ -2455,4 +2469,215 @@ async function linkSiklusToMenu(siklusId, hariKe, menuId) {
   } catch (e) {
     showToast('Gagal menghubungkan menu: ' + (e.message || ''), 'error');
   }
+}
+
+// ===== Reaktivasi Siklus (pakai ulang siklus arsip untuk periode baru) =====
+// Tanggal hari ini (lokal) dalam format YYYY-MM-DD.
+function siklusTodayYmd() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Tambah N hari ke tanggal YYYY-MM-DD (aman melewati akhir bulan).
+function siklusAddDays(ymd, days) {
+  var p = String(ymd || '').slice(0, 10).split('-').map(Number);
+  if (!p[0] || !p[1] || !p[2]) return '';
+  var d = new Date(p[0], p[1] - 1, p[2] + days);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Default tanggal mulai reaktivasi: tanggal 1 bulan ini (jika belum lewat), kalau sudah lewat → 1 bulan berikutnya.
+function siklusDefaultTglMulai() {
+  var now = new Date();
+  var d = now.getDate() > 1 ? new Date(now.getFullYear(), now.getMonth() + 1, 1) : new Date(now.getFullYear(), now.getMonth(), 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function reaktivasiSiklus(id, totalHari, nama) {
+  var existing = document.getElementById('siklus-reaktivasi-modal');
+  if (existing) existing.remove();
+  var defMulai = siklusDefaultTglMulai();
+  var defSelesai = siklusAddDays(defMulai, (Number(totalHari) || 7) - 1);
+  var m = document.createElement('div');
+  m.id = 'siklus-reaktivasi-modal';
+  m.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-black/40';
+  m.innerHTML =
+    '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">' +
+      '<div class="flex items-center justify-between px-5 py-3 border-b border-stone-200">' +
+        '<h3 class="font-bold text-stone-700 text-sm">↻ Reaktivasi Siklus</h3>' +
+        '<button onclick="closeReaktivasiSiklus()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-colors">&times;</button>' +
+      '</div>' +
+      '<div class="p-5 space-y-4">' +
+        '<div class="flex items-start gap-2.5 p-3 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800 leading-relaxed">' +
+          '<svg class="w-4 h-4 mt-0.5 shrink-0 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>' +
+          '<div>Siklus <b>"' + escHtml(nama || '') + '"</b> diaktifkan kembali untuk periode baru (' + (Number(totalHari) || 7) + ' hari). Status menjadi <b>Aktif</b> dan tanggal digeser otomatis.</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Mulai Baru *</label>' +
+          '<input id="rk-tgl-mulai" type="date" value="' + defMulai + '" onchange="hitungSelesaiReaktivasi(' + totalHari + ')" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 transition-all" />' +
+        '</div>' +
+        '<div>' +
+          '<label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Selesai (otomatis)</label>' +
+          '<div id="rk-tgl-selesai" class="mt-1.5 h-11 px-3 rounded-lg bg-stone-50 border border-stone-200 text-sm flex items-center text-stone-600 mono">' + defSelesai + '</div>' +
+        '</div>' +
+        '<div class="flex gap-2 pt-1">' +
+          '<button onclick="closeReaktivasiSiklus()" class="flex-1 h-10 rounded-lg border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 transition-colors">Batal</button>' +
+          '<button id="rk-submit" onclick="submitReaktivasiSiklus(' + id + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 shadow-sm transition-colors inline-flex items-center justify-center gap-2">↻ Aktifkan</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(m);
+  m.addEventListener('click', function(e) { if (e.target === m) closeReaktivasiSiklus(); });
+}
+
+function closeReaktivasiSiklus() {
+  var m = document.getElementById('siklus-reaktivasi-modal');
+  if (m) m.remove();
+}
+
+function hitungSelesaiReaktivasi(totalHari) {
+  var mulai = (document.getElementById('rk-tgl-mulai') || {}).value || '';
+  var el = document.getElementById('rk-tgl-selesai');
+  if (!el) return;
+  el.textContent = mulai ? siklusAddDays(mulai, (Number(totalHari) || 7) - 1) : '—';
+}
+
+async function submitReaktivasiSiklus(id) {
+  var mulai = (document.getElementById('rk-tgl-mulai') || {}).value || '';
+  if (!mulai) { showAlert('Pilih tanggal mulai baru terlebih dahulu', 'warning'); return; }
+  var btn = document.getElementById('rk-submit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Mengaktifkan…'; }
+  try {
+    // fetch mentah agar bisa membedakan 409 (bentrok siklus aktif) dan menampilkan alert jelas
+    var r = await fetch('/api/siklus/' + id + '/reactivate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tanggal_mulai: mulai }),
+      credentials: 'include'
+    });
+    var data = await r.json().catch(function() { return {}; });
+    if (!r.ok) {
+      if (r.status === 409) showAlert('⚠️ ' + (data.error || 'Rentang waktu bentrok dengan siklus aktif lain'), 'warning');
+      else showAlert('Gagal reaktivasi: ' + (data.error || r.status + ' ' + r.statusText), 'error');
+      return;
+    }
+    closeReaktivasiSiklus();
+    showToast(data.message || 'Siklus berhasil diaktifkan kembali', 'success');
+    reloadSiklusList();
+  } catch (e) {
+    showToast('Gagal reaktivasi: ' + (e.message || ''), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Aktifkan'; }
+  }
+}
+
+// ===== Pilih Menu & Gizi untuk satu hari siklus =====
+var _menuPickerHariCache = null;
+
+async function openMenuPickerHari(hk) {
+  var existing = document.getElementById('menu-picker-hari-modal');
+  if (existing) existing.remove();
+  var list;
+  if (_menuPickerHariCache) list = _menuPickerHariCache;
+  else {
+    try { var res = await api.get('/menu?limit=500'); list = (res && res.data) || []; } catch { list = []; }
+    _menuPickerHariCache = list;
+  }
+  if (!list.length) { showAlert('Belum ada menu di Menu & Gizi. Buat menu terlebih dahulu atau isi manual via Bahan Grid.', 'warning'); return; }
+  window._menuPickerHk = hk;
+  var m = document.createElement('div');
+  m.id = 'menu-picker-hari-modal';
+  m.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-black/40';
+  m.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">' +
+    '<div class="flex items-center justify-between px-5 py-3 border-b border-stone-200">' +
+      '<h3 class="font-bold text-stone-700 text-sm">📋 Pilih Menu & Gizi — Hari ' + hk + '</h3>' +
+      '<button onclick="closeMenuPickerHari()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-colors">&times;</button>' +
+    '</div>' +
+    '<div class="p-4">' +
+      '<div class="mb-3"><input id="mph-search" placeholder="Cari menu..." oninput="filterMenuPickerHari()" class="w-full h-10 px-3 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>' +
+      '<div id="mph-list" class="max-h-[340px] overflow-y-auto space-y-1"></div>' +
+      '<div class="flex justify-end gap-2 mt-4 pt-3 border-t border-stone-100">' +
+        '<button onclick="closeMenuPickerHari()" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Tutup</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  document.body.appendChild(m);
+  m.addEventListener('click', function(e) { if (e.target === m) closeMenuPickerHari(); });
+  filterMenuPickerHari();
+  var inp = document.getElementById('mph-search');
+  if (inp) { inp.focus(); inp.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') closeMenuPickerHari(); }); }
+}
+
+function closeMenuPickerHari() {
+  var m = document.getElementById('menu-picker-hari-modal');
+  if (m) m.remove();
+}
+
+function filterMenuPickerHari() {
+  var q = (document.getElementById('mph-search')?.value || '').toLowerCase();
+  var list = _menuPickerHariCache || [];
+  var wrap = document.getElementById('mph-list');
+  if (!wrap) return;
+  var hk = window._menuPickerHk;
+  var gd = window._gridData;
+  var curId = (gd && gd[hk]) ? (gd[hk].menu_id || '') : '';
+  wrap.innerHTML = '';
+  var shown = 0;
+  for (var i = 0; i < list.length; i++) {
+    var m = list[i];
+    if (q && !(m.nama || '').toLowerCase().includes(q)) continue;
+    var sel = String(m.id) === String(curId) ? ' border-blue-400 bg-blue-50' : '';
+    var kat = m.kategori_penerima ? fmtJenjang(m.kategori_penerima) : 'Semua';
+    wrap.innerHTML += '<button type="button" onclick="pilihMenuHari(' + hk + ',' + m.id + ')" class="w-full text-left px-3 py-2 rounded-xl border border-stone-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors' + sel + '">' +
+      '<div class="flex items-center justify-between gap-2">' +
+        '<div class="text-sm font-medium text-stone-800 truncate">' + escHtml(m.nama) + '</div>' +
+        '<div class="text-[10px] text-stone-400 shrink-0">' + escHtml(kat) + '</div>' +
+      '</div>' +
+      '<div class="text-[10px] text-stone-400 mt-0.5">' + (Number(m.kalori) || 0) + ' kkal · ' + ((m.bahan || []).length) + ' bahan</div>' +
+    '</button>';
+    shown++;
+  }
+  if (!shown) wrap.innerHTML = '<div class="text-center py-8 text-stone-400 text-sm">Tidak ada menu yang cocok</div>';
+}
+
+async function pilihMenuHari(hk, menuId) {
+  var list = _menuPickerHariCache || [];
+  var m = list.find(function(x) { return String(x.id) === String(menuId); });
+  if (!m) return;
+  var gd = window._gridData;
+  if (!gd[hk]) return;
+  // Pasang resep master: menu_id + nama + gizi (agar tersimpan ke siklus_menu_item)
+  gd[hk].menu_id = m.id;
+  gd[hk].menu_nama = m.nama;
+  gd[hk].kalori = Number(m.kalori) || 0;
+  gd[hk].protein = Number(m.protein) || 0;
+  gd[hk].karbohidrat = Number(m.karbohidrat) || 0;
+  gd[hk].lemak = Number(m.lemak) || 0;
+  gd[hk].serat = Number(m.serat) || 0;
+  // Isi bahan grid per kategori_sp dari komposisi resep master
+  var rowKeys = window._rowKeys || ROW_KEYS;
+  gd[hk].bahan = {};
+  for (var ri = 0; ri < rowKeys.length; ri++) gd[hk].bahan[rowKeys[ri]] = [];
+  if (!gd[hk].resep_map) gd[hk].resep_map = {};
+  (m.bahan || []).forEach(function(b) {
+    var kat = b.kategori_sp || 'Lainnya';
+    if (!gd[hk].bahan[kat]) gd[hk].bahan[kat] = [];
+    gd[hk].bahan[kat].push({ id: b.bahan_baku_id, nama: b.nama });
+    if (rowKeys.indexOf(kat) !== -1 && !gd[hk].resep_map[kat]) gd[hk].resep_map[kat] = b.nama;
+  });
+  window._gridDirty = true;
+  closeMenuPickerHari();
+  // Re-render form sambil mempertahankan nilai input lain (pola sama dengan saveGridPicker)
+  var curNama = (document.getElementById('sk-nama')?.value) || '';
+  var curStatus = (document.getElementById('sk-status')?.value) || 'Draft';
+  var curTglMulai = document.getElementById('sk-tgl-mulai')?.value || '';
+  var meta = window._siklusMeta || {};
+  var curKat = meta.kategori_penerima || '';
+  var hkKeys = Object.keys(window._gridData).sort(function(a,b) { return Number(a)-Number(b); });
+  var items = hkKeys.map(function(k) {
+    var d = window._gridData[Number(k)];
+    return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: meta.jumlah_porsi || 0, kalori: d.kalori || 0, protein: d.protein || 0, karbohidrat: d.karbohidrat || 0, lemak: d.lemak || 0, serat: d.serat || 0, foto: d.foto || '' };
+  });
+  openSiklusForm(window._siklusFormId ? { id: window._siklusFormId, nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, tanggal_mulai: curTglMulai, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: items.length, status: curStatus, tanggal_mulai: curTglMulai, items: items });
+  showToast('Menu "' + m.nama + '" dipasang ke Hari ' + hk, 'success');
 }

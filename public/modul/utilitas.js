@@ -11,7 +11,7 @@ const api = {
     if (!r.ok) {
       let msg = r.status + ' ' + r.statusText;
       try { const e = await r.json(); msg = e.error || msg; } catch {}
-      throw new Error(msg);
+      const err = new Error(msg); err.status = r.status; throw err;
     }
     return r.json();
   },
@@ -20,7 +20,7 @@ const api = {
     if (!r.ok) {
       let msg = r.status + ' ' + r.statusText;
       try { const e = await r.json(); msg = e.error || msg; } catch {}
-      throw new Error(msg);
+      const err = new Error(msg); err.status = r.status; throw err;
     }
     return r.json();
   },
@@ -29,7 +29,7 @@ const api = {
     if (!r.ok) {
       let msg = r.status + ' ' + r.statusText;
       try { const e = await r.json(); msg = e.error || msg; } catch {}
-      throw new Error(msg);
+      const err = new Error(msg); err.status = r.status; throw err;
     }
     return r.json();
   },
@@ -38,7 +38,7 @@ const api = {
     if (!r.ok) {
       let msg = r.status + ' ' + r.statusText;
       try { const e = await r.json(); msg = e.error || msg; } catch {}
-      throw new Error(msg);
+      const err = new Error(msg); err.status = r.status; throw err;
     }
     return r;
   },

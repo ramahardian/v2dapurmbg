@@ -4,6 +4,68 @@ const { parseKategoriPenerima, expandJenjangToDbValues, autoHitungPorsi, compute
 
 const router = express.Router();
 
+// Siklus Aktif wajib punya tanggal_selesai ≥ hari ini; kalau tidak,
+// autoArchiveSiklus akan langsung membaliknya ke Arsip secara diam-diam.
+// Validasi ini mencegah flip-flop status tanpa peringatan.
+async function validasiStatusAktif(status, tanggalSelesai) {
+  if (status !== 'Aktif' || !tanggalSelesai) return null;
+  // DATE_FORMAT wajib: mysql2 mengembalikan CURDATE() sebagai objek Date,
+  // dan String(Date).slice(0,10) = "Sat Aug 08" (bukan YYYY-MM-DD) yang
+  // membuat perbandingan tanggal selalu salah. DATE_FORMAT menjamin string YYYY-MM-DD.
+  const [[{ today }]] = await db.query("SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS today");
+  if (String(tanggalSelesai).slice(0, 10) < String(today).slice(0, 10)) {
+    return 'Siklus Aktif wajib memiliki tanggal selesai ≥ hari ini. Ubah rentang tanggal ke periode baru, atau gunakan tombol "Reaktivasi" untuk memakai ulang siklus arsip.';
+  }
+  return null;
+}
+
+// Parse kategori_penerima siklus (bisa string tunggal atau JSON array) → Set jenjang.
+function parseJenjangSet(kp) {
+  if (!kp) return new Set();
+  try {
+    const p = JSON.parse(kp);
+    if (Array.isArray(p)) return new Set(p.map(String).filter(Boolean));
+  } catch (e) { /* bukan JSON */ }
+  return new Set([String(kp)]);
+}
+
+function jenjangTumpangTindih(setA, setB) {
+  if (!setA.size || !setB.size) return false;
+  for (const v of setA) if (setB.has(v)) return true;
+  return false;
+}
+
+// Cek bentrok: ada siklus Aktif lain dengan jenjang yang sama di rentang tanggal
+// yang tumpang tindih. Mengembalikan { nama, tanggal_mulai, tanggal_selesai, message } atau null.
+// Tanggal dipakai DATE_FORMAT → string YYYY-MM-DD agar perbandingan konsisten.
+async function cekBentrokSiklusAktif(tenantId, excludeId, kategoriPenerima, tanggalMulai, tanggalSelesai) {
+  if (!kategoriPenerima || !tanggalMulai || !tanggalSelesai) return null;
+  const [rows] = await db.query(
+    `SELECT id, nama, kategori_penerima,
+            DATE_FORMAT(tanggal_mulai, '%Y-%m-%d') AS tgl_mulai,
+            DATE_FORMAT(tanggal_selesai, '%Y-%m-%d') AS tgl_selesai
+     FROM siklus_menu
+     WHERE tenant_id=? AND id!=? AND status='Aktif'
+       AND tanggal_mulai IS NOT NULL AND tanggal_selesai IS NOT NULL`,
+    [tenantId, excludeId]
+  );
+  const setBaru = parseJenjangSet(kategoriPenerima);
+  const mulai = String(tanggalMulai).slice(0, 10);
+  const selesai = String(tanggalSelesai).slice(0, 10);
+  for (const r of rows) {
+    const overlapTanggal = String(r.tgl_mulai).slice(0, 10) <= selesai && String(r.tgl_selesai).slice(0, 10) >= mulai;
+    if (!overlapTanggal) continue;
+    if (!jenjangTumpangTindih(setBaru, parseJenjangSet(r.kategori_penerima))) continue;
+    return {
+      nama: r.nama,
+      tanggal_mulai: r.tgl_mulai,
+      tanggal_selesai: r.tgl_selesai,
+      message: 'Ada siklus aktif lain untuk jenjang yang sama pada rentang waktu tersebut: "' + r.nama + '" (' + r.tgl_mulai + ' s.d. ' + r.tgl_selesai + '). Arsipkan siklus itu terlebih dahulu atau pilih rentang waktu yang lain.',
+    };
+  }
+  return null;
+}
+
 /**
  * GET /siklus
  * Mengambil semua data siklus menu milik tenant yang sedang login.
@@ -152,6 +214,12 @@ router.post('/siklus', async (req, res) => {
   const finalPorsi = await autoHitungPorsi(req.user.tenant_id, kategori_penerima, jumlah_porsi);
   const finalTanggalSelesai = computeTanggalSelesai(tanggal_mulai, tanggal_selesai, finalTotalHari);
 
+  const errAktif = await validasiStatusAktif(status, finalTanggalSelesai);
+  if (errAktif) return res.status(400).json({ error: errAktif });
+
+  const bentrok = status === 'Aktif' ? await cekBentrokSiklusAktif(req.user.tenant_id, 0, kategori_penerima, tanggal_mulai, finalTanggalSelesai) : null;
+  if (bentrok) return res.status(409).json({ error: bentrok.message, conflict: bentrok });
+
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
@@ -208,6 +276,12 @@ router.put('/siklus/:id', async (req, res) => {
   const finalPorsi = await autoHitungPorsi(req.user.tenant_id, kategori_penerima, jumlah_porsi);
   const finalTanggalSelesai = computeTanggalSelesai(tanggal_mulai, tanggal_selesai, finalTotalHari);
 
+  const errAktif = await validasiStatusAktif(status, finalTanggalSelesai);
+  if (errAktif) return res.status(400).json({ error: errAktif });
+
+  const bentrok = status === 'Aktif' ? await cekBentrokSiklusAktif(req.user.tenant_id, id, kategori_penerima, tanggal_mulai, finalTanggalSelesai) : null;
+  if (bentrok) return res.status(409).json({ error: bentrok.message, conflict: bentrok });
+
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
@@ -234,6 +308,54 @@ router.put('/siklus/:id', async (req, res) => {
     res.status(400).json({ error: 'Gagal mengupdate siklus' });
   } finally {
     conn.release();
+  }
+});
+
+/**
+ * POST /siklus/:id/reactivate
+ * Reaktivasi siklus arsip: pilih tanggal mulai baru, sistem menghitung tanggal
+ * selesai otomatis (mulai + total_hari - 1), lalu status kembali Aktif.
+ * Menghindari flip-flop diam-diam dari autoArchiveSiklus.
+ */
+router.post('/siklus/:id/reactivate', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id || isNaN(id)) return res.status(400).json({ error: 'ID siklus tidak valid' });
+
+  const tanggalMulai = String(req.body.tanggal_mulai || '').slice(0, 10);
+  if (!tanggalMulai) return res.status(400).json({ error: 'Tanggal mulai baru wajib diisi' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggalMulai)) {
+    return res.status(400).json({ error: 'Format tanggal mulai tidak valid (harus YYYY-MM-DD)' });
+  }
+
+  try {
+    const [[siklus]] = await db.query('SELECT * FROM siklus_menu WHERE id=? AND tenant_id=?', [id, req.user.tenant_id]);
+    if (!siklus) return res.status(404).json({ error: 'Siklus tidak ditemukan' });
+
+    const totalHari = Number(siklus.total_hari) || 7;
+    const tanggalSelesai = computeTanggalSelesai(tanggalMulai, null, totalHari);
+    if (!tanggalSelesai) return res.status(400).json({ error: 'Gagal menghitung tanggal selesai dari tanggal mulai "' + tanggalMulai + '"' });
+
+    const errAktif = await validasiStatusAktif('Aktif', tanggalSelesai);
+    if (errAktif) {
+      return res.status(400).json({ error: 'Tanggal mulai "' + tanggalMulai + '" menghasilkan periode yang sudah lewat. Pilih tanggal mulai yang belum lewat.' });
+    }
+
+    const bentrok = await cekBentrokSiklusAktif(req.user.tenant_id, id, siklus.kategori_penerima, tanggalMulai, tanggalSelesai);
+    if (bentrok) return res.status(409).json({ error: bentrok.message, conflict: bentrok });
+
+    await db.query(
+      "UPDATE siklus_menu SET status='Aktif', tanggal_mulai=?, tanggal_selesai=? WHERE id=? AND tenant_id=?",
+      [tanggalMulai, tanggalSelesai, id, req.user.tenant_id]
+    );
+    res.json({
+      ok: true,
+      message: 'Siklus "' + siklus.nama + '" diaktifkan kembali (' + tanggalMulai + ' s.d. ' + tanggalSelesai + ')',
+      tanggal_mulai: tanggalMulai,
+      tanggal_selesai: tanggalSelesai,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: 'Gagal reaktivasi siklus: ' + (e.message || '') });
   }
 });
 
