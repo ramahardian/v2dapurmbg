@@ -122,6 +122,7 @@ async function renderMenu() {
     const data = await r.json();
     const pagination = data.pagination || { total: data.length || 0, totalPages: 1, page: menuState.page };
     menuState = { ...menuState, total: pagination.total, totalPages: pagination.totalPages, page: pagination.page };
+    menuState.currentMenus = Array.isArray(data.data) ? data.data : [];
     
     c.innerHTML = renderMenuHtml(Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []));
     renderPagination();
@@ -456,6 +457,7 @@ function renderMenuHtml(menus) {
               <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${m.kalori} kkal</td>
               <td class="px-4 py-3 text-xs text-left whitespace-nowrap">${renderBahanCell(m.bahan)}</td>
               <td class="px-4 py-3 text-xs text-right whitespace-nowrap">
+                <button data-menu-tpl="${m.id}" class="tpl-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-amber-600 hover:bg-amber-50 transition-all" title="Simpan sebagai template siklus (bisa dipakai di form Siklus lewat tombol Template)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 7v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 11h6"/></svg></button>
                 <button data-menu-id="${m.id}" class="edit-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                 <button data-menu-id="${m.id}" class="delete-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
               </td>
@@ -506,6 +508,12 @@ function attachMenuHandlers() {
     btn.addEventListener('click', function() {
       const menuId = this.getAttribute('data-menu-id');
       editMenuById(menuId);
+    });
+  });
+  document.querySelectorAll('.tpl-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const menuId = this.getAttribute('data-menu-tpl');
+      openSimpanTemplateMenu(menuId);
     });
   });
   document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -1200,6 +1208,105 @@ async function deleteSelectedMenu() {
 
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ===== Simpan resep dari Menu & Gizi sebagai template siklus =====
+
+function openSimpanTemplateMenu(menuId) {
+  var menus = (menuState.currentMenus || []);
+  var m = menus.find(function(x) { return String(x.id) === String(menuId); });
+  if (!m) { showAlert('Data menu tidak ditemukan. Muat ulang halaman lalu coba lagi.', 'warning'); return; }
+  var hasBahan = (m.bahan || []).some(function(b) { return Number(b.bahan_baku_id) > 0; });
+  if (!hasBahan) { showAlert('Menu "' + m.nama + '" belum punya bahan. Tambahkan bahan terlebih dahulu, lalu simpan sebagai template.', 'warning'); return; }
+  var existing = document.getElementById('simpan-template-menu-modal');
+  if (existing) existing.remove();
+  var modal = document.createElement('div');
+  modal.id = 'simpan-template-menu-modal';
+  modal.className = 'fixed inset-0 z-[75] flex items-center justify-center bg-black/40';
+  modal.innerHTML =
+    '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">' +
+      '<div class="flex items-center justify-between px-5 py-3 border-b border-stone-200">' +
+        '<h3 class="font-bold text-stone-700 text-sm">💾 Simpan sebagai Template Siklus</h3>' +
+        '<button onclick="closeSimpanTemplateMenu()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-colors">&times;</button>' +
+      '</div>' +
+      '<div class="p-5 space-y-4">' +
+        '<div class="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">' +
+          '<svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 7v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 11h6"/></svg>' +
+          '<div>Resep <b>' + escHtml(m.nama) + '</b> akan disimpan sebagai template terpisah. Nanti bisa dipakai lewat tombol <b>🗂 Template</b> saat mengisi hari di form Siklus.</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Template *</label>' +
+          '<input id="stm-nama" value="' + escHtml(m.nama || '') + '" placeholder="cth: Nasi Ayam Sayur" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" />' +
+        '</div>' +
+        '<div class="flex gap-2 pt-1">' +
+          '<button onclick="closeSimpanTemplateMenu()" class="flex-1 h-10 rounded-lg border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 transition-colors">Batal</button>' +
+          '<button id="stm-submit" onclick="submitSimpanTemplateMenu(' + menuId + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition-colors inline-flex items-center justify-center gap-2">💾 Simpan Template</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e) { if (e.target === modal) closeSimpanTemplateMenu(); });
+  var inp = document.getElementById('stm-nama');
+  if (inp) {
+    inp.focus();
+    inp.select();
+    inp.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); submitSimpanTemplateMenu(menuId); }
+      if (ev.key === 'Escape') closeSimpanTemplateMenu();
+    });
+  }
+}
+
+function closeSimpanTemplateMenu() {
+  var m = document.getElementById('simpan-template-menu-modal');
+  if (m) m.remove();
+}
+
+async function submitSimpanTemplateMenu(menuId) {
+  var inp = document.getElementById('stm-nama');
+  var nama = ((inp && inp.value) || '').trim();
+  if (!nama) { showAlert('Nama template wajib diisi', 'warning'); if (inp) inp.focus(); return; }
+  var menus = (menuState.currentMenus || []);
+  var m = menus.find(function(x) { return String(x.id) === String(menuId); });
+  if (!m) { showAlert('Data menu tidak ditemukan. Muat ulang halaman lalu coba lagi.', 'warning'); return; }
+  var byKat = {};
+  (m.bahan || []).forEach(function(b) {
+    var id = Number(b.bahan_baku_id);
+    if (!id || id <= 0) return;
+    var kat = b.kategori_sp || 'Lainnya';
+    if (!byKat[kat]) byKat[kat] = [];
+    byKat[kat].push(id);
+  });
+  var gridPayload = Object.keys(byKat).map(function(kat) { return { kategori_sp: kat, bahan_baku_ids: byKat[kat] }; });
+  if (!gridPayload.length) { showAlert('Menu ini belum punya bahan yang valid', 'warning'); return; }
+  var btn = document.getElementById('stm-submit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan…'; }
+  try {
+    var r = await fetch('/api/siklus/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nama: nama,
+        grid: gridPayload,
+        resep_map: null,
+        foto: null,
+        jumlah_porsi: Number(m.jumlah_porsi) || 0
+      }),
+      credentials: 'include'
+    });
+    var data = await r.json().catch(function() { return {}; });
+    if (!r.ok) {
+      if (r.status === 409) { closeSimpanTemplateMenu(); showToast('Template dengan nama "' + nama + '" sudah ada — gunakan nama lain', 'warning'); return; }
+      showAlert(data.error || 'Gagal menyimpan template', 'error');
+      return;
+    }
+    closeSimpanTemplateMenu();
+    showToast('Template "' + data.nama + '" berhasil disimpan', 'success');
+  } catch (e) {
+    showAlert('Gagal menyimpan template: ' + (e.message || 'Unknown error'), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Simpan Template'; }
+  }
 }
 
 function closeSiklusMenuPicker() {
