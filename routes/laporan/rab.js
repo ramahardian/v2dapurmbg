@@ -416,18 +416,19 @@ function registerRabRoutes(router) {
       const dbToDisplay = buildDbToDisplay();
 
       let penerima;
+      let siklusDbKat = [];
       const penerimaQuery = `SELECT kategori_penerima,
         SUM(paket_besar) as total_besar, SUM(paket_kecil) as total_kecil,
         SUM(paket_besar + paket_kecil) as total_penerima
         FROM penerima_manfaat WHERE tenant_id=?`;
       if (siklusInfo && siklusInfo.kategori_penerima) {
         const katList = parseKategoriPenerima(siklusInfo.kategori_penerima);
-        const dbKatList = expandJenjangToDbValues(katList);
-        if (dbKatList.length) {
-          const ph = dbKatList.map(() => '?').join(',');
+        siklusDbKat = expandJenjangToDbValues(katList);
+        if (siklusDbKat.length) {
+          const ph = siklusDbKat.map(() => '?').join(',');
           [penerima] = await db.query(
             penerimaQuery + ` AND kategori_penerima IN (${ph}) GROUP BY kategori_penerima ORDER BY kategori_penerima`,
-            [t, ...dbKatList]
+            [t, ...siklusDbKat]
           );
         } else {
           [penerima] = [[], []];
@@ -440,20 +441,44 @@ function registerRabRoutes(router) {
       }
 
       const [hargaList] = await db.query(
-        `SELECT kategori_penerima, harga_per_porsi, harga_besar, harga_kecil, total_budget, realisasi FROM budget
+        `SELECT kategori_penerima, harga_per_porsi, harga_besar, harga_kecil, jumlah_penerima, total_budget, realisasi FROM budget
          WHERE tenant_id=? AND periode=?`,
         [t, periode]
       );
       const hargaBesarMap = {};
       const hargaKecilMap = {};
       const budgetMap = {};
+      const jumlahPenerimaMap = {};
       const realisasiMap = {};
+      const budgetSet = new Set();
       for (const h of hargaList) {
         const displayKey = dbToDisplay[h.kategori_penerima] || h.kategori_penerima;
         hargaBesarMap[displayKey] = Number(h.harga_besar) || Number(h.harga_per_porsi) || 0;
         hargaKecilMap[displayKey] = Number(h.harga_kecil) || Number(h.harga_per_porsi) || 0;
         budgetMap[displayKey] = Number(h.total_budget || 0);
+        jumlahPenerimaMap[displayKey] = Number(h.jumlah_penerima || 0);
         realisasiMap[displayKey] = Number(h.realisasi || 0);
+        budgetSet.add(displayKey);
+      }
+
+      // Harga referensi untuk estimasi (kategori tanpa budget periode ini):
+      // pakai harga dari periode budget terakhir sebagai dasar perkiraan.
+      const [refHarga] = await db.query(
+        `SELECT b1.kategori_penerima, b1.harga_besar, b1.harga_kecil, b1.harga_per_porsi
+         FROM budget b1
+         INNER JOIN (
+           SELECT kategori_penerima, MAX(periode) AS max_periode
+           FROM budget WHERE tenant_id=? AND periode < ? AND (harga_besar > 0 OR harga_kecil > 0 OR harga_per_porsi > 0)
+           GROUP BY kategori_penerima
+         ) b2 ON b1.kategori_penerima = b2.kategori_penerima AND b1.periode = b2.max_periode`,
+        [t, periode]
+      );
+      for (const h of refHarga) {
+        const displayKey = dbToDisplay[h.kategori_penerima] || h.kategori_penerima;
+        if (!budgetSet.has(displayKey)) {
+          hargaBesarMap[displayKey] = Number(h.harga_besar) || Number(h.harga_per_porsi) || 0;
+          hargaKecilMap[displayKey] = Number(h.harga_kecil) || Number(h.harga_per_porsi) || 0;
+        }
       }
 
       const [[{ realisasi_kas } = { realisasi_kas: 0 }]] = await db.query(
@@ -464,11 +489,20 @@ function registerRabRoutes(router) {
         [t, periode]
       );
 
+      // Agregasi budget ikut difilter ke kategori yang tampil (konsisten dengan rows)
+      // supaya kartu Anggaran = kartu Budget bahkan saat filter siklus aktif.
+      let budgetAggWhere = '';
+      const budgetAggParams = [t, periode];
+      if (siklusDbKat.length) {
+        const ph = siklusDbKat.map(() => '?').join(',');
+        budgetAggWhere = ` AND kategori_penerima IN (${ph})`;
+        budgetAggParams.push(...siklusDbKat);
+      }
       const [[budgetAgg]] = await db.query(
         `SELECT COALESCE(SUM(total_budget),0) AS total_budget,
                 COALESCE(SUM(realisasi),0) AS total_realisasi_manual
-         FROM budget WHERE tenant_id=? AND periode=?`,
-        [t, periode]
+         FROM budget WHERE tenant_id=? AND periode=?${budgetAggWhere}`,
+        budgetAggParams
       );
       const totalBudgetAgg = Number(budgetAgg.total_budget) || 0;
       const totalRealisasiManual = Number(budgetAgg.total_realisasi_manual) || 0;
@@ -554,28 +588,39 @@ function registerRabRoutes(router) {
           // Gabung budget & realisasi dari sub-kategori + entri ber-kategori 'Posyandu'
           const budgetGabung = (budgetMap['Bumil/Busui'] || 0) + (budgetMap['Balita'] || 0) + (budgetMap['Posyandu'] || 0);
           const realisasiGabung = (realisasiMap['Bumil/Busui'] || 0) + (realisasiMap['Balita'] || 0) + (realisasiMap['Posyandu'] || 0);
-          const total = hargaRata * totalPenerima * (total_hari || 0);
+          const jmlGabung = (jumlahPenerimaMap['Bumil/Busui'] || 0) + (jumlahPenerimaMap['Balita'] || 0) + (jumlahPenerimaMap['Posyandu'] || 0);
+          // Satu sumber kebenaran: kalau ada budget di periode ini, pakai angka tersimpan
+          // (jumlah_penerima & total_budget) supaya Anggaran = Budget. Kalau belum ada
+          // budget, hitung estimasi dari master PM dan tandai sumber 'estimasi'.
+          const hasBudget = budgetSet.has('Bumil/Busui') || budgetSet.has('Balita') || budgetSet.has('Posyandu');
+          const jmlTampil = hasBudget ? (jmlGabung || totalPenerima) : totalPenerima;
+          const total = hasBudget ? budgetGabung : hargaRata * totalPenerima * (total_hari || 0);
 
-          grandPenerima += totalPenerima;
+          grandPenerima += jmlTampil;
           grandTotal += total;
           rows.push({
             kategori: 'Posyandu',
             harga_besar: hargaBesar,
             harga_kecil: hargaKecil,
-            jumlah_penerima: totalPenerima,
+            jumlah_penerima: jmlTampil,
             jumlah_hari: total_hari || 0,
             budget: budgetGabung,
             realisasi: realisasiGabung,
             total,
+            sumber: hasBudget ? 'budget' : 'estimasi',
           });
         } else {
           const hargaBesar = hargaBesarMap[kategori] || 0;
           const hargaKecil = hargaKecilMap[kategori] || 0;
           const totalBesar = Number(p.total_besar) || 0;
           const totalKecil = Number(p.total_kecil) || 0;
-          const jmlPenerima = Number(p.total_penerima);
           const jmlHari = total_hari || 0;
-          const total = (hargaBesar * totalBesar + hargaKecil * totalKecil) * jmlHari;
+          // Satu sumber kebenaran: kalau ada budget di periode ini, pakai angka tersimpan
+          // (jumlah_penerima & total_budget) supaya Anggaran = Budget. Kalau belum ada
+          // budget, hitung estimasi dari master PM dan tandai sumber 'estimasi'.
+          const hasBudget = budgetSet.has(kategori);
+          const jmlPenerima = hasBudget ? (jumlahPenerimaMap[kategori] || Number(p.total_penerima)) : Number(p.total_penerima);
+          const total = hasBudget ? (budgetMap[kategori] || 0) : (hargaBesar * totalBesar + hargaKecil * totalKecil) * jmlHari;
           grandPenerima += jmlPenerima;
           grandTotal += total;
           rows.push({
@@ -587,6 +632,7 @@ function registerRabRoutes(router) {
             budget: budgetMap[kategori] || 0,
             realisasi: realisasiMap[kategori] || 0,
             total,
+            sumber: hasBudget ? 'budget' : 'estimasi',
           });
         }
       }

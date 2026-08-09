@@ -153,7 +153,7 @@ const tabColors = {
         '<div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm">' +
           '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Anggaran</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg></div>' +
           '<div class="text-lg font-bold text-emerald-800">' + fmtIDR(r.grand_total) + '</div>' +
-          '<div class="text-[10px] text-emerald-600/70">Total RAB sinkron</div>' +
+          '<div class="text-[10px] text-emerald-600/70">Sama dengan Budget (tabel budget)</div>' +
         '</div>' +
         '<div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm">' +
           '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Budget</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg></div>' +
@@ -244,7 +244,8 @@ const tabColors = {
         var dotColor = catColors[catIdx % catColors.length];
         if (!isSub) catIdx++;
         tableContent += '<tr class="border-t border-stone-100 hover:bg-stone-50/80 transition-colors ' + bgRow + '">' +
-          '<td class="px-4 py-3 font-medium text-xs"><span class="inline-block w-2 h-2 rounded-full mr-2" style="background:' + dotColor + '"></span>' + escHtml(b.kategori) + '</td>' +
+          '<td class="px-4 py-3 font-medium text-xs"><span class="inline-block w-2 h-2 rounded-full mr-2" style="background:' + dotColor + '"></span>' + escHtml(b.kategori) +
+          (b.sumber === 'estimasi' ? ' <span class="inline-block text-[9px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded ml-1" title="Belum ada budget untuk periode ini — dihitung estimasi dari master PM">Estimasi</span>' : '') + '</td>' +
           '<td class="px-4 py-3 text-right mono text-xs font-semibold text-amber-700">' + (b.harga_besar > 0 ? fmtIdr(b.harga_besar) : '<span class="text-stone-300">—</span>') + '</td>' +
           '<td class="px-4 py-3 text-right mono text-xs font-semibold text-rose-600">' + (b.harga_kecil > 0 ? fmtIdr(b.harga_kecil) : '<span class="text-stone-300">—</span>') + '</td>' +
           '<td class="px-1 py-3 text-center text-stone-300 text-[9px]">×</td>' +
@@ -270,6 +271,15 @@ const tabColors = {
         '<td class="px-4 py-3.5 text-right mono font-bold text-xs ' + (totalSelisih >= 0 ? 'text-emerald-600' : 'text-red-600') + '">' + fmtIdr(totalBiayaKas) + '</td></tr>';
 
       tableContent += '</tbody></table></div></div>';
+
+      // Catatan sumber anggaran (anti-rancu): anggaran diambil dari tabel budget
+      var estCount = rows.filter(function(b) { return b.sumber === 'estimasi'; }).length;
+      tableContent += '<div class="px-4 py-2 text-[10px] text-stone-400 bg-stone-50/60 border-t border-stone-100 flex items-start gap-2">' +
+        '<svg class="w-3.5 h-3.5 mt-0.5 shrink-0 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>' +
+        '<span>Anggaran & jumlah penerima diambil dari tabel <strong>budget</strong> periode ' + escHtml(effectivePeriode) +
+        (estCount > 0 ? ' — <span class="text-amber-600 font-semibold">' + estCount + ' kategori belum punya budget (estimasi)</span>' : ' (konsisten dengan kolom Budget)') +
+        '. Perbarui lewat "Hitung Budget" di halaman Budgeting.</span>' +
+      '</div>';
 
       // Tabel Rincian Biaya Pengeluaran
       var biayaContent = '<div class="mt-4 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
