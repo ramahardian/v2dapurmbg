@@ -434,9 +434,12 @@ const tabColors = {
                 '<th class="text-left px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">TITIK</th>' +
                 '<th class="text-left px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">KATEGORI</th>' +
                 '<th class="text-right px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">PAKET BESAR</th>' +
+                '<th class="text-right px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">PAKET BESAR (UTAMA)</th>' +
                 '<th class="text-right px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">PAKET KECIL</th>' +
+                '<th class="text-right px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">SAMPLE</th>' +
+                '<th class="text-right px-3 py-2.5 text-[10px] font-bold text-stone-500 uppercase tracking-wider">GURU &amp; TENDIK</th>' +
               '</tr></thead><tbody id="pm-editor-tbody">' +
-              '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="4">Muat data editor...</td></tr>' +
+              '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="7">Muat data editor...</td></tr>' +
             '</tbody></table></div>' +
             '<div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-2">' +
               '<div id="pm-editor-status" class="text-[10px] text-stone-400"></div>' +
@@ -2272,7 +2275,7 @@ async function loadPMEditor(tanggal) {
   var statusEl = document.getElementById('pm-editor-status');
   var t = tanggal || lapState.rab_pm_tanggal || new Date().toISOString().slice(0, 10);
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="4">Memuat...</td></tr>';
+  tbody.innerHTML = '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="7">Memuat...</td></tr>';
   var filterEl = document.getElementById('pm-search');
   if (filterEl) filterEl.value = '';
   try {
@@ -2290,7 +2293,7 @@ async function loadPMEditor(tanggal) {
     var countEl = document.getElementById('pm-editor-count');
     if (countEl) countEl.textContent = d.terisi + ' dari ' + d.total;
   } catch(e) {
-    tbody.innerHTML = '<tr><td class="px-3 py-6 text-center text-red-500" colspan="4">Gagal memuat: ' + escHtml(e.message) + '</td></tr>';
+    tbody.innerHTML = '<tr><td class="px-3 py-6 text-center text-red-500" colspan="7">Gagal memuat: ' + escHtml(e.message) + '</td></tr>';
   }
 }
 
@@ -2311,38 +2314,58 @@ function filterPMMan() {
   pmAutoTotals();
 }
 
+function pmInputCell(r, f, val) {
+  return '<td class="px-2 py-1.5 text-right"><input type="number" min="0" step="1" data-k="' + r.penerima_manfaat_id + '" data-f="' + f + '" value="' + (val == null ? 0 : val) + '" oninput="pmAutoTotals()" class="inline-block w-20 text-right text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"></td>';
+}
+
 function renderPMRows(rows) {
-  if (!rows.length) return '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="4">Tidak ada titik yang cocok.</td></tr>';
+  if (!rows.length) return '<tr><td class="px-3 py-6 text-center text-stone-400" colspan="7">Tidak ada titik yang cocok.</td></tr>';
   return rows.map(function(r) {
     return '<tr class="border-t border-stone-100">' +
       '<td class="px-3 py-2 font-semibold text-xs text-stone-800">' + escHtml(r.nama_titik) + (r.is_snapshot ? ' <span class="text-[9px] font-medium text-emerald-600 bg-emerald-50 rounded px-1 py-0.5">tersimpan</span>' : '') + '</td>' +
       '<td class="px-3 py-2 text-[11px] text-stone-500">' + escHtml(r.kategori_penerima || '-') + '</td>' +
-      '<td class="px-2 py-1.5 text-right"><input type="number" min="0" step="1" data-k="' + r.penerima_manfaat_id + '" data-f="besar" value="' + r.paket_besar + '" oninput="pmAutoTotals()" class="inline-block w-20 text-right text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"></td>' +
-      '<td class="px-2 py-1.5 text-right"><input type="number" min="0" step="1" data-k="' + r.penerima_manfaat_id + '" data-f="kecil" value="' + r.paket_kecil + '" oninput="pmAutoTotals()" class="inline-block w-20 text-right text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"></td>' +
+      pmInputCell(r, 'besar', r.paket_besar) +
+      pmInputCell(r, 'utama', r.paket_besar_utama) +
+      pmInputCell(r, 'kecil', r.paket_kecil) +
+      pmInputCell(r, 'sample', r.sample) +
+      pmInputCell(r, 'guru', r.guru_tendik) +
     '</tr>';
   }).join('');
 }
 
 function renderPMRowsWithTotal(rows) {
   var besar = rows.reduce(function(s, r) { return s + (Number(r.paket_besar) || 0); }, 0);
+  var utama = rows.reduce(function(s, r) { return s + (Number(r.paket_besar_utama) || 0); }, 0);
   var kecil = rows.reduce(function(s, r) { return s + (Number(r.paket_kecil) || 0); }, 0);
+  var sample = rows.reduce(function(s, r) { return s + (Number(r.sample) || 0); }, 0);
+  var guru = rows.reduce(function(s, r) { return s + (Number(r.guru_tendik) || 0); }, 0);
   return renderPMRows(rows) +
     '<tr class="border-t-2 border-stone-300 bg-stone-50 font-bold text-stone-700">' +
       '<td class="px-3 py-2 text-xs" colspan="2">TOTAL (' + rows.length + ' titik)</td>' +
       '<td class="px-2 py-2 text-right text-xs" id="pm-total-besar">' + besar + '</td>' +
+      '<td class="px-2 py-2 text-right text-xs" id="pm-total-utama">' + utama + '</td>' +
       '<td class="px-2 py-2 text-right text-xs" id="pm-total-kecil">' + kecil + '</td>' +
+      '<td class="px-2 py-2 text-right text-xs" id="pm-total-sample">' + sample + '</td>' +
+      '<td class="px-2 py-2 text-right text-xs" id="pm-total-guru">' + guru + '</td>' +
     '</tr>';
 }
 
 function pmAutoTotals() {
-  var rows = window.__pm_rows || [];
-  var besar = 0, kecil = 0;
+  var besar = 0, utama = 0, kecil = 0, sample = 0, guru = 0;
   document.querySelectorAll('#pm-editor-tbody tr input[data-f]').forEach(function(inp) {
-    if (inp.getAttribute('data-f') === 'besar') besar += parseInt(inp.value, 10) || 0;
-    else kecil += parseInt(inp.value, 10) || 0;
+    var v = parseInt(inp.value, 10) || 0;
+    var f = inp.getAttribute('data-f');
+    if (f === 'besar') besar += v;
+    else if (f === 'utama') utama += v;
+    else if (f === 'kecil') kecil += v;
+    else if (f === 'sample') sample += v;
+    else if (f === 'guru') guru += v;
   });
   var be = document.getElementById('pm-total-besar'); if (be) be.textContent = besar;
+  var ue = document.getElementById('pm-total-utama'); if (ue) ue.textContent = utama;
   var ke = document.getElementById('pm-total-kecil'); if (ke) ke.textContent = kecil;
+  var se = document.getElementById('pm-total-sample'); if (se) se.textContent = sample;
+  var ge = document.getElementById('pm-total-guru'); if (ge) ge.textContent = guru;
 }
 function gantiTanggalPMMan() {
   var v = document.getElementById('rab-pm-tanggal')?.value || new Date().toISOString().slice(0, 10);
@@ -2356,9 +2379,14 @@ async function simpanPMMan() {
   document.querySelectorAll('#pm-editor-tbody tr input[data-f]').forEach(function(inp) {
     var pid = parseInt(inp.getAttribute('data-k'), 10);
     var found = rows.find(function(x) { return x.penerima_manfaat_id === pid; });
-    if (!found) { found = { penerima_manfaat_id: pid, paket_besar: 0, paket_kecil: 0 }; rows.push(found); }
-    if (inp.getAttribute('data-f') === 'besar') found.paket_besar = parseInt(inp.value, 10) || 0;
-    else found.paket_kecil = parseInt(inp.value, 10) || 0;
+    if (!found) { found = { penerima_manfaat_id: pid, paket_besar: 0, paket_besar_utama: 0, paket_kecil: 0, sample: 0, guru_tendik: 0 }; rows.push(found); }
+    var v = parseInt(inp.value, 10) || 0;
+    var f = inp.getAttribute('data-f');
+    if (f === 'besar') found.paket_besar = v;
+    else if (f === 'utama') found.paket_besar_utama = v;
+    else if (f === 'kecil') found.paket_kecil = v;
+    else if (f === 'sample') found.sample = v;
+    else if (f === 'guru') found.guru_tendik = v;
   });
   try {
     await api.post('/laporan/rab-pm-harian', { tanggal: tanggal, rows: rows });

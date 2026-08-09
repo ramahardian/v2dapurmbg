@@ -1913,7 +1913,7 @@ function registerRabRoutes(router) {
       const tanggal = (req.query.tanggal || new Date().toISOString().slice(0, 10)).trim();
 
       const [snap] = await db.query(
-        `SELECT penerima_manfaat_id, nama_titik, kategori_penerima, paket_besar, paket_kecil
+        `SELECT penerima_manfaat_id, nama_titik, kategori_penerima, paket_besar, paket_besar_utama, paket_kecil, sample, guru_tendik
          FROM pm_harian WHERE tenant_id=? AND tanggal=?`,
         [t, tanggal]
       );
@@ -1921,7 +1921,7 @@ function registerRabRoutes(router) {
       for (const s of snap) snapMap[s.penerima_manfaat_id] = s;
 
       const [pmList] = await db.query(
-        `SELECT id, nama_kelompok, paket_besar, paket_kecil, kategori_penerima
+        `SELECT id, nama_kelompok, paket_besar, paket_besar_utama, paket_kecil, sample, guru_tendik, kategori_penerima
          FROM penerima_manfaat WHERE tenant_id=? ORDER BY nama_kelompok ASC`,
         [t]
       );
@@ -1931,7 +1931,10 @@ function registerRabRoutes(router) {
         nama_titik: p.nama_kelompok,
         kategori_penerima: p.kategori_penerima,
         paket_besar: snapMap[p.id] ? Number(snapMap[p.id].paket_besar) : Number(p.paket_besar || 0),
+        paket_besar_utama: snapMap[p.id] ? Number(snapMap[p.id].paket_besar_utama) : Number(p.paket_besar_utama || 0),
         paket_kecil: snapMap[p.id] ? Number(snapMap[p.id].paket_kecil) : Number(p.paket_kecil || 0),
+        sample: snapMap[p.id] ? Number(snapMap[p.id].sample) : Number(p.sample || 0),
+        guru_tendik: snapMap[p.id] ? Number(snapMap[p.id].guru_tendik) : Number(p.guru_tendik || 0),
         is_snapshot: !!snapMap[p.id],
       }));
 
@@ -1964,17 +1967,23 @@ function registerRabRoutes(router) {
         const pm = pmMap[r.penerima_manfaat_id];
         if (!pm) { failed++; continue; }
         const besar = Math.max(0, parseInt(r.paket_besar, 10) || 0);
+        const besarUtama = Math.max(0, parseInt(r.paket_besar_utama, 10) || 0);
         const kecil = Math.max(0, parseInt(r.paket_kecil, 10) || 0);
+        const sample = Math.max(0, parseInt(r.sample, 10) || 0);
+        const guruTendik = Math.max(0, parseInt(r.guru_tendik, 10) || 0);
 
         await db.query(
-          `INSERT INTO pm_harian (tenant_id, tanggal, penerima_manfaat_id, nama_titik, kategori_penerima, paket_besar, paket_kecil)
-           VALUES (?,?,?,?,?,?,?)
+          `INSERT INTO pm_harian (tenant_id, tanggal, penerima_manfaat_id, nama_titik, kategori_penerima, paket_besar, paket_besar_utama, paket_kecil, sample, guru_tendik)
+           VALUES (?,?,?,?,?,?,?,?,?,?)
            ON DUPLICATE KEY UPDATE
              nama_titik=VALUES(nama_titik),
              kategori_penerima=VALUES(kategori_penerima),
              paket_besar=VALUES(paket_besar),
-             paket_kecil=VALUES(paket_kecil)`,
-          [t, tanggal, r.penerima_manfaat_id, pm.nama_kelompok, pm.kategori_penerima, besar, kecil]
+             paket_besar_utama=VALUES(paket_besar_utama),
+             paket_kecil=VALUES(paket_kecil),
+             sample=VALUES(sample),
+             guru_tendik=VALUES(guru_tendik)`,
+          [t, tanggal, r.penerima_manfaat_id, pm.nama_kelompok, pm.kategori_penerima, besar, besarUtama, kecil, sample, guruTendik]
         );
         saved++;
       }
@@ -1998,7 +2007,10 @@ function registerRabRoutes(router) {
           nama_titik VARCHAR(200) NOT NULL,
           kategori_penerima VARCHAR(100) DEFAULT NULL,
           paket_besar INT DEFAULT 0,
+          paket_besar_utama INT DEFAULT 0,
           paket_kecil INT DEFAULT 0,
+          sample INT DEFAULT 0,
+          guru_tendik INT DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           UNIQUE KEY uq_pm_harian (tenant_id, tanggal, penerima_manfaat_id),
@@ -2006,6 +2018,17 @@ function registerRabRoutes(router) {
           INDEX idx_pm_harian_tanggal (tenant_id, tanggal)
         ) ENGINE=InnoDB`;
       await db.query(sql);
+
+      // Tambahkan kolom baru jika tabel pm_harian sudah ada (instalasi lama)
+      const [pmCols] = await db.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pm_harian' AND COLUMN_NAME IN ('paket_besar_utama','sample','guru_tendik')");
+      const pmExisting = new Set(pmCols.map(c => c.COLUMN_NAME));
+      const pmAdds = [];
+      if (!pmExisting.has('paket_besar_utama')) pmAdds.push('ADD COLUMN paket_besar_utama INT DEFAULT 0 AFTER paket_besar');
+      if (!pmExisting.has('sample')) pmAdds.push('ADD COLUMN sample INT DEFAULT 0 AFTER paket_kecil');
+      if (!pmExisting.has('guru_tendik')) pmAdds.push('ADD COLUMN guru_tendik INT DEFAULT 0 AFTER sample');
+      if (pmAdds.length) {
+        await db.query('ALTER TABLE pm_harian ' + pmAdds.join(', '));
+      }
       const [[{ c } = { c: 0 }]] = await db.query(
         `SELECT COUNT(*) AS c FROM information_schema.tables
          WHERE table_schema=DATABASE() AND table_name='pm_harian'`

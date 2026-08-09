@@ -83,7 +83,10 @@ async function runMigration() {
     nama_titik VARCHAR(255) NOT NULL,
     kategori_penerima VARCHAR(255) DEFAULT NULL,
     paket_besar INT DEFAULT 0,
+    paket_besar_utama INT DEFAULT 0,
     paket_kecil INT DEFAULT 0,
+    sample INT DEFAULT 0,
+    guru_tendik INT DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
@@ -91,6 +94,20 @@ async function runMigration() {
     INDEX idx_tanggal (tenant_id, tanggal)
   ) ENGINE=InnoDB`);
   log('[OK] Tabel pm_harian tersedia');
+
+  // Kolom Paket Besar (Utama), Sample & Guru/Tendik di pm_harian (snapshot PM harian)
+  try {
+    const [pmCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pm_harian' AND COLUMN_NAME IN ('paket_besar_utama','sample','guru_tendik')");
+    const pmExisting = new Set(pmCols.map(c => c.COLUMN_NAME));
+    const pmAdds = [];
+    if (!pmExisting.has('paket_besar_utama')) pmAdds.push('ADD COLUMN paket_besar_utama INT DEFAULT 0 AFTER paket_besar');
+    if (!pmExisting.has('sample')) pmAdds.push('ADD COLUMN sample INT DEFAULT 0 AFTER paket_kecil');
+    if (!pmExisting.has('guru_tendik')) pmAdds.push('ADD COLUMN guru_tendik INT DEFAULT 0 AFTER sample');
+    if (pmAdds.length) {
+      await q('ALTER TABLE pm_harian ' + pmAdds.join(', '));
+      log('✓ Migrasi pm_harian: tambah kolom paket_besar_utama, sample & guru_tendik');
+    }
+  } catch (e) { log('  (skip migrasi pm_harian baru): ' + e.message); }
 
   // Migrasi kolom penerima_manfaat
   try {
