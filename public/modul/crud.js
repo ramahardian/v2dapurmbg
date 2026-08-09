@@ -102,31 +102,7 @@ async function reloadCrud(cfg) {
   window._crudRows = rows;
 
   // Load stats jika dikonfigurasi
-  if (cfg.stats) {
-    (async () => {
-      try {
-        const statsRes = await api.get(cfg.stats.endpoint);
-        const totalVal = Number(statsRes.total) || 0;
-        const contentEl = document.getElementById('crud-stats-content');
-        if (contentEl) {
-          var cards = '';
-          var fmt = cfg.stats.format === 'num' ? fmtNum(totalVal) : totalVal;
-          cards += '<div class="flex-1 min-w-[140px] bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">' + cfg.stats.label + '</div><div class="text-xl font-bold text-blue-800">' + fmt + '</div></div>';
-          if (cfg.stats.extra) {
-            cfg.stats.extra.forEach(function(x) {
-              var c = x.color || 'blue';
-              // Gunakan nilai total dari backend (prefixed total_) agar akurat untuk seluruh data
-              var val = statsRes['total_' + x.field] != null ? Number(statsRes['total_' + x.field]) : 0;
-              cards += '<div class="flex-1 min-w-[140px] bg-gradient-to-br from-' + c + '-50 to-' + c + '-100/60 rounded-2xl border border-' + c + '-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-' + c + '-700 mb-0.5">' + x.label + '</div><div class="text-xl font-bold text-' + c + '-800">' + fmtNum(val) + '</div></div>';
-            });
-          }
-          contentEl.innerHTML = cards;
-        }
-      } catch (e) {
-        console.warn('Gagal load stats:', e.message);
-      }
-    })();
-  }
+  renderCrudStats(cfg);
 
   const w = document.getElementById('table-wrap');
   if (!rows.length) {
@@ -146,6 +122,7 @@ async function reloadCrud(cfg) {
       let cell = v == null || v === '' ? '-' : v;
       if (f?.badge && v) cell = `<span class="badge ${f.badge[v] || 'bg-stone-100 text-stone-600'}">${v}</span>`;
       else if (f?.fmt === 'idr') cell = `<span class="mono">${fmtIDR(v)}</span>`;
+      else if (f?.type === 'number' && f.inline) cell = inlineNumCell(r.id, k, v, f);
       else if (f?.fmt === 'num') cell = `<span class="mono">${f.decimals != null ? Number(v).toFixed(f.decimals) : fmtNum(v)}</span>`;
       else if (f?.fmt === 'pct') cell = `<span class="mono">${Math.round(v * 100)}</span>%`;
       else if (f?.type === 'date') cell = fmtDate(v);
@@ -164,6 +141,14 @@ async function reloadCrud(cfg) {
     ${headers}<th class="px-4 py-3.5 text-right text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
 
   renderCrudPagination();
+
+  // Inline edit: klik sel angka → langsung ubah tanpa form Edit
+  ensureInlineEditStyles();
+  w.onclick = (ev) => {
+    const t = ev.target.closest('.inline-edit');
+    if (!t || t.dataset.editing === '1') return;
+    startInlineEdit(t);
+  };
 }
 
 function renderCrudPagination() {
@@ -178,6 +163,115 @@ function renderCrudPagination() {
 function crudGoToPage(p) {
   _crudState.page = p;
   reloadCrud(_crudCfg);
+}
+
+// ===== Inline edit angka di tabel (tanpa form Edit) =====
+function ensureInlineEditStyles() {
+  if (document.getElementById('inline-edit-style')) return;
+  const st = document.createElement('style');
+  st.id = 'inline-edit-style';
+  st.textContent = `
+.inline-edit{cursor:pointer;border-radius:6px;padding:2px 4px;transition:background .15s;display:inline-block;line-height:1.4}
+.inline-edit:hover{background:#eff6ff}
+.inline-edit .inline-edit-icon{opacity:0;vertical-align:-2px;margin-left:3px;transition:opacity .15s}
+.inline-edit:hover .inline-edit-icon{opacity:.55}
+.inline-edit.inline-editing{background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.12);border-radius:6px}
+.inline-input{width:76px;text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;padding:3px 6px;border:1.5px solid #bfdbfe;border-radius:6px;background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.15);outline:none}
+.inline-input::-webkit-outer-spin-button,.inline-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+`;
+  document.head.appendChild(st);
+}
+
+function inlineNumCell(id, k, v, f) {
+  const val = v == null || v === '' ? 0 : Number(v);
+  const disp = f.decimals != null ? val.toFixed(f.decimals) : fmtNum(val);
+  return `<span class="mono inline-edit" data-id="${id}" data-field="${k}" data-val="${val}" data-editing="0" title="Klik untuk ubah angka">
+    <span class="inline-edit-val">${disp}</span>
+    <svg class="inline-edit-icon" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+  </span>`;
+}
+
+function renderInlineVal(t, val) {
+  const num = val === '' || val == null ? 0 : Number(val);
+  const f = _crudCfg.fields.find(x => x.k === t.dataset.field);
+  const disp = f && f.decimals != null ? num.toFixed(f.decimals) : fmtNum(num);
+  t.dataset.editing = '0';
+  t.classList.remove('inline-editing');
+  t.innerHTML = `<span class="inline-edit-val">${disp}</span>
+    <svg class="inline-edit-icon" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+}
+
+function startInlineEdit(t) {
+  const id = t.dataset.id;
+  const field = t.dataset.field;
+  const orig = t.dataset.val;
+  t.dataset.editing = '1';
+  t.classList.add('inline-editing');
+  t.innerHTML = `<input type="number" value="${orig}" class="inline-input">`;
+  const inp = t.querySelector('input');
+  inp.focus();
+  inp.select();
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    const raw = inp.value.trim();
+    if (!save || raw === '' || raw === String(orig)) {
+      renderInlineVal(t, orig);
+      return;
+    }
+    // Parsing konsisten dengan form modal: "1.234" (dengan koma) = 1234
+    const num = raw.includes(',') ? Number(raw.replace(/\./g, '').replace(',', '.')) : Number(raw);
+    if (isNaN(num)) {
+      renderInlineVal(t, orig);
+      showToast('Nilai harus angka', 'warning');
+      return;
+    }
+    const payload = {};
+    payload[field] = num;
+    inp.disabled = true;
+    try {
+      await api.put(_crudCfg.endpoint + '/' + id, payload);
+      t.dataset.val = String(num);
+      renderInlineVal(t, num);
+      const row = (window._crudRows || []).find(x => String(x.id) === String(id));
+      if (row) row[field] = num;
+      showToast('Tersimpan', 'success');
+      if (_crudCfg.stats) renderCrudStats(_crudCfg);
+    } catch (e) {
+      renderInlineVal(t, orig);
+      showToast('Gagal menyimpan: ' + (e.message || 'Terjadi kesalahan'), 'error');
+    }
+  };
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') finish(true);
+    else if (e.key === 'Escape') finish(false);
+  });
+  inp.addEventListener('blur', () => finish(true));
+}
+
+async function renderCrudStats(cfg) {
+  if (!cfg || !cfg.stats) return;
+  try {
+    const statsRes = await api.get(cfg.stats.endpoint);
+    const totalVal = Number(statsRes.total) || 0;
+    const contentEl = document.getElementById('crud-stats-content');
+    if (!contentEl) return;
+    var cards = '';
+    var fmt = cfg.stats.format === 'num' ? fmtNum(totalVal) : totalVal;
+    cards += '<div class="flex-1 min-w-[140px] bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">' + cfg.stats.label + '</div><div class="text-xl font-bold text-blue-800">' + fmt + '</div></div>';
+    if (cfg.stats.extra) {
+      cfg.stats.extra.forEach(function(x) {
+        var c = x.color || 'blue';
+        // Gunakan nilai total dari backend (prefixed total_) agar akurat untuk seluruh data
+        var val = statsRes['total_' + x.field] != null ? Number(statsRes['total_' + x.field]) : 0;
+        cards += '<div class="flex-1 min-w-[140px] bg-gradient-to-br from-' + c + '-50 to-' + c + '-100/60 rounded-2xl border border-' + c + '-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-' + c + '-700 mb-0.5">' + x.label + '</div><div class="text-xl font-bold text-' + c + '-800">' + fmtNum(val) + '</div></div>';
+      });
+    }
+    contentEl.innerHTML = cards;
+  } catch (e) {
+    console.warn('Gagal load stats:', e.message);
+  }
 }
 
 function editRow(cfg, row) { openForm(cfg, row); }
