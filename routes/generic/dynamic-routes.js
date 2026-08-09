@@ -333,7 +333,7 @@ function registerDynamicRoutes(router) {
     } else if (kategori) { baseWhere.push('(nama_kelompok LIKE ? OR lokasi LIKE ?)'); const s = `%${kategori}%`; params.push(s, s); }
     const where = baseWhere.join(' AND ');
     const [[row]] = await db.query(
-      `SELECT COALESCE(SUM(paket_besar + paket_besar_utama + paket_kecil + sample + guru_tendik),0) AS total,
+      `SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total,
               COALESCE(SUM(paket_besar),0) AS total_paket_besar,
               COALESCE(SUM(paket_besar_utama),0) AS total_paket_besar_utama,
               COALESCE(SUM(paket_kecil),0) AS total_paket_kecil,
@@ -349,7 +349,7 @@ function registerDynamicRoutes(router) {
       total_paket_kecil: Number(row.total_paket_kecil),
       total_sample: Number(row.total_sample),
       total_guru_tendik: Number(row.total_guru_tendik),
-      total_paket: Number(row.total) // total = seluruh 5 jenis paket (besar, utama, kecil, sample, guru)
+      total_paket: Number(row.total) // total = paket_besar + paket_kecil
     });
   });
 

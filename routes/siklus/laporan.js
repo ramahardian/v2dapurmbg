@@ -191,7 +191,7 @@ router.get('/siklus/laporan/bahan-per-jenjang', async (req, res) => {
   );
 
   const [pmRows] = await db.query(
-    `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang, COALESCE(SUM(paket_besar + paket_besar_utama + paket_kecil + sample + guru_tendik),0) AS total_penerima FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
+    `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang, COALESCE(SUM(paket_besar + paket_kecil),0) AS total_penerima FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
     [req.user.tenant_id]
   );
   const pmByDb = {};
@@ -383,7 +383,7 @@ router.get('/siklus/laporan/siklus-menu', async (req, res) => {
   );
 
   const [pmRows] = await db.query(
-    `SELECT kategori_penerima, COALESCE(SUM(paket_besar + paket_besar_utama + paket_kecil + sample + guru_tendik),0) AS total FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
+    `SELECT kategori_penerima, COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
     [req.user.tenant_id]
   );
   const pmByDb = {};
@@ -531,8 +531,9 @@ router.get('/siklus/:id/laporan/produksi-harian', async (req, res) => {
     const dbToDisplay = buildDbToDisplay();
     const allDbVals = [...new Set(jenjangList.flatMap(j => JENJANG_DB_MAP[j] || Object.entries(JENJANG_DB_MAP).find(([,v]) => v.includes(j))?.[1] || [j]))];
     if (allDbVals.length) {
-      const { totalPmForKategori } = require('./helpers');
-      jumlahPorsi = await totalPmForKategori(req.user.tenant_id, allDbVals);
+      const ph = allDbVals.map(() => '?').join(',');
+      const [[{ total }]] = await db.query(`SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})`, [req.user.tenant_id, ...allDbVals]);
+      jumlahPorsi = Number(total) || 0;
     }
   }
 

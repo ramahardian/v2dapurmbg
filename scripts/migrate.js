@@ -127,17 +127,16 @@ async function runMigration() {
 
   // Kolom Sample & Guru/Tendik di penerima_manfaat (jumlah sampel uji mutu & guru/tendik per kelompok)
   try {
-    const [pmNewCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'penerima_manfaat' AND COLUMN_NAME IN ('sample','guru_tendik','paket_besar_utama')");
+    const [pmNewCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'penerima_manfaat' AND COLUMN_NAME IN ('sample','guru_tendik')");
     const pmExisting = new Set(pmNewCols.map(c => c.COLUMN_NAME));
     const pmAdds = [];
     if (!pmExisting.has('sample')) pmAdds.push('ADD COLUMN sample INT DEFAULT 0 AFTER paket_kecil');
     if (!pmExisting.has('guru_tendik')) pmAdds.push('ADD COLUMN guru_tendik INT DEFAULT 0 AFTER sample');
-    if (!pmExisting.has('paket_besar_utama')) pmAdds.push('ADD COLUMN paket_besar_utama INT DEFAULT 0 AFTER paket_besar');
     if (pmAdds.length) {
       await q('ALTER TABLE penerima_manfaat ' + pmAdds.join(', '));
-      log('✓ Migrasi penerima_manfaat: tambah kolom paket_besar_utama, sample & guru_tendik');
+      log('✓ Migrasi penerima_manfaat: tambah kolom sample & guru_tendik');
     }
-  } catch (e) { log('  (skip migrasi paket_besar_utama/sample/guru_tendik): ' + e.message); }
+  } catch (e) { log('  (skip migrasi sample/guru_tendik): ' + e.message); }
 
   // Migrasi nutrisi bahan_baku
   try {
