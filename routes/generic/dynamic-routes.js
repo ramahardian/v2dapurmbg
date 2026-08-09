@@ -335,7 +335,9 @@ function registerDynamicRoutes(router) {
     const [[row]] = await db.query(
       `SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total,
               COALESCE(SUM(paket_besar),0) AS total_paket_besar,
-              COALESCE(SUM(paket_kecil),0) AS total_paket_kecil
+              COALESCE(SUM(paket_kecil),0) AS total_paket_kecil,
+              COALESCE(SUM(sample),0) AS total_sample,
+              COALESCE(SUM(guru_tendik),0) AS total_guru_tendik
        FROM penerima_manfaat WHERE ${where}`,
       params
     );
@@ -343,6 +345,8 @@ function registerDynamicRoutes(router) {
       total: Number(row.total),
       total_paket_besar: Number(row.total_paket_besar),
       total_paket_kecil: Number(row.total_paket_kecil),
+      total_sample: Number(row.total_sample),
+      total_guru_tendik: Number(row.total_guru_tendik),
       total_paket: Number(row.total) // total = paket_besar + paket_kecil
     });
   });

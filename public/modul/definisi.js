@@ -2,12 +2,14 @@ const MODULES = {
   dashboard: { title: 'Dashboard', sub: 'Ringkasan operasional dapur', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>', render: renderDashboard },
   'dashboard-keuangan': { title: 'Dashboard Keuangan', sub: 'Ringkasan keuangan & transaksi terbaru', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><path d="M12 1l-4 4 4-4z"/></svg>', render: renderDashboardKeuangan },
   'penerima-manfaat': { title: 'Penerima Manfaat', sub: 'Master data kelompok penerima MBG', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-    crud: { endpoint: '/penerima_manfaat', stats: { endpoint: '/penerima_manfaat/total', label: 'Total Penerima', format: 'num', extra: [{ field: 'paket_besar', label: 'Paket Besar', color: 'emerald' },{ field: 'paket_kecil', label: 'Paket Kecil', color: 'amber' },{ field: 'paket', label: 'Total Paket', color: 'violet' }] }, fields: [
+    crud: { endpoint: '/penerima_manfaat', stats: { endpoint: '/penerima_manfaat/total', label: 'Total Penerima', format: 'num', extra: [{ field: 'paket_besar', label: 'Paket Besar', color: 'emerald' },{ field: 'paket_kecil', label: 'Paket Kecil', color: 'amber' },{ field: 'sample', label: 'Sample', color: 'sky' },{ field: 'guru_tendik', label: 'Guru & Tendik', color: 'purple' },{ field: 'paket', label: 'Total Paket', color: 'violet' }] }, fields: [
       { k: 'nama_kelompok', l: 'Nama Kelompok / Sekolah', req: true },
-       { k: 'kategori_penerima', l: 'Jenjang', type: 'select', opts: ['TK/PAUD', 'SD 1-3', 'SD 4-6', 'SMP', 'SMA', 'Ibu Hamil', 'Ibu Menyusui', 'Balita', 'Posyandu'] },
+       { k: 'kategori_penerima', l: 'Jenjang', type: 'select', opts: ['TK/PAUD', 'SD 1-3', 'SD 4-6', 'SMP', 'SMA', 'Ibu Hamil', 'Ibu Menyusui', 'Balita', 'Posyandu', 'SAMPLE', 'GURU & TENDIK'] },
       { k: 'status_kepemilikan', l: 'Status', type: 'select', opts: ['NEGERI', 'SWASTA'] },
       { k: 'paket_besar', l: 'Paket Besar', type: 'number', fmt: 'num' },
       { k: 'paket_kecil', l: 'Paket Kecil', type: 'number', fmt: 'num' },
+      { k: 'sample', l: 'Sample', type: 'number', fmt: 'num' },
+      { k: 'guru_tendik', l: 'Guru & Tendik', type: 'number', fmt: 'num' },
       { k: 'provinsi', l: 'Provinsi' },
       { k: 'kota', l: 'Kota / Kabupaten' },
       { k: 'kecamatan', l: 'Kecamatan' },
@@ -16,7 +18,7 @@ const MODULES = {
       { k: 'nama_kontak', l: 'Nama Kontak' },
       { k: 'email', l: 'Email' },
       { k: 'keterangan', l: 'Keterangan', type: 'textarea' },
-    ], cols: ['nama_kelompok','kategori_penerima','status_kepemilikan','paket_besar','paket_kecil','kota','kecamatan'] }
+    ], cols: ['nama_kelompok','kategori_penerima','status_kepemilikan','paket_besar','paket_kecil','sample','guru_tendik','kota','kecamatan'] }
   },
 
   'bahan-baku': { title: 'Bahan Baku', sub: 'Master bahan baku, harga, & nutrisi', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>', render: renderBahanBaku },

@@ -125,6 +125,9 @@ router.use('/mobile', require('./mobileAbsensi'));
 // Mengimpor dan mendaftarkan router Alternatif Sumber Bahan secara langsung (URL root /)
 router.use(require('./alterBahanSumber'));
 
+// Mengimpor dan mendaftarkan router ALTER tabel Penerima Manfaat secara langsung (URL root /)
+router.use(require('./alterPenerimaManfaat'));
+
 // Mengimpor dan mendaftarkan router Konfigurasi Sistem secara langsung (URL root /)
 router.use(require('./system'));
 
