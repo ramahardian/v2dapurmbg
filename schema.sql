@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS penerima_manfaat (
   kategori_penerima ENUM('TK/PAUD','SD 1-3','SD 4-6','SMP','SMA','Ibu Hamil','Ibu Menyusui','Balita','Posyandu','SAMPLE','GURU & TENDIK') NULL,
   status_kepemilikan ENUM('NEGERI','SWASTA') NULL,
   paket_besar INT DEFAULT 0,
+  paket_besar_utama INT DEFAULT 0 COMMENT 'Paket Besar (Utama)',
   paket_kecil INT DEFAULT 0,
   sample INT DEFAULT 0,
   guru_tendik INT DEFAULT 0,

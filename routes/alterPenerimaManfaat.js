@@ -23,6 +23,7 @@ const KOLOM_WAJIB = [
   ['email', "VARCHAR(100) DEFAULT NULL"],
   ['sample', 'INT DEFAULT 0'],
   ['guru_tendik', 'INT DEFAULT 0'],
+  ['paket_besar_utama', 'INT DEFAULT 0'],
 ];
 
 router.get('/alter-penerima-manfaat', requireRole('admin'), async (req, res) => {
