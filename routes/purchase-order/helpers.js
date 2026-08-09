@@ -50,7 +50,7 @@ function createDbToDisplay() {
 async function loadPmByJenjang(tenantId) {
   const [pmByJenjang] = await db.query(
     `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang,
-            COALESCE(SUM(paket_besar + paket_kecil), 0) AS total_penerima
+            COALESCE(SUM(paket_besar + paket_besar_utama + paket_kecil + sample + guru_tendik), 0) AS total_penerima
      FROM penerima_manfaat WHERE tenant_id=?
      GROUP BY kategori_penerima`,
     [tenantId]

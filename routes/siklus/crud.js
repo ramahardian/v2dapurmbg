@@ -103,14 +103,12 @@ router.get('/siklus', async (req, res) => {
   const allDbVals = [...new Set(allJenjang.flatMap(j => JENJANG_DB_MAP[j] || Object.entries(JENJANG_DB_MAP).find(([,v]) => v.includes(j))?.[1] || [j]))];
   const pmTotalMap = {};
   if (allDbVals.length) {
-    const ph2 = allDbVals.map(() => '?').join(',');
-    const [pmRows] = await db.query(
-      `SELECT kategori_penerima, COALESCE(SUM(paket_besar + paket_kecil),0) AS total
-       FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph2})
-       GROUP BY kategori_penerima`,
-      [req.user.tenant_id, ...allDbVals]
-    );
-    for (const p of pmRows) pmTotalMap[dbToDisplay[p.kategori_penerima] || p.kategori_penerima] = Number(p.total);
+    const { loadPmPerKategori } = require('./helpers');
+    const pmMap = await loadPmPerKategori(req.user.tenant_id, allDbVals);
+    for (const [k, v] of Object.entries(pmMap)) {
+      const display = dbToDisplay[k] || k;
+      pmTotalMap[display] = (pmTotalMap[display] || 0) + v.total;
+    }
   }
 
   for (const s of rows) {

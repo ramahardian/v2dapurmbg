@@ -89,7 +89,9 @@ function buildPmDisplayMaps(pmRows) {
   const pmByDisplayKecil = {};
   for (const p of pmRows || []) {
     const dbJenjang = String(p.jenjang || p.kategori_penerima || '').trim();
-    const besar = Number(p.paket_besar) || 0;
+    // Semua 5 jenis paket dihitung: besar+utama+sample+guru masuk sisi "besar",
+    // kecil sisi "kecil" — konsisten dengan perhitungan budget (5 kolom).
+    const besar = (Number(p.paket_besar) || 0) + (Number(p.paket_besar_utama) || 0) + (Number(p.sample) || 0) + (Number(p.guru_tendik) || 0);
     const kecil = Number(p.paket_kecil) || 0;
     if (isPosyanduKat(dbJenjang)) {
       pmByDisplay['Bumil/Busui'] = (pmByDisplay['Bumil/Busui'] || 0) + besar;
@@ -243,14 +245,7 @@ async function loadMenuBahanByName(itemsBySiklus, tenantId) {
 async function autoHitungPorsi(tenantId, kategori_penerima, jumlah_porsi) {
   const jenjangList = parseKategoriPenerima(kategori_penerima);
   const allDbVals = expandJenjangToDbValues(jenjangList);
-  const porsiFromPm = allDbVals.length ? await (async () => {
-    const ph = allDbVals.map(() => '?').join(',');
-    const [[{ total }]] = await db.query(
-      `SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})`,
-      [tenantId, ...allDbVals]
-    );
-    return Number(total) || 0;
-  })() : 0;
+  const porsiFromPm = await totalPmForKategori(tenantId, allDbVals);
   return (jumlah_porsi || 0) || porsiFromPm;
 }
 
@@ -349,11 +344,70 @@ function rebuildMenuNama(it, gridNamaByHari) {
   }
 }
 
+// ── PM per kategori (5 jenis paket) ─────────────────────────────────
+// Satu sumber kebenaran: jumlah penerima manfaat per kategori_penerima (jenjang).
+// Mencakup KELIMA kolom paket: besar, besar_utama, kecil, sample, guru_tendik.
+async function loadPmPerKategori(tenantId, dbKategoriList) {
+  const map = {};
+  if (!dbKategoriList.length) return map;
+  const ph = dbKategoriList.map(() => '?').join(',');
+  const [rows] = await db.query(
+    `SELECT kategori_penerima,
+            COALESCE(SUM(paket_besar),0) AS besar,
+            COALESCE(SUM(paket_besar_utama),0) AS besar_utama,
+            COALESCE(SUM(paket_kecil),0) AS kecil,
+            COALESCE(SUM(sample),0) AS sample,
+            COALESCE(SUM(guru_tendik),0) AS guru_tendik
+     FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})
+     GROUP BY kategori_penerima`,
+    [tenantId, ...dbKategoriList]
+  );
+  for (const p of rows) {
+    map[p.kategori_penerima] = {
+      besar: Number(p.besar),
+      besar_utama: Number(p.besar_utama),
+      kecil: Number(p.kecil),
+      sample: Number(p.sample),
+      guru_tendik: Number(p.guru_tendik),
+      total: Number(p.besar) + Number(p.besar_utama) + Number(p.kecil) + Number(p.sample) + Number(p.guru_tendik),
+    };
+  }
+  return map;
+}
+
+// Total PM (5 jenis paket) untuk satu/beberapa kategori — jumlah porsi & budget.
+async function totalPmForKategori(tenantId, dbKategoriList) {
+  if (!dbKategoriList.length) return 0;
+  const ph = dbKategoriList.map(() => '?').join(',');
+  const [[{ total }]] = await db.query(
+    `SELECT COALESCE(SUM(paket_besar + paket_besar_utama + paket_kecil + sample + guru_tendik),0) AS total
+     FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})`,
+    [tenantId, ...dbKategoriList]
+  );
+  return Number(total) || 0;
+}
+
+// Hari kerja Senin–Sabtu dalam periode YYYY-MM (dipakai konsisten utk budget).
+function hitungHariKerja(periode) {
+  const [year, month] = String(periode).split('-').map(Number);
+  if (!year || !month) return 0;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let workingDays = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dow = new Date(year, month - 1, d).getDay();
+    if (dow !== 0) workingDays++;
+  }
+  return workingDays;
+}
+
 module.exports = {
   JENJANG_DISPLAY_ORDER,
   JENJANG_DB_MAP,
   KAT_ORDER,
   buildDbToDisplay,
+  loadPmPerKategori,
+  totalPmForKategori,
+  hitungHariKerja,
   computeTanggalSelesai,
   autoArchiveSiklus,
   parseKategoriPenerima,

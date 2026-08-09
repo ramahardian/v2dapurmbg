@@ -36,11 +36,8 @@ async function loadSpData(tenantId, kategoriPenerima) {
       [kategoriPenerima]
     );
     for (const r of spRows) spMap[r.kategori_sp] = Number(r.sp_value);
-    const [pmRow] = await db.query(
-      'SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima=?',
-      [tenantId, kategoriPenerima]
-    );
-    jumlahPorsi = Number(pmRow[0].total);
+    const { totalPmForKategori } = require('../siklus/helpers');
+    jumlahPorsi = await totalPmForKategori(tenantId, [kategoriPenerima]);
   }
   return { spMap, jumlahPorsi };
 }

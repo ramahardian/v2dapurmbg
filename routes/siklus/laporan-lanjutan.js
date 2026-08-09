@@ -93,7 +93,13 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
 
   // PM totals — split paket_besar and paket_kecil
   const [pmRows] = await db.query(
-    `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang, COALESCE(SUM(paket_besar),0) AS paket_besar, COALESCE(SUM(paket_kecil),0) AS paket_kecil FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
+    `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang,
+            COALESCE(SUM(paket_besar),0) AS paket_besar,
+            COALESCE(SUM(paket_besar_utama),0) AS paket_besar_utama,
+            COALESCE(SUM(paket_kecil),0) AS paket_kecil,
+            COALESCE(SUM(sample),0) AS sample,
+            COALESCE(SUM(guru_tendik),0) AS guru_tendik
+     FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
     [req.user.tenant_id]
   );
   // Pecah kategori 'Posyandu' (paket besar = Bumil/Busui, paket kecil = Balita)
@@ -328,7 +334,10 @@ async function buildPerencanaanData({ tenant_id, query }) {
   const [pmRows] = await db.query(
     `SELECT COALESCE(kategori_penerima, 'Lainnya') AS jenjang,
             COALESCE(SUM(paket_besar),0) AS paket_besar,
-            COALESCE(SUM(paket_kecil),0) AS paket_kecil
+            COALESCE(SUM(paket_besar_utama),0) AS paket_besar_utama,
+            COALESCE(SUM(paket_kecil),0) AS paket_kecil,
+            COALESCE(SUM(sample),0) AS sample,
+            COALESCE(SUM(guru_tendik),0) AS guru_tendik
      FROM penerima_manfaat WHERE tenant_id=? GROUP BY kategori_penerima`,
     [tenant_id]
   );

@@ -1,21 +1,11 @@
 const express = require('express');
 const db = require('../../db');
-const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, hitungEstimasiGiziManual, resolveGridBeratPerSiswa } = require('./helpers');
+const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, hitungEstimasiGiziManual, resolveGridBeratPerSiswa, loadPmPerKategori, hitungHariKerja } = require('./helpers');
 const { loadSpRefMap, calculateNutrition } = require('../menu/helpers');
 const { hitungBDD } = require('../../services/spBddCalculator');
 
 const router = express.Router();
 
-function hitungHariKerja(periode) {
-  const [year, month] = periode.split('-').map(Number);
-  const daysInMonth = new Date(year, month, 0).getDate();
-  let workingDays = 0;
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dow = new Date(year, month - 1, d).getDay();
-    if (dow !== 0) workingDays++;
-  }
-  return workingDays;
-}
 
 async function kategoriBudgetSiklus(siklus, tenantId) {
   const jenjangList = parseKategoriPenerima(siklus.kategori_penerima);
@@ -30,31 +20,22 @@ async function kategoriBudgetSiklus(siklus, tenantId) {
     catMap[display].push(dv);
   }
 
-  const ph = dbVals.map(() => '?').join(',');
-  const [pmRows] = await db.query(
-    `SELECT kategori_penerima,
-            COALESCE(SUM(paket_besar),0) AS besar,
-            COALESCE(SUM(paket_kecil),0) AS kecil
-     FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})
-     GROUP BY kategori_penerima`,
-    [tenantId, ...dbVals]
-  );
-  const pmMap = {};
-  for (const p of pmRows) pmMap[p.kategori_penerima] = { besar: Number(p.besar), kecil: Number(p.kecil) };
+  const pmMap = await loadPmPerKategori(tenantId, dbVals);
 
   const siklusPorsi = Number(siklus.jumlah_porsi) || 0;
   const displayList = Object.keys(catMap);
   return displayList.map(display => {
-    let besar = 0, kecil = 0;
+    let besar = 0, besarUtama = 0, kecil = 0, sample = 0, guru = 0;
     for (const dv of catMap[display]) {
       const pm = pmMap[dv];
-      if (pm) { besar += pm.besar; kecil += pm.kecil; }
+      if (pm) { besar += pm.besar; besarUtama += pm.besar_utama; kecil += pm.kecil; sample += pm.sample; guru += pm.guru_tendik; }
     }
-    if (besar + kecil <= 0) {
+    const total = besar + besarUtama + kecil + sample + guru;
+    if (total <= 0) {
       besar = displayList.length ? Math.round(siklusPorsi / displayList.length) : 0;
-      kecil = 0;
+      besarUtama = 0; kecil = 0; sample = 0; guru = 0;
     }
-    return { display, jumlah_penerima: besar + kecil, jumlah_besar: besar, jumlah_kecil: kecil };
+    return { display, jumlah_penerima: total || besar, jumlah_besar: besar, jumlah_besar_utama: besarUtama, jumlah_kecil: kecil, jumlah_sample: sample, jumlah_guru_tendik: guru };
   });
 }
 
@@ -64,10 +45,10 @@ async function refHargaKategori(tenantId, display, periode) {
   const ph = candidates.map(() => '?').join(',');
   const [rows] = await db.query(
     `SELECT harga_besar, harga_kecil, harga_per_porsi FROM budget
-     WHERE tenant_id=? AND kategori_penerima IN (${ph})
+     WHERE tenant_id=? AND kategori_penerima IN (${ph}) AND periode <= ?
      ORDER BY (COALESCE(harga_besar,0) > 0) DESC, (periode = ?) DESC, periode DESC
      LIMIT 1`,
-    [tenantId, ...candidates, periode]
+    [tenantId, ...candidates, periode, periode]
   );
   if (rows.length) {
     const r = rows[0];
@@ -192,7 +173,7 @@ router.post('/siklus/hitung-budget', async (req, res) => {
   let totalBudget = 0, created = 0, updated = 0;
   for (const kat of kategoriList) {
     const harga = await refHargaKategori(req.user.tenant_id, kat.display, periode);
-    const rowTotal = workingDays * (harga.harga_besar * kat.jumlah_besar + harga.harga_kecil * kat.jumlah_kecil);
+    const rowTotal = workingDays * (harga.harga_besar * (kat.jumlah_besar + kat.jumlah_besar_utama + kat.jumlah_sample + kat.jumlah_guru_tendik) + harga.harga_kecil * kat.jumlah_kecil);
     totalBudget += rowTotal;
 
     const [existing] = await db.query(
@@ -201,14 +182,14 @@ router.post('/siklus/hitung-budget', async (req, res) => {
     );
     if (existing.length) {
       await db.query(
-        'UPDATE budget SET jumlah_penerima=?, harga_besar=?, harga_kecil=?, total_budget=? WHERE id=? AND tenant_id=?',
-        [kat.jumlah_penerima, harga.harga_besar, harga.harga_kecil, rowTotal, existing[0].id, req.user.tenant_id]
+        'UPDATE budget SET jumlah_penerima=?, harga_besar=?, harga_kecil=?, harga_per_porsi=?, total_budget=? WHERE id=? AND tenant_id=?',
+        [kat.jumlah_penerima, harga.harga_besar, harga.harga_kecil, harga.harga_besar, rowTotal, existing[0].id, req.user.tenant_id]
       );
       updated++;
     } else {
       await db.query(
-        'INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_besar, harga_kecil, total_budget) VALUES (?,?,?,?,?,?,?)',
-        [req.user.tenant_id, periode, kat.display, kat.jumlah_penerima, harga.harga_besar, harga.harga_kecil, rowTotal]
+        'INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_besar, harga_kecil, harga_per_porsi, total_budget) VALUES (?,?,?,?,?,?,?,?)',
+        [req.user.tenant_id, periode, kat.display, kat.jumlah_penerima, harga.harga_besar, harga.harga_kecil, harga.harga_besar, rowTotal]
       );
       created++;
     }
@@ -246,9 +227,12 @@ router.post('/siklus/hitung-budget-semua', async (req, res) => {
   for (const s of siklusList) {
     const kategoriList = await kategoriBudgetSiklus(s, req.user.tenant_id);
     for (const kat of kategoriList) {
-      if (!agg[kat.display]) agg[kat.display] = { jumlah_besar: 0, jumlah_kecil: 0 };
+      if (!agg[kat.display]) agg[kat.display] = { jumlah_besar: 0, jumlah_besar_utama: 0, jumlah_kecil: 0, jumlah_sample: 0, jumlah_guru_tendik: 0 };
       agg[kat.display].jumlah_besar += kat.jumlah_besar;
+      agg[kat.display].jumlah_besar_utama += kat.jumlah_besar_utama;
       agg[kat.display].jumlah_kecil += kat.jumlah_kecil;
+      agg[kat.display].jumlah_sample += kat.jumlah_sample;
+      agg[kat.display].jumlah_guru_tendik += kat.jumlah_guru_tendik;
     }
   }
 
@@ -256,9 +240,9 @@ router.post('/siklus/hitung-budget-semua', async (req, res) => {
   for (const display of Object.keys(agg)) {
     const kat = agg[display];
     const harga = await refHargaKategori(req.user.tenant_id, display, periode);
-    const rowTotal = workingDays * (harga.harga_besar * kat.jumlah_besar + harga.harga_kecil * kat.jumlah_kecil);
+    const rowTotal = workingDays * (harga.harga_besar * (kat.jumlah_besar + kat.jumlah_besar_utama + kat.jumlah_sample + kat.jumlah_guru_tendik) + harga.harga_kecil * kat.jumlah_kecil);
     totalBudget += rowTotal;
-    const jumlahPenerima = kat.jumlah_besar + kat.jumlah_kecil;
+    const jumlahPenerima = kat.jumlah_besar + kat.jumlah_besar_utama + kat.jumlah_kecil + kat.jumlah_sample + kat.jumlah_guru_tendik;
 
     const [existing] = await db.query(
       'SELECT id FROM budget WHERE tenant_id=? AND periode=? AND kategori_penerima=?',
@@ -266,14 +250,14 @@ router.post('/siklus/hitung-budget-semua', async (req, res) => {
     );
     if (existing.length) {
       await db.query(
-        'UPDATE budget SET jumlah_penerima=?, harga_besar=?, harga_kecil=?, total_budget=? WHERE id=? AND tenant_id=?',
-        [jumlahPenerima, harga.harga_besar, harga.harga_kecil, rowTotal, existing[0].id, req.user.tenant_id]
+        'UPDATE budget SET jumlah_penerima=?, harga_besar=?, harga_kecil=?, harga_per_porsi=?, total_budget=? WHERE id=? AND tenant_id=?',
+        [jumlahPenerima, harga.harga_besar, harga.harga_kecil, harga.harga_besar, rowTotal, existing[0].id, req.user.tenant_id]
       );
       updated++;
     } else {
       await db.query(
-        'INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_besar, harga_kecil, total_budget) VALUES (?,?,?,?,?,?,?)',
-        [req.user.tenant_id, periode, display, jumlahPenerima, harga.harga_besar, harga.harga_kecil, rowTotal]
+        'INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_besar, harga_kecil, harga_per_porsi, total_budget) VALUES (?,?,?,?,?,?,?,?)',
+        [req.user.tenant_id, periode, display, jumlahPenerima, harga.harga_besar, harga.harga_kecil, harga.harga_besar, rowTotal]
       );
       created++;
     }

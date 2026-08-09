@@ -7,7 +7,8 @@ const path = require('path');
 const ExcelJS = require('exceljs');
 const { requireRole } = require('../../middleware/auth');
 const { roleFinance, roleOps } = require('./config');
-const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP } = require('../siklus/helpers');
+const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, loadPmPerKategori, hitungHariKerja } = require('../siklus/helpers');
+const { recalculateRealisasi } = require('../generic/auto-jurnal');
 
 const MONTHS_ID = ['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
 const HARI_ID = ['MINGGU','SENIN','SELASA','RABU','KAMIS','JUMAT','SABTU'];
@@ -66,14 +67,16 @@ function registerRabRoutes(router) {
       const periode = `${filterTahun}-${String(filterBulan).padStart(2, '0')}`;
 
       const [kategoriRows] = await db.query(
-        `SELECT id, kategori_penerima, jumlah_penerima, harga_per_porsi, biaya_operasional, total_budget, realisasi, catatan FROM budget WHERE tenant_id=? AND periode=? ORDER BY kategori_penerima`,
+        `SELECT id, kategori_penerima, jumlah_penerima, harga_per_porsi, harga_besar, harga_kecil, biaya_operasional, total_budget, realisasi, catatan FROM budget WHERE tenant_id=? AND periode=? ORDER BY kategori_penerima`,
         [t, periode]
       );
       detailKategori = kategoriRows.map(r => ({
         id: r.id,
         kategori_penerima: r.kategori_penerima,
         jumlah_penerima: Number(r.jumlah_penerima),
-        harga_per_porsi: Number(r.harga_per_porsi),
+        harga_per_porsi: Number(r.harga_per_porsi) || Number(r.harga_besar) || 0,
+        harga_besar: Number(r.harga_besar) || Number(r.harga_per_porsi) || 0,
+        harga_kecil: Number(r.harga_kecil) || Number(r.harga_per_porsi) || 0,
         biaya_operasional: Number(r.biaya_operasional),
         total_budget: Number(r.total_budget),
         realisasi: Number(r.realisasi),
@@ -178,18 +181,19 @@ function registerRabRoutes(router) {
       if (!periode) return res.status(400).json({ error: 'Periode wajib diisi (YYYY-MM)' });
 
       const [budgetRows] = await db.query(
-        `SELECT id, kategori_penerima, jumlah_penerima, harga_per_porsi, biaya_operasional, total_budget, realisasi, catatan FROM budget WHERE tenant_id=? AND periode=? ORDER BY kategori_penerima`,
+        `SELECT id, kategori_penerima, jumlah_penerima, harga_per_porsi, harga_besar, harga_kecil, biaya_operasional, total_budget, realisasi, catatan FROM budget WHERE tenant_id=? AND periode=? ORDER BY kategori_penerima`,
         [t, periode]
       );
 
-      const [[{ total_hari } = { total_hari: 0 }]] = await db.query(
+      let [[{ total_hari } = { total_hari: 0 }]] = await db.query(
         `SELECT COUNT(DISTINCT tanggal_produksi) as total_hari
          FROM produksi WHERE tenant_id=? AND DATE_FORMAT(tanggal_produksi, '%Y-%m')=?`,
         [t, periode]
       );
+      total_hari = Number(total_hari) || hitungHariKerja(periode);
 
       const [penerima] = await db.query(
-        `SELECT kategori_penerima, SUM(paket_besar + paket_kecil) as total_penerima
+        `SELECT kategori_penerima, SUM(paket_besar + paket_besar_utama + paket_kecil + sample + guru_tendik) as total_penerima
          FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IS NOT NULL
          GROUP BY kategori_penerima ORDER BY kategori_penerima`,
         [t]
@@ -217,16 +221,21 @@ function registerRabRoutes(router) {
       const totalBudget = budgetRows.reduce((s, r) => s + Number(r.total_budget), 0);
       const totalRealisasiBudget = budgetRows.reduce((s, r) => s + Number(r.realisasi), 0);
 
-      const detail = budgetRows.map(b => ({
-        id: b.id,
-        kategori_penerima: b.kategori_penerima,
-        jumlah_penerima: Number(b.jumlah_penerima),
-        harga_per_porsi: Number(b.harga_per_porsi),
-        biaya_operasional: Number(b.biaya_operasional),
-        total_budget: Number(b.total_budget),
-        realisasi_budget: Number(b.realisasi),
-        estimasi_kebutuhan: Number(b.harga_per_porsi) * (Number(b.jumlah_penerima) || 0) * total_hari,
-      }));
+      const detail = budgetRows.map(b => {
+        const hargaEff = Number(b.harga_per_porsi) || Number(b.harga_besar) || 0;
+        return {
+          id: b.id,
+          kategori_penerima: b.kategori_penerima,
+          jumlah_penerima: Number(b.jumlah_penerima),
+          harga_per_porsi: hargaEff,
+          harga_besar: Number(b.harga_besar) || Number(b.harga_per_porsi) || 0,
+          harga_kecil: Number(b.harga_kecil) || Number(b.harga_per_porsi) || 0,
+          biaya_operasional: Number(b.biaya_operasional),
+          total_budget: Number(b.total_budget),
+          realisasi_budget: Number(b.realisasi),
+          estimasi_kebutuhan: hargaEff * (Number(b.jumlah_penerima) || 0) * total_hari,
+        };
+      });
 
       const realisasiDisplay = Object.entries(realisasiKatMap).map(([kategori, total]) => ({
         kategori,
@@ -287,25 +296,26 @@ function registerRabRoutes(router) {
         await db.query(`DELETE FROM budget WHERE tenant_id=? AND periode=?`, [t, periode]);
       }
 
-      const [[{ total_hari } = { total_hari: 0 }]] = await db.query(
+      let [[{ total_hari } = { total_hari: 0 }]] = await db.query(
         `SELECT COUNT(DISTINCT tanggal_produksi) as total_hari
          FROM produksi WHERE tenant_id=? AND DATE_FORMAT(tanggal_produksi, '%Y-%m')=?`,
         [t, periode]
       );
+      total_hari = Number(total_hari) || hitungHariKerja(periode);
 
       const [penerima] = await db.query(
-        `SELECT kategori_penerima, SUM(paket_besar + paket_kecil) as total_penerima
+        `SELECT kategori_penerima, SUM(paket_besar + paket_besar_utama + paket_kecil + sample + guru_tendik) as total_penerima
          FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IS NOT NULL
          GROUP BY kategori_penerima ORDER BY kategori_penerima`,
         [t]
       );
 
       const [hargaReferensi] = await db.query(
-        `SELECT b1.kategori_penerima, b1.harga_per_porsi
+        `SELECT b1.kategori_penerima, COALESCE(b1.harga_per_porsi, b1.harga_besar) as harga_per_porsi
          FROM budget b1
          INNER JOIN (
            SELECT kategori_penerima, MAX(periode) as max_periode
-           FROM budget WHERE tenant_id=? AND periode < ? AND harga_per_porsi > 0
+           FROM budget WHERE tenant_id=? AND periode < ? AND COALESCE(harga_per_porsi, harga_besar) > 0
            GROUP BY kategori_penerima
          ) b2 ON b1.kategori_penerima = b2.kategori_penerima AND b1.periode = b2.max_periode`,
         [t, periode]
@@ -412,13 +422,16 @@ function registerRabRoutes(router) {
           total_hari = siklus_hari || 0;
         }
       }
+      if (!total_hari) total_hari = hitungHariKerja(periode);
 
       const dbToDisplay = buildDbToDisplay();
 
       let penerima;
       const penerimaQuery = `SELECT kategori_penerima,
-        SUM(paket_besar) as total_besar, SUM(paket_kecil) as total_kecil,
-        SUM(paket_besar + paket_kecil) as total_penerima
+        SUM(paket_besar) as total_besar, SUM(paket_besar_utama) as total_besar_utama,
+        SUM(paket_kecil) as total_kecil, SUM(sample) as total_sample,
+        SUM(guru_tendik) as total_guru_tendik,
+        SUM(paket_besar + paket_besar_utama + paket_kecil + sample + guru_tendik) as total_penerima
         FROM penerima_manfaat WHERE tenant_id=?`;
       if (siklusInfo && siklusInfo.kategori_penerima) {
         const katList = parseKategoriPenerima(siklusInfo.kategori_penerima);
@@ -541,15 +554,18 @@ function registerRabRoutes(router) {
         if (rawKat === 'Posyandu') {
           // Gabung Posyandu jadi satu baris: hitung rata-rata tertimbang harga besar & kecil
           const totalBesar = Number(p.total_besar) || 0;
+          const totalBesarUtama = Number(p.total_besar_utama) || 0;
           const totalKecil = Number(p.total_kecil) || 0;
-          const totalPenerima = totalBesar + totalKecil;
+          const totalSample = Number(p.total_sample) || 0;
+          const totalGuru = Number(p.total_guru_tendik) || 0;
+          const totalPenerima = totalBesar + totalBesarUtama + totalKecil + totalSample + totalGuru;
           if (!totalPenerima) continue;
 
           const hargaBesar = hargaBesarMap['Bumil/Busui'] || hargaBesarMap['Posyandu'] || 0;
           const hargaKecil = hargaKecilMap['Balita'] || hargaKecilMap['Posyandu'] || 0;
 
           // Weighted average harga per porsi (pembulatan ke rupiah terdekat)
-          const hargaRata = Math.round((hargaBesar * totalBesar + hargaKecil * totalKecil) / totalPenerima);
+          const hargaRata = Math.round((hargaBesar * (totalBesar + totalBesarUtama + totalSample + totalGuru) + hargaKecil * totalKecil) / totalPenerima);
 
           // Gabung budget & realisasi dari sub-kategori + entri ber-kategori 'Posyandu'
           const budgetGabung = (budgetMap['Bumil/Busui'] || 0) + (budgetMap['Balita'] || 0) + (budgetMap['Posyandu'] || 0);
@@ -572,10 +588,13 @@ function registerRabRoutes(router) {
           const hargaBesar = hargaBesarMap[kategori] || 0;
           const hargaKecil = hargaKecilMap[kategori] || 0;
           const totalBesar = Number(p.total_besar) || 0;
+          const totalBesarUtama = Number(p.total_besar_utama) || 0;
           const totalKecil = Number(p.total_kecil) || 0;
+          const totalSample = Number(p.total_sample) || 0;
+          const totalGuru = Number(p.total_guru_tendik) || 0;
           const jmlPenerima = Number(p.total_penerima);
           const jmlHari = total_hari || 0;
-          const total = (hargaBesar * totalBesar + hargaKecil * totalKecil) * jmlHari;
+          const total = (hargaBesar * (totalBesar + totalBesarUtama + totalSample + totalGuru) + hargaKecil * totalKecil) * jmlHari;
           grandPenerima += jmlPenerima;
           grandTotal += total;
           rows.push({
@@ -640,22 +659,12 @@ function registerRabRoutes(router) {
 
         // Get PM counts for each jenjang
         const allDbVals = expandJenjangToDbValues(siklusKat);
-        const pmMap = {};
-        if (allDbVals.length) {
-          const ph = allDbVals.map(() => '?').join(',');
-          const [pmRows] = await db.query(
-            `SELECT kategori_penerima, COALESCE(SUM(paket_besar + paket_kecil),0) AS total
-             FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})
-             GROUP BY kategori_penerima`,
-            [t, ...allDbVals]
-          );
-          for (const p of pmRows) pmMap[p.kategori_penerima] = Number(p.total);
-        }
+        const pmMap = allDbVals.length ? await loadPmPerKategori(t, allDbVals) : {};
 
         // Calculate total porsi and aggregate bahan per jenjang
         for (const kat of displayKats) {
           const dbKeys = Object.keys(pmMap).filter(k => (dbToDisplay[k] || k) === kat);
-          const totalPm = dbKeys.reduce((s, k) => s + (pmMap[k] || 0), 0) || Number(siklusInfo?.jumlah_porsi || 0) || 1;
+          const totalPm = dbKeys.reduce((s, k) => s + (pmMap[k]?.total || 0), 0) || Number(siklusInfo?.jumlah_porsi || 0) || 1;
 
           const hariData = [];
           const allBahanAgg = {}; // aggregate bahan across all days
@@ -732,42 +741,30 @@ function registerRabRoutes(router) {
         return res.status(400).json({ error: 'Periode wajib diisi (YYYY-MM)' });
       }
 
-      const [rows] = await db.query(
-        `SELECT DATE_FORMAT(tanggal, '%Y-%m') AS periode,
-                COALESCE(SUM(jumlah),0) AS total_keluar
-         FROM kas_bank
-         WHERE tenant_id=? AND tipe='keluar'
-           AND DATE_FORMAT(tanggal, '%Y-%m')=?
-         GROUP BY DATE_FORMAT(tanggal, '%Y-%m')`,
+      const [[{ totalRealisasi } = { totalRealisasi: 0 }]] = await db.query(
+        `SELECT COALESCE(SUM(jumlah),0) AS totalRealisasi
+         FROM kas_bank WHERE tenant_id=? AND tipe='keluar'
+           AND DATE_FORMAT(tanggal, '%Y-%m')=?`,
         [t, periode]
       );
-
-      const totalRealisasi = rows.length > 0 ? Number(rows[0].total_keluar) : 0;
 
       const [budgetItems] = await db.query(
         `SELECT id FROM budget WHERE tenant_id=? AND periode=?`,
         [t, periode]
       );
 
-      if (budgetItems.length === 0) {
-        return res.json({ message: 'Tidak ada budget untuk periode ' + periode, updated: 0, totalRealisasi });
-      }
-
-      const perItem = Math.round(totalRealisasi / budgetItems.length);
-      for (const item of budgetItems) {
-        await db.query(
-          `UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?`,
-          [perItem, item.id, t]
-        );
-      }
+      // Pakai logika proporsional yang SAMA dengan tombol "Hitung Ulang Realisasi"
+      // di halaman Budgeting (recalculateRealisasi):
+      // realisasi = totalKas × (total_budget_entry / Σ total_budget periode).
+      const updated = await recalculateRealisasi(t);
 
       res.json({
-        message: 'Realisasi berhasil dihitung',
+        message: 'Realisasi berhasil dihitung (proporsional per bobot budget)',
         periode,
-        totalRealisasi,
+        totalRealisasi: Number(totalRealisasi),
         item_count: budgetItems.length,
-        per_item: perItem,
-        updated: budgetItems.length,
+        per_item: budgetItems.length ? Math.round(Number(totalRealisasi) / budgetItems.length) : 0,
+        updated,
       });
     } catch (err) {
       console.error('RAB hitung realisasi error:', err);
@@ -785,40 +782,15 @@ function registerRabRoutes(router) {
         [t]
       );
 
-      let totalUpdated = 0;
-      const results = [];
-
-      for (const { periode } of periodeList) {
-        const [[{ totalRealisasi } = { totalRealisasi: 0 }]] = await db.query(
-          `SELECT COALESCE(SUM(jumlah),0) AS totalRealisasi
-           FROM kas_bank WHERE tenant_id=? AND tipe='keluar'
-             AND DATE_FORMAT(tanggal, '%Y-%m')=?`,
-          [t, periode]
-        );
-
-        const [budgetItems] = await db.query(
-          `SELECT id FROM budget WHERE tenant_id=? AND periode=?`,
-          [t, periode]
-        );
-
-        if (budgetItems.length > 0) {
-          const perItem = Math.round(Number(totalRealisasi) / budgetItems.length);
-          for (const item of budgetItems) {
-            await db.query(
-              `UPDATE budget SET realisasi=? WHERE id=? AND tenant_id=?`,
-              [perItem, item.id, t]
-            );
-          }
-          totalUpdated += budgetItems.length;
-          results.push({ periode, realisasi: totalRealisasi, items: budgetItems.length });
-        }
-      }
+      // Pakai logika proporsional yang SAMA dengan recalculateRealisasi (auto-jurnal.js)
+      // agar semua tombol menghasilkan angka realisasi yang konsisten.
+      const totalUpdated = await recalculateRealisasi(t);
 
       res.json({
-        message: 'Semua realisasi berhasil dihitung ulang',
+        message: 'Semua realisasi berhasil dihitung ulang (proporsional per bobot budget)',
         total_updated: totalUpdated,
-        total_periode: results.length,
-        results,
+        total_periode: periodeList.length,
+        results: periodeList.map(p => ({ periode: p.periode })),
       });
     } catch (err) {
       console.error('RAB hitung realisasi semua error:', err);
@@ -946,17 +918,7 @@ function registerRabRoutes(router) {
       // Get PM counts per jenjang
       const siklusKat = siklusInfo ? parseKategoriPenerima(siklusInfo.kategori_penerima || '') : [];
       const allDbVals = expandJenjangToDbValues(siklusKat);
-      const pmMap = {};
-      if (allDbVals.length) {
-        const ph = allDbVals.map(() => '?').join(',');
-        const [pmRows] = await db.query(
-          `SELECT kategori_penerima, COALESCE(SUM(paket_besar + paket_kecil),0) AS total
-           FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})
-           GROUP BY kategori_penerima`,
-          [t, ...allDbVals]
-        );
-        for (const p of pmRows) pmMap[p.kategori_penerima] = Number(p.total);
-      }
+      const pmMap = allDbVals.length ? await loadPmPerKategori(t, allDbVals) : {};
 
       // Load bahan for all menus
       const bahanByMenu = {};
@@ -990,7 +952,7 @@ function registerRabRoutes(router) {
 
       for (const mi of menuItems) {
         const dbKeys = Object.keys(pmMap).filter(k => (dbToDisplay[k] || k) === displayKats[0]);
-        const totalPm = dbKeys.reduce((s, k) => s + (pmMap[k] || 0), 0) || Number(siklusInfo?.jumlah_porsi || 0) || 1;
+        const totalPm = dbKeys.reduce((s, k) => s + (pmMap[k]?.total || 0), 0) || Number(siklusInfo?.jumlah_porsi || 0) || 1;
         const porsi = Number(mi.jumlah_porsi) || totalPm;
 
         const mid = effMenuId(mi);
@@ -1539,11 +1501,12 @@ function registerRabRoutes(router) {
         [t, periode]
       );
 
-      const [[{ total_hari } = { total_hari: 0 }]] = await db.query(
+      let [[{ total_hari } = { total_hari: 0 }]] = await db.query(
         `SELECT COUNT(DISTINCT tanggal_produksi) as total_hari
          FROM produksi WHERE tenant_id=? AND DATE_FORMAT(tanggal_produksi, '%Y-%m')=?`,
         [t, periode]
       );
+      total_hari = Number(total_hari) || hitungHariKerja(periode);
 
       const [realisasiPerKat] = await db.query(
         `SELECT kategori, SUM(jumlah) as total
@@ -1711,7 +1674,7 @@ function registerRabRoutes(router) {
 
       // 2. Penerima manfaat
       const [penerima] = await db.query(
-        `SELECT kategori_penerima, SUM(paket_besar + paket_kecil) as total_penerima
+        `SELECT kategori_penerima, SUM(paket_besar + paket_besar_utama + paket_kecil + sample + guru_tendik) as total_penerima
          FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IS NOT NULL
          GROUP BY kategori_penerima`,
         [t]
