@@ -147,4 +147,251 @@ function registerSyncKoperasiRoutes(router) {
   });
 }
 
-module.exports = { registerSyncKoperasiRoutes };
+// ─── RIWAYAT DAPUR (invoice / pesanan koperasi) ─────────────────────
+// Endpoint GET /purchase_order/riwayat-koperasi mengambil riwayat
+// invoice/pesanan dari API koperasi (riwayat_dapur.php) yang mendukung
+// filter: jenis, nama_dapur, tanggal_awal, tanggal_akhir, id_unit_dapur.
+const KOPERASI_RIWAYAT_API_URL = process.env.KOPERASI_RIWAYAT_API_URL || 'https://koperasi.mealify.id/api/riwayat_dapur.php';
+
+// Kunci kandidat nomor invoice pada respons riwayat dapur
+const KEYS_NO_INVOICE_RIWAYAT = ['no_invoice', 'no_dokumen', 'no_invoice_koperasi', 'nomor_invoice'];
+
+// Normalisasi respons riwayat_dapur.php menjadi array record seragam.
+// Respons berbentuk:
+//   { status, last_sync, dapur, filter, ringkasan,
+//     data: { pesanan: [], invoice_manual: [] }, riwayat: [] }
+function normalizeRiwayatRecords(data) {
+  let raw = [];
+  if (data && Array.isArray(data.riwayat)) {
+    raw = data.riwayat;
+  } else if (data && data.data) {
+    const pesanan = Array.isArray(data.data.pesanan) ? data.data.pesanan : [];
+    const invoice = Array.isArray(data.data.invoice_manual) ? data.data.invoice_manual : [];
+    raw = pesanan.concat(invoice);
+  }
+
+  return raw.map(rec => ({
+    jenis: rec.jenis || 'pesanan',
+    id: rec.id,
+    no_invoice: getStr(rec, KEYS_NO_INVOICE_RIWAYAT),
+    no_dokumen: rec.no_dokumen || null,
+    no_po: getStr(rec, ['no_po', 'no_po_dapur', 'kode_po_dapur']),
+    kode_pesanan: getStr(rec, ['kode_pesanan', 'nomor_pesanan']),
+    id_pesanan: rec.id_pesanan != null ? rec.id_pesanan : null,
+    penerima: rec.penerima || rec.nama_dapur || null,
+    alamat_penerima: rec.alamat_penerima || null,
+    nama_perusahaan: rec.nama_perusahaan || null,
+    nama_driver: rec.nama_driver || null,
+    no_kendaraan: rec.no_kendaraan || null,
+    tanggal: rec.tanggal || null,
+    status: rec.status || null,
+    total: Number(rec.total != null ? rec.total : (rec.total_nilai || 0)),
+    keterangan: rec.keterangan || null,
+    created_at: rec.created_at || null,
+    jumlah_item: Number(rec.jumlah_item != null ? rec.jumlah_item : (Array.isArray(rec.detail) ? rec.detail.length : 0)),
+    detail: Array.isArray(rec.detail) ? rec.detail.map(d => ({
+      nama_barang: d.nama_barang || d.nama || '-',
+      qty: d.kuantitas != null ? d.kuantitas : (d.qty || 0),
+      satuan: d.satuan || '',
+      harga_satuan: d.harga_satuan != null ? d.harga_satuan : (d.harga || 0),
+      subtotal: d.subtotal || 0,
+    })) : [],
+  }));
+}
+
+// Susun query string filter (hanya field yang terisi)
+function buildRiwayatQuery(q) {
+  const params = new URLSearchParams();
+  const KEYS = ['jenis', 'nama_dapur', 'tanggal_awal', 'tanggal_akhir', 'id_unit_dapur', 'limit'];
+  for (const k of KEYS) {
+    const v = q[k];
+    if (v !== undefined && v !== null && String(v).trim() !== '') params.set(k, String(v).trim());
+  }
+  const s = params.toString();
+  return s ? '?' + s : '';
+}
+
+async function fetchRiwayatKoperasi(filters) {
+  const url = KOPERASI_RIWAYAT_API_URL + buildRiwayatQuery(filters);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error('Gagal mengambil data dari API riwayat dapur (HTTP ' + response.status + ')');
+  }
+  return response.json();
+}
+
+function registerRiwayatKoperasiRoutes(router) {
+  // ===== TAMPILKAN RIWAYAT INVOICE / PESANAN DARI KOPERASI =====
+  // GET /purchase_order/riwayat-koperasi?jenis=invoice&nama_dapur=Dapur%20Pusat&tanggal_awal=2026-08-01&tanggal_akhir=2026-08-31&id_unit_dapur=1
+  router.get('/purchase_order/riwayat-koperasi', async (req, res) => {
+    try {
+      const data = await fetchRiwayatKoperasi(req.query);
+      const records = normalizeRiwayatRecords(data);
+      res.json({
+        ok: true,
+        total: records.length,
+        last_sync: data.last_sync || null,
+        dapur: data.dapur || null,
+        filter: data.filter || null,
+        ringkasan: data.ringkasan || null,
+        records,
+      });
+    } catch (e) {
+      console.error('Ambil riwayat koperasi error:', e);
+      res.status(502).json({ error: 'Gagal ambil riwayat koperasi: ' + e.message });
+    }
+  });
+
+  // ===== SINKRON NOMOR INVOICE DARI RIWAYAT KE PO LOKAL =====
+  // POST /purchase_order/riwayat-koperasi/sync  (body: filter sama seperti di atas)
+  router.post('/purchase_order/riwayat-koperasi/sync', async (req, res) => {
+    try {
+      const t = req.user.tenant_id;
+      const filters = Object.assign({}, req.body || {}, req.query);
+      const data = await fetchRiwayatKoperasi(filters);
+      const records = normalizeRiwayatRecords(data);
+
+      const updated = [];
+      for (const rec of records) {
+        const noInvoice = rec.no_invoice;
+        const noPo = rec.no_po;
+        if (!noInvoice && !noPo) continue;
+
+        // Match PO lokal via no_invoice_koperasi
+        let [[po]] = await db.query(
+          'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_invoice_koperasi=?',
+          [t, noInvoice]
+        );
+        // Fallback match via no_po lokal (nomor PO dapur yang tersimpan di koperasi)
+        if (!po && noPo) {
+          [[po]] = await db.query(
+            'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_po=?',
+            [t, noPo]
+          );
+        }
+        if (!po) continue;
+
+        await db.query(
+          'UPDATE purchase_order SET no_invoice_koperasi=COALESCE(?, no_invoice_koperasi), no_po_koperasi=COALESCE(?, no_po_koperasi) WHERE id=? AND tenant_id=?',
+          [noInvoice, rec.kode_pesanan || null, po.id, t]
+        );
+        updated.push({ id: po.id, no_po: po.no_po, no_invoice_koperasi: noInvoice });
+      }
+
+      res.json({
+        ok: true,
+        total: records.length,
+        updated: updated.length,
+        detail: updated,
+        message: updated.length + ' PO diupdate dari riwayat koperasi',
+      });
+    } catch (e) {
+      console.error('Sinkron riwayat koperasi error:', e);
+      res.status(502).json({ error: 'Gagal sinkron riwayat koperasi: ' + e.message });
+    }
+  });
+
+  // ===== IMPOR DOKUMEN RIWAYAT KE LIST PEMBELIAN (purchase_order) =====
+  // POST /purchase_order/riwayat-koperasi/import (body: filter sama seperti GET)
+  // Membuat record purchase_order BARU untuk setiap invoice/pesanan riwayat yang
+  // belum tersimpan, sehingga tampil di list /pembelian. Idempotent — dokumen
+  // yang sudah ada (via no_invoice_koperasi / no_po_koperasi) dilewati.
+  router.post('/purchase_order/riwayat-koperasi/import', async (req, res) => {
+    try {
+      const t = req.user.tenant_id;
+      const filters = Object.assign({}, req.body || {}, req.query);
+      const data = await fetchRiwayatKoperasi(filters);
+      const records = normalizeRiwayatRecords(data);
+
+      const imported = [];
+      const skipped = [];
+
+      for (const rec of records) {
+        const noInvoice = rec.no_invoice;
+        const kodePesanan = rec.kode_pesanan;
+
+        // Identitas dokumen untuk dedup sekaligus no_po lokal
+        const ident = noInvoice || kodePesanan;
+        if (!ident) {
+          skipped.push({ id: rec.id, alasan: 'tanpa nomor invoice / kode pesanan' });
+          continue;
+        }
+
+        // Cek sudah tersimpan? (via no_invoice_koperasi, no_po_koperasi, atau no_po lokal)
+        let ada = null;
+        if (noInvoice) {
+          [[ada]] = await db.query(
+            'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_invoice_koperasi=? LIMIT 1',
+            [t, noInvoice]
+          );
+        }
+        if (!ada && kodePesanan) {
+          [[ada]] = await db.query(
+            'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_po_koperasi=? LIMIT 1',
+            [t, kodePesanan]
+          );
+        }
+        // Pesanan dari koperasi membawa nomor PO lokal — jangan duplikat PO yang sudah ada
+        if (!ada && rec.no_po) {
+          [[ada]] = await db.query(
+            'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_po=? LIMIT 1',
+            [t, rec.no_po]
+          );
+        }
+        if (ada) {
+          skipped.push({ id: rec.id, no_po: ada.no_po, alasan: 'sudah tersimpan di sistem' });
+          continue;
+        }
+
+        // Susun item JSON (bentuk sama dengan item PO lain di sistem)
+        const items = (rec.detail || []).map(d => ({
+          nama: d.nama_barang || '-',
+          qty: Number(d.qty) || 0,
+          satuan: d.satuan || '',
+          harga: Number(d.harga_satuan) || 0,
+          subtotal: Number(d.subtotal) || 0,
+        }));
+        const totalNilai = Number(rec.total) || items.reduce((s, i) => s + i.subtotal, 0);
+        const catatan = ((rec.keterangan ? rec.keterangan + '\n' : '') +
+          '[Impor dari riwayat koperasi: ' + (noInvoice || kodePesanan) + ']').trim();
+        const noPoLokal = String(ident).slice(0, 50);
+
+        const [ins] = await db.query(
+          `INSERT INTO purchase_order
+             (tenant_id, no_po, no_po_koperasi, no_invoice_koperasi, tanggal,
+              supplier_nama, item, total_nilai, status, unit_dapur, catatan)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?)`,
+          [
+            t,
+            noPoLokal,
+            kodePesanan || null,
+            noInvoice || null,
+            rec.tanggal || new Date().toISOString().slice(0, 10),
+            rec.nama_perusahaan || 'KOPERASI',
+            JSON.stringify(items),
+            totalNilai,
+            rec.penerima || null,
+            catatan,
+          ]
+        );
+
+        imported.push({ id: ins.insertId, no_po: noPoLokal, no_invoice: noInvoice, kode_pesanan: kodePesanan });
+      }
+
+      res.json({
+        ok: true,
+        total: records.length,
+        imported: imported.length,
+        skipped: skipped.length,
+        detail: imported,
+        skipped_detail: skipped,
+        message: imported.length + ' dokumen disimpan ke list pembelian' + (skipped.length ? ', ' + skipped.length + ' dilewati (sudah ada / tanpa nomor)' : ''),
+      });
+    } catch (e) {
+      console.error('Impor riwayat koperasi error:', e);
+      res.status(502).json({ error: 'Gagal impor riwayat koperasi: ' + e.message });
+    }
+  });
+}
+
+module.exports = { registerSyncKoperasiRoutes, registerRiwayatKoperasiRoutes };

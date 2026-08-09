@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS tenants (
   plan ENUM('free','pro','enterprise') DEFAULT 'free',
   is_active TINYINT(1) DEFAULT 1,
   saldo_awal DECIMAL(15,2) DEFAULT 0,
+  koperasi_id_unit_dapur VARCHAR(20) DEFAULT NULL,
+  koperasi_nama_dapur VARCHAR(200) DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 

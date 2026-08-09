@@ -497,6 +497,36 @@ router.put('/system/kop-surat', requireRole('admin'), async (req, res) => {
   }
 });
 
+// GET/PUT /system/koperasi — identitas unit dapur di sistem koperasi
+// (id_unit_dapur & nama_dapur). Dipakai sebagai default filter Riwayat
+// Koperasi dan pengiriman PO ke koperasi.
+router.get('/system/koperasi', async (req, res) => {
+  try {
+    const [[t]] = await db.query('SELECT koperasi_id_unit_dapur, koperasi_nama_dapur FROM tenants WHERE id=?', [req.user.tenant_id]);
+    if (!t) return res.status(404).json({ error: 'Tenant tidak ditemukan' });
+    res.json({
+      id_unit_dapur: t.koperasi_id_unit_dapur || '',
+      nama_dapur: t.koperasi_nama_dapur || '',
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.put('/system/koperasi', requireRole('admin'), async (req, res) => {
+  try {
+    const { id_unit_dapur, nama_dapur } = req.body || {};
+    await db.query('UPDATE tenants SET koperasi_id_unit_dapur=?, koperasi_nama_dapur=? WHERE id=?', [
+      String(id_unit_dapur || '').trim(),
+      String(nama_dapur || '').trim(),
+      req.user.tenant_id
+    ]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /system/backup — unduh backup database sebagai file .sql
 router.get('/system/backup', requireRole('admin'), async (req, res) => {
   try {

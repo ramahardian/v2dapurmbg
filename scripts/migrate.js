@@ -386,6 +386,16 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi telepon tenants)'); }
 
+  // koperasi_id_unit_dapur & koperasi_nama_dapur di tenants — identitas dapur di sistem koperasi
+  // (dipakai default filter Riwayat Koperasi & kirim PO ke koperasi)
+  try {
+    const [kopCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tenants' AND COLUMN_NAME = 'koperasi_id_unit_dapur'");
+    if (!kopCols.length) {
+      await q("ALTER TABLE tenants ADD COLUMN koperasi_id_unit_dapur VARCHAR(20) DEFAULT NULL AFTER telepon, ADD COLUMN koperasi_nama_dapur VARCHAR(200) DEFAULT NULL AFTER koperasi_id_unit_dapur");
+      log('✓ Migrasi tenants: tambah kolom koperasi_id_unit_dapur + koperasi_nama_dapur');
+    }
+  } catch (e) { log('  (skip migrasi koperasi dapur): ' + e.message); }
+
   // shift_divisi
   try {
     await q(`CREATE TABLE IF NOT EXISTS shift_divisi (

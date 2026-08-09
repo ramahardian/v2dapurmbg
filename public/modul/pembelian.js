@@ -393,6 +393,7 @@ async function renderPoView() {
         </button>
         <button id="po-from-siklus-btn" class="h-11 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all">+ Buat dari Siklus</button>
         <button id="po-sync-koperasi-btn" class="h-11 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all" title="Tarik nomor PO/Invoice dari koperasi">Sinkron dari Koperasi</button>
+        <button id="po-riwayat-btn" class="h-11 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all" title="Lihat riwayat invoice/pesanan dari koperasi (riwayat_dapur.php)">Riwayat Koperasi</button>
       </div>
       <div class="relative">
         <input id="po-search" placeholder="Cari PO..." class="w-56 h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
@@ -406,6 +407,7 @@ async function renderPoView() {
   document.getElementById('po-add-btn').onclick = () => openPembelianForm(null);
   document.getElementById('po-from-siklus-btn').onclick = openSiklusPicker;
   document.getElementById('po-sync-koperasi-btn').onclick = syncDariKoperasi;
+  document.getElementById('po-riwayat-btn').onclick = bukaRiwayatKoperasi;
 
   document.getElementById('po-search').oninput = function() {
     const q = this.value.toLowerCase();
@@ -522,7 +524,8 @@ async function terimaPo(poId) {
 }
 
 async function kirimKeKoperasi(po) {
-  let id_unit_dapur = localStorage.getItem('koperasi_id_unit_dapur');
+  const setting = await muatKoperasiSetting();
+  let id_unit_dapur = setting.id_unit_dapur;
   if (!id_unit_dapur) {
     id_unit_dapur = prompt('Masukkan ID Unit Dapur di sistem Koperasi:');
     if (!id_unit_dapur) return;
@@ -535,7 +538,7 @@ async function kirimKeKoperasi(po) {
 
   const payload = {
     id_unit_dapur: Number(id_unit_dapur),
-    nama_dapur: po.unit_dapur || '',
+    nama_dapur: setting.nama_dapur || po.unit_dapur || '',
     supplier_name: po.supplier_nama || '',
     no_po: po.no_po || '',
     tanggal_pesanan: po.tanggal,
@@ -1061,4 +1064,265 @@ function updateMenuPoSelection() {
   if (allEl) allEl.checked = cbs.length > 0 && checked.length === cbs.length;
   const btn = document.getElementById('confirm-create-po');
   if (btn) btn.textContent = 'Buat PO Terpilih (' + checked.length + ')';
+}
+
+// ==================== RIWAYAT KOPERASI (riwayat_dapur.php) ====================
+
+// Baca identitas dapur di sistem koperasi (nama dapur & ID unit dapur) yang
+// tersimpan per-tenant di database. Fallback: localStorage (ID saja).
+// HTML info status pengaturan dapur (dipakai di modal Riwayat Koperasi)
+function koperasiSettingInfoHtml(idUnit, namaDapur) {
+  if (!idUnit && !namaDapur) {
+    return '<div id="rw-setting-info" class="text-[11px] text-stone-400">Belum ada pengaturan dapur tersimpan — klik "Simpan Dapur" agar nama & ID dapur terisi otomatis.</div>';
+  }
+  return '<div id="rw-setting-info" class="text-[11px] text-emerald-600 bg-emerald-50 rounded-lg px-3 py-2">Tersimpan di sistem: <strong>' + escHtml(namaDapur || '-') + '</strong>' + (idUnit ? ' (id unit ' + escHtml(idUnit) + ')' : '') + '</div>';
+}
+
+// Normalisasi ID unit dapur: "001" → "1" agar konsisten di semua alur
+function normalizeIdUnitDapur(v) {
+  const s = String(v || '').trim();
+  if (/^\d+$/.test(s)) return String(parseInt(s, 10));
+  return s;
+}
+
+async function muatKoperasiSetting() {
+  const setting = {
+    id_unit_dapur: localStorage.getItem('koperasi_id_unit_dapur') || '',
+    nama_dapur: '',
+  };
+  try {
+    const d = await api.get('/system/koperasi');
+    if (d) {
+      if (d.id_unit_dapur) setting.id_unit_dapur = d.id_unit_dapur;
+      if (d.nama_dapur) setting.nama_dapur = d.nama_dapur;
+    }
+  } catch { /* fallback ke localStorage */ }
+  return setting;
+}
+
+async function simpanKoperasiSetting() {
+  const idUnit = normalizeIdUnitDapur(document.getElementById('rw-id-unit').value);
+  const namaDapur = document.getElementById('rw-nama-dapur').value.trim();
+  if (!idUnit && !namaDapur) { showAlert('Isi minimal salah satu: ID Unit Dapur atau Nama Dapur', 'warning'); return; }
+  try {
+    await api.put('/system/koperasi', { id_unit_dapur: idUnit, nama_dapur: namaDapur });
+    if (idUnit) localStorage.setItem('koperasi_id_unit_dapur', idUnit);
+    const infoEl = document.getElementById('rw-setting-info');
+    if (infoEl) infoEl.outerHTML = koperasiSettingInfoHtml(idUnit, namaDapur);
+    showToast('✅ Identitas dapur tersimpan di sistem', 'success');
+  } catch (e) {
+    let msg = e.message || 'Error';
+    if (/(column|ER_BAD_FIELD|Unknown)/i.test(msg)) msg += ' — jalankan migrasi dulu (Admin > /api/migrate/run)';
+    showAlert('Gagal simpan: ' + msg, 'error');
+  }
+}
+
+async function bukaRiwayatKoperasi() {
+  const setting = await muatKoperasiSetting();
+  const idUnit = setting.id_unit_dapur;
+  const namaDapur = setting.nama_dapur;
+
+  document.getElementById('modal-title').textContent = 'Riwayat Invoice Koperasi';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="space-y-4">
+      <div class="flex items-start gap-2.5 bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-800">
+        <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <div>
+          <div class="font-semibold">Riwayat dari sistem koperasi</div>
+          <div class="text-[10px] text-indigo-600 mt-0.5">Data diambil dari <span class="mono">/api/riwayat_dapur.php</span> (filter: jenis, nama dapur, rentang tanggal, id unit dapur). "Simpan ke List Pembelian" menyimpan dokumen sebagai PO baru di list /pembelian; "Sinkronkan ke PO Lokal" hanya mengisi nomor invoice di PO yang sudah ada.</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Jenis</label>
+          <select id="rw-jenis" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+            <option value="semua">Semua</option>
+            <option value="invoice">Invoice</option>
+            <option value="pesanan">Pesanan</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">ID Unit Dapur</label>
+          <input id="rw-id-unit" type="number" min="1" value="${idUnit}" placeholder="contoh: 1" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        </div>
+        <div class="col-span-2">
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Dapur</label>
+          <input id="rw-nama-dapur" value="${escHtml(namaDapur)}" placeholder="contoh: Dapur Pusat" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Awal</label>
+          <input id="rw-tgl-awal" type="date" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Akhir</label>
+          <input id="rw-tgl-akhir" type="date" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button onclick="muatRiwayatKoperasi()" class="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Muat Riwayat
+        </button>
+        ${(typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin') ? `<button onclick="simpanKoperasiSetting()" class="h-10 px-4 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-sm font-semibold transition-all" title="Simpan nama & ID unit dapur sebagai default di sistem ini (khusus admin)">💾 Simpan Dapur</button>` : ''}
+        <span class="text-[11px] text-stone-400">Filter yang kosong tidak dikirim ke API koperasi.</span>
+      </div>
+      ${koperasiSettingInfoHtml(setting.id_unit_dapur, setting.nama_dapur)}
+      <div id="rw-result" class="text-sm text-stone-500">Isi filter (opsional) lalu klik "Muat Riwayat" untuk menarik data invoice/pesanan dari koperasi.</div>
+    </div>`;
+
+  document.getElementById('modal-save').style.display = 'none';
+  document.getElementById('modal-save').onclick = null;
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modal').classList.add('flex');
+}
+
+async function muatRiwayatKoperasi() {
+  const qs = new URLSearchParams(bacaFilterRiwayat()).toString();
+  const resultEl = document.getElementById('rw-result');
+  resultEl.innerHTML = '<div class="text-center py-8 text-stone-500">⏳ Mengambil riwayat dari koperasi...</div>';
+  try {
+    const data = await api.get('/purchase_order/riwayat-koperasi' + (qs ? '?' + qs : ''));
+    tampilRiwayatKoperasi(data);
+  } catch (e) {
+    resultEl.innerHTML = '<div class="text-red-700 bg-red-50 p-3 rounded text-sm">Gagal: ' + escHtml(e.message || 'Terjadi kesalahan') + '</div>';
+  }
+}
+
+// Baca nilai filter dari form modal riwayat (dipakai untuk GET maupun POST sync)
+function bacaFilterRiwayat() {
+  const filter = {};
+  const jenis = document.getElementById('rw-jenis').value;
+  if (jenis) filter.jenis = jenis;
+  const idUnit = document.getElementById('rw-id-unit').value.trim();
+  if (idUnit) filter.id_unit_dapur = idUnit;
+  const namaDapur = document.getElementById('rw-nama-dapur').value.trim();
+  if (namaDapur) filter.nama_dapur = namaDapur;
+  const tglAwal = document.getElementById('rw-tgl-awal').value;
+  if (tglAwal) filter.tanggal_awal = tglAwal;
+  const tglAkhir = document.getElementById('rw-tgl-akhir').value;
+  if (tglAkhir) filter.tanggal_akhir = tglAkhir;
+  return filter;
+}
+
+function tampilRiwayatKoperasi(data) {
+  const records = data.records || [];
+  const resultEl = document.getElementById('rw-result');
+
+  if (!records.length) {
+    resultEl.innerHTML = '<div class="text-stone-400 text-center py-10 text-sm">Tidak ada riwayat invoice/pesanan untuk filter tersebut.</div>';
+    return;
+  }
+
+  const totalNilai = records.reduce((s, r) => s + (Number(r.total) || 0), 0);
+  const ringkasan = data.ringkasan || {};
+  const extraMeta = (data.last_sync ? '<span class="text-[10px] text-indigo-400">Sinkron terakhir: ' + escHtml(data.last_sync) + '</span>' : '') +
+    ((ringkasan.total_pesanan != null || ringkasan.total_invoice_manual != null) ? '<span class="text-[10px] text-indigo-400">Ringkasan: ' + Number(ringkasan.total_pesanan || 0) + ' pesanan, ' + Number(ringkasan.total_invoice_manual || 0) + ' invoice manual</span>' : '');
+
+  resultEl.innerHTML = `
+    <div class="rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+      <div class="px-4 py-3 bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-indigo-100 flex flex-wrap items-center justify-between gap-2 text-xs text-indigo-800">
+        <span class="font-semibold">${records.length} dokumen</span>
+        <span class="font-semibold mono">Total: ${fmtIDR(totalNilai)}</span>
+        ${extraMeta}
+      </div>
+      <div class="px-4 py-2.5 bg-white border-b border-stone-100 flex flex-wrap items-center gap-2">
+        <button id="rw-impor-btn" onclick="imporRiwayatKoperasi()" class="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5" title="Simpan semua dokumen di hasil ini sebagai PO baru di list /pembelian (yang sudah tersimpan dilewati)">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Simpan ke List Pembelian
+        </button>
+        <span class="text-[10px] text-stone-400">Menyimpan ${records.length} dokumen sebagai PO baru (status Draft) — aman diulang, yang sudah tersimpan otomatis dilewati.</span>
+      </div>
+      <div class="overflow-x-auto max-h-[45vh] overflow-y-auto"><table class="w-full">
+        <thead class="sticky top-0 bg-white z-10"><tr class="border-b border-stone-100">
+          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">No Invoice</th>
+          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Tanggal</th>
+          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Penerima</th>
+          <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Item</th>
+          <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Total</th>
+          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Status</th>
+          <th class="text-center px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Detail</th>
+        </tr></thead>
+        <tbody>
+          ${records.map((r, i) => `
+            <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors cursor-pointer" onclick="toggleRiwayatDetail(${i})">
+              <td class="px-4 py-3 text-xs font-semibold text-stone-700">${escHtml(r.no_invoice || '-')}</td>
+              <td class="px-4 py-3 text-xs text-stone-600">${r.tanggal ? fmtDate(r.tanggal) : '-'}</td>
+              <td class="px-4 py-3 text-xs text-stone-600">${escHtml(r.penerima || '-')}</td>
+              <td class="px-4 py-3 text-xs text-right text-stone-600">${r.jumlah_item}</td>
+              <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(r.total)}</td>
+              <td class="px-4 py-3 text-xs"><span class="inline-block px-2.5 py-0.5 text-[10px] font-semibold rounded-lg bg-stone-100 text-stone-700">${escHtml(r.status || '-')}</span></td>
+              <td class="px-4 py-3 text-center"><span class="text-indigo-600 text-xs font-medium">Detail ▾</span></td>
+            </tr>
+            <tr id="rw-detail-${i}" class="hidden bg-stone-50/70">
+              <td colspan="7" class="px-4 py-3">
+                <div class="text-[10px] text-stone-400 mb-2 flex flex-wrap gap-x-3 gap-y-1">
+                  <span>No Dokumen: <span class="mono">${escHtml(r.no_dokumen || '-')}</span></span>
+                  ${r.no_po ? '<span>No PO: <span class="mono">' + escHtml(r.no_po) + '</span></span>' : ''}
+                  ${r.no_kendaraan ? '<span>Kendaraan: ' + escHtml(r.no_kendaraan) + '</span>' : ''}
+                  ${r.nama_driver ? '<span>Driver: ' + escHtml(r.nama_driver) + '</span>' : ''}
+                </div>
+                ${r.detail && r.detail.length ? `<div class="overflow-x-auto"><table class="w-full">
+                  <thead><tr class="border-b border-stone-200">
+                    <th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Barang</th>
+                    <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Qty</th>
+                    <th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Satuan</th>
+                    <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Harga</th>
+                    <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Subtotal</th>
+                  </tr></thead>
+                  <tbody>
+                    ${r.detail.map(d => `<tr class="border-b border-stone-100/60">
+                      <td class="px-3 py-2 text-xs text-stone-700">${escHtml(d.nama_barang)}</td>
+                      <td class="px-3 py-2 text-xs text-right mono text-stone-600">${escHtml(d.qty != null ? d.qty : 0)}</td>
+                      <td class="px-3 py-2 text-xs text-stone-500">${escHtml(d.satuan)}</td>
+                      <td class="px-3 py-2 text-xs text-right mono text-stone-600">${fmtIDR(d.harga_satuan)}</td>
+                      <td class="px-3 py-2 text-xs text-right mono font-medium text-stone-700">${fmtIDR(d.subtotal)}</td>
+                    </tr>`).join('')}
+                  </tbody>
+                </table></div>` : '<div class="text-xs text-stone-400">Tidak ada detail item.</div>'}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+
+  const saveBtn = document.getElementById('modal-save');
+  saveBtn.style.display = 'inline-block';
+  saveBtn.textContent = 'Sinkronkan ke PO Lokal';
+  saveBtn.onclick = syncRiwayatKoperasi;
+}
+
+async function imporRiwayatKoperasi() {
+  const nDokumen = document.querySelectorAll('#rw-result tbody tr[onclick^="toggleRiwayatDetail"]').length;
+  if (!await showConfirm('Simpan ' + (nDokumen || 'semua') + ' dokumen riwayat ini ke sistem sebagai Purchase Order baru (list /pembelian)? Dokumen yang sudah tersimpan akan dilewati.', 'Simpan', 'Batal')) return;
+  const btn = document.getElementById('rw-impor-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Menyimpan...'; }
+  try {
+    const result = await api.post('/purchase_order/riwayat-koperasi/import', bacaFilterRiwayat());
+    const msg = result.message || (result.imported + ' dokumen disimpan');
+    showToast('✅ ' + msg, result.imported > 0 ? 'success' : 'info');
+    closeModal();
+    renderPembelianPage('po');
+  } catch (e) {
+    showAlert('Gagal simpan: ' + (e.message || 'Error'), 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Simpan ke List Pembelian'; }
+  }
+}
+
+function toggleRiwayatDetail(idx) {
+  const el = document.getElementById('rw-detail-' + idx);
+  if (el) el.classList.toggle('hidden');
+}
+
+async function syncRiwayatKoperasi() {
+  if (!await showConfirm('Sinkronkan nomor invoice dari riwayat koperasi ke PO lokal yang cocok (dipasangkan via no_invoice_koperasi atau no_po)?', 'Sinkronkan', 'Batal')) return;
+  const body = bacaFilterRiwayat();
+  try {
+    const result = await api.post('/purchase_order/riwayat-koperasi/sync', body);
+    const msg = result.message || (result.updated + ' PO diupdate');
+    showToast('✅ ' + msg + (result.total != null ? ' (dari ' + result.total + ' dokumen riwayat)' : ''), result.updated > 0 ? 'success' : 'info');
+    closeModal();
+    renderPembelianPage('po');
+  } catch (e) {
+    showAlert('Gagal sinkron: ' + (e.message || 'Error'), 'error');
+  }
 }
