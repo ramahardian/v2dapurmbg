@@ -34,16 +34,16 @@ function formatItems(aggMap, idKoperasiMap, bufferPersenMap) {
         qty = qty / 1000;
         satuan = 'kg';
       } else {
-        if (b.non_gram && b.total_porsi > 0) {
+        const perUnitBerat = Number(b.berat_per_satuan) > 0 ? Number(b.berat_per_satuan) : 0;
+        if (perUnitBerat > 0) {
+          // Ada berat per satuan → konversi kebutuhan gram ke jumlah satuan unit
+          qty = Math.round(qty / perUnitBerat);
+        } else if (b.non_gram && b.total_porsi > 0) {
+          // Tanpa berat per satuan → fallback hitung per porsi
           qty = b.total_porsi;
         } else {
-          const perUnitBerat = Number(b.berat_per_satuan) > 0 ? Number(b.berat_per_satuan) : 0;
-          if (perUnitBerat > 0) {
-            qty = Math.round(qty / perUnitBerat);
-          } else {
-            qty = Math.round(qty / 1000 * 100) / 100;
-            satuan = 'kg';
-          }
+          qty = Math.round(qty / 1000 * 100) / 100;
+          satuan = 'kg';
         }
       }
 
