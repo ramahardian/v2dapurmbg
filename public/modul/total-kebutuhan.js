@@ -350,9 +350,12 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       var kategoriSp = b.kategori_sp || '';
       var hargaSatuan = Number(b.harga_satuan) || 0;
       var beratPerSatuan = Number(b.berat_per_satuan) || 0;
-      // Tanda merah: harga belum diisi, atau bahan bersatuan unit (pcs/btl/renceng) yang berat_per_satuan-nya masih kosong
-      var butuhBeratSatuan = isSatuanHitung(String(satuan || '').toLowerCase()) && !beratPerSatuan;
+      // Tanda merah: harga belum diisi, atau bahan bersatuan unit (pcs/btl/renceng)
+      // yang tidak punya berat per satuan efektif (default minyak-karton 11000g tidak dihitung kurang)
+      var bpsEfektif = beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
+      var butuhBeratSatuan = isSatuanHitung(String(satuan || '').toLowerCase()) && bpsEfektif <= 0;
       var kekuranganHargaBerat = !hargaSatuan || butuhBeratSatuan;
+      var ketKurang = (!hargaSatuan && butuhBeratSatuan) ? 'Harga & Berat kosong' : (!hargaSatuan ? 'Harga kosong' : 'Berat per satuan kosong');
       var qty = autoQty(satuan, bufferKg, rowSiswa, kategoriSp, beratPerSatuan);
       var parsed = parseTkQtySatuan(qty);
       if (parsed.qty <= 0) continue;
@@ -369,7 +372,8 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
         harga: hargaSatuan,
         jumlah: jumlah,
         ket: b.keterangan || '',
-        kekurangan: kekuranganHargaBerat
+        kekurangan: kekuranganHargaBerat,
+        ketKurang: ketKurang
       });
     }
 
@@ -471,7 +475,7 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
       html += '<td class="px-3 py-3 text-xs font-medium ' + (r.kekurangan ? 'text-red-700' : 'text-stone-700') + '">' + escHtmlTk(r.uraian);
       if (r.kekurangan) {
         var editHref = r.bahanBakuId ? "onclick=\"tkEditBahanBaku(" + r.bahanBakuId + ")\"" : '';
-        html += ' <span ' + editHref + ' class="inline-block ml-1 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap cursor-pointer" title="Klik untuk melengkapi harga & berat di master Bahan Baku">Harga &amp; Berat kosong</span>';
+        html += ' <span ' + editHref + ' class="inline-block ml-1 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap cursor-pointer" title="Klik untuk melengkapi di master Bahan Baku">' + escHtmlTk(r.ketKurang || 'Data belum lengkap') + '</span>';
       }
       html += '</td>';
       html += '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700">' + r.qty + '</td>';
