@@ -89,6 +89,16 @@ async function renderBahanBaku() {
   await loadSpRefMap();
   await loadBahanBaku();
 
+  // Jika datang dari total-kebutuhan (?edit=ID), buka form edit bahan tersebut otomatis
+  const editId = new URLSearchParams(location.search).get('edit');
+  if (editId) {
+    try {
+      const r = await api.get('/bahan_baku?id=' + encodeURIComponent(editId));
+      const list = Array.isArray(r) ? r : (r.data || []);
+      if (list.length) editBahanBaku(list[0]);
+    } catch (e) { console.log('Auto-open edit bahan:', e.message); }
+  }
+
   showToast('Daftar bahan baku sedang diperbarui...', 'success');
   syncBahanBaku();
   bahanSyncInterval = setInterval(syncBahanBaku, BAHAN_SYNC_INTERVAL_MS);

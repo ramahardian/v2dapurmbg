@@ -363,6 +363,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       rows.push({
         no: no,
         uraian: b.nama_display || b.nama,
+        bahanBakuId: Number(b.bahan_baku_id) || 0,
         qty: fmtTkNum(parsed.qty),
         satuan: parsed.satuan,
         harga: hargaSatuan,
@@ -469,7 +470,8 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
       html += '<td class="px-2 py-3 text-center text-xs text-stone-500">' + r.no + '</td>';
       html += '<td class="px-3 py-3 text-xs font-medium ' + (r.kekurangan ? 'text-red-700' : 'text-stone-700') + '">' + escHtmlTk(r.uraian);
       if (r.kekurangan) {
-        html += ' <span class="inline-block ml-1 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap" title="Harga satuan & berat per satuan belum diisi di master Bahan Baku">Harga &amp; Berat kosong</span>';
+        var editHref = r.bahanBakuId ? "onclick=\"tkEditBahanBaku(" + r.bahanBakuId + ")\"" : '';
+        html += ' <span ' + editHref + ' class="inline-block ml-1 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap cursor-pointer" title="Klik untuk melengkapi harga & berat di master Bahan Baku">Harga &amp; Berat kosong</span>';
       }
       html += '</td>';
       html += '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700">' + r.qty + '</td>';
@@ -538,6 +540,12 @@ function parseTkQtySatuan(str) {
 
 function fmtTkRp(v) {
   return 'Rp ' + Number(v || 0).toLocaleString('id-ID');
+}
+
+// Arahkan dari total-kebutuhan ke halaman edit master bahan baku yang harga/beratnya belum lengkap
+function tkEditBahanBaku(id) {
+  if (!id) return;
+  navigate('bahan-baku?edit=' + id);
 }
 
 function fmtTkTanggalPanjang(tanggal, hariNama) {

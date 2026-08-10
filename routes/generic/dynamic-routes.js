@@ -106,6 +106,11 @@ function registerDynamicRoutes(router) {
       if (req.query.sumber === 'koperasi' && table === 'bahan_baku') {
         whereClause += ' AND id_koperasi IS NOT NULL';
       }
+      // Filter by id (dipakai total-kebutuhan untuk mengarahkan ke edit master bahan)
+      if (req.query.id) {
+        whereClause += ' AND id=?';
+        params.push(req.query.id);
+      }
 
       // Hitung total sebelum pagination
       const countFrom = table === 'distribusi' ? `${table} d` : table === 'penerimaan_barang' ? `${table} pb` : table;
