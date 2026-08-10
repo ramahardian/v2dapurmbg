@@ -16,6 +16,7 @@ const BAHAN_BAKU_CRUD_BASE = {
     { k: 'stok_saat_ini', l: 'Stok Saat Ini', type: 'number', fmt: 'num', group: 'harga_stok' },
     { k: 'stok_minimum', l: 'Stok Minimum', type: 'number', fmt: 'num', group: 'harga_stok' },
     { k: 'berat_per_satuan', l: 'Berat per Satuan (gram)', type: 'number', fmt: 'num', desc: 'Isi jika satuan bukan gram (misal 1 pcs = 50g, 1 ikat = 30g)', group: 'info' },
+    { k: 'buffer_persen', l: 'Buffer (%)', type: 'number', fmt: 'num', info: 'Cadangan belanja (0-10). Menambah QTY di halaman Total Kebutuhan — isi 0 jika ingin QTY sama dengan jumlah porsi.', group: 'harga_stok' },
     { k: 'kalori', l: 'Energi (kkal)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
     { k: 'protein', l: 'Protein (g)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
     { k: 'lemak', l: 'Lemak (g)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
