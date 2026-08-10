@@ -904,20 +904,15 @@ function tkIsSatuanHitung(s) {
 }
 function tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) {
   const b = Number(beratPerSatuan) || 0;
+  if (b > 0) return b;
   if (String(kategoriSp || '').toLowerCase() === 'minyak') {
     const s = String(satuan || '').toLowerCase();
-    if ((s === 'karton' || s === 'ctn' || s === 'kardus' || s === 'dus') && b > 0) return b;
-    return 11000;
+    if (s === 'karton' || s === 'ctn' || s === 'kardus' || s === 'dus') return 11000;
   }
-  return b;
+  return 0;
 }
 function tkAutoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
   const s = String(satuan || 'kg').toLowerCase();
-  if (String(kategoriSp || '').toLowerCase() === 'minyak') {
-    if (!totalKg || totalKg <= 0) return '';
-    const bps = tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
-    return Math.ceil((totalKg * 1000) / bps) + ' karton';
-  }
   if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
     if (s === 'kg') return Math.ceil(totalKg) + ' kg';
     return Math.ceil(totalKg * 1000) + ' g';
@@ -926,6 +921,7 @@ function tkAutoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
     const bps = tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
     if (bps > 0 && totalKg > 0) return Math.ceil((totalKg * 1000) / bps) + ' ' + s;
     if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') return '';
+    if (totalKg > 0) return Math.ceil(totalKg * 1000) + ' g';
     return (Math.ceil(jumlahSiswa) || 0) + ' ' + s;
   }
   return '';

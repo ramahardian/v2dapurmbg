@@ -288,36 +288,33 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
   // Berat isi per satuan efektif — bila kosong, minyak dikarton diasumsikan 6x2L / 12x1L ≈ 12 L ≈ 11 kg
   function beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) {
     var b = Number(beratPerSatuan) || 0;
+    if (b > 0) return b;
     if (String(kategoriSp || '').toLowerCase() === 'minyak') {
       var s = String(satuan || '').toLowerCase();
-      if ((s === 'karton' || s === 'ctn' || s === 'kardus' || s === 'dus') && b > 0) return b;
-      return 11000;
+      // Minyak dalam karton/dus tanpa berat_per_satuan → asumsi 11 kg/karton
+      if (s === 'karton' || s === 'ctn' || s === 'kardus' || s === 'dus') return 11000;
     }
-    if (b > 0) return b;
     return 0;
   }
 
   function autoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
     var s = String(satuan || 'kg').toLowerCase();
-    // Minyak selalu dinyatakan per karton untuk kebutuhan PR/PO ke supplier
-    if (String(kategoriSp || '').toLowerCase() === 'minyak') {
-      if (!totalKg || totalKg <= 0) return '';
-      var bps = beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
-      return Math.ceil((totalKg * 1000) / bps) + ' karton';
-    }
     if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
       // Bahan berat → dibulatkan ke atas agar aman untuk belanja
       if (s === 'kg') return Math.ceil(totalKg) + ' kg';
       return Math.ceil(totalKg * 1000) + ' g'; // satuan gram
     }
     if (isSatuanHitung(s)) {
-      // Bahan kemasan besar (karton/kardus/dus/ctn) wajib punya berat_per_satuan — tanpa itu biarkan kosong agar diisi manual
       var bps = beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
+      // Ada berat per satuan & ada kebutuhan nyata → konversi ke satuan unit
       if (bps > 0 && totalKg > 0) {
         return Math.ceil((totalKg * 1000) / bps) + ' ' + s;
       }
+      // Kemasan besar tanpa berat_per_satuan → biarkan kosong agar diisi manual
       if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') return '';
-      // Bahan satuan lain → pakai jumlah siswa (porsi)
+      // Bahan satuan unit tanpa berat_per_satuan → tampilkan kebutuhan asli dalam gram (jangan pakai jumlah porsi),
+      // agar tidak menghasilkan angka belanja keliru; baris tetap ditandai merah.
+      if (totalKg > 0) return Math.ceil(totalKg * 1000) + ' g';
       return (Math.ceil(jumlahSiswa) || 0) + ' ' + s;
     }
     return '';
@@ -353,8 +350,9 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       var kategoriSp = b.kategori_sp || '';
       var hargaSatuan = Number(b.harga_satuan) || 0;
       var beratPerSatuan = Number(b.berat_per_satuan) || 0;
-      // Tanda merah: bahan baku sudah masuk total kebutuhan tapi harga & berat belum diisi di master
-      var kekuranganHargaBerat = !hargaSatuan && !beratPerSatuan;
+      // Tanda merah: harga belum diisi, atau bahan bersatuan unit (pcs/btl/renceng) yang berat_per_satuan-nya masih kosong
+      var butuhBeratSatuan = isSatuanHitung(String(satuan || '').toLowerCase()) && !beratPerSatuan;
+      var kekuranganHargaBerat = !hargaSatuan || butuhBeratSatuan;
       var qty = autoQty(satuan, bufferKg, rowSiswa, kategoriSp, beratPerSatuan);
       var parsed = parseTkQtySatuan(qty);
       if (parsed.qty <= 0) continue;
@@ -399,7 +397,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     html += '<li><strong>HARGA</strong> = harga satuan dari master Bahan Baku (bahan_baku.harga_satuan).</li>';
     html += '<li><strong>JUMLAH</strong> = QTY × HARGA.</li>';
     html += '<li><strong>KETERANGAN</strong> = instruksi bahan (mis. Potong 10, Fillet) dari resep menu.</li>';
-    html += '<li><strong>Baris merah</strong> = bahan baku sudah masuk total kebutuhan tapi <em>harga satuan</em> dan <em>berat per satuan</em> di master Bahan Baku masih kosong — wajib diisi agar QTY &amp; JUMLAH akurat.</li>';
+    html += '<li><strong>Baris merah</strong> = bahan baku sudah masuk total kebutuhan tapi <em>harga satuan</em> belum diisi, atau bahan bersatuan unit (pcs/btl/renceng) yang <em>berat per satuan</em>-nya masih kosong di master Bahan Baku — wajib dilengkapi agar QTY &amp; JUMLAH akurat.</li>';
     html += '<li>Kebutuhan sudah termasuk <em>buffer</em> 1-10% (jika ada). Angka memakai pembulatan ke atas agar aman.</li>';
     html += '</ul></div>';
   }
