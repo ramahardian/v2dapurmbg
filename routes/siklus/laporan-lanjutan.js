@@ -900,7 +900,7 @@ router.get('/siklus/laporan/kebutuhan-pangan/export', async (req, res) => {
  */
 function tkIsSatuanHitung(s) {
   const t = String(s || '').toLowerCase();
-  return ['pcs', 'btl', 'renceng', 'ctn', 'karton', 'kardus', 'dus', 'pack', 'ikat', 'ekor', 'butir', 'bungkus'].includes(t);
+  return ['pcs', 'btl', 'botol', 'renceng', 'ctn', 'karton', 'kardus', 'dus', 'pack', 'ikat', 'ekor', 'butir', 'bungkus'].includes(t);
 }
 function tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) {
   const b = Number(beratPerSatuan) || 0;

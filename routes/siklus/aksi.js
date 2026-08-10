@@ -329,7 +329,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
       const bahanRows = menuBahanMap[it.menu_id] || [];
       for (const br of bahanRows) {
         if (!bahanTotal[br.bahan_baku_id]) {
-          bahanTotal[br.bahan_baku_id] = { nama: br.nama, satuan: br.satuan, total: 0, harga_satuan: Number(br.harga_satuan) || 0, buffer_persen: Number(br.buffer_persen) || 0 };
+          bahanTotal[br.bahan_baku_id] = { nama: br.nama, satuan: br.satuan, total: 0, harga_satuan: Number(br.harga_satuan) || 0, buffer_persen: Number(br.buffer_persen) || 0, berat_per_satuan: Number(br.berat_per_satuan) || 0 };
         }
         const dailyNeed = hitungBDD(Number(br.jumlah) * porsiPerHari, br.persen_bdd);
         bahanTotal[br.bahan_baku_id].total += dailyNeed * workingDays;
@@ -340,7 +340,7 @@ router.post('/siklus/buat-pr', async (req, res) => {
     const gridBahan = gridBahanBySiklus[s.id] || [];
     for (const g of gridBahan) {
       if (!bahanTotal[g.bahan_baku_id]) {
-        bahanTotal[g.bahan_baku_id] = { nama: g.nama || '(bahan dihapus)', satuan: g.satuan || 'g', total: 0, harga_satuan: 0, buffer_persen: Number(g.buffer_persen) || 0 };
+        bahanTotal[g.bahan_baku_id] = { nama: g.nama || '(bahan dihapus)', satuan: g.satuan || 'g', total: 0, harga_satuan: 0, buffer_persen: Number(g.buffer_persen) || 0, berat_per_satuan: Number(g.berat_per_satuan) || 0 };
       }
       const dailyNeed = hitungBDD(Number(g.berat_1_sp || 0) * porsiPerHari, g.persen_bdd);
       bahanTotal[g.bahan_baku_id].total += dailyNeed * workingDays;
@@ -351,29 +351,47 @@ router.post('/siklus/buat-pr', async (req, res) => {
   const bahanIds = Object.keys(bahanTotal).map(Number);
   if (bahanIds.length) {
     const ph = bahanIds.map(() => '?').join(',');
-    const [bahanRefs] = await db.query(`SELECT id, id_koperasi, COALESCE(buffer_persen, 10) AS buffer_persen FROM bahan_baku WHERE id IN (${ph}) AND tenant_id=?`, [...bahanIds, req.user.tenant_id]);
+    const [bahanRefs] = await db.query(`SELECT id, id_koperasi, satuan, COALESCE(buffer_persen, 10) AS buffer_persen, COALESCE(berat_per_satuan, 0) AS berat_per_satuan FROM bahan_baku WHERE id IN (${ph}) AND tenant_id=?`, [...bahanIds, req.user.tenant_id]);
     for (const ref of bahanRefs) {
       if (bahanTotal[ref.id]) {
         bahanTotal[ref.id].id_koperasi = ref.id_koperasi;
         bahanTotal[ref.id].buffer_persen = Number(ref.buffer_persen) || 10;
+        if (!bahanTotal[ref.id].satuan) bahanTotal[ref.id].satuan = ref.satuan || 'g';
+        if (!bahanTotal[ref.id].berat_per_satuan) bahanTotal[ref.id].berat_per_satuan = Number(ref.berat_per_satuan) || 0;
       }
     }
   }
 
-  // Build PR items array
+  // Build PR items array — konversi kebutuhan gram → satuan beli (kg/botol/karton/pcs)
+  const gramSatuan = ['g', 'gr', 'gram', 'kg'];
   const items = Object.entries(bahanTotal)
     .filter(([, v]) => v.total > 0)
     .map(([id, v]) => {
       const buffer = 1 + (v.buffer_persen / 100);
       const kebutuhanDenganBuffer = Math.round(v.total * buffer);
-      const kg = v.satuan === 'Kg' || v.satuan === 'kg' ? kebutuhanDenganBuffer / 1000 : kebutuhanDenganBuffer;
-      const subTotal = kg * v.harga_satuan;
-      const qtyBuffer = Math.round(kg * 100) / 100;
+      const satuanLower = String(v.satuan || '').toLowerCase();
+      const isGram = gramSatuan.includes(satuanLower);
+      let qtyBeli, satuanBeli;
+      if (isGram) {
+        qtyBeli = Math.round((kebutuhanDenganBuffer / 1000) * 100) / 100;
+        satuanBeli = 'kg';
+      } else {
+        const bps = Number(v.berat_per_satuan) || 0;
+        if (bps > 0) {
+          qtyBeli = Math.ceil(kebutuhanDenganBuffer / bps);
+          satuanBeli = v.satuan || 'unit';
+        } else {
+          qtyBeli = Math.round((kebutuhanDenganBuffer / 1000) * 100) / 100;
+          satuanBeli = 'kg';
+        }
+      }
+      const subTotal = qtyBeli * v.harga_satuan;
+      const qtyBuffer = Math.round(qtyBeli * 100) / 100;
       return {
         bahan_baku_id: Number(id),
         nama: v.nama,
-        satuan: v.satuan,
-        total_qty: Math.round(kebutuhanDenganBuffer * 100) / 100,
+        satuan: satuanBeli,
+        total_qty: qtyBuffer,
         buffer_10: qtyBuffer,
         harga_satuan: v.harga_satuan,
         subtotal: Math.round(subTotal),

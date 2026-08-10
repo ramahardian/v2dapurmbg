@@ -1024,6 +1024,7 @@ function registerRabRoutes(router) {
             satuan: br.satuan || 'g',
             jumlah_per_porsi: Number(br.jumlah) || 0,
             harga_satuan: Number(br.harga_satuan) || 0,
+            berat_per_satuan: Number(br.berat_per_satuan) || 0,
             keterangan: br.keterangan || '',
           });
         }
@@ -1055,6 +1056,7 @@ function registerRabRoutes(router) {
               total_gram: 0,
               total_kg: 0,
               harga_satuan: b.harga_satuan,
+              berat_per_satuan: b.berat_per_satuan,
               total_harga: 0,
               keterangan: b.keterangan || '',
             };
@@ -1071,16 +1073,38 @@ function registerRabRoutes(router) {
         .map(b => {
           no++;
           // Determine display qty and unit - convert to KG if gram >= 1000, else keep as satuan
+          const satuanLower = String(b.satuan || '').toLowerCase();
+          const isGramSatuan = ['g', 'gr', 'gram', 'kg'].includes(satuanLower);
+          const beratPerSatuan = Number(b.berat_per_satuan) || 0;
+
           let displayQty, displaySatuan;
-          if (b.total_gram >= 1000) {
-            displayQty = b.total_kg;
-            displaySatuan = 'KG';
-          } else if (b.total_gram > 0) {
-            displayQty = Math.round(b.total_gram * 100) / 100;
-            displaySatuan = b.satuan === 'g' ? 'GRAM' : b.satuan.toUpperCase();
+          if (isGramSatuan) {
+            if (b.total_gram >= 1000) {
+              displayQty = b.total_kg;
+              displaySatuan = 'KG';
+            } else if (b.total_gram > 0) {
+              displayQty = Math.round(b.total_gram * 100) / 100;
+              displaySatuan = satuanLower === 'kg' ? 'KG' : 'GR';
+            } else {
+              displayQty = 0;
+              displaySatuan = 'GR';
+            }
           } else {
-            displayQty = 0;
-            displaySatuan = b.satuan.toUpperCase();
+            // Satuan non-gram (botol/karton/pcs/dll): hitung jumlah satuan dari gram via berat_per_satuan
+            if (b.total_gram > 0 && beratPerSatuan > 0) {
+              displayQty = Math.ceil(b.total_gram / beratPerSatuan);
+              displaySatuan = (b.satuan || '').toUpperCase();
+            } else if (b.total_gram >= 1000) {
+              // Belum ada berat_per_satuan → tampilkan dalam KG
+              displayQty = b.total_kg;
+              displaySatuan = 'KG';
+            } else if (b.total_gram > 0) {
+              displayQty = Math.round(b.total_gram * 100) / 100;
+              displaySatuan = 'GR';
+            } else {
+              displayQty = 0;
+              displaySatuan = 'GR';
+            }
           }
 
           const jumlah = Math.round(b.harga_satuan * displayQty);

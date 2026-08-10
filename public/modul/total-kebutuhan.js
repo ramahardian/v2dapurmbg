@@ -282,7 +282,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
   // Satuan yang dihitung per satuan (pcs/btl/renceng/ctn/karton) vs per berat (kg/g)
   function isSatuanHitung(s) {
     var t = String(s || '').toLowerCase();
-    return t === 'pcs' || t === 'btl' || t === 'renceng' || t === 'ctn' || t === 'karton' || t === 'kardus' || t === 'dus' || t === 'pack' || t === 'ikat' || t === 'ekor' || t === 'butir' || t === 'bungkus';
+    return t === 'pcs' || t === 'btl' || t === 'botol' || t === 'renceng' || t === 'ctn' || t === 'karton' || t === 'kardus' || t === 'dus' || t === 'pack' || t === 'ikat' || t === 'ekor' || t === 'butir' || t === 'bungkus';
   }
 
   // Berat isi per satuan efektif — bila kosong, minyak dikarton diasumsikan 6x2L / 12x1L ≈ 12 L ≈ 11 kg
