@@ -570,4 +570,223 @@ router.get('/system/backup-page', requireRole('admin'), (req, res) => {
 </html>`);
 });
 
+// ============================================================
+// POST /system/sync-produksi — terapkan perbaikan data master langsung dari URL
+// (tanpa SSH / mysql CLI). Menyamakan data bahan baku dengan hasil audit localhost:
+//   1) buffer_persen = 0 untuk semua bahan
+//   2) Minyak Goreng (karton/dus) -> berat_per_satuan = 12000 g (12 kg/karton)
+//   3) Buncis & Wortel -> persen_bdd = 100 (0% susut)
+// Aman: discope per tenant login, idempotent, dan mencocokkan bahan berdasarkan
+// nama/kategori/satuan (bukan id) supaya tetap benar di DB produksi.
+// ============================================================
+router.post('/system/sync-produksi', requireRole('admin'), async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const t = req.user.tenant_id;
+  const log = (msg) => { res.write(msg + '\n'); };
+
+  log('══════════════════════════════════════════════');
+  log('  SINKRONISASI DATA MASTER — via URL');
+  log('  Tenant : id ' + t + ' (' + (req.user.nama || req.user.email || '') + ')');
+  log('  Waktu  : ' + new Date().toLocaleString('id-ID'));
+  log('══════════════════════════════════════════════\n');
+
+  // Semua update dalam SATU transaksi: kalau ada error di tengah, rollback total
+  // (tidak ada perubahan parsial yang tersimpan).
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // ── 1) Buffer persen -> 0 ─────────────────────────────────
+    const [[b0]] = await conn.query(
+      'SELECT COUNT(*) total, COALESCE(SUM(buffer_persen > 0),0) dgn FROM bahan_baku WHERE tenant_id=?',
+      [t]
+    );
+    const [u0] = await conn.query('UPDATE bahan_baku SET buffer_persen = 0 WHERE tenant_id=?', [t]);
+    const [[b1]] = await conn.query(
+      'SELECT COALESCE(SUM(buffer_persen > 0),0) dgn FROM bahan_baku WHERE tenant_id=?',
+      [t]
+    );
+    log('1) BUFFER PERSEN → 0');
+    log('   Sebelum : ' + b0.dgn + ' bahan dgn buffer > 0 (dari ' + b0.total + ')');
+    log('   Update  : ' + u0.affectedRows + ' baris dikosongkan');
+    log('   Sesudah : ' + b1.dgn + ' bahan dgn buffer > 0 ✓');
+    log('');
+
+    // ── 2) Minyak (karton/dus) -> 12.000 g/karton ─────────────
+    // Cari yang jelas-jelas minyak goreng dulu; kalau tidak ada, pakai semua
+    // minyak bersatuan karton (fallback untuk DB produksi dengan penamaan lain).
+    let daftarMinyak = null;
+    const [minyakGoreng] = await conn.query(
+      `SELECT id, nama, satuan, berat_per_satuan FROM bahan_baku
+       WHERE tenant_id=? AND LOWER(kategori_sp)='minyak'
+         AND LOWER(satuan) IN ('karton','ctn','kardus','dus')
+         AND LOWER(nama) LIKE '%goreng%'`,
+      [t]
+    );
+    if (minyakGoreng.length) {
+      daftarMinyak = minyakGoreng;
+    } else {
+      const [m] = await conn.query(
+        `SELECT id, nama, satuan, berat_per_satuan FROM bahan_baku
+         WHERE tenant_id=? AND LOWER(kategori_sp)='minyak'
+           AND LOWER(satuan) IN ('karton','ctn','kardus','dus')`,
+        [t]
+      );
+      daftarMinyak = m;
+    }
+    log('2) MINYAK → 12.000 g/karton (12 kg)');
+    if (!daftarMinyak.length) {
+      log('   ⚠ Tidak ada bahan minyak bersatuan karton/dus — dilewati');
+    } else {
+      for (const row of daftarMinyak) {
+        const [upd] = await conn.query(
+          'UPDATE bahan_baku SET berat_per_satuan=12000 WHERE id=? AND tenant_id=?',
+          [row.id, t]
+        );
+        log('   ' + row.nama + ' (id ' + row.id + ', ' + row.satuan + '): ' +
+          (Number(row.berat_per_satuan) || 0) + ' → 12000 ' + (upd.affectedRows ? '✓' : '(tidak berubah)'));
+      }
+    }
+    log('');
+
+    // ── 3) Buncis & Wortel -> BDD 100 (0% susut) ───────────────
+    log('3) BDD → 100 (0% susut) untuk Buncis & Wortel');
+    const target = [{ kata: 'Buncis' }, { kata: 'Wortel' }];
+    for (const tg of target) {
+      // Hanya bahan belanja asli: nama mengandung kata target tapi BUKAN baris referensi SP
+      // (mis. 'Buncis 0.5 SP') — baris SP dipakai sebagai referensi standar porsi.
+      const [rows] = await conn.query(
+        `SELECT id, nama, persen_bdd FROM bahan_baku
+         WHERE tenant_id=? AND LOWER(nama) LIKE ? AND LOWER(nama) NOT LIKE '% sp%'`,
+        [t, '%' + tg.kata.toLowerCase() + '%']
+      );
+      if (!rows.length) {
+        log('   ' + tg.kata + ': ⚠ tidak ditemukan — dilewati');
+        continue;
+      }
+      for (const row of rows) {
+        const [upd] = await conn.query(
+          'UPDATE bahan_baku SET persen_bdd=100 WHERE id=? AND tenant_id=?',
+          [row.id, t]
+        );
+        log('   ' + row.nama + ' (id ' + row.id + '): ' + (Number(row.persen_bdd) || 0) +
+          ' → 100 ' + (upd.affectedRows ? '✓' : '(tidak berubah)'));
+      }
+    }
+    log('');
+
+    await conn.commit();
+
+    // ── Verifikasi akhir (setelah commit) ──────────────────────
+    const [[v]] = await conn.query(
+      `SELECT
+         (SELECT COALESCE(SUM(buffer_persen>0),0) FROM bahan_baku WHERE tenant_id=?) AS sisa_buffer,
+         (SELECT COUNT(*) FROM bahan_baku WHERE tenant_id=? AND LOWER(nama) LIKE '%buncis%' AND LOWER(nama) NOT LIKE '% sp%' AND persen_bdd<100) AS buncis_bdd,
+         (SELECT COUNT(*) FROM bahan_baku WHERE tenant_id=? AND LOWER(nama) LIKE '%wortel%' AND LOWER(nama) NOT LIKE '% sp%' AND persen_bdd<100) AS wortel_bdd,
+         (SELECT COALESCE(SUM(berat_per_satuan=12000),0) FROM bahan_baku WHERE tenant_id=? AND LOWER(kategori_sp)='minyak' AND LOWER(satuan) IN ('karton','ctn','kardus','dus')) AS minyak_12kg`,
+      [t, t, t, t]
+    );
+    log('──────────────────────────────────────────────');
+    log('  VERIFIKASI AKHIR (tenant id ' + t + ')');
+    log('  Sisa buffer > 0  : ' + v.sisa_buffer + '  (harus 0)');
+    log('  Buncis BDD < 100 : ' + v.buncis_bdd + '  (harus 0)');
+    log('  Wortel BDD < 100 : ' + v.wortel_bdd + '  (harus 0)');
+    log('  Minyak 12 kg     : ' + v.minyak_12kg + '  bahan (harus ≥ 1)');
+    log('──────────────────────────────────────────────');
+    log('✓ Sinkronisasi selesai — perubahan tersimpan (commit).');
+    log('  Refresh /total-kebutuhan untuk melihat hasilnya.');
+  } catch (err) {
+    try { await conn.rollback(); } catch (e) { /* koneksi mungkin sudah putus */ }
+    log('');
+    log('✗ Gagal: ' + err.message);
+    log('  Semua perubahan dibatalkan (rollback) — data tidak berubah.');
+  } finally {
+    conn.release();
+  }
+  res.end();
+});
+
+// GET /system/sync-produksi — halaman trigger sinkronisasi (web UI)
+router.get('/system/sync-produksi', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Sinkronisasi Data Master</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-indigo-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-stone-800">Sinkronisasi Data Master</h1>
+        <p class="text-xs text-stone-500">Terapkan perbaikan data bahan baku via URL — tanpa SSH/mysql.</p>
+      </div>
+    </div>
+
+    <p class="text-sm text-stone-600 leading-relaxed mb-4">
+      Menyamakan data master dengan hasil audit. Aman & idempotent (hanya untuk tenant Anda):
+    </p>
+    <ul class="text-sm text-stone-700 space-y-1.5 mb-5">
+      <li class="flex items-start gap-2"><span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"></span>
+        <span><b>Buffer = 0</b> — hapus +10% stok aman (item = total kebutuhan)</span></li>
+      <li class="flex items-start gap-2"><span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"></span>
+        <span><b>Minyak (karton/dus) = 12.000 g</b> — 12 kg per karton, QTY jadi wajar</span></li>
+      <li class="flex items-start gap-2"><span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"></span>
+        <span><b>Buncis & Wortel BDD = 100</b> — 0% susut, total = item</span></li>
+    </ul>
+
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5 text-xs text-amber-800">
+      <strong>⚠️ Disarankan:</strong> unduh backup dulu via <code class="bg-amber-100 px-1 rounded">/api/system/backup</code>
+      sebelum menjalankan sinkronisasi.
+    </div>
+
+    <button onclick="runSync()" id="btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-semibold transition shadow-md">
+      Jalankan Sinkronisasi
+    </button>
+    <pre id="output" class="mt-4 bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-96 hidden"></pre>
+  </div>
+  <script>
+    async function runSync() {
+      if (!confirm('Terapkan perbaikan data master sekarang? (buffer=0, Minyak 12 kg, Buncis/Wortel BDD 100)')) return;
+      const btn = document.getElementById('btn');
+      const out = document.getElementById('output');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      out.classList.remove('hidden');
+      out.textContent = '';
+
+      try {
+        const r = await fetch('/api/system/sync-produksi', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        if (!r.ok) {
+          out.textContent += 'HTTP ' + r.status + ': ' + (await r.text());
+          return;
+        }
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          out.textContent += decoder.decode(value);
+          out.scrollTop = out.scrollHeight;
+        }
+      } catch (e) {
+        out.textContent += '\nGagal: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = 'Jalankan Sinkronisasi';
+    }
+  </script>
+</body>
+</html>`);
+});
+
 module.exports = router;
