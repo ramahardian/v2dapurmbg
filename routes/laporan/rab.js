@@ -1191,7 +1191,10 @@ function registerRabRoutes(router) {
 
   function fillDaySheet(ws, data, S) {
     const items = data.rab.items || [];
-    const anggaran = Number(data.titik.grand_total) || Number(data.rab.anggaran_belanja_harian) || 0;
+    // Anggaran = nilai dari tabel budget (konsisten dgn web RAB Harian, dan
+    // dengan fitur Budget Harian di Siklus). Fallback ke pagu per-titik bila
+    // periode belum punya budget.
+    const anggaran = Number(data.rab.anggaran_belanja_harian) || Number(data.titik.grand_total) || 0;
     const totalBahan = Number(data.rab.total) || 0;
     const sisa = anggaran - totalBahan;
     const dlabel = data.d.getDate() + ' ' + MONTHS_ID[data.d.getMonth()] + ' ' + data.d.getFullYear();
@@ -1270,7 +1273,9 @@ function registerRabRoutes(router) {
     ['TANGGAL', 'ANGGARAN', 'REALISASI', 'SELISIH'].forEach((h, i) => { ws.getCell(3, i + 1).value = h; });
     let r = 4, sumA = 0, sumR = 0, sumS = 0;
     for (const dd of dayData) {
-      const angg = Number(dd.titik.grand_total) || 0;
+      // Anggaran harian dari tabel budget dulu (konsisten dgn sheet harian);
+      // fallback ke pagu per-titik.
+      const angg = Number(dd.rab.anggaran_belanja_harian) || Number(dd.titik.grand_total) || 0;
       const real = Number(dd.rab.total) || 0;
       const sel = angg - real;
       sumA += angg; sumR += real; sumS += sel;
@@ -1393,67 +1398,10 @@ function registerRabRoutes(router) {
     return res.status(400).json({ error: 'Tidak ada data RAB untuk tanggal yang dipilih' });
   }
 
-  // Fill data into worksheet
-  const templateData = allDayData.map((day, index) => {
-    const date = new Date(day.d);
-    const dayNum = date.getDate();
-    const d = date.getDay();
-    const hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][d];
-
-    return {
-      tanggal: dayNum,
-      hari: hari,
-      siklus: day.rab?.siklus?.nama || '',
-      jumlah_porsi: day.rab?.hari_ke > 0 ? day.rab.hari_ke : '',
-      deskripsi: day.rab?.menu_deskripsi || day.rab?.message || '',
-      total: day.rab?.total || 0,
-      anggaran_belanja_harian: day.rab?.anggaran_belanja_harian || day.rab?.anggaranBelanjaHarian || 0,
-      status: day.rab?.status || 'Aktif',
-      items: (day.rab?.items || []).map(item => {
-        const idx = day.rab.items.indexOf(item) + 1;
-        return {
-          no: idx,
-          kode: item.bahan_baku_id || '',
-          bahan: item.nama || '',
-          qty: item.qty || item.jumlah || 0,
-          satuan: item.satuan || item.unit || '',
-          harga: item.harga || item.harga_satuan || 0,
-          jumlah: item.jumlah || item.total_harga || 0,
-          keterangan: item.keterangan || ''
-        };
-      })
-    };
-  });
-
-  templateData.forEach((row, idx) => {
-    const wsRow = halWs.getRow(idx + 2);
-    wsRow.values = [
-      row.tanggal,
-      row.hari,
-      row.siklus,
-      row.jumlah_porsi,
-      row.deskripsi,
-      row.total,
-      row.anggaran_belanja_harian,
-      row.status,
-    ];
-
-    row.items.forEach((item, i) => {
-      const itemRowNum = idx + 1 + i;
-      const itemRow = halWs.getRow(itemRowNum + 1);
-      itemRow.values = [
-        item.no,
-        item.kode,
-        item.bahan,
-        item.qty,
-        item.satuan,
-        item.harga,
-        item.jumlah,
-        item.keterangan
-      ];
-      itemRow.commit();
-    });
-  });
+      // Template dipakai apa adanya: judul/SPPG/YAYASAN (baris 2-6) & header
+      // kolom (baris 7) dibiarkan dari RAB.xlsx, hanya area data (baris 8+)
+      // yang diisi ulang oleh fillDaySheet. Gaya diambil dari baris contoh
+      // template agar hasil export seragam dengan template.
       const S = captureStyles(halWs);
       const pristineModel = JSON.parse(JSON.stringify(halWs.model));
       const pristineMerges = JSON.parse(JSON.stringify(pristineModel.merges));
@@ -1470,7 +1418,12 @@ function registerRabRoutes(router) {
 
       const tWs = wb.getWorksheet('total');
       if (tWs) {
-        const totalName = 'TOTAL RAB ' + daySheetName(first.d) + (allDayData.length > 1 ? ' s/d ' + daySheetName(allDayData[allDayData.length - 1].d) : '');
+        // Nama sheet maksimal 31 karakter & tidak boleh mengandung '/' — pakai
+        // label ringkas "TOTAL RAB 10-12 AGUSTUS 2026" utk rentang hari.
+        const last = allDayData[allDayData.length - 1].d;
+        const totalName = allDayData.length > 1
+          ? 'TOTAL RAB ' + first.d.getDate() + '-' + last.getDate() + ' ' + MONTHS_ID[first.d.getMonth()] + ' ' + last.getFullYear()
+          : 'TOTAL RAB ' + daySheetName(first.d);
         if (tWs.name !== totalName) tWs.name = totalName;
         fillTotalSheet(tWs, allDayData);
       }
