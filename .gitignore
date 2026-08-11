@@ -12,3 +12,6 @@ out/
 # Build
 dist/
 build/
+
+# Database backups (berisi seluruh data — jangan di-commit)
+backups/

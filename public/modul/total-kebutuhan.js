@@ -396,7 +396,9 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
           var bpsUnit = beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
           if (bpsUnit > 0) {
             var asliUnit = Math.round((asliKg * 1000 / bpsUnit) * 100) / 100;
-            qtyTooltip = 'Kebutuhan asli: ' + fmtTkNum(asliUnit) + ' ' + satuanKecil + ' (' + fmtTkNum(asliKg) + ' kg) → dibulatkan ke atas menjadi ' + fmtTkNum(parsed.qty) + ' ' + satuanKecil + ' (belanja aman)';
+            qtyTooltip = asliUnit === parsed.qty
+              ? 'Kebutuhan asli: ' + fmtTkNum(asliUnit) + ' ' + satuanKecil + ' (' + fmtTkNum(asliKg) + ' kg) = QTY belanja'
+              : 'Kebutuhan asli: ' + fmtTkNum(asliUnit) + ' ' + satuanKecil + ' (' + fmtTkNum(asliKg) + ' kg) → dibulatkan ke atas menjadi ' + fmtTkNum(parsed.qty) + ' ' + satuanKecil + ' (belanja aman)';
           } else {
             qtyTooltip = 'Kebutuhan asli: ' + fmtTkNum(asliKg) + ' kg → dibulatkan ke atas menjadi ' + fmtTkNum(parsed.qty) + ' ' + satuanKecil + ' (belanja aman)';
           }
