@@ -461,6 +461,7 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
   var hariNama = day.hari_nama || '';
   var tglFormatted = fmtTkTanggalPanjang(tanggal, hariNama);
   var daftarMenu = day.menu_names || [];
+  var daftarMenuId = day.menu_ids || [];
 
   // ── Header (hero: hari pelaksanaan + menu; judul instansi dihilangkan di total-kebutuhan) ──
   var html = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">';
@@ -486,10 +487,16 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
     html += '<div class="text-[10px] font-bold uppercase tracking-widest text-emerald-100/90 mb-1.5">Menu Hari Ini</div>';
     html += '<div class="flex flex-wrap gap-1.5">';
     for (var mi = 0; mi < daftarMenu.length; mi++) {
-      html += '<span class="inline-flex items-center gap-1.5 bg-white/15 border border-white/25 text-white px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm">';
+      // Menu yang punya id (terhubung ke master menu) → bisa diklik ke halaman edit /menu
+      var menuId = daftarMenuId[mi] || 0;
+      if (menuId) {
+        html += '<a href="/menu?edit=' + menuId + '" onclick="tkEditMenu(' + menuId + ');return false;" class="inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/30 border border-white/25 text-white px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="Klik untuk mengedit menu">';
+      } else {
+        html += '<span class="inline-flex items-center gap-1.5 bg-white/15 border border-white/25 text-white px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm">';
+      }
       html += '<svg class="w-3 h-3 shrink-0 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>';
       html += escHtmlTk(daftarMenu[mi]);
-      html += '</span>';
+      html += menuId ? '</a>' : '</span>';
     }
     html += '</div>';
     html += '</div>';
@@ -594,6 +601,12 @@ function fmtTkRp(v) {
 function tkEditBahanBaku(id) {
   if (!id) return;
   navigate('bahan-baku?edit=' + id);
+}
+
+// Arahkan dari total-kebutuhan ke halaman edit menu (chip menu hari ini)
+function tkEditMenu(id) {
+  if (!id) return;
+  navigate('menu?edit=' + id);
 }
 
 function fmtTkTanggalPanjang(tanggal, hariNama) {

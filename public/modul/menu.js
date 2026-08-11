@@ -105,6 +105,9 @@ async function ensureBahanBakuLoaded() {
 async function renderMenu() {
   const c = document.getElementById('content');
   if (!c) return;
+  // Jika datang dari total-kebutuhan (?edit=ID), paksa tampilan daftar lalu buka form edit menu otomatis
+  const autoEditId = new URLSearchParams(location.search).get('edit');
+  if (autoEditId) menuViewMode = 'list';
   c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
     if (menuViewMode === 'siklus') {
@@ -127,6 +130,13 @@ async function renderMenu() {
     c.innerHTML = renderMenuHtml(Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []));
     renderPagination();
     attachMenuHandlers();
+    // Auto-buka form edit jika ada ?edit= (mis. dari chip menu di /total-kebutuhan).
+    // Bersihkan query-nya setelah dibuka sekali, agar form tidak terbuka ulang
+    // saat renderMenu() dipanggil lagi (mis. setelah simpan / tutup modal).
+    if (autoEditId) {
+      history.replaceState(null, '', '/menu');
+      editMenuById(autoEditId);
+    }
   } catch (err) {
     console.error('Menu error:', err);
     c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat menu: ${err.message}</div>`;

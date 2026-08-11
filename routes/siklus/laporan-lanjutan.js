@@ -443,7 +443,7 @@ async function buildPerencanaanData({ tenant_id, query }) {
     const dayOfWeek = curDate.getDay(); // 0=Sun, 1=Mon, ...
     const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
-    const dayPlan = { tanggal: dateStr, hari_nama: dayNames[dayOfWeek], header_tanggal: dateStr, total_porsi: 0, menu_names: [], bahan: [] };
+    const dayPlan = { tanggal: dateStr, hari_nama: dayNames[dayOfWeek], header_tanggal: dateStr, total_porsi: 0, menu_names: [], menu_ids: [], bahan: [] };
     const bahanMap = {};
 
     for (const s of siklusList) {
@@ -507,7 +507,12 @@ async function buildPerencanaanData({ tenant_id, query }) {
         }
 
         dayPlan.total_porsi += Number(it.jumlah_porsi || s.jumlah_porsi || 0);
-        if (it.menu_nama) dayPlan.menu_names.push(it.menu_nama);
+        if (it.menu_nama) {
+          dayPlan.menu_names.push(it.menu_nama);
+          // Sertakan id menu (jika ada / cocok dgn master menu) agar chip menu
+          // di halaman /total-kebutuhan bisa diklik → edit di halaman /menu.
+          dayPlan.menu_ids.push(lookupMenuIdByName(menuIdByName, it) || null);
+        }
       }
 
       // Grid items
