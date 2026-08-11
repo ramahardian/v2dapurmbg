@@ -9,10 +9,16 @@
 --   62,1 g × 2859 porsi = 177.543,9 g (≈ 177,5 kg) BERAT BERSIH
 --   ÷ 46% = 385.965 g ≈ 386 kg BERAT KOTOR (belanja)  ✓
 --
--- Diterapkan di 2 tempat agar konsisten:
+-- Diterapkan di 3 tempat agar konsisten:
 --   1) bahan_baku.berat_1_sp        = 62,1 g  (master bahan)
 --   2) sp_referensi_bahan.berat_bersih = 62,1 g & berat_kotor = 135 g
 --      (135 g = 62,1 ÷ 0,46 — referensi SP ikut disamakan)
+--   3) menu_bahan.jumlah            = 62,1 g  (gram per porsi di resep MENU)
+--      PENTING: /total-kebutuhan memberi PRIORITAS pada menu_bahan.jumlah
+--      (bukan berat_1_sp) saat bahan dipakai oleh resep menu (lihat
+--      resolveGridBeratPerSiswa di routes/siklus/helpers.js). Tanpa langkah 3,
+--      Semangka bisa tampil beda: 386 kg di /menu vs 870 kg di /total-kebutuhan
+--      (mis. menu_bahan.jumlah masih 139,909 g dari nilai lama).
 --
 -- Backup nilai lama di tabel backup_semangka_target386.
 -- Catatan: bila seed ulang sp_referensi (scripts/seed_sp_referensi.js
@@ -43,6 +49,23 @@ WHERE id = 78 AND tenant_id = 1;
 UPDATE sp_referensi_bahan
 SET berat_bersih = 62.1, berat_kotor = 135.0
 WHERE tenant_id = 1 AND nama = 'Semangka';
+
+-- 4b) Sinkronkan gram per porsi di SEMUA resep menu yang memakai Semangka
+-- tenant 1 (kalau tidak, angka /total-kebutuhan tetap memakai nilai lama
+-- yang lebih besar karena prioritas menu_bahan.jumlah > berat_1_sp).
+CREATE TABLE IF NOT EXISTS backup_menu_bahan_semangka_386 AS
+SELECT mb.*, m.tenant_id AS menu_tenant
+FROM menu_bahan mb
+JOIN menu m ON m.id = mb.menu_id;
+
+UPDATE menu_bahan mb
+JOIN menu m ON m.id = mb.menu_id
+SET mb.jumlah = 62.1
+WHERE mb.bahan_baku_id = 78 AND m.tenant_id = 1;
+
+-- 4c) Catatan: setelah langkah 4b, gramasi_total / nutrisi menu yang berubah
+-- perlu dihitung ulang via endpoint POST /menu/recalculate-nutrisi (gramasi
+-- hanyalah penjumlahan jumlah bahan, tidak mempengaruhi angka kebutuhan).
 
 -- 5) Verifikasi: harus tampil 386 kg di Total Kebutuhan (2.859 porsi)
 SELECT

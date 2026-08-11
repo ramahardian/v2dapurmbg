@@ -2485,10 +2485,15 @@ router.get('/system/koreksi-bdd', requireRole('admin'), (req, res) => {
 // SSH/mysql.
 //
 // Matematika: 62,1 g × 2859 = 177.543,9 g bersih ÷ 46% = 386 kg.
-// Diterapkan di 2 tempat agar konsisten:
+// Diterapkan di 3 tempat agar konsisten:
 //   1) bahan_baku.berat_1_sp        → 62,1 g
 //   2) sp_referensi_bahan.berat_bersih → 62,1 g & berat_kotor → 135 g
 //      (135 = 62,1 ÷ 0,46)
+//   3) menu_bahan.jumlah (gram per porsi di resep menu) → 62,1 g
+//      PENTING: /total-kebutuhan memberi PRIORITAS pada menu_bahan.jumlah
+//      (bukan berat_1_sp) saat bahan dipakai oleh resep menu (lihat
+//      resolveGridBeratPerSiswa). Tanpa langkah 3, Semangka bisa tampil
+//      beda: 386 kg di /menu vs 870 kg di /total-kebutuhan.
 // ============================================================
 router.post('/system/koreksi-semangka', requireRole('admin'), async (req, res) => {
   res.writeHead(200, {
@@ -2526,6 +2531,18 @@ router.post('/system/koreksi-semangka', requireRole('admin'), async (req, res) =
        WHERE tenant_id=? AND LOWER(nama) LIKE '%semangka%'`,
       [t]
     );
+    // Resep menu (grant per porsi) yang memakai Semangka tenant ini —
+    // wajib disinkronkan karena /total-kebutuhan memberi prioritas
+    // menu_bahan.jumlah atas berat_1_sp (resolveGridBeratPerSiswa).
+    const [mbRows] = await conn.query(
+      `SELECT mb.id, mb.menu_id, mb.jumlah, b.nama AS bahan_nama, m.nama AS menu_nama
+       FROM menu_bahan mb
+       JOIN menu m ON m.id = mb.menu_id
+       JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+       WHERE m.tenant_id=? AND mb.bahan_baku_id IN
+         (SELECT id FROM bahan_baku WHERE tenant_id=? AND LOWER(nama) LIKE '%semangka%' AND LOWER(nama) NOT LIKE '% sp%')`,
+      [t, t]
+    );
     // Porsi dari siklus aktif (utk simulasi angka akhir)
     const [sk] = await conn.query(
       `SELECT jumlah_porsi FROM siklus_menu WHERE tenant_id=? AND status='Aktif' ORDER BY id DESC LIMIT 1`,
@@ -2535,6 +2552,7 @@ router.post('/system/koreksi-semangka', requireRole('admin'), async (req, res) =
 
     log('BAHAN BELANJA  : ' + (bb.length ? bb.map(b => b.nama + ' (id ' + b.id + ')').join(', ') : '⚠ tidak ditemukan'));
     log('REFERENSI SP   : ' + (ref.length ? ref.map(r => r.nama + ' (id ' + r.id + ')').join(', ') : '⚠ tidak ditemukan'));
+    log('RESEP MENU     : ' + (mbRows.length ? mbRows.map(r => r.menu_nama + ' → ' + (Number(r.jumlah) || 0) + ' g').join(', ') : '⚠ tidak dipakai resep apa pun'));
     log('Porsi siklus   : ' + porsi + (porsi === 2859 ? '  (target 386 kg)' : '  ⚠ bukan 2859 — angka akhir akan berbeda') + '\n');
 
     if (!bb.length && !ref.length) {
@@ -2555,10 +2573,14 @@ router.post('/system/koreksi-semangka', requireRole('admin'), async (req, res) =
       log('   ' + (apply ? '✓' : '•') + ' sp_referensi : ' + r.nama + ' — berat_bersih ' + (Number(r.berat_bersih) || 0) + ' → ' + TARGET + ' g, berat_kotor ' + (Number(r.berat_kotor) || 0) + ' → ' + KOTOR + ' g');
       if (apply) await conn.query('UPDATE sp_referensi_bahan SET berat_bersih=?, berat_kotor=? WHERE id=? AND tenant_id=?', [TARGET, KOTOR, r.id, t]);
     }
+    for (const mb of mbRows) {
+      log('   ' + (apply ? '✓' : '•') + ' menu_bahan   : ' + mb.menu_nama + ' (menu ' + mb.menu_id + ') — jumlah ' + (Number(mb.jumlah) || 0) + ' g → ' + TARGET + ' g per porsi');
+      if (apply) await conn.query('UPDATE menu_bahan SET jumlah=? WHERE id=?', [TARGET, mb.id]);
+    }
     log('');
 
     if (!apply) {
-      log('Dry-run: ' + bb.length + ' baris bahan_baku + ' + ref.length + ' baris referensi akan disetel.');
+      log('Dry-run: ' + bb.length + ' baris bahan_baku + ' + ref.length + ' baris referensi + ' + mbRows.length + ' baris resep menu akan disetel ke ' + TARGET + ' g.');
       log('Jalankan ulang dengan { "apply": true } untuk menyimpan.');
       await conn.rollback();
       log('');
@@ -2576,6 +2598,20 @@ router.post('/system/koreksi-semangka', requireRole('admin'), async (req, res) =
     );
     const [[bk]] = await conn.query('SELECT COUNT(*) c FROM ' + namaBackup);
     log('BACKUP : ' + bk.c + ' baris bahan_baku → tabel ' + namaBackup);
+
+    const namaBackupMb = 'backup_menu_bahan_semangka_' + t;
+    await conn.query('DROP TABLE IF EXISTS ' + namaBackupMb);
+    if (mbRows.length) {
+      await conn.query(
+        'CREATE TABLE ' + namaBackupMb + ' AS SELECT mb.*, m.tenant_id AS menu_tenant FROM menu_bahan mb JOIN menu m ON m.id = mb.menu_id WHERE mb.id IN (' +
+        mbRows.map(() => '?').join(',') + ')',
+        mbRows.map(mb => mb.id)
+      );
+      const [[bkMb]] = await conn.query('SELECT COUNT(*) c FROM ' + namaBackupMb);
+      log('BACKUP : ' + bkMb.c + ' baris menu_bahan → tabel ' + namaBackupMb);
+    } else {
+      log('BACKUP : 0 baris menu_bahan (tidak ada resep pemakaian Semangka).');
+    }
     log('');
 
     await conn.commit();
