@@ -667,6 +667,40 @@ function hitungNutrisi() {
   });
 }
 
+// ── Input jumlah yang mendukung pecahan ──
+// Terima "1/5", "1/5 kg", "1 1/2", "0,2", "0.2 kg", "200 g", "1.500" (ribuan).
+// Nilai kembalian = angka desimal dalam satuan tampil kolom (gram / kg / unit).
+function parseJumlahInput(str) {
+  var s = String(str || '').trim();
+  if (!s) return 0; // kolom dikosongkan → 0 (perilaku lama input angka)
+  // Buang akhiran satuan huruf, mis. "kg", "g", "gr" → "1/5 kg" → "1/5"
+  s = s.replace(/\s*[a-zA-Z]+\s*$/, '').trim();
+  // Pecahan campuran: "1 1/2" → 1.5
+  var m = s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  if (m) return parseFloat(m[1]) + parseFloat(m[2]) / parseFloat(m[3]);
+  // Pecahan: "1/5", "1,5/2"
+  var f = s.match(/^(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)$/);
+  if (f) {
+    var dn = parseFloat(f[1].replace(',', '.'));
+    var dd = parseFloat(f[2].replace(',', '.'));
+    if (!dd) return NaN;
+    return dn / dd;
+  }
+  // Desimal biasa: "0,2" → 0.2 ; "1.500" (ribuan) → 1500
+  var clean = s.replace(/\s/g, '');
+  if (/^\d{1,3}(\.\d{3})+([.,]\d+)?$/.test(clean)) {
+    clean = clean.replace(/\./g, '').replace(',', '.');
+  } else {
+    clean = clean.replace(',', '.');
+  }
+  // Validasi ketat: hanya angka dengan maksimal satu titik desimal.
+  // Input rusak ("1/5/3", "0.5.5", "-0.2", "abc") → NaN → tampilan dikembalikan,
+  // bukan tersimpan diam-diam sebagai nilai yang salah.
+  if (!/^\d+(\.\d+)?$/.test(clean)) return NaN;
+  var v = parseFloat(clean);
+  return isNaN(v) ? NaN : v;
+}
+
 function updateBahan(i, k, v) {
   if (k === 'jumlah') {
     var b = window._menuBahan[i];
@@ -674,8 +708,11 @@ function updateBahan(i, k, v) {
     var porsi = Number(window._menuPorsi) || 1;
     var satuan = menuSatuanTampil(b);
     var perUnit = bahanKalkulatorInfo(b).perUnit || 1;
+    // Input mendukung pecahan ("1/5 kg", "0,2") → parse ke angka dulu; jika tidak valid, kembalikan tampilan
+    var parsedVal = parseJumlahInput(v);
+    if (isNaN(parsedVal)) { renderBahanList(); return; }
     // Input shows total when porsi>0; convert back to grams per-porsi for storage
-    var valPerPorsi = Number(v) / porsi;
+    var valPerPorsi = parsedVal / porsi;
     var newJumlah;
     if (perUnit > 0 && isSatuanUnit(satuan)) {
       newJumlah = valPerPorsi * perUnit;
@@ -1014,7 +1051,6 @@ function renderBahanList() {
         displayJumlah = displayJumlah / perUnit;
       }
       var totalJumlah = porsi > 0 ? displayJumlah * porsi : 0;
-      var inputStep = isKgSatuan(displaySatuan) ? '0.01' : (isSatuanUnit(displaySatuan) ? '1' : '0.01');
       var inputValue = porsi > 0 ? (totalJumlah ? Math.round(totalJumlah * 100) / 100 : '0') : (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0');
       var inputTitle = porsi > 0 ? 'Total untuk ' + porsi + ' porsi (' + displaySatuan + ')' : (displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')');
       var calcSatuan = bahanKalkulatorSatuan(b);
@@ -1026,7 +1062,7 @@ function renderBahanList() {
             '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-lg shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
           '</div>' +
           '<div class="order-2 col-span-10 sm:col-span-3 flex">' +
-            '<input type="number" step="' + inputStep + '" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 w-full h-10 px-3 border border-stone-200 rounded-l-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" title="' + inputTitle + '" />' +
+            '<input type="text" inputmode="decimal" autocomplete="off" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 w-full h-10 px-3 border border-stone-200 rounded-l-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" title="' + inputTitle + ' — bisa diisi pecahan, mis. 1/5 kg" />' +
             '<span class="inline-flex items-center px-2 sm:px-2.5 h-10 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 whitespace-nowrap">' + displaySatuan + '</span>' +
             '<button type="button" onclick="openBahanKalkulator(' + i + ')" class="shrink-0 inline-flex items-center justify-center w-8 h-10 text-blue-500 hover:bg-blue-50 border border-l-0 border-stone-200 rounded-r-lg transition-all" title="' + kalkTitle + '"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 8h.01M15 8h.01M9 12h.01M15 12h.01M9 16h.01M15 16h.01"/></svg></button>' +
           '</div>' +
