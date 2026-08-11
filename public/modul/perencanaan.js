@@ -294,7 +294,7 @@ function renderPncMatriksFinal(hari, totalSiswaSemuaJenjang) {
         var v = pj ? (Number(pj.kebutuhan_kg) || 0) : 0;
         rowKg += v;
         colTotal[jn] += v;
-        cells += '<td class="px-3 py-1.5 text-sm text-right mono">' + (v ? fmtPncNum(v) : '-') + '</td>';
+        cells += '<td class="px-3 py-1.5 text-sm text-right mono">' + (v ? fmtPncPecahan(v) : '-') + '</td>';
       }
       var bufferKg = Math.round(rowKg * (1 + bufferPersen / 100) * 100) / 100;
       grandTotalKg += rowKg;
@@ -304,8 +304,8 @@ function renderPncMatriksFinal(hari, totalSiswaSemuaJenjang) {
       html += '<td class="px-3 py-1.5 text-sm font-medium text-stone-800">' + (b.nama_display || b.nama) + '</td>';
       html += cells;
       html += '<td class="px-3 py-1.5 text-sm text-right mono text-stone-600">' + fmtPncNum(totalPorsiDay) + '</td>';
-      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtPncNum(rowKg) + '</td>';
-      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold ' + (bufferPersen > 0 ? 'text-sky-700' : 'text-stone-500') + '" title="Buffer ' + bufferPersen + '%">' + fmtPncNum(bufferKg) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtPncPecahan(rowKg) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold ' + (bufferPersen > 0 ? 'text-sky-700' : 'text-stone-500') + '" title="Buffer ' + bufferPersen + '%">' + fmtPncPecahan(bufferKg) + '</td>';
       html += '<td class="px-3 py-1.5 text-sm text-right text-stone-400"></td>';
       html += '</tr>';
     }
@@ -314,11 +314,11 @@ function renderPncMatriksFinal(hari, totalSiswaSemuaJenjang) {
     html += '<tr class="bg-stone-50 border-t-2 border-stone-200 font-bold">';
     html += '<td class="px-3 py-2 text-sm font-semibold text-stone-700">Total</td>';
     for (var jc4 = 0; jc4 < tkJenjangOrder.length; jc4++) {
-      html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtPncNum(colTotal[tkJenjangOrder[jc4]]) + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtPncPecahan(colTotal[tkJenjangOrder[jc4]]) + '</td>';
     }
     html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtPncNum(totalPorsiDay) + '</td>';
-    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-emerald-700">' + fmtPncNum(Math.round(grandTotalKg * 100) / 100) + '</td>';
-    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-sky-700">' + fmtPncNum(Math.round(grandBufferKg * 100) / 100) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-emerald-700">' + fmtPncPecahan(Math.round(grandTotalKg * 100) / 100) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-sky-700">' + fmtPncPecahan(Math.round(grandBufferKg * 100) / 100) + '</td>';
     html += '<td class="px-3 py-2"></td>';
     html += '</tr>';
 
@@ -440,7 +440,7 @@ function renderPncRekapPorsi(allData) {
             html += '<td class="px-2 py-1.5 text-sm text-right mono">' + b.persen_bdd + '%</td>';
             html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(bkPerSiswa) + '</td>';
             html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(porsiCount) + '</td>';
-            html += '<td class="px-2 py-1.5 text-sm text-right mono font-bold ' + (porsiKey === 'BESAR' ? 'text-amber-700' : 'text-emerald-700') + '">' + fmtPncNum(kebutuhanPorsi) + '</td>';
+            html += '<td class="px-2 py-1.5 text-sm text-right mono font-bold ' + (porsiKey === 'BESAR' ? 'text-amber-700' : 'text-emerald-700') + '">' + fmtPncPecahan(kebutuhanPorsi) + '</td>';
             html += '</tr>';
           }
 
@@ -513,6 +513,12 @@ function fmtPncNum(v) {
   if (v == null || isNaN(v)) return '0,00';
   var n = Number(v);
   return n === Math.floor(n) ? String(n) : n.toFixed(2).replace('.', ',');
+}
+
+// Format pecahan yang sama dengan halaman Total Kebutuhan (mis. 0,5 → 1/2, 0,2 → 1/5)
+function fmtPncPecahan(v) {
+  if (typeof fmtTkPecahan === 'function') return fmtTkPecahan(v);
+  return fmtPncNum(v);
 }
 
 // ===== Export Functions =====

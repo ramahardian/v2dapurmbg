@@ -151,6 +151,47 @@ function fmtTkNum(v) {
   return n === Math.floor(n) ? String(n) : n.toFixed(2).replace('.', ',');
 }
 
+function tkGcd(a, b) {
+  a = Math.abs(a); b = Math.abs(b);
+  while (b) { var t = b; b = a % b; a = t; }
+  return a;
+}
+
+// Format angka sebagai pecahan bila nilainya "rapi" — mis. 0,5 → 1/2, 0,2 → 1/5,
+// 0,75 → 3/4, 1,5 → 1 1/2. Angka utuh tetap utuh; desimal lain tetap desimal.
+// Dipakai di kolom Kebutuhan (kg) & QTY belanja agar sesuai kebiasaan pasar.
+function fmtTkPecahan(v) {
+  if (v == null || isNaN(v)) return '0,00';
+  var n = Number(v);
+  if (n === 0) return '0';
+  var neg = n < 0;
+  n = Math.abs(n);
+  var whole = Math.floor(n);
+  var frac = n - whole;
+  if (frac < 0.005) return (neg ? '-' : '') + String(whole);
+  // Cari pecahan sederhana (penyebut 2..6 — pecahan umum dapur: 1/2, 1/3, 1/4,
+  // 1/5, 1/6, 2/3, 3/4, 2/5, 3/5, 4/5, 5/6) yang mendekati bagian pecahan.
+  // Penyebut dibatasi 6 agar nilai tak-rapi (mis. 0,57 kg — hasil 0,5 ÷ porsi ×
+  // siswa) TIDAK tampil sebagai pecahan menyesatkan seperti "4/7".
+  var best = null;
+  for (var d = 2; d <= 6; d++) {
+    var num = Math.round(frac * d);
+    if (num < 1 || num >= d) continue;
+    var err = Math.abs(frac - num / d);
+    if (err < 0.005 && (!best || err < best.err)) best = { num: num, den: d, err: err };
+  }
+  if (best) {
+    var g = tkGcd(best.num, best.den);
+    var num2 = best.num / g;
+    var den2 = best.den / g;
+    var s = neg ? '-' : '';
+    if (whole > 0) s += whole + ' ';
+    return s + num2 + '/' + den2;
+  }
+  // Bukan pecahan rapi → tetap desimal
+  return (neg ? '-' : '') + n.toFixed(2).replace('.', ',');
+}
+
 // ── Render matriks perencanaan per hari (dipakai bersama halaman Perencanaan) ──
 // Baris = bahan pangan, kolom = jenjang + Total Porsi + Kebutuhan Pangan (kg) + 1-10% + Rincian
 function renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang) {
@@ -217,7 +258,7 @@ function renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang) {
         var v = pj ? (Number(pj.kebutuhan_kg) || 0) : 0;
         rowKg += v;
         colTotal[jn] += v;
-        cells += '<td class="px-3 py-1.5 text-sm text-right mono">' + (v ? fmtTkNum(v) : '-') + '</td>';
+        cells += '<td class="px-3 py-1.5 text-sm text-right mono">' + (v ? fmtTkPecahan(v) : '-') + '</td>';
       }
       var bufferKg = Math.round(rowKg * (1 + bufferPersen / 100) * 100) / 100;
       grandTotalKg += rowKg;
@@ -227,8 +268,8 @@ function renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang) {
       html += '<td class="px-3 py-1.5 text-sm font-medium text-stone-800">' + (b.nama_display || b.nama) + '</td>';
       html += cells;
       html += '<td class="px-3 py-1.5 text-sm text-right mono text-stone-600">' + fmtTkNum(totalPorsiDay) + '</td>';
-      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtTkNum(rowKg) + '</td>';
-      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold ' + (bufferPersen > 0 ? 'text-sky-700' : 'text-stone-500') + '" title="Buffer ' + bufferPersen + '%">' + fmtTkNum(bufferKg) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtTkPecahan(rowKg) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold ' + (bufferPersen > 0 ? 'text-sky-700' : 'text-stone-500') + '" title="Buffer ' + bufferPersen + '%">' + fmtTkPecahan(bufferKg) + '</td>';
       html += '<td class="px-3 py-1.5 text-sm text-right text-stone-400"></td>';
       html += '</tr>';
     }
@@ -237,11 +278,11 @@ function renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang) {
     html += '<tr class="bg-stone-50 border-t-2 border-stone-200 font-bold">';
     html += '<td class="px-3 py-2 text-sm font-semibold text-stone-700">Total</td>';
     for (var jc4 = 0; jc4 < tkJenjangOrder.length; jc4++) {
-      html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtTkNum(colTotal[tkJenjangOrder[jc4]]) + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtTkPecahan(colTotal[tkJenjangOrder[jc4]]) + '</td>';
     }
     html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtTkNum(totalPorsiDay) + '</td>';
-    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-emerald-700">' + fmtTkNum(Math.round(grandTotalKg * 100) / 100) + '</td>';
-    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-sky-700">' + fmtTkNum(Math.round(grandBufferKg * 100) / 100) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-emerald-700">' + fmtTkPecahan(Math.round(grandTotalKg * 100) / 100) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-sky-700">' + fmtTkPecahan(Math.round(grandBufferKg * 100) / 100) + '</td>';
     html += '<td class="px-3 py-2"></td>';
     html += '</tr>';
 
@@ -257,7 +298,7 @@ function renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang) {
     html += '<ul class="space-y-1 list-disc list-inside">';
     html += '<li><strong>Kolom jenjang</strong> = kebutuhan bahan (kg) per kategori penerima manfaat (TK/PAUD, SD, SMP/SMA, Bumil/Busui, Balita).</li>';
     html += '<li><strong>Total Porsi</strong> = total penerima manfaat (porsi) semua jenjang pada hari tersebut.</li>';
-    html += '<li><strong>Kebutuhan Pangan (kg)</strong> = jumlah kebutuhan seluruh jenjang (Berat Kotor × Jumlah Penerima ÷ 1000).</li>';
+    html += '<li><strong>Kebutuhan Pangan (kg)</strong> = jumlah kebutuhan seluruh jenjang (Berat Kotor × Jumlah Penerima ÷ 1000) — ditampilkan dalam pecahan bila rapi (mis. 0,5 kg → 1/2 kg, 0,2 kg → 1/5 kg).</li>';
     html += '<li><strong>1-10%</strong> = Kebutuhan Pangan + <em>buffer</em> per bahan — diambil dari <em>buffer_persen</em> master Bahan Baku (jika kosong = 0%).</li>';
     html += '<li><strong>Rincian</strong> = kolom untuk catatan/penjelasan tambahan.</li>';
     html += '</ul></div>';
@@ -313,7 +354,19 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     var s = String(satuan || 'kg').toLowerCase();
     if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
       // Bahan berat → dibulatkan ke atas agar aman untuk belanja
-      if (s === 'kg') return ceilAman(totalKg - TK_QTY_TOLERANSI_GRAM / 1000, totalKg) + ' kg';
+      if (s === 'kg') {
+        // Kebutuhan kecil (< 1 kg) → tampilkan pecahan aslinya (mis. 0,2 kg → 1/5 kg)
+        // agar kebutuhan kecil tidak dibulatkan ke 1 kg; kebutuhan ≥ 1 kg tetap
+        // dibulatkan ke atas ke kg utuh (belanja aman).
+        if (totalKg > 0 && totalKg < 1) {
+          var qKecil = Math.round(totalKg * 100) / 100;
+          // Jangan sampai jadi 0 kg: kebutuhan nyata sekecil apa pun tetap tampil
+          // minimal 0,01 kg (mencegah baris hilang dari RAB karena parsed.qty <= 0).
+          if (qKecil <= 0) qKecil = 0.01;
+          return fmtTkPecahan(qKecil) + ' kg';
+        }
+        return ceilAman(totalKg - TK_QTY_TOLERANSI_GRAM / 1000, totalKg) + ' kg';
+      }
       return ceilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g'; // satuan gram
     }
     if (isSatuanHitung(s)) {
@@ -384,8 +437,8 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
         if (satuanKecil === 'kg') {
           var bulatAsli = Math.round(asliKg * 100) / 100;
           qtyTooltip = bulatAsli === parsed.qty
-            ? 'Kebutuhan asli: ' + fmtTkNum(asliKg) + ' kg = QTY belanja'
-            : 'Kebutuhan asli: ' + fmtTkNum(asliKg) + ' kg → dibulatkan ke atas menjadi ' + fmtTkNum(parsed.qty) + ' kg (belanja aman)';
+            ? 'Kebutuhan asli: ' + fmtTkPecahan(asliKg) + ' kg = QTY belanja'
+            : 'Kebutuhan asli: ' + fmtTkPecahan(asliKg) + ' kg → dibulatkan ke atas menjadi ' + fmtTkPecahan(parsed.qty) + ' kg (belanja aman)';
         } else if (satuanKecil === 'g') {
           var asliG = Math.round(asliKg * 1000);
           qtyTooltip = asliG === parsed.qty
@@ -410,7 +463,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
         no: no,
         uraian: b.nama_display || b.nama,
         bahanBakuId: Number(b.bahan_baku_id) || 0,
-        qty: fmtTkNum(parsed.qty),
+        qty: fmtTkPecahan(parsed.qty),
         satuan: parsed.satuan,
         harga: hargaSatuan,
         jumlah: jumlah,
@@ -442,7 +495,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     html += '<div class="bg-white border border-stone-200 rounded-lg p-4 mt-4 text-xs text-stone-500">';
     html += '<div class="font-semibold text-stone-700 mb-2">Keterangan:</div>';
     html += '<ul class="space-y-1 list-disc list-inside">';
-    html += '<li><strong>QTY</strong> = jumlah belanja per bahan — dihitung otomatis dari kebutuhan pangan (bahan berat → kg; bahan satuan → pcs/btl/dll.). Angka kebutuhan asli dibulatkan <em>ke atas</em> ke satuan beli utuh agar aman untuk pembelian (mis. kebutuhan 285,4 kg → QTY 286 kg). Arahkan kursor ke tanda ⓘ pada QTY untuk melihat rincian asalnya.</li>';
+    html += '<li><strong>QTY</strong> = jumlah belanja per bahan — dihitung otomatis dari kebutuhan pangan (bahan berat → kg; bahan satuan → pcs/btl/dll.). Kebutuhan ≥ 1 kg dibulatkan <em>ke atas</em> ke satuan beli utuh agar aman untuk pembelian (mis. kebutuhan 285,4 kg → QTY 286 kg). Kebutuhan < 1 kg ditampilkan dalam pecahan (mis. 1/2 kg, 1/5 kg) agar tidak membesar menjadi 1 kg. Arahkan kursor ke tanda ⓘ pada QTY untuk melihat rincian asalnya.</li>';
     html += '<li><strong>HARGA</strong> = harga satuan dari master Bahan Baku (bahan_baku.harga_satuan).</li>';
     html += '<li><strong>JUMLAH</strong> = QTY × HARGA.</li>';
     html += '<li><strong>KETERANGAN</strong> = instruksi bahan (mis. Potong 10, Fillet) dari resep menu.</li>';
@@ -578,8 +631,12 @@ function parseTkQtySatuan(str) {
   }
 
   var qty = 0;
-  // Pecahan 1/2
-  if (/^[0-9,.\s]+\/[0-9,.\s]+$/.test(s)) {
+  // Pecahan campuran: "1 1/2" → 1.5
+  var mMix = s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  if (mMix) {
+    qty = parseFloat(mMix[1]) + parseFloat(mMix[2]) / parseFloat(mMix[3]);
+  } else if (/^[0-9,.\s]+\/[0-9,.\s]+$/.test(s)) {
+    // Pecahan 1/2
     var parts = s.split('/');
     var num = parseFloat(parts[0].replace(/\./g, '').replace(/,/g, '.'));
     var den = parseFloat(parts[1].replace(/\./g, '').replace(/,/g, '.'));

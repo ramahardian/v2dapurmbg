@@ -58,7 +58,13 @@ function hitungSP(b, spMap) {
 
 function hitungBDD(beratBersih, persenBdd) {
   const bdd = Number(persenBdd || 100);
-  return bdd > 0 ? Math.round((beratBersih / (bdd / 100)) * 100) / 100 : beratBersih;
+  // JANGAN membulatkan di sini: nilai ini per-siswa (gram) yang lalu dikalikan
+  // ribuan siswa (mis. 2859). Pembulatan 2 desimal di level per-siswa akan
+  // melebar ke gram yang banyak — mis. 0,175 g → 0,18 g × 2859 = 514,6 g
+  // padahal seharusnya 500,3 g (kebutuhan jadi 0,51 kg, bukan 0,5 kg).
+  // Pembulatan untuk tampilan dilakukan oleh pemanggil (Math.round di sisi
+  // display / kebutuhan_kg).
+  return bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
 }
 
 async function getSpMapByJenjang(jenjang) {

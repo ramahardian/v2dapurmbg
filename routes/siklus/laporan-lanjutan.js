@@ -931,10 +931,49 @@ function tkCeilAman(v, totalKg) {
   if (q < 1 && totalKg > 0) return 1;
   return q;
 }
+// Format angka jadi pecahan bila rapi (1/2, 1/3, 1/4, 1/5, 2/3, 3/4 dst.) —
+// salinan dari fmtTkPecahan di public/modul/total-kebutuhan.js (penyebut ≤ 6)
+// agar export XLSX konsisten dengan tampilan web (kebutuhan kecil mis. 0,5 kg
+// ditampilkan "1/2 kg", bukan dibulatkan jadi 1 kg).
+function tkGcd(a, b) {
+  a = Math.abs(a); b = Math.abs(b);
+  while (b) { const t = b; b = a % b; a = t; }
+  return a;
+}
+function tkPecahan(v) {
+  if (v == null || isNaN(v)) return '0,00';
+  const n0 = Number(v);
+  if (n0 === 0) return '0';
+  const neg = n0 < 0;
+  let n = Math.abs(n0);
+  const whole = Math.floor(n);
+  const frac = n - whole;
+  if (frac < 0.005) return (neg ? '-' : '') + String(whole);
+  let best = null;
+  for (let d = 2; d <= 6; d++) {
+    const num = Math.round(frac * d);
+    if (num < 1 || num >= d) continue;
+    const err = Math.abs(frac - num / d);
+    if (err < 0.005 && (!best || err < best.err)) best = { num, den: d, err };
+  }
+  if (best) {
+    const g = tkGcd(best.num, best.den);
+    return (neg ? '-' : '') + (whole > 0 ? whole + ' ' : '') + (best.num / g) + '/' + (best.den / g);
+  }
+  return (neg ? '-' : '') + n.toFixed(2).replace('.', ',');
+}
 function tkAutoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
   const s = String(satuan || 'kg').toLowerCase();
   if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
-    if (s === 'kg') return tkCeilAman(totalKg - TK_QTY_TOLERANSI_GRAM / 1000, totalKg) + ' kg';
+    if (s === 'kg') {
+      // Kebutuhan kecil (< 1 kg) → pecahan aslinya, konsisten dgn halaman web
+      if (totalKg > 0 && totalKg < 1) {
+        let qKecil = Math.round(totalKg * 100) / 100;
+        if (qKecil <= 0) qKecil = 0.01;
+        return tkPecahan(qKecil) + ' kg';
+      }
+      return tkCeilAman(totalKg - TK_QTY_TOLERANSI_GRAM / 1000, totalKg) + ' kg';
+    }
     return tkCeilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g';
   }
   if (tkIsSatuanHitung(s)) {
