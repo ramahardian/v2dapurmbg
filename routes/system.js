@@ -789,4 +789,179 @@ router.get('/system/sync-produksi', requireRole('admin'), (req, res) => {
 </html>`);
 });
 
+// ============================================================
+// POST /system/koreksi-rosmery — perbaiki menu_bahan rosmery dry → 0,175 g/anak
+// (0,5 kg utk 2859 porsi) langsung dari URL, tanpa SSH/mysql.
+// Mengikuti pola sync-produksi: admin-only, per tenant, transaksi atomik,
+// log streaming, idempotent (aman dijalankan berulang).
+// ============================================================
+router.post('/system/koreksi-rosmery', requireRole('admin'), async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const t = req.user.tenant_id;
+  const log = (msg) => { res.write(msg + '\n'); };
+
+  log('══════════════════════════════════════════════');
+  log('  KOREKSI ROSMERY DRY — via URL');
+  log('  Tenant : id ' + t + ' (' + (req.user.nama || req.user.email || '') + ')');
+  log('  Waktu  : ' + new Date().toLocaleString('id-ID'));
+  log('══════════════════════════════════════════════\n');
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // ── 1) Bahan & baris menu yang terdampak ────────────────
+    const [rows] = await conn.query(
+      `SELECT bb.id, bb.nama, bb.satuan, COUNT(mb.id) baris
+       FROM bahan_baku bb
+       LEFT JOIN menu_bahan mb ON mb.bahan_baku_id = bb.id
+       LEFT JOIN menu m ON m.id = mb.menu_id
+       WHERE bb.tenant_id=? AND LOWER(bb.nama) LIKE '%rosmery%'
+       GROUP BY bb.id, bb.nama, bb.satuan`,
+      [t]
+    );
+    log('1) BAHAN TERDAMPAK');
+    if (!rows.length) {
+      log('   ⚠ Tidak ada bahan bernama rosmery untuk tenant ini — selesai (tanpa perubahan).');
+      await conn.commit();
+      log('');
+      log('✓ Selesai.');
+      res.end();
+      return;
+    }
+    for (const r of rows) {
+      log('   • ' + r.nama + ' (id ' + r.id + ', satuan ' + (r.satuan || '-') + ') — ' + r.baris + ' baris di menu');
+    }
+    log('');
+
+    // ── 2) Update jumlah → 0,175 g/anak (= 0,5 kg utk 2859 porsi) ──
+    const [u] = await conn.query(
+      `UPDATE menu_bahan mb
+       JOIN menu m ON m.id = mb.menu_id
+       JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+       SET mb.jumlah = 0.175
+       WHERE m.tenant_id = ? AND LOWER(bb.nama) LIKE '%rosmery%'`,
+      [t]
+    );
+    log('2) UPDATE JUMLAH');
+    log('   menu_bahan.jumlah → 0,175 g/anak (Total Kebutuhan: 0,5 kg → tampil 1/2 kg)');
+    log('   Baris diperbarui : ' + u.affectedRows);
+    log('');
+
+    // ── 3) Sinkronkan gramasi_total menu yang terdampak ───────
+    const [menus] = await conn.query(
+      `SELECT DISTINCT m.id FROM menu_bahan mb
+       JOIN menu m ON m.id = mb.menu_id
+       JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+       WHERE m.tenant_id=? AND LOWER(bb.nama) LIKE '%rosmery%'`,
+      [t]
+    );
+    log('3) GRAMASI MENU TERDAMPAK');
+    for (const mn of menus) {
+      const [[g]] = await conn.query(
+        'SELECT COALESCE(SUM(jumlah),0) s FROM menu_bahan WHERE menu_id=?', [mn.id]
+      );
+      const gramasi = Math.round(Number(g.s) * 100) / 100;
+      await conn.query('UPDATE menu SET gramasi_total=? WHERE id=? AND tenant_id=?', [gramasi, mn.id, t]);
+      log('   Menu id ' + mn.id + ': gramasi_total → ' + gramasi + ' g');
+    }
+    log('');
+
+    await conn.commit();
+
+    // ── Verifikasi akhir ──────────────────────────────────────
+    const [[v]] = await conn.query(
+      `SELECT
+         (SELECT COUNT(*) FROM menu_bahan mb JOIN menu m ON m.id=mb.menu_id JOIN bahan_baku bb ON bb.id=mb.bahan_baku_id
+           WHERE m.tenant_id=? AND LOWER(bb.nama) LIKE '%rosmery%' AND mb.jumlah <> 0.175) AS belum,
+         (SELECT COUNT(*) FROM menu_bahan mb JOIN menu m ON m.id=mb.menu_id JOIN bahan_baku bb ON bb.id=mb.bahan_baku_id
+           WHERE m.tenant_id=? AND LOWER(bb.nama) LIKE '%rosmery%') AS total`,
+      [t, t]
+    );
+    log('──────────────────────────────────────────────');
+    log('  VERIFIKASI AKHIR (tenant id ' + t + ')');
+    log('  Baris rosmery total   : ' + v.total);
+    log('  Baris belum 0,175     : ' + v.belum + '  (harus 0)');
+    log('──────────────────────────────────────────────');
+    log('✓ Koreksi selesai — refresh /total-kebutuhan → rosmery dry tampil 1/2 kg.');
+  } catch (err) {
+    try { await conn.rollback(); } catch (e) { /* koneksi mungkin sudah putus */ }
+    log('');
+    log('✗ Gagal: ' + err.message);
+    log('  Semua perubahan dibatalkan (rollback) — data tidak berubah.');
+  } finally {
+    conn.release();
+  }
+  res.end();
+});
+
+// GET /system/koreksi-rosmery — halaman trigger koreksi (web UI)
+router.get('/system/koreksi-rosmery', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Koreksi Rosmery Dry</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-rose-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-stone-800">Koreksi Rosmery Dry</h1>
+        <p class="text-xs text-stone-500">Perbaiki jumlah rosmery dry di semua menu via URL — tanpa SSH/mysql.</p>
+      </div>
+    </div>
+
+    <p class="text-sm text-stone-600 leading-relaxed mb-4">
+      Menyetel <code class="bg-stone-100 px-1.5 py-0.5 rounded text-xs">menu_bahan.jumlah</code> rosmery dry menjadi
+      <b>0,175 g/anak</b> (= <b>0,5 kg</b> untuk 2.859 porsi) sehingga Total Kebutuhan menampilkan
+      <b>1/2 kg</b> (bukan 1/5 kg / 0,51 kg). Aman & idempotent, hanya untuk tenant Anda.
+    </p>
+
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5 text-xs text-amber-800">
+      <strong>⚠️ Disarankan:</strong> unduh backup dulu via <code class="bg-amber-100 px-1 rounded">/api/system/backup</code>.
+    </div>
+
+    <button onclick="runFix()" id="btn" class="w-full bg-rose-600 hover:bg-rose-700 text-white px-6 py-3 rounded-xl font-semibold transition shadow-md">
+      Jalankan Koreksi Rosmery
+    </button>
+    <pre id="output" class="mt-4 bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-96 hidden"></pre>
+  </div>
+  <script>
+    async function runFix() {
+      if (!confirm('Set rosmery dry → 0,175 g/anak (0,5 kg) di semua menu sekarang?')) return;
+      const btn = document.getElementById('btn');
+      const out = document.getElementById('output');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      out.classList.remove('hidden');
+      out.textContent = '';
+      try {
+        const r = await fetch('/api/system/koreksi-rosmery', { method: 'POST', credentials: 'include' });
+        if (!r.ok) { out.textContent += 'HTTP ' + r.status + ': ' + (await r.text()); return; }
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          out.textContent += decoder.decode(value);
+          out.scrollTop = out.scrollHeight;
+        }
+      } catch (e) {
+        out.textContent += '\\nGagal: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = 'Jalankan Koreksi Rosmery';
+    }
+  </script>
+</body>
+</html>`);
+});
+
 module.exports = router;
