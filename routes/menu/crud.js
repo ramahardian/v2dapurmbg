@@ -63,7 +63,7 @@ function registerCrudRoutes(router) {
     } catch (e) {
       await conn.rollback();
       console.error(e);
-      res.status(400).json({ error: 'Gagal' });
+      res.status(400).json({ error: 'Gagal menyimpan menu: ' + (e.message || 'Terjadi kesalahan') });
     } finally {
       conn.release();
     }
@@ -127,7 +127,7 @@ function registerCrudRoutes(router) {
       res.json({ ok: true });
     } catch (e) {
       await conn.rollback();
-      res.status(400).json({ error: 'Gagal' });
+      res.status(400).json({ error: 'Gagal menyimpan menu: ' + (e.message || 'Terjadi kesalahan') });
     } finally {
       conn.release();
     }

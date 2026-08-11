@@ -661,6 +661,17 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi kategori_penerima TEXT): ' + e.message); }
 
+  // Multi-jenjang di menu — kolom varchar(50) meluap saat kategori diambil dari
+  // siklus multi-jenjang (mis. ["TK/PAUD","SD 1-3","SD 4-6","SMP","SMA","Posyandu"]
+  // = 52 karakter) → simpan menu gagal dengan ER_DATA_TOO_LONG.
+  try {
+    const [menuKpCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'menu' AND COLUMN_NAME = 'kategori_penerima' AND DATA_TYPE = 'text'");
+    if (!menuKpCol.length) {
+      await q("ALTER TABLE menu MODIFY COLUMN kategori_penerima TEXT");
+      log('✓ Migrasi menu: kategori_penerima → TEXT (multi jenjang)');
+    }
+  } catch (e) { log('  (skip migrasi kategori_penerima menu TEXT): ' + e.message); }
+
   // Tabel perencanaan_override — override bahan per jenjang
   try {
     await q(`CREATE TABLE IF NOT EXISTS perencanaan_override (

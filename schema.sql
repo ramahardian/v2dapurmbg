@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS menu (
   id INT AUTO_INCREMENT PRIMARY KEY,
   tenant_id INT NOT NULL,
   nama VARCHAR(200) NOT NULL,
-  kategori_penerima VARCHAR(50),
+  kategori_penerima TEXT,
   deskripsi TEXT,
   gramasi_total DECIMAL(10,2) DEFAULT 0,
   gramasi_besar DECIMAL(10,2) DEFAULT 0,
