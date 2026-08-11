@@ -964,4 +964,375 @@ router.get('/system/koreksi-rosmery', requireRole('admin'), (req, res) => {
 </html>`);
 });
 
+// ============================================================
+// POST /system/koreksi-berat-satuan — isi berat_per_satuan yang masih 0/null
+// untuk bahan belanja (Kg → 1000 g, g → 1 g, Minyak karton → 12.000 g).
+// Baris SP referensi (nama mengandung ' SP') TIDAK disentuh.
+// Mode: dry-run (default) / apply ({ apply: true }). Idempotent, per tenant.
+// ============================================================
+router.post('/system/koreksi-berat-satuan', requireRole('admin'), async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const t = req.user.tenant_id;
+  const apply = !!(req.body && req.body.apply);
+  const log = (msg) => { res.write(msg + '\n'); };
+
+  log('══════════════════════════════════════════════');
+  log('  KOREKSI BERAT PER SATUAN — via URL');
+  log('  Tenant : id ' + t + ' (' + (req.user.nama || req.user.email || '') + ')');
+  log('  Waktu  : ' + new Date().toLocaleString('id-ID'));
+  log('  Mode   : ' + (apply ? 'APPLY (data diubah)' : 'DRY-RUN (hanya preview)'));
+  log('══════════════════════════════════════════════\n');
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Bahan belanja (bukan baris SP referensi) yang berat_per_satuan kosong/0
+    const [rows] = await conn.query(
+      `SELECT bb.id, bb.nama, bb.satuan, bb.kategori_sp, bb.berat_per_satuan
+       FROM bahan_baku bb
+       WHERE bb.tenant_id = ?
+         AND (bb.berat_per_satuan IS NULL OR bb.berat_per_satuan = 0)
+         AND LOWER(bb.nama) NOT LIKE '% sp%'
+         AND LOWER(bb.satuan) IN ('kg','kilogram','g','gram','gr','liter','l','karton','ctn','kardus','dus')`,
+      [t]
+    );
+
+    log('BAHAN DENGAN BERAT PER SATUAN KOSONG');
+    if (!rows.length) {
+      log('   ✓ Tidak ada — semua bahan belanja sudah punya berat_per_satuan.');
+      await conn.commit();
+      log('');
+      log('✓ Selesai.');
+      res.end();
+      return;
+    }
+
+    let toFix = 0, skip = 0, fixed = 0;
+    for (const r of rows) {
+      const s = String(r.satuan || '').toLowerCase();
+      let target = 0;
+      if (s === 'kg' || s === 'kilogram') target = 1000;                 // 1 kg = 1000 g
+      else if (s === 'g' || s === 'gram' || s === 'gr') target = 1;      // satuan gram = 1 g
+      else if (s === 'liter' || s === 'l') target = 1000;                // ~1 L ≈ 1000 g
+      else if (['karton','ctn','kardus','dus'].includes(s)) {
+        if (String(r.kategori_sp || '').toLowerCase() === 'minyak') target = 12000; // 12 kg/karton
+        else { skip++; log('   ⚠ SKIP (satuan karton non-minyak, tidak ditebak): ' + r.nama + ' (' + r.satuan + ')'); continue; }
+      }
+      if (target <= 0) { skip++; continue; }
+      toFix++;
+      if (apply) {
+        await conn.query('UPDATE bahan_baku SET berat_per_satuan=? WHERE id=? AND tenant_id=?', [target, r.id, t]);
+        fixed++;
+      }
+      log('   ' + (apply ? '✓' : '•') + ' ' + r.nama + ' (' + r.satuan + '): ' + (Number(r.berat_per_satuan) || 0) + ' → ' + target + ' g');
+    }
+
+    log('');
+    if (apply) {
+      log('Update: ' + fixed + ' bahan diisi (skip ' + skip + ')');
+    } else {
+      log('Dry-run: ' + toFix + ' bahan akan diisi (skip ' + skip + ')');
+      log('Jalankan ulang dengan { "apply": true } untuk menyimpan.');
+    }
+
+    if (apply) await conn.commit();
+    else await conn.rollback(); // dry-run: jangan simpan apa pun
+
+    // Verifikasi: hanya hitung bahan yang SEHARUSNYA sudah terisi (karton
+    // non-minyak sengaja di-skip, jadi tidak dihitung sebagai sisa masalah).
+    const [[v]] = await conn.query(
+      `SELECT
+         (SELECT COUNT(*) FROM bahan_baku WHERE tenant_id=? AND (berat_per_satuan IS NULL OR berat_per_satuan=0)
+           AND LOWER(nama) NOT LIKE '% sp%'
+           AND (LOWER(satuan) IN ('kg','kilogram','g','gram','gr','liter','l')
+                OR (LOWER(satuan) IN ('karton','ctn','kardus','dus') AND LOWER(kategori_sp)='minyak'))) AS sisa`,
+      [t]
+    );
+    log('──────────────────────────────────────────────');
+    log('  VERIFIKASI (tenant id ' + t + ')');
+    log('  Bahan belanja bps masih kosong : ' + v.sisa + (apply && v.sisa === 0 ? '  ✓ bersih' : ''));
+    log('  (karton non-minyak sengaja dilewati, tidak dihitung)');
+    log('──────────────────────────────────────────────');
+    log(apply ? '✓ Koreksi selesai — perubahan tersimpan (commit).' : '✓ Dry-run selesai — tidak ada perubahan tersimpan.');
+  } catch (err) {
+    try { await conn.rollback(); } catch (e) { /* koneksi mungkin sudah putus */ }
+    log('');
+    log('✗ Gagal: ' + err.message);
+    log('  Semua perubahan dibatalkan (rollback) — data tidak berubah.');
+  } finally {
+    conn.release();
+  }
+  res.end();
+});
+
+// GET /system/koreksi-berat-satuan — halaman trigger (web UI)
+router.get('/system/koreksi-berat-satuan', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Koreksi Berat Per Satuan</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-sky-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 3v18m-7-7l7 7 7-7"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-stone-800">Koreksi Berat Per Satuan</h1>
+        <p class="text-xs text-stone-500">Isi berat_per_satuan yang masih kosong via URL — tanpa SSH/mysql.</p>
+      </div>
+    </div>
+
+    <p class="text-sm text-stone-600 leading-relaxed mb-4">
+      Bahan belanja (bukan baris SP referensi) yang <code class="bg-stone-100 px-1.5 py-0.5 rounded text-xs">berat_per_satuan</code>-nya masih 0/null
+      akan diisi sesuai satuan:
+    </p>
+    <ul class="text-sm text-stone-700 space-y-1.5 mb-5">
+      <li class="flex items-start gap-2"><span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0"></span>
+        <span><b>Kg</b> → 1000 g</span></li>
+      <li class="flex items-start gap-2"><span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0"></span>
+        <span><b>g / Liter</b> → 1 g / 1000 g</span></li>
+      <li class="flex items-start gap-2"><span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0"></span>
+        <span><b>Minyak karton/dus</b> → 12.000 g (12 kg/karton)</span></li>
+      <li class="flex items-start gap-2"><span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-300 shrink-0"></span>
+        <span><b>Karton non-minyak</b> → dilewati (tidak ditebak)</span></li>
+    </ul>
+
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5 text-xs text-amber-800">
+      <strong>⚠️ Disarankan:</strong> unduh backup dulu via <code class="bg-amber-100 px-1 rounded">/api/system/backup</code>.
+      Jalankan <b>Dry Run</b> dulu untuk preview, lalu <b>Jalankan Koreksi</b>.
+    </div>
+
+    <div class="flex gap-3 mb-6">
+      <button onclick="runFix(false)" id="btn-dry" class="flex-1 bg-sky-600 hover:bg-sky-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        1. Dry Run (Preview)
+      </button>
+      <button onclick="runFix(true)" id="btn-apply" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        2. Jalankan Koreksi
+      </button>
+    </div>
+
+    <pre id="output" class="bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-96 hidden"></pre>
+  </div>
+  <script>
+    async function runFix(apply) {
+      const btn = apply ? document.getElementById('btn-apply') : document.getElementById('btn-dry');
+      if (apply && !confirm('Isi berat_per_satuan yang kosong sekarang?')) return;
+      const out = document.getElementById('output');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      out.classList.remove('hidden');
+      out.textContent = '';
+      try {
+        const r = await fetch('/api/system/koreksi-berat-satuan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apply }),
+          credentials: 'include'
+        });
+        if (!r.ok) { out.textContent += 'HTTP ' + r.status + ': ' + (await r.text()); return; }
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          out.textContent += decoder.decode(value);
+          out.scrollTop = out.scrollHeight;
+        }
+      } catch (e) {
+        out.textContent += '\\nGagal: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = apply ? '2. Jalankan Koreksi' : '1. Dry Run (Preview)';
+    }
+  </script>
+</body>
+</html>`);
+});
+
+// ============================================================
+// POST /system/koreksi-wijen — set Minyak Wijen di semua menu = 1 botol
+// (menu_bahan.jumlah = berat_per_satuan ÷ jumlah_porsi) langsung dari URL.
+// Mengikuti pola koreksi-rosmery: admin-only, per tenant, transaksi atomik,
+// log streaming, idempotent. Bahan dicocokkan by nama (LIKE '%wijen%').
+// ============================================================
+router.post('/system/koreksi-wijen', requireRole('admin'), async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const t = req.user.tenant_id;
+  const log = (msg) => { res.write(msg + '\n'); };
+
+  log('══════════════════════════════════════════════');
+  log('  KOREKSI MINYAK WIJEN — via URL');
+  log('  Tenant : id ' + t + ' (' + (req.user.nama || req.user.email || '') + ')');
+  log('  Waktu  : ' + new Date().toLocaleString('id-ID'));
+  log('══════════════════════════════════════════════\n');
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // ── 1) Bahan & baris menu yang terdampak ────────────────
+    const [rows] = await conn.query(
+      `SELECT bb.id AS bahan_id, bb.nama, bb.satuan, bb.berat_per_satuan,
+              mb.id AS mb_id, mb.menu_id, mb.jumlah AS jumlah_lama,
+              m.jumlah_porsi, m.nama AS menu_nama
+       FROM bahan_baku bb
+       JOIN menu_bahan mb ON mb.bahan_baku_id = bb.id
+       JOIN menu m ON m.id = mb.menu_id
+       WHERE bb.tenant_id=? AND LOWER(bb.nama) LIKE '%wijen%'
+         AND LOWER(bb.nama) NOT LIKE '% sp%'`,
+      [t]
+    );
+    log('1) BAHAN & BARIS TERDAMPAK');
+    if (!rows.length) {
+      log('   ⚠ Tidak ada bahan bernama wijen untuk tenant ini — selesai (tanpa perubahan).');
+      await conn.commit();
+      log('');
+      log('✓ Selesai.');
+      res.end();
+      return;
+    }
+
+    let total = 0, ok = 0, skip = 0;
+    const affectedMenus = new Set();
+    for (const r of rows) {
+      total++;
+      const bps = Number(r.berat_per_satuan) || 170; // fallback 170 g/botol
+      const porsi = Number(r.jumlah_porsi) || 0;
+      if (porsi <= 0) {
+        skip++;
+        log('   ⚠ SKIP: ' + r.nama + ' → "' + (r.menu_nama || 'menu tanpa porsi') + '" (jumlah_porsi ' + r.jumlah_porsi + ')');
+        continue;
+      }
+      // 1 botol = bps gram total utk porsi tsb → gram per anak = bps / porsi.
+      // Kolom menu_bahan.jumlah hanya DECIMAL(15,3) (3 desimal), jadi target
+      // dibulatkan ke 3 desimal agar tersimpan persis (0,05946 → 0,059) dan
+      // verifikasi tidak salah hitung (0,059 masih ≈ 1 botol: 0,059×2859 = 168,7 g).
+      const target = Math.round((bps / porsi) * 1000) / 1000;
+      log('   • ' + r.nama + ' (' + r.satuan + ', bps ' + bps + ' g) → menu "' + (r.menu_nama || r.menu_id) + '" (' + porsi + ' porsi): ' + r.jumlah_lama + ' → ' + target + ' g/anak');
+      await conn.query('UPDATE menu_bahan SET jumlah=? WHERE id=?', [target, r.mb_id]);
+      affectedMenus.add(r.menu_id);
+      ok++;
+    }
+    log('');
+    log('2) UPDATE JUMLAH');
+    log('   ' + ok + ' baris di-set = 1 botol (' + skip + ' di-skip karena porsi kosong)');
+    log('');
+
+    // ── 3) Sinkronkan gramasi_total menu yang terdampak ───────
+    log('3) GRAMASI MENU TERDAMPAK (' + affectedMenus.size + ')');
+    for (const menuId of affectedMenus) {
+      const [[g]] = await conn.query(
+        'SELECT COALESCE(SUM(jumlah),0) s FROM menu_bahan WHERE menu_id=?', [menuId]
+      );
+      const gramasi = Math.round(Number(g.s) * 100) / 100;
+      await conn.query('UPDATE menu SET gramasi_total=? WHERE id=? AND tenant_id=?', [gramasi, menuId, t]);
+      log('   Menu id ' + menuId + ': gramasi_total → ' + gramasi + ' g');
+    }
+    log('');
+
+    await conn.commit();
+
+    // ── Verifikasi akhir ──────────────────────────────────────
+    const [[v]] = await conn.query(
+      `SELECT
+         (SELECT COUNT(*) FROM menu_bahan mb JOIN menu m ON m.id=mb.menu_id JOIN bahan_baku bb ON bb.id=mb.bahan_baku_id
+           WHERE m.tenant_id=? AND LOWER(bb.nama) LIKE '%wijen%' AND LOWER(bb.nama) NOT LIKE '% sp%'
+             AND mb.jumlah <> ROUND(COALESCE(NULLIF(bb.berat_per_satuan,0),170) / NULLIF(m.jumlah_porsi,0), 3)) AS belum,
+         (SELECT COUNT(*) FROM menu_bahan mb JOIN menu m ON m.id=mb.menu_id JOIN bahan_baku bb ON bb.id=mb.bahan_baku_id
+           WHERE m.tenant_id=? AND LOWER(bb.nama) LIKE '%wijen%' AND LOWER(bb.nama) NOT LIKE '% sp%') AS total`,
+      [t, t]
+    );
+    log('──────────────────────────────────────────────');
+    log('  VERIFIKASI AKHIR (tenant id ' + t + ')');
+    log('  Baris wijen total        : ' + v.total);
+    log('  Baris belum = 1 botol    : ' + v.belum + '  (harus 0)');
+    log('──────────────────────────────────────────────');
+    log('✓ Koreksi selesai — refresh /total-kebutuhan → Minyak Wijen tampil 1 BOTOL.');
+  } catch (err) {
+    try { await conn.rollback(); } catch (e) { /* koneksi mungkin sudah putus */ }
+    log('');
+    log('✗ Gagal: ' + err.message);
+    log('  Semua perubahan dibatalkan (rollback) — data tidak berubah.');
+  } finally {
+    conn.release();
+  }
+  res.end();
+});
+
+// GET /system/koreksi-wijen — halaman trigger koreksi (web UI)
+router.get('/system/koreksi-wijen', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Koreksi Minyak Wijen</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-yellow-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.4 7.2H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6L8 13.6 2 9.2h7.6z"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-stone-800">Koreksi Minyak Wijen</h1>
+        <p class="text-xs text-stone-500">Set Minyak Wijen di semua menu = 1 botol via URL — tanpa SSH/mysql.</p>
+      </div>
+    </div>
+
+    <p class="text-sm text-stone-600 leading-relaxed mb-4">
+      Menyetel <code class="bg-stone-100 px-1.5 py-0.5 rounded text-xs">menu_bahan.jumlah</code> Minyak Wijen sehingga kebutuhan
+      total = <b>1 botol</b> per hari (gram per anak = berat_per_satuan ÷ jumlah porsi menu,
+      mis. 170 g ÷ 2.859 porsi ≈ 0,0595 g/anak). Aman & idempotent, hanya untuk tenant Anda.
+    </p>
+
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5 text-xs text-amber-800">
+      <strong>⚠️ Disarankan:</strong> unduh backup dulu via <code class="bg-amber-100 px-1 rounded">/api/system/backup</code>.
+    </div>
+
+    <button onclick="runFix()" id="btn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold transition shadow-md">
+      Jalankan Koreksi Minyak Wijen
+    </button>
+    <pre id="output" class="mt-4 bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-96 hidden"></pre>
+  </div>
+  <script>
+    async function runFix() {
+      if (!confirm('Set Minyak Wijen = 1 botol di semua menu sekarang?')) return;
+      const btn = document.getElementById('btn');
+      const out = document.getElementById('output');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      out.classList.remove('hidden');
+      out.textContent = '';
+      try {
+        const r = await fetch('/api/system/koreksi-wijen', { method: 'POST', credentials: 'include' });
+        if (!r.ok) { out.textContent += 'HTTP ' + r.status + ': ' + (await r.text()); return; }
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          out.textContent += decoder.decode(value);
+          out.scrollTop = out.scrollHeight;
+        }
+      } catch (e) {
+        out.textContent += '\\nGagal: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = 'Jalankan Koreksi Minyak Wijen';
+    }
+  </script>
+</body>
+</html>`);
+});
+
 module.exports = router;
