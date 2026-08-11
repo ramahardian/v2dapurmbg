@@ -1572,4 +1572,264 @@ router.get('/system/koreksi-berat-pcs', requireRole('admin'), (req, res) => {
 </html>`);
 });
 
+// ============================================================
+// POST /system/koreksi-menu-bahan-bersih — perbaiki menu_bahan.jumlah yang
+// tersimpan sebagai berat KOTOR (mis. Jeruk 76,39 g) padahal kolom itu harus
+// berat BERSIH (55 g = 1 SP). Akibatnya RAB membagi BDD dua kali → QTY Jeruk
+// jadi 3971 pcs (bukan = jumlah siswa 2859).
+//
+// Latar: menu yang bahan-nya diambil dari siklus (data lama / versi lama)
+// menyimpan jumlah = berat kotor. Bila dihapus & diisi ulang normal → 55 g →
+// QTY = jumlah PM. Endpoint ini mengoreksi data yang tersimpan salah secara
+// massal, lalu menghitung ulang nutrisi menu terdampak.
+//
+// Aman: hanya mengubah baris yang TERBUKTI pola kotor (jumlah ≈ berat_1_sp ÷ BDD
+// ATAU ≈ berat_kotor referensi SP, dan ≠ berat bersih), dan hanya untuk bahan
+// satuan unit (pcs/buah/biji/butir/ekor) — bahan satuan berat hanya dilaporkan.
+// Mode: dry-run (default) / apply ({ apply: true }). Idempotent, per tenant.
+// ============================================================
+router.post('/system/koreksi-menu-bahan-bersih', requireRole('admin'), async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const t = req.user.tenant_id;
+  const apply = !!(req.body && req.body.apply);
+  const log = (msg) => { res.write(msg + '\n'); };
+
+  log('══════════════════════════════════════════════');
+  log('  KOREKSI JUMLAH MENU BAHAN (kotor → bersih) — via URL');
+  log('  Tenant : id ' + t + ' (' + (req.user.nama || req.user.email || '') + ')');
+  log('  Waktu  : ' + new Date().toLocaleString('id-ID'));
+  log('  Mode   : ' + (apply ? 'APPLY (data diubah)' : 'DRY-RUN (hanya preview)'));
+  log('══════════════════════════════════════════════\n');
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const { loadSpRefMap, calculateNutrition } = require('./menu/helpers');
+    const spRefMap = await loadSpRefMap(t);
+
+    // Referensi SP (berat bersih + kotor) utk bahan yang berat_1_sp master kosong
+    const [refs] = await conn.query(
+      'SELECT nama, berat_bersih, berat_kotor FROM sp_referensi_bahan WHERE tenant_id=?',
+      [t]
+    );
+    const refByNama = {};
+    for (const r of refs) {
+      refByNama[String(r.nama).toLowerCase()] = {
+        bersih: Number(r.berat_bersih) || 0,
+        kotor: Number(r.berat_kotor) || 0,
+      };
+    }
+
+    const SATUAN_UNIT = ['pcs', 'buah', 'biji', 'butir', 'ekor'];
+
+    const [rows] = await conn.query(
+      `SELECT mb.id, mb.menu_id, mb.jumlah, b.nama, b.satuan, b.berat_1_sp, b.persen_bdd, m.nama AS menu_nama
+       FROM menu_bahan mb
+       JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+       JOIN menu m ON m.id = mb.menu_id
+       WHERE m.tenant_id = ?
+       ORDER BY mb.id`,
+      [t]
+    );
+
+    log('MEMINDAI ' + rows.length + ' BARIS MENU_BAHAN…\n');
+    if (!rows.length) {
+      log('   ⚠ Tidak ada baris menu_bahan untuk tenant ini — selesai.');
+      await conn.commit();
+      log('');
+      log('✓ Selesai.');
+      res.end();
+      return;
+    }
+
+    const affectedMenus = new Set();
+    let kotorUnit = 0, kotorNonUnit = 0, takBisa = 0, fixed = 0;
+    for (const r of rows) {
+      const jml = Number(r.jumlah) || 0;
+      const b1 = Number(r.berat_1_sp) || 0;
+      const bdd = Number(r.persen_bdd) || 100;
+      const sat = String(r.satuan || '').toLowerCase();
+      const ref = refByNama[String(r.nama).toLowerCase()] || {};
+
+      const bersih = b1 > 0 ? b1 : (ref.bersih || 0);
+      let kotor = 0;
+      if (b1 > 0 && bdd > 0) kotor = Math.round((b1 / (bdd / 100)) * 100) / 100;
+      else kotor = ref.kotor || 0;
+
+      if (!bersih || !kotor) { takBisa++; continue; }
+
+      // Pola salah: jumlah ≈ berat kotor TAPI ≠ berat bersih
+      const isKotor = Math.abs(jml - kotor) < 0.02 && Math.abs(jml - bersih) > 0.02;
+      if (!isKotor) continue;
+
+      const label = r.nama + ' — "' + (r.menu_nama || 'menu ' + r.menu_id) + '" (menu ' + r.menu_id + ')';
+      if (!SATUAN_UNIT.includes(sat)) {
+        kotorNonUnit++;
+        log('   ⚠ SATUAN BERAT (cek manual): ' + label + ' | jumlah=' + r.jumlah + ' (kotor ' + kotor + ', bersih ' + bersih + ')');
+        continue;
+      }
+
+      kotorUnit++;
+      if (apply) {
+        await conn.query('UPDATE menu_bahan SET jumlah=? WHERE id=?', [bersih, r.id]);
+        affectedMenus.add(r.menu_id);
+        fixed++;
+      }
+      log('   ' + (apply ? '✓' : '•') + ' ' + label + ' | jumlah ' + r.jumlah + ' → ' + bersih + ' g (bersih)');
+    }
+
+    log('');
+    if (apply) {
+      log('Update: ' + fixed + ' baris dikoreksi ke berat bersih (skip ' + takBisa + ' tak bisa, ' + kotorNonUnit + ' satuan berat dicatat)');
+      // Hitung ulang nutrisi menu terdampak
+      if (affectedMenus.size) {
+        const ph = [...affectedMenus].map(() => '?').join(',');
+        const [bahanRows] = await conn.query(
+          `SELECT mb.menu_id, mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
+           FROM menu_bahan mb JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
+           WHERE mb.menu_id IN (${ph})`,
+          [...affectedMenus]
+        );
+        const byMenu = {};
+        for (const br of bahanRows) {
+          if (!byMenu[br.menu_id]) byMenu[br.menu_id] = [];
+          byMenu[br.menu_id].push(br);
+        }
+        for (const mid of affectedMenus) {
+          const nut = calculateNutrition(byMenu[mid] || [], spRefMap);
+          await conn.query(
+            'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?',
+            [nut.gramasi, nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, mid, t]
+          );
+          log('   ↻ Nutrisi menu ' + mid + ' dihitung ulang (gramasi ' + nut.gramasi + ' g)');
+        }
+      }
+    } else {
+      log('Dry-run: ' + kotorUnit + ' baris perlu dikoreksi (skip ' + takBisa + ' tak bisa, ' + kotorNonUnit + ' satuan berat dicatat)');
+      log('Jalankan ulang dengan { "apply": true } untuk menyimpan.');
+    }
+
+    if (apply) await conn.commit();
+    else await conn.rollback();
+
+    // Verifikasi akhir — sisa pola kotor utk bahan satuan unit
+    const [checkRows] = await conn.query(
+      `SELECT mb.id FROM menu_bahan mb
+       JOIN bahan_baku b ON b.id = mb.bahan_baku_id
+       JOIN menu m ON m.id = mb.menu_id
+       LEFT JOIN sp_referensi_bahan r ON r.tenant_id = b.tenant_id AND LOWER(r.nama) = LOWER(b.nama)
+       WHERE m.tenant_id = ? AND LOWER(b.satuan) IN ('pcs','buah','biji','butir','ekor')
+         AND b.berat_1_sp > 0 AND b.persen_bdd > 0
+         AND ABS(mb.jumlah - ROUND(b.berat_1_sp/(b.persen_bdd/100)*100)/100) < 0.02
+         AND ABS(mb.jumlah - b.berat_1_sp) > 0.02`,
+      [t]
+    );
+    log('──────────────────────────────────────────────');
+    log('  VERIFIKASI (tenant id ' + t + ')');
+    log('  Sisa pola jumlah=berat kotor (satuan unit) : ' + checkRows.length + (apply && checkRows.length === 0 ? '  ✓ bersih' : ''));
+    log('  Aturan: menu_bahan.jumlah harus berat BERSIH (1 SP), bukan berat kotor.');
+    log('──────────────────────────────────────────────');
+    log(apply ? '✓ Koreksi selesai — perubahan tersimpan (commit).' : '✓ Dry-run selesai — tidak ada perubahan tersimpan.');
+  } catch (err) {
+    try { await conn.rollback(); } catch (e) { /* koneksi mungkin sudah putus */ }
+    log('');
+    log('✗ Gagal: ' + err.message);
+    log('  Semua perubahan dibatalkan (rollback) — data tidak berubah.');
+  } finally {
+    conn.release();
+  }
+  res.end();
+});
+
+// GET /system/koreksi-menu-bahan-bersih — halaman trigger (web UI)
+router.get('/system/koreksi-menu-bahan-bersih', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Koreksi Jumlah Menu Bahan</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-lime-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-lime-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 3v18m-7-7l7 7 7-7"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-stone-800">Koreksi Jumlah Menu Bahan</h1>
+        <p class="text-xs text-stone-500">Perbaiki menu_bahan.jumlah yang tersimpan sebagai berat kotor — tanpa SSH/mysql.</p>
+      </div>
+    </div>
+
+    <p class="text-sm text-stone-600 leading-relaxed mb-4">
+      Saat bahan menu diambil dari siklus, <code class="bg-stone-100 px-1.5 py-0.5 rounded text-xs">menu_bahan.jumlah</code>
+      sebagian tersimpan sebagai <b>berat kotor</b> (mis. Jeruk <b>76,39 g</b>) padahal kolom itu harus
+      <b>berat bersih 1 SP</b> (55 g). Akibatnya RAB membagi BDD dua kali → QTY Jeruk <b>3971 pcs</b>
+      (bukan = jumlah siswa 2859). Endpoint ini mengembalikan ke berat bersih + menghitung ulang nutrisi menu.
+    </p>
+    <ul class="text-sm text-stone-700 space-y-1.5 mb-5">
+      <li class="flex items-start gap-2"><span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-lime-500 shrink-0"></span>
+        <span>Hanya baris yang <b>terbukti pola kotor</b> (jumlah ≈ berat_1_sp ÷ BDD) yang diubah</span></li>
+      <li class="flex items-start gap-2"><span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-300 shrink-0"></span>
+        <span>Khusus bahan <b>satuan unit</b> (PCS/Buah/Biji/Butir/Ekor); satuan berat hanya dicatat</span></li>
+      <li class="flex items-start gap-2"><span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-300 shrink-0"></span>
+        <span>Setelahnya jalankan juga <code class="bg-stone-100 px-1 rounded">koreksi-berat-pcs</code> agar berat_per_satuan benar</span></li>
+    </ul>
+
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5 text-xs text-amber-800">
+      <strong>⚠️ Disarankan:</strong> unduh backup dulu via <code class="bg-amber-100 px-1 rounded">/api/system/backup</code>.
+      Jalankan <b>Dry Run</b> dulu untuk preview, lalu <b>Jalankan Koreksi</b>.
+    </div>
+
+    <div class="flex gap-3 mb-6">
+      <button onclick="runFix(false)" id="btn-dry" class="flex-1 bg-lime-600 hover:bg-lime-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        1. Dry Run (Preview)
+      </button>
+      <button onclick="runFix(true)" id="btn-apply" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        2. Jalankan Koreksi
+      </button>
+    </div>
+
+    <pre id="output" class="bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-96 hidden"></pre>
+  </div>
+  <script>
+    async function runFix(apply) {
+      const btn = apply ? document.getElementById('btn-apply') : document.getElementById('btn-dry');
+      if (apply && !confirm('Perbaiki jumlah menu_bahan ke berat bersih sekarang? Nutrisi menu akan dihitung ulang.')) return;
+      const out = document.getElementById('output');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      out.classList.remove('hidden');
+      out.textContent = '';
+      try {
+        const r = await fetch('/api/system/koreksi-menu-bahan-bersih', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apply }),
+          credentials: 'include'
+        });
+        if (!r.ok) { out.textContent += 'HTTP ' + r.status + ': ' + (await r.text()); return; }
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          out.textContent += decoder.decode(value);
+          out.scrollTop = out.scrollHeight;
+        }
+      } catch (e) {
+        out.textContent += '\\nGagal: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = apply ? '2. Jalankan Koreksi' : '1. Dry Run (Preview)';
+    }
+  </script>
+</body>
+</html>`);
+});
+
 module.exports = router;

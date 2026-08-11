@@ -1149,7 +1149,14 @@ async function selectBahan(i, nama) {
     var perPorsi = berat1Sp;
     
     if (!bb) {
-      // Auto-create bahan_baku jika belum ada di master
+      // Auto-create bahan_baku jika belum ada di master.
+      // berat_per_satuan harus berat KOTOR 1 unit (= berat_1_sp ÷ BDD), BUKAN berat
+      // bersih — bila diisi berat bersih (55 g), QTY di RAB jadi 2859 ÷ 0,72 = 3971 pcs
+      // (bukan = jumlah siswa). Contoh: Jeruk 55 g & BDD 72% → 76,39 g.
+      var bddDec = Number(ref.bdd_persen) || 1;
+      if (bddDec > 1) bddDec = bddDec / 100; // aman bila tersimpan sebagai persen (72)
+      if (bddDec <= 0) bddDec = 1;
+      var kotorUnit = Math.round((berat1Sp / bddDec) * 100) / 100;
       try {
         var created = await api.post('/bahan_baku', {
           nama: nama,
@@ -1157,7 +1164,7 @@ async function selectBahan(i, nama) {
           kategori_sp: kat || '',
           berat_1_sp: berat1Sp,
           persen_bdd: Math.round(ref.bdd_persen * 100),
-          berat_per_satuan: berat1Sp,
+          berat_per_satuan: kotorUnit,
           kalori: ref.energi || 0,
           protein: ref.protein || 0,
           karbohidrat: ref.karbohidrat || 0,
