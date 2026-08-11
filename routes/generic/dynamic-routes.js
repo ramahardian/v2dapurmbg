@@ -10,6 +10,7 @@ const { TABLES, REQUIRED_FIELDS, UNIQUE_FIELDS, SEARCHABLE_FIELDS, TABLE_ROLES }
 const { buildInsert, buildUpdate } = require('./helpers');
 const { autoStokMasukFromPenerimaan, autoStokKeluarFromProduksi } = require('./auto-stok');
 const { recalculateRealisasi } = require('./auto-jurnal');
+const { KATEGORI_SP } = require('../../services/spBddCalculator');
 
 /**
  * Mendaftarkan seluruh rute dinamis dan endpoint tambahan ke dalam router.
@@ -286,7 +287,10 @@ function registerDynamicRoutes(router) {
     try {
       const tenantId = req.user.tenant_id;
       const [spRefs] = await db.query('SELECT * FROM sp_referensi_bahan WHERE tenant_id=?', [tenantId]);
-      const validKategoriSp = ['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu', 'Minyak'];
+      // Pakai konstanta tunggal dari spBddCalculator agar tidak ada lagi daftar
+      // kategori yang duplikat (sebelumnya drift: 'Bumbu' ada di aplikasi tapi
+      // tidak di daftar ini → sync tidak mengisi kategori_sp 'Bumbu').
+      const validKategoriSp = KATEGORI_SP;
       let updated = 0, imported = 0;
       for (const ref of spRefs) {
         const [bahan] = await db.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [tenantId, ref.nama]);

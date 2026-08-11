@@ -102,7 +102,10 @@ function registerQueryRoutes(router) {
   });
 
   // GET /menu/:id — detail menu + bahan
-  router.get('/menu/:id', async (req, res) => {
+  // NOTE: dibatasi numerik (:id(\\d+)) karena rute ini terdaftar SEBELUM
+  // /menu/batch & /menu/by-siklus — tanpa pembatasan, Express akan mencocokkan
+  // 'batch'/'by-siklus' sebagai :id dan merusak kedua rute statis tersebut.
+  router.get('/menu/:id(\\d+)', async (req, res) => {
     const [menus] = await db.query(
       `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.jumlah_porsi,
               mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.keterangan

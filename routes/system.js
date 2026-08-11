@@ -2264,4 +2264,427 @@ router.get('/system/koreksi-bdd-100', requireRole('admin'), (req, res) => {
 </html>`);
 });
 
+// ============================================================
+// POST /system/koreksi-bdd — samakan persen_bdd bahan baku dengan nilai
+// bdd_persen dari tabel referensi SP (sp_referensi_bahan) via URL.
+//
+// Latar: sp_referensi_bahan adalah sumber acuan BDD (tombol "Sync ke Bahan
+// Baku" di menu SP Referensi memakai bdd_persen -> persen_bdd). Kadang master
+// bahan_baku tertinggal (mis. Buncis/Labu Siam/Wortel masih 100% padahal
+// referensi 90/83/80%), sehingga /total-kebutuhan meremehkan kebutuhan belanja
+// (BDD 100% = tanpa susut). Endpoint ini menyamakan keduanya untuk semua bahan
+// yang punya baris referensi.
+//
+// Mode: dry-run (default) / apply ({ apply: true }). Backup dibuat ke tabel
+// backup_bahan_baku_sebelum_koreksi_bdd_<tenant_id>. Aman & idempotent: hanya
+// bahan dengan selisih > 0.5 poin yang diubah; baris tanpa referensi tidak
+// disentuh; dijalankan dalam SATU transaksi (rollback total jika gagal).
+// ============================================================
+router.post('/system/koreksi-bdd', requireRole('admin'), async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const t = req.user.tenant_id;
+  const apply = !!(req.body && req.body.apply);
+  const log = (msg) => { res.write(msg + '\n'); };
+
+  log('══════════════════════════════════════════════');
+  log('  KOREKSI PERSEN BDD (dari Referensi SP) — via URL');
+  log('  Tenant : id ' + t + ' (' + (req.user.nama || req.user.email || '') + ')');
+  log('  Waktu  : ' + new Date().toLocaleString('id-ID'));
+  log('  Mode   : ' + (apply ? 'APPLY (data diubah)' : 'DRY-RUN (hanya preview)'));
+  log('══════════════════════════════════════════════\n');
+
+  const conn = await db.getConnection();
+  const namaBackup = 'backup_bahan_baku_sebelum_koreksi_bdd_' + t;
+  try {
+    await conn.beginTransaction();
+
+    // ── Diagnosa: bahan dgn referensi yg persen_bdd-nya beda dari bdd_persen ──
+    const [diff] = await conn.query(
+      `SELECT b.id, b.nama, b.satuan, b.persen_bdd AS sekarang, ROUND(s.bdd_persen*100) AS seharusnya
+       FROM bahan_baku b
+       JOIN sp_referensi_bahan s ON s.nama = b.nama AND s.tenant_id = b.tenant_id
+       WHERE b.tenant_id = ? AND ABS(COALESCE(b.persen_bdd,0) - ROUND(s.bdd_persen*100)) > 0.5
+       ORDER BY b.nama`,
+      [t]
+    );
+
+    const [[tot]] = await conn.query(
+      `SELECT COUNT(*) c FROM bahan_baku b
+       JOIN sp_referensi_bahan s ON s.nama = b.nama AND s.tenant_id = b.tenant_id
+       WHERE b.tenant_id = ?`,
+      [t]
+    );
+
+    log('BAHAN DENGAN REFERENSI SP : ' + tot.c);
+    log('INKONSISTENSI BDD          : ' + diff.length + '\n');
+
+    if (!diff.length) {
+      log('   ✓ Semua persen_bdd bahan baku sudah sesuai referensi SP — tidak ada yang perlu diubah.');
+      await conn.commit();
+      log('');
+      log(apply ? '✓ Selesai (tidak ada perubahan).' : '✓ Dry-run selesai — tidak ada perubahan tersimpan.');
+      res.end();
+      return;
+    }
+
+    for (const r of diff) {
+      log('   ' + (apply ? '✓' : '•') + ' ' + r.nama + ' (' + (r.satuan || '-') + '): ' + (Number(r.sekarang) || 0) + '% → ' + r.seharusnya + '%');
+    }
+    log('');
+
+    if (!apply) {
+      log('Dry-run: ' + diff.length + ' bahan akan disamakan ke referensi SP.');
+      log('Jalankan ulang dengan { "apply": true } untuk menyimpan.');
+      await conn.rollback();
+      log('');
+      log('✓ Dry-run selesai — tidak ada perubahan tersimpan.');
+      res.end();
+      return;
+    }
+
+    // ── Backup baris yang akan diubah ────────────────────────────
+    await conn.query('DROP TABLE IF EXISTS ' + namaBackup);
+    await conn.query(
+      `CREATE TABLE ${namaBackup} AS
+       SELECT b.* FROM bahan_baku b
+       JOIN sp_referensi_bahan s ON s.nama = b.nama AND s.tenant_id = b.tenant_id
+       WHERE b.tenant_id = ? AND ABS(COALESCE(b.persen_bdd,0) - ROUND(s.bdd_persen*100)) > 0.5`,
+      [t]
+    );
+    const [[bk]] = await conn.query('SELECT COUNT(*) c FROM ' + namaBackup);
+    log('BACKUP : ' + bk.c + ' baris → tabel ' + namaBackup);
+    log('');
+
+    // ── Update persen_bdd dari referensi ─────────────────────────
+    const [u] = await conn.query(
+      `UPDATE bahan_baku b
+       JOIN sp_referensi_bahan s ON s.nama = b.nama AND s.tenant_id = b.tenant_id
+       SET b.persen_bdd = ROUND(s.bdd_persen*100)
+       WHERE b.tenant_id = ? AND ABS(COALESCE(b.persen_bdd,0) - ROUND(s.bdd_persen*100)) > 0.5`,
+      [t]
+    );
+    log('Update : ' + u.affectedRows + ' baris persen_bdd disamakan ke referensi SP');
+    log('');
+
+    await conn.commit();
+
+    // ── Verifikasi akhir ─────────────────────────────────────────
+    const [sisa] = await conn.query(
+      `SELECT COUNT(*) c FROM bahan_baku b
+       JOIN sp_referensi_bahan s ON s.nama = b.nama AND s.tenant_id = b.tenant_id
+       WHERE b.tenant_id = ? AND ABS(COALESCE(b.persen_bdd,0) - ROUND(s.bdd_persen*100)) > 0.5`,
+      [t]
+    );
+    log('──────────────────────────────────────────────');
+    log('  VERIFIKASI AKHIR (tenant id ' + t + ')');
+    log('  Sisa inkonsistensi BDD : ' + sisa[0].c + '  ' + (sisa[0].c === 0 ? '✓ bersih' : '(periksa ulang)'));
+    log('  Backup tersimpan di    : ' + namaBackup);
+    log('  Dampak: /total-kebutuhan kini menghitung susut (BDD) sesuai referensi.');
+    log('──────────────────────────────────────────────');
+    log('✓ Koreksi selesai — perubahan tersimpan (commit).');
+    log('  Refresh /total-kebutuhan untuk melihat hasilnya.');
+  } catch (err) {
+    try { await conn.rollback(); } catch (e) { /* koneksi mungkin sudah putus */ }
+    log('');
+    log('✗ Gagal: ' + err.message);
+    log('  Semua perubahan dibatalkan (rollback) — data tidak berubah.');
+  } finally {
+    conn.release();
+  }
+  res.end();
+});
+
+// GET /system/koreksi-bdd — halaman trigger koreksi (web UI)
+router.get('/system/koreksi-bdd', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Koreksi Persen BDD</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-cyan-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v16h16M8 16l4-4 4 4M8 10l4-4 4 4"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-stone-800">Koreksi Persen BDD</h1>
+        <p class="text-xs text-stone-500">Samakan persen_bdd bahan baku dengan referensi SP via URL — tanpa SSH/mysql.</p>
+      </div>
+    </div>
+
+    <p class="text-sm text-stone-600 leading-relaxed mb-4">
+      Tabel <code class="bg-stone-100 px-1.5 py-0.5 rounded text-xs">sp_referensi_bahan</code> adalah sumber acuan BDD.
+      Bila <code class="bg-stone-100 px-1.5 py-0.5 rounded text-xs">bahan_baku.persen_bdd</code> tertinggal (mis. Buncis 100% vs referensi
+      <b>90%</b>, Wortel 100% vs <b>80%</b>, Labu Siam 100% vs <b>83%</b>), kebutuhan belanja di
+      <b>/total-kebutuhan</b> jadi meremehkan susut. Endpoint ini menyamakan semuanya ke nilai referensi.
+    </p>
+
+    <div class="bg-sky-50 border border-sky-200 rounded-lg p-3 mb-5 text-xs text-sky-800">
+      <strong>Urutan yang benar:</strong> jalankan <strong>1. Dry Run</strong> dulu untuk melihat daftar bahan yang berbeda,
+      periksa, lalu <strong>2. Jalankan Koreksi</strong>. Backup otomatis dibuat ke tabel
+      <code class="bg-sky-100 px-1 rounded">backup_bahan_baku_sebelum_koreksi_bdd_&lt;tenant_id&gt;</code>.
+    </div>
+
+    <div class="flex gap-3 mb-6">
+      <button onclick="runFix(false)" id="btn-dry" class="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        1. Dry Run (Preview)
+      </button>
+      <button onclick="runFix(true)" id="btn-apply" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        2. Jalankan Koreksi
+      </button>
+    </div>
+
+    <pre id="output" class="bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-96 hidden"></pre>
+  </div>
+  <script>
+    async function runFix(apply) {
+      const btn = apply ? document.getElementById('btn-apply') : document.getElementById('btn-dry');
+      if (apply && !confirm('Samakan persen_bdd semua bahan baku dengan referensi SP sekarang? Backup otomatis akan dibuat.')) return;
+      const out = document.getElementById('output');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      out.classList.remove('hidden');
+      out.textContent = '';
+      try {
+        const r = await fetch('/api/system/koreksi-bdd', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apply }),
+          credentials: 'include'
+        });
+        if (!r.ok) { out.textContent += 'HTTP ' + r.status + ': ' + (await r.text()); return; }
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          out.textContent += decoder.decode(value);
+          out.scrollTop = out.scrollHeight;
+        }
+      } catch (e) {
+        out.textContent += '\\nGagal: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = apply ? '2. Jalankan Koreksi' : '1. Dry Run (Preview)';
+    }
+  </script>
+</body>
+</html>`);
+});
+
+// ============================================================
+// POST /system/koreksi-semangka — set porsi Semangka → 62,1 g/anak
+// (BDD TETAP 46%) agar /total-kebutuhan menampilkan 386 kg belanja
+// untuk 2.859 porsi. Mengikuti pola koreksi-bdd: dry-run/apply,
+// backup, transaksi atomik, idempotent, per tenant, via URL tanpa
+// SSH/mysql.
+//
+// Matematika: 62,1 g × 2859 = 177.543,9 g bersih ÷ 46% = 386 kg.
+// Diterapkan di 2 tempat agar konsisten:
+//   1) bahan_baku.berat_1_sp        → 62,1 g
+//   2) sp_referensi_bahan.berat_bersih → 62,1 g & berat_kotor → 135 g
+//      (135 = 62,1 ÷ 0,46)
+// ============================================================
+router.post('/system/koreksi-semangka', requireRole('admin'), async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const t = req.user.tenant_id;
+  const apply = !!(req.body && req.body.apply);
+  const log = (msg) => { res.write(msg + '\n'); };
+  const TARGET = 62.1;   // g/anak (berat bersih 1 porsi)
+  const KOTOR  = 135.0;  // berat_kotor referensi = 62,1 ÷ 0,46
+
+  log('══════════════════════════════════════════════');
+  log('  KOREKSI SEMANGKA → 386 kg di Total Kebutuhan');
+  log('  Tenant : id ' + t + ' (' + (req.user.nama || req.user.email || '') + ')');
+  log('  Waktu  : ' + new Date().toLocaleString('id-ID'));
+  log('  Mode   : ' + (apply ? 'APPLY (data diubah)' : 'DRY-RUN (hanya preview)'));
+  log('══════════════════════════════════════════════\n');
+
+  const conn = await db.getConnection();
+  const namaBackup = 'backup_semangka_target386_' + t;
+  try {
+    await conn.beginTransaction();
+
+    // Bahan belanja (bukan baris referensi "... SP")
+    const [bb] = await conn.query(
+      `SELECT id, nama, satuan, berat_1_sp, persen_bdd FROM bahan_baku
+       WHERE tenant_id=? AND LOWER(nama) LIKE '%semangka%' AND LOWER(nama) NOT LIKE '% sp%'`,
+      [t]
+    );
+    // Referensi SP
+    const [ref] = await conn.query(
+      `SELECT id, nama, berat_bersih, bdd_persen, berat_kotor FROM sp_referensi_bahan
+       WHERE tenant_id=? AND LOWER(nama) LIKE '%semangka%'`,
+      [t]
+    );
+    // Porsi dari siklus aktif (utk simulasi angka akhir)
+    const [sk] = await conn.query(
+      `SELECT jumlah_porsi FROM siklus_menu WHERE tenant_id=? AND status='Aktif' ORDER BY id DESC LIMIT 1`,
+      [t]
+    );
+    const porsi = sk.length ? (Number(sk[0].jumlah_porsi) || 0) : 0;
+
+    log('BAHAN BELANJA  : ' + (bb.length ? bb.map(b => b.nama + ' (id ' + b.id + ')').join(', ') : '⚠ tidak ditemukan'));
+    log('REFERENSI SP   : ' + (ref.length ? ref.map(r => r.nama + ' (id ' + r.id + ')').join(', ') : '⚠ tidak ditemukan'));
+    log('Porsi siklus   : ' + porsi + (porsi === 2859 ? '  (target 386 kg)' : '  ⚠ bukan 2859 — angka akhir akan berbeda') + '\n');
+
+    if (!bb.length && !ref.length) {
+      log('   ⚠ Tidak ada bahan bernama Semangka untuk tenant ini — tidak ada yang bisa diubah.');
+      await conn.commit();
+      log('');
+      log(apply ? '✓ Selesai (tidak ada perubahan).' : '✓ Dry-run selesai — tidak ada perubahan tersimpan.');
+      res.end();
+      return;
+    }
+
+    // ── Preview / Apply ───────────────────────────────────
+    for (const b of bb) {
+      log('   ' + (apply ? '✓' : '•') + ' bahan_baku   : ' + b.nama + ' — berat_1_sp ' + (Number(b.berat_1_sp) || 0) + ' → ' + TARGET + ' g (BDD ' + (Number(b.persen_bdd) || 0) + '%)');
+      if (apply) await conn.query('UPDATE bahan_baku SET berat_1_sp=? WHERE id=? AND tenant_id=?', [TARGET, b.id, t]);
+    }
+    for (const r of ref) {
+      log('   ' + (apply ? '✓' : '•') + ' sp_referensi : ' + r.nama + ' — berat_bersih ' + (Number(r.berat_bersih) || 0) + ' → ' + TARGET + ' g, berat_kotor ' + (Number(r.berat_kotor) || 0) + ' → ' + KOTOR + ' g');
+      if (apply) await conn.query('UPDATE sp_referensi_bahan SET berat_bersih=?, berat_kotor=? WHERE id=? AND tenant_id=?', [TARGET, KOTOR, r.id, t]);
+    }
+    log('');
+
+    if (!apply) {
+      log('Dry-run: ' + bb.length + ' baris bahan_baku + ' + ref.length + ' baris referensi akan disetel.');
+      log('Jalankan ulang dengan { "apply": true } untuk menyimpan.');
+      await conn.rollback();
+      log('');
+      log('✓ Dry-run selesai — tidak ada perubahan tersimpan.');
+      res.end();
+      return;
+    }
+
+    // ── Backup (sebelum update) ────────────────────────────
+    await conn.query('DROP TABLE IF EXISTS ' + namaBackup);
+    await conn.query(
+      'CREATE TABLE ' + namaBackup + ' AS SELECT * FROM bahan_baku WHERE id IN (' +
+      (bb.length ? bb.map(() => '?').join(',') : 'NULL') + ')',
+      bb.map(b => b.id)
+    );
+    const [[bk]] = await conn.query('SELECT COUNT(*) c FROM ' + namaBackup);
+    log('BACKUP : ' + bk.c + ' baris bahan_baku → tabel ' + namaBackup);
+    log('');
+
+    await conn.commit();
+
+    // ── Verifikasi akhir ───────────────────────────────────
+    const [[v]] = await conn.query(
+      `SELECT id, nama, berat_1_sp, persen_bdd FROM bahan_baku
+       WHERE tenant_id=? AND LOWER(nama) LIKE '%semangka%' AND LOWER(nama) NOT LIKE '% sp%'`,
+      [t]
+    );
+    const bersih = Number(v.berat_1_sp) * porsi / 1000;
+    const kotor = bersih / (Number(v.persen_bdd) / 100);
+    log('──────────────────────────────────────────────');
+    log('  VERIFIKASI AKHIR (tenant id ' + t + ')');
+    log('  ' + v.nama + ' : berat_1_sp = ' + v.berat_1_sp + ' g, BDD = ' + v.persen_bdd + '%');
+    log('  Porsi ' + porsi + ' → BERSIH ' + bersih.toFixed(1) + ' kg → KOTOR ' + kotor.toFixed(1) + ' kg → QTY ' + Math.ceil(kotor) + ' kg');
+    log('  Backup tersimpan di : ' + namaBackup);
+    log('──────────────────────────────────────────────');
+    log('✓ Koreksi selesai — perubahan tersimpan (commit).');
+    log('  Tambahkan Semangka ke menu/siklus, lalu refresh /total-kebutuhan.');
+  } catch (err) {
+    try { await conn.rollback(); } catch (e) { /* koneksi mungkin sudah putus */ }
+    log('');
+    log('✗ Gagal: ' + err.message);
+    log('  Semua perubahan dibatalkan (rollback) — data tidak berubah.');
+  } finally {
+    conn.release();
+  }
+  res.end();
+});
+
+// GET /system/koreksi-semangka — halaman trigger koreksi (web UI)
+router.get('/system/koreksi-semangka', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Koreksi Semangka 386 kg</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-rose-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3 3-3M12 22V10"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-stone-800">Koreksi Semangka → 386 kg</h1>
+        <p class="text-xs text-stone-500">Set porsi Semangka 62,1 g/anak (BDD 46%) via URL — tanpa SSH/mysql.</p>
+      </div>
+    </div>
+
+    <p class="text-sm text-stone-600 leading-relaxed mb-4">
+      Menyetel <code class="bg-stone-100 px-1.5 py-0.5 rounded text-xs">berat_1_sp</code> Semangka menjadi
+      <b>62,1 g/anak</b> dengan BDD tetap <b>46%</b> sehingga /total-kebutuhan menampilkan
+      <b>386 kg</b> (untuk 2.859 porsi): 62,1 g × 2859 = 177,5 kg bersih ÷ 46% = 386 kg belanja.
+      Referensi SP ikut disinkronkan (bersih 62,1 g, kotor 135 g).
+    </p>
+
+    <div class="bg-sky-50 border border-sky-200 rounded-lg p-3 mb-5 text-xs text-sky-800">
+      <strong>Urutan yang benar:</strong> jalankan <strong>1. Dry Run</strong> dulu untuk melihat nilai sebelum/sesudah,
+      lalu <strong>2. Jalankan Koreksi</strong>. Backup otomatis dibuat ke tabel
+      <code class="bg-sky-100 px-1 rounded">backup_semangka_target386_&lt;tenant_id&gt;</code>.
+      Setelah itu tambahkan Semangka ke menu/siklus agar muncul di Total Kebutuhan.
+    </div>
+
+    <div class="flex gap-3 mb-6">
+      <button onclick="runFix(false)" id="btn-dry" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        1. Dry Run (Preview)
+      </button>
+      <button onclick="runFix(true)" id="btn-apply" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        2. Jalankan Koreksi
+      </button>
+    </div>
+
+    <pre id="output" class="bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-96 hidden"></pre>
+  </div>
+  <script>
+    async function runFix(apply) {
+      const btn = apply ? document.getElementById('btn-apply') : document.getElementById('btn-dry');
+      if (apply && !confirm('Set porsi Semangka = 62,1 g/anak sekarang? Backup otomatis akan dibuat.')) return;
+      const out = document.getElementById('output');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      out.classList.remove('hidden');
+      out.textContent = '';
+      try {
+        const r = await fetch('/api/system/koreksi-semangka', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apply }),
+          credentials: 'include'
+        });
+        if (!r.ok) { out.textContent += 'HTTP ' + r.status + ': ' + (await r.text()); return; }
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          out.textContent += decoder.decode(value);
+          out.scrollTop = out.scrollHeight;
+        }
+      } catch (e) {
+        out.textContent += '\\nGagal: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = apply ? '2. Jalankan Koreksi' : '1. Dry Run (Preview)';
+    }
+  </script>
+</body>
+</html>`);
+});
+
 module.exports = router;

@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS bahan_baku (
   kode VARCHAR(50),
   nama VARCHAR(200) NOT NULL,
   kategori VARCHAR(100),
-  kategori_sp ENUM('Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Susu','Minyak') NULL,
+  kategori_sp VARCHAR(50) NULL, -- VARCHAR (bukan ENUM) agar kategori 'Bumbu' dll. dari aplikasi tidak memicu 'Data truncated'
   berat_1_sp DECIMAL(10,2) DEFAULT 0,
   persen_bdd DECIMAL(5,1) DEFAULT 100,
   berat_per_satuan DECIMAL(10,2) DEFAULT 0 COMMENT 'Berat 1 satuan dalam gram (misal 1 pcs = 50g)',

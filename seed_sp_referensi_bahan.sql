@@ -105,7 +105,7 @@ INSERT IGNORE INTO sp_referensi_bahan (tenant_id, nama, berat_bersih, bdd_persen
 (1, 'Kelengkeng', 53, 0.7, 75.714286)
 (1, 'Rambutan', 75, 0.4, 187.5)
 (1, 'Pisang', 55.0, 0.66, 83.33333333),
-(1, 'Semangka', 90.0, 0.67, 134.3283582),
+(1, 'Semangka', 90.0, 0.46, 195.65),  -- BDD 46% (sinkron dgn scripts/seed_sp_referensi.js & bahan_baku)
 (1, 'Melon', 90.0, 0.67, 134.3283582),
 (1, 'Pepaya', 110.0, 0.75, 146.6666667),
 (1, 'Naga', 90, 0.66, 136.363636)
