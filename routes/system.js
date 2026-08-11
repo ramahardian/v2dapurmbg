@@ -779,7 +779,7 @@ router.get('/system/sync-produksi', requireRole('admin'), (req, res) => {
           out.scrollTop = out.scrollHeight;
         }
       } catch (e) {
-        out.textContent += '\nGagal: ' + e.message;
+        out.textContent += '\\nGagal: ' + e.message;
       }
       btn.disabled = false;
       btn.textContent = 'Jalankan Sinkronisasi';
