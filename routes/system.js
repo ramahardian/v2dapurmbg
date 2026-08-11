@@ -1832,4 +1832,436 @@ router.get('/system/koreksi-menu-bahan-bersih', requireRole('admin'), (req, res)
 </html>`);
 });
 
+// ============================================================
+// POST /system/cek-bahan — diagnosis data bahan (READ-ONLY, via URL)
+// untuk memverifikasi mengapa angka di /menu (berat BERSIH) berbeda
+// dari /total-kebutuhan (berat KOTOR + buffer). Contoh: Labu Siam
+// 120 kg di /menu vs 145/149 kg di /total-kebutuhan.
+//
+// Tidak mengubah data apa pun — hanya laporan. Per bahan menampilkan:
+//   1) master bahan_baku (berat_1_sp, persen_bdd, berat_per_satuan, buffer)
+//   2) referensi SP (berat_bersih, bdd, berat_kotor) bila ada
+//   3) semua baris menu_bahan (jumlah) + klasifikasi bersih/kotor
+//   4) simulasi angka Total Kebutuhan (bersih → kotor → +buffer)
+// Opsional filter body { kata: 'labu' } → hanya bahan yang namanya mengandung kata tsb.
+// ============================================================
+router.post('/system/cek-bahan', requireRole('admin'), async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const t = req.user.tenant_id;
+  const kata = (req.body && req.body.kata ? String(req.body.kata).trim() : '').toLowerCase();
+  const log = (msg) => { res.write(msg + '\n'); };
+
+  log('══════════════════════════════════════════════');
+  log('  DIAGNOSIS DATA BAHAN — via URL (READ-ONLY)');
+  log('  Tenant : id ' + t + ' (' + (req.user.nama || req.user.email || '') + ')');
+  log('  Waktu  : ' + new Date().toLocaleString('id-ID'));
+  if (kata) log('  Filter : nama mengandung "' + kata + '"');
+  log('══════════════════════════════════════════════\n');
+
+  const conn = await db.getConnection();
+  try {
+    // Siklus aktif (utk simulasi jumlah porsi)
+    const [siklus] = await conn.query(
+      "SELECT id, nama, jumlah_porsi FROM siklus_menu WHERE tenant_id=? AND status<>'Arsip' ORDER BY id DESC LIMIT 1",
+      [t]
+    );
+    const porsi = siklus.length ? Number(siklus[0].jumlah_porsi) || 0 : 0;
+    log('Siklus aktif : ' + (siklus.length ? siklus[0].nama + ' (' + porsi + ' porsi)' : 'tidak ada'));
+    log('');
+
+    // Referensi SP (nama → bersih/bdd/kotor)
+    const [refs] = await conn.query('SELECT nama, berat_bersih, bdd_persen, berat_kotor FROM sp_referensi_bahan WHERE tenant_id=?', [t]);
+    const refMap = {};
+    for (const r of refs) refMap[String(r.nama).toLowerCase()] = {
+      bersih: Number(r.berat_bersih) || 0,
+      bdd: Number(r.bdd_persen) || 0,
+      kotor: Number(r.berat_kotor) || 0,
+    };
+
+    // Bahan yang cocok filter (tanpa filter: semua bahan satuan unit + bahan dengan b1sp>0, max 60)
+    let rows;
+    if (kata) {
+      const [r] = await conn.query(
+        `SELECT bb.id, bb.nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, bb.buffer_persen
+         FROM bahan_baku bb
+         WHERE bb.tenant_id=? AND LOWER(bb.nama) LIKE ?
+         ORDER BY bb.nama LIMIT 60`,
+        [t, '%' + kata + '%']
+      );
+      rows = r;
+    } else {
+      const [r] = await conn.query(
+        `SELECT bb.id, bb.nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, bb.buffer_persen
+         FROM bahan_baku bb
+         WHERE bb.tenant_id=?
+           AND (LOWER(bb.satuan) IN ('pcs','buah','biji','butir','ekor') OR bb.berat_1_sp>0)
+         ORDER BY bb.nama LIMIT 60`,
+        [t]
+      );
+      rows = r;
+    }
+
+    log('BAHAN DIPERIKSA: ' + rows.length + ' baris' + (rows.length === 60 ? ' (batas 60, perketat dengan filter kata)' : '') + '\n');
+    if (!rows.length) {
+      log('   ⚠ Tidak ada bahan yang cocok.');
+      log('');
+      log('✓ Selesai (read-only — tidak ada perubahan data).');
+      res.end();
+      return;
+    }
+
+    const SATUAN_UNIT = ['pcs', 'buah', 'biji', 'butir', 'ekor'];
+    for (const bb of rows) {
+      const nama = bb.nama;
+      const sat = String(bb.satuan || '').toLowerCase();
+      const b1sp = Number(bb.berat_1_sp) || 0;
+      const bdd = Number(bb.persen_bdd) || 100;
+      const bps = Number(bb.berat_per_satuan) || 0;
+      const buffer = Number(bb.buffer_persen) || 0;
+      const ref = refMap[String(nama).toLowerCase()] || {};
+
+      log('──────────────────────────────────────────────');
+      log('Bahan : ' + nama + ' (id ' + bb.id + ', ' + sat + ', ' + (bb.kategori_sp || '-') + ')');
+      log('  master  : berat_1_sp=' + b1sp + ' g | BDD=' + bdd + '% | berat_per_satuan=' + bps + ' g | buffer=' + buffer + '%');
+      if (ref.bersih) {
+        log('  SP ref  : bersih=' + ref.bersih + ' g | BDD=' + Math.round(ref.bdd * 100) + '% | kotor=' + ref.kotor + ' g');
+      } else {
+        log('  SP ref  : (tidak ada baris referensi)' + (b1sp ? ' — master dipakai' : ' — ⚠ berat kosong'));
+      }
+
+      // Simulasi per porsi
+      const bersihPerPorsi = b1sp > 0 ? b1sp : (ref.bersih || 0);
+      const bddDec = bdd > 0 ? bdd / 100 : (ref.bdd || 1);
+      const kotorPerPorsi = bersihPerPorsi > 0 && bddDec > 0 ? Math.round((bersihPerPorsi / bddDec) * 100) / 100 : 0;
+      if (bersihPerPorsi > 0 && porsi > 0) {
+        const totalBersih = bersihPerPorsi * porsi / 1000;
+        const totalKotor = kotorPerPorsi * porsi / 1000;
+        const totalBuffer = Math.round(totalKotor * (1 + buffer / 100) * 100) / 100;
+        log('  simulasi : BERSIH ' + Math.round(totalBersih) + ' kg → KOTOR ' + Math.round(totalKotor) + ' kg' +
+          (buffer > 0 ? ' → +' + buffer + '% buffer = ' + Math.ceil(totalBuffer) + ' kg' : '') +
+          '  (utk ' + porsi + ' porsi/hari, bahan ini muncul 1 hari)');
+      } else {
+        log('  simulasi : (berat per porsi kosong — bahan tidak bisa dihitung)' + (sat === 'kg' ? ' — satuan Kg' : ''));
+      }
+
+      // Semua baris menu_bahan
+      const [mb] = await conn.query(
+        `SELECT mb.id, mb.menu_id, mb.jumlah, m.nama AS menu_nama,
+           (SELECT COUNT(*) FROM siklus_menu_item si WHERE si.menu_id=mb.menu_id) AS hari_dipakai
+         FROM menu_bahan mb
+         JOIN menu m ON m.id = mb.menu_id
+         WHERE mb.bahan_baku_id=? AND m.tenant_id=?`,
+        [bb.id, t]
+      );
+      if (!mb.length) {
+        log('  menu_bahan: (tidak dipakai menu mana pun)');
+      } else {
+        for (const r of mb) {
+          const jml = Number(r.jumlah) || 0;
+          let klas = '';
+          if (SATUAN_UNIT.includes(sat)) {
+            const kotorUnit = kotorPerPorsi; // berat kotor 1 unit
+            if (jml > 0 && Math.abs(jml - kotorUnit) < 0.02 && Math.abs(jml - bersihPerPorsi) > 0.02) klas = ' ⚠ TERSIMPAN KOTOR (jalankan koreksi-menu-bahan-bersih)';
+            else if (jml > 0 && Math.abs(jml - bersihPerPorsi) < 0.02) klas = ' ✓ benar (bersih)';
+            else if (jml > 0) klas = ' (manual — cek manual)';
+          } else {
+            const refKotor1SP = ref.kotor || 0;
+            if (jml > 0 && refKotor1SP > 0 && Math.abs(jml - refKotor1SP) < 0.02 && Math.abs(jml - (ref.bersih || 0)) > 0.02) klas = ' ⚠ ≈ kotor 1 SP dari referensi';
+            else if (jml > 0) klas = ' ✓';
+          }
+          log('  menu_bahan id ' + r.id + ' | menu ' + r.menu_id + ' "' + (r.menu_nama || '').slice(0, 40) + '" | jumlah=' + r.jumlah + ' g' + klas + ' | dipakai ' + r.hari_dipakai + ' hari');
+        }
+      }
+      log('');
+    }
+
+    log('══════════════════════════════════════════════');
+    log('  CATATAN PEMBACAAN');
+    log('  • /menu menampilkan berat BERSIH per porsi × porsi (yang dimakan).');
+    log('  • /total-kebutuhan memakai berat KOTOR (= bersih ÷ BDD) utk belanja.');
+    log('  • Selisih menu vs TK = faktor BDD (susut) + buffer — itu disengaja.');
+    log('  • Kalau menu_bahan.jumlah ternyata ≈ kotor → jalankan koreksi-menu-bahan-bersih.');
+    log('══════════════════════════════════════════════');
+    log('✓ Selesai (read-only — tidak ada perubahan data).');
+  } catch (err) {
+    log('');
+    log('✗ Gagal: ' + err.message);
+  } finally {
+    conn.release();
+  }
+  res.end();
+});
+
+// GET /system/cek-bahan — halaman trigger diagnosis (web UI)
+router.get('/system/cek-bahan', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Cek Data Bahan</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-3xl w-full">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-violet-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-stone-800">Cek Data Bahan</h1>
+        <p class="text-xs text-stone-500">Diagnosis angka bahan (menu vs total-kebutuhan) via URL — read-only, tanpa SSH/mysql.</p>
+      </div>
+    </div>
+
+    <p class="text-sm text-stone-600 leading-relaxed mb-4">
+      Menampilkan master bahan, referensi SP, semua baris <code class="bg-stone-100 px-1.5 py-0.5 rounded text-xs">menu_bahan</code>,
+      dan simulasi angka Total Kebutuhan (bersih → kotor → +buffer).
+      Berguna untuk memverifikasi kasus seperti Labu Siam 120 kg di /menu vs 145/149 kg di /total-kebutuhan.
+    </p>
+
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-stone-700 mb-1">Filter nama bahan (opsional)</label>
+      <input type="text" id="kataInput" placeholder="mis. labu, telur, jeruk — kosongkan utk semua bahan unit/berisi"
+             class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none">
+    </div>
+
+    <button onclick="runCek()" id="btn" class="w-full bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-xl font-semibold transition shadow-md">
+      Jalankan Diagnosis
+    </button>
+    <pre id="output" class="mt-4 bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-[70vh] hidden"></pre>
+  </div>
+  <script>
+    async function runCek() {
+      const btn = document.getElementById('btn');
+      const out = document.getElementById('output');
+      const kata = document.getElementById('kataInput').value.trim();
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      out.classList.remove('hidden');
+      out.textContent = '';
+      try {
+        const r = await fetch('/api/system/cek-bahan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kata: kata || undefined }),
+          credentials: 'include'
+        });
+        if (!r.ok) { out.textContent += 'HTTP ' + r.status + ': ' + (await r.text()); return; }
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          out.textContent += decoder.decode(value);
+          out.scrollTop = out.scrollHeight;
+        }
+      } catch (e) {
+        out.textContent += '\\nGagal: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = 'Jalankan Diagnosis';
+    }
+  </script>
+</body>
+</html>`);
+});
+
+// ============================================================
+// POST /system/koreksi-bdd-100 — set persen_bdd = 100 (0% susut) utk bahan
+// belanja tertentu via URL, agar angka /total-kebutuhan = angka /menu.
+//
+// Latar: /menu menampilkan berat BERSIH per porsi × porsi (mis. Labu Siam
+// 41,973 g × 2859 = 120 kg), tapi /total-kebutuhan mengonversi ke berat KOTOR
+// belanja dengan membagi BDD (mis. 41,973 ÷ 0,83 × 2859 = 145 kg). Selisih ini
+// disengaja (susut), namun bila user menghendaki angka belanja = angka menu
+// (mis. Labu Siam 120 kg), set BDD bahan tsb menjadi 100.
+//
+// Aman: filter kata WAJIB untuk apply ({ apply:true, kata:'labu' }) — tanpa
+// filter hanya menampilkan daftar bahan belanja ber-BDD < 100. Baris SP
+// referensi (nama mengandung ' SP') tidak disentuh. Idempotent, per tenant.
+// ============================================================
+router.post('/system/koreksi-bdd-100', requireRole('admin'), async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const t = req.user.tenant_id;
+  const apply = !!(req.body && req.body.apply);
+  const kata = (req.body && req.body.kata ? String(req.body.kata).trim() : '').toLowerCase();
+  const log = (msg) => { res.write(msg + '\n'); };
+
+  log('══════════════════════════════════════════════');
+  log('  KOREKSI BDD → 100 (0% susut) — via URL');
+  log('  Tenant : id ' + t + ' (' + (req.user.nama || req.user.email || '') + ')');
+  log('  Waktu  : ' + new Date().toLocaleString('id-ID'));
+  log('  Mode   : ' + (apply ? 'APPLY (data diubah)' : 'DRY-RUN (hanya preview)'));
+  if (kata) log('  Filter : nama mengandung "' + kata + '"');
+  log('══════════════════════════════════════════════\n');
+
+  const conn = await db.getConnection();
+  try {
+    // Semua bahan belanja (bukan baris SP referensi) dengan BDD < 100
+    const [rows] = await conn.query(
+      `SELECT bb.id, bb.nama, bb.satuan, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan
+       FROM bahan_baku bb
+       WHERE bb.tenant_id = ? AND bb.persen_bdd > 0 AND bb.persen_bdd < 100
+         AND LOWER(bb.nama) NOT LIKE '% sp%'
+       ORDER BY bb.nama`,
+      [t]
+    );
+    const list = kata ? rows.filter(r => String(r.nama || '').toLowerCase().includes(kata)) : rows;
+
+    log('BAHAN BELANJA DENGAN BDD < 100: ' + rows.length + ' baris' + (kata ? ' (filter: ' + list.length + ')' : '') + '\n');
+    if (!list.length) {
+      log(kata
+        ? '   ⚠ Tidak ada bahan belanja ber-BDD<100 yang namanya mengandung "' + kata + '".'
+        : '   ✓ Semua bahan belanja sudah BDD = 100 — tidak ada yang perlu diubah.');
+      log('');
+      log(apply ? '✓ Selesai (tidak ada perubahan).' : '✓ Dry-run selesai.');
+      res.end();
+      return;
+    }
+
+    if (!kata) {
+      // Tanpa filter: hanya laporan. Beri tahu cara apply.
+      for (const r of list) {
+        log('   • ' + r.nama + ' (' + r.satuan + '): BDD ' + r.persen_bdd + '% → akan jadi 100%' + (r.berat_1_sp > 0 ? ' (b1sp ' + r.berat_1_sp + ' g)' : ''));
+      }
+      log('');
+      log('⚠ Apply membutuhkan filter kata ({ "apply": true, "kata": "labu" }) agar tidak mengubah semua bahan.');
+      log('  BDD < 100 itu sah utk bahan bersusut (ayam, telur, ikan) — jangan disamakan semua.');
+      log('  Dry-run selesai — tidak ada perubahan tersimpan.');
+      res.end();
+      return;
+    }
+
+    let toFix = 0, fixed = 0;
+    for (const r of list) {
+      if (Number(r.persen_bdd) === 100) { continue; }
+      toFix++;
+      if (apply) {
+        await conn.query('UPDATE bahan_baku SET persen_bdd=100 WHERE id=? AND tenant_id=?', [r.id, t]);
+        fixed++;
+      }
+      log('   ' + (apply ? '✓' : '•') + ' ' + r.nama + ' (' + r.satuan + '): BDD ' + r.persen_bdd + '% → 100%');
+    }
+
+    log('');
+    if (apply) {
+      log('Update: ' + fixed + ' bahan disetel BDD=100 (skip ' + (toFix - fixed) + ')');
+      await conn.commit();
+    } else {
+      log('Dry-run: ' + toFix + ' bahan akan disetel BDD=100');
+      log('Jalankan ulang dengan { "apply": true, "kata": "' + kata + '" } untuk menyimpan.');
+      await conn.rollback();
+    }
+
+    // Verifikasi: sisa bahan belanja BDD<100 yang mengandung kata
+    const [[v]] = await conn.query(
+      `SELECT COUNT(*) AS sisa FROM bahan_baku
+       WHERE tenant_id=? AND persen_bdd>0 AND persen_bdd<100
+         AND LOWER(nama) NOT LIKE '% sp%' AND LOWER(nama) LIKE ?`,
+      [t, '%' + kata + '%']
+    );
+    log('──────────────────────────────────────────────');
+    log('  VERIFIKASI (tenant id ' + t + ')');
+    log('  Sisa bahan "' + kata + '" ber-BDD<100 : ' + v.sisa + (apply && v.sisa === 0 ? '  ✓ bersih' : ''));
+    log('  Catatan: angka /total-kebutuhan kini = angka /menu utk bahan tsb.');
+    log('──────────────────────────────────────────────');
+    log(apply ? '✓ Koreksi selesai — perubahan tersimpan (commit).' : '✓ Dry-run selesai — tidak ada perubahan tersimpan.');
+  } catch (err) {
+    try { await conn.rollback(); } catch (e) { /* koneksi mungkin sudah putus */ }
+    log('');
+    log('✗ Gagal: ' + err.message);
+    log('  Semua perubahan dibatalkan (rollback) — data tidak berubah.');
+  } finally {
+    conn.release();
+  }
+  res.end();
+});
+
+// GET /system/koreksi-bdd-100 — halaman trigger (web UI)
+router.get('/system/koreksi-bdd-100', requireRole('admin'), (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Koreksi BDD 100</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 max-w-2xl w-full">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-teal-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 12H4M12 4v16"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-stone-800">Koreksi BDD → 100</h1>
+        <p class="text-xs text-stone-500">Samakan angka /total-kebutuhan dengan angka /menu via URL — tanpa SSH/mysql.</p>
+      </div>
+    </div>
+
+    <p class="text-sm text-stone-600 leading-relaxed mb-4">
+      <b>/menu</b> menampilkan berat <b>BERSIH</b> per porsi × porsi (mis. Labu Siam <b>120 kg</b>),
+      sedangkan <b>/total-kebutuhan</b> mengonversi ke berat <b>KOTOR</b> belanja (÷ BDD <b>83%</b> → <b>145 kg</b>).
+      Set <b>BDD = 100</b> (0% susut) agar angka TK = angka menu (<b>120 kg</b>).
+    </p>
+
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-stone-700 mb-1">Nama bahan (wajib utk apply)</label>
+      <input type="text" id="kataInput" placeholder="mis. labu"
+             class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
+      <p class="text-xs text-stone-400 mt-1">Apply membutuhkan filter kata agar bahan bersusut lain (ayam, telur, ikan) tidak ikut berubah.</p>
+    </div>
+
+    <div class="flex gap-3 mb-6">
+      <button onclick="runFix(false)" id="btn-dry" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        1. Dry Run (Preview)
+      </button>
+      <button onclick="runFix(true)" id="btn-apply" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md">
+        2. Jalankan Koreksi
+      </button>
+    </div>
+
+    <pre id="output" class="bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-96 hidden"></pre>
+  </div>
+  <script>
+    async function runFix(apply) {
+      const btn = apply ? document.getElementById('btn-apply') : document.getElementById('btn-dry');
+      const kata = document.getElementById('kataInput').value.trim();
+      if (!kata) { alert('Isi nama bahan dulu (mis. labu)'); return; }
+      if (apply && !confirm('Set BDD=100 (0% susut) untuk bahan yang namanya mengandung "' + kata + '" sekarang?')) return;
+      const out = document.getElementById('output');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      out.classList.remove('hidden');
+      out.textContent = '';
+      try {
+        const r = await fetch('/api/system/koreksi-bdd-100', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apply, kata }),
+          credentials: 'include'
+        });
+        if (!r.ok) { out.textContent += 'HTTP ' + r.status + ': ' + (await r.text()); return; }
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          out.textContent += decoder.decode(value);
+          out.scrollTop = out.scrollHeight;
+        }
+      } catch (e) {
+        out.textContent += '\\nGagal: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = apply ? '2. Jalankan Koreksi' : '1. Dry Run (Preview)';
+    }
+  </script>
+</body>
+</html>`);
+});
+
 module.exports = router;
