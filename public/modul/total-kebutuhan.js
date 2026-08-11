@@ -375,6 +375,28 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       var jumlah = Math.round(parsed.qty * hargaSatuan);
       grandTotal += jumlah;
 
+      // Penjelasan asal QTY (tooltip): tampilkan kebutuhan asli vs hasil pembulatan,
+      // agar angka seperti 285 kg (asli) → 286 kg (belanja) tidak terkesan salah.
+      var qtyTooltip = '';
+      {
+        var asliKg = bufferKg;
+        var satuanKecil = String(parsed.satuan || '').toLowerCase();
+        if (satuanKecil === 'kg') {
+          var bulatAsli = Math.round(asliKg * 100) / 100;
+          qtyTooltip = bulatAsli === parsed.qty
+            ? 'Kebutuhan asli: ' + fmtTkNum(asliKg) + ' kg = QTY belanja'
+            : 'Kebutuhan asli: ' + fmtTkNum(asliKg) + ' kg → dibulatkan ke atas menjadi ' + fmtTkNum(parsed.qty) + ' kg (belanja aman)';
+        } else if (satuanKecil === 'g') {
+          var asliG = Math.round(asliKg * 1000);
+          qtyTooltip = asliG === parsed.qty
+            ? 'Kebutuhan asli: ' + fmtTkNum(asliG) + ' g = QTY belanja'
+            : 'Kebutuhan asli: ' + fmtTkNum(asliG) + ' g → dibulatkan ke atas menjadi ' + fmtTkNum(parsed.qty) + ' g (belanja aman)';
+        } else {
+          qtyTooltip = 'Kebutuhan asli: ' + fmtTkNum(asliKg) + ' kg → dibulatkan ke atas menjadi ' + fmtTkNum(parsed.qty) + ' ' + satuanKecil + ' (belanja aman)';
+        }
+        if (bufferPersen > 0) qtyTooltip += ' • termasuk buffer ' + bufferPersen + '%';
+      }
+
       rows.push({
         no: no,
         uraian: b.nama_display || b.nama,
@@ -385,7 +407,8 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
         jumlah: jumlah,
         ket: b.keterangan || '',
         kekurangan: kekuranganHargaBerat,
-        ketKurang: ketKurang
+        ketKurang: ketKurang,
+        qtyTooltip: qtyTooltip
       });
     }
 
@@ -410,7 +433,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     html += '<div class="bg-white border border-stone-200 rounded-lg p-4 mt-4 text-xs text-stone-500">';
     html += '<div class="font-semibold text-stone-700 mb-2">Keterangan:</div>';
     html += '<ul class="space-y-1 list-disc list-inside">';
-    html += '<li><strong>QTY</strong> = jumlah belanja per bahan — dihitung otomatis dari kebutuhan pangan (bahan berat → kg; bahan satuan → pcs/btl/dll.), dibulatkan ke atas agar aman untuk pembelian.</li>';
+    html += '<li><strong>QTY</strong> = jumlah belanja per bahan — dihitung otomatis dari kebutuhan pangan (bahan berat → kg; bahan satuan → pcs/btl/dll.). Angka kebutuhan asli dibulatkan <em>ke atas</em> ke satuan beli utuh agar aman untuk pembelian (mis. kebutuhan 285,4 kg → QTY 286 kg). Arahkan kursor ke tanda ⓘ pada QTY untuk melihat rincian asalnya.</li>';
     html += '<li><strong>HARGA</strong> = harga satuan dari master Bahan Baku (bahan_baku.harga_satuan).</li>';
     html += '<li><strong>JUMLAH</strong> = QTY × HARGA.</li>';
     html += '<li><strong>KETERANGAN</strong> = instruksi bahan (mis. Potong 10, Fillet) dari resep menu.</li>';
@@ -490,7 +513,7 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
         html += ' <span ' + editHref + ' class="inline-block ml-1 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap cursor-pointer" title="Klik untuk melengkapi di master Bahan Baku">' + escHtmlTk(r.ketKurang || 'Data belum lengkap') + '</span>';
       }
       html += '</td>';
-      html += '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700">' + r.qty + '</td>';
+      html += '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700"' + (r.qtyTooltip ? ' title="' + escHtmlTk(r.qtyTooltip) + '" style="cursor:help"' : '') + '>' + r.qty + (r.qtyTooltip ? ' <span class="text-[9px] text-stone-400 font-normal align-middle">ⓘ</span>' : '') + '</td>';
       html += '<td class="px-3 py-3 text-xs text-stone-500">' + escHtmlTk(r.satuan) + '</td>';
       html += '<td class="px-3 py-3 text-right mono text-xs ' + (r.kekurangan ? 'font-bold text-red-700' : 'text-stone-600') + '">' + fmtTkRp(r.harga) + '</td>';
       html += '<td class="px-3 py-3 text-right mono text-xs font-bold ' + (r.kekurangan ? 'text-red-700' : 'text-stone-800') + '">' + fmtTkRp(r.jumlah) + '</td>';
