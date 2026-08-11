@@ -349,6 +349,139 @@ function rebuildMenuNama(it, gridNamaByHari) {
   }
 }
 
+// ── Helper QTY belanja (port dari public/modul/total-kebutuhan.js) ──────
+// Dipakai bersama oleh export Total Kebutuhan (laporan-lanjutan.js) dan
+// RAB Harian (laporan/rab.js) agar angka QTY belanja konsisten: kebutuhan
+// ≥ 1 kg dibulatkan ke atas, kebutuhan < 1 kg ditampilkan pecahan (1/2 kg),
+// bahan satuan unit dikonversi via berat_per_satuan.
+
+// Satuan yang dihitung per satuan (pcs/btl/renceng/ctn/karton) vs per berat (kg/g)
+function tkIsSatuanHitung(s) {
+  const t = String(s || '').toLowerCase();
+  return ['pcs', 'btl', 'botol', 'renceng', 'ctn', 'karton', 'kardus', 'dus', 'pack', 'ikat', 'ekor', 'butir', 'bungkus'].includes(t);
+}
+
+// Berat isi per satuan efektif — bila kosong, minyak dikarton diasumsikan 6x2L / 12x1L ≈ 12 L ≈ 11 kg
+function tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) {
+  const b = Number(beratPerSatuan) || 0;
+  if (b > 0) return b;
+  if (String(kategoriSp || '').toLowerCase() === 'minyak') {
+    const s = String(satuan || '').toLowerCase();
+    if (s === 'karton' || s === 'ctn' || s === 'kardus' || s === 'dus') return 11000;
+  }
+  return 0;
+}
+
+// Toleransi sebelum pembulatan ke atas (dalam gram): menyerap noise penyimpanan
+// menu_bahan.jumlah decimal(15,3) × jumlah porsi (mis. 2839 porsi → error ≤ ~1,5 g),
+// agar kebutuhan asli yang nyaris bulat (mis. 4,00015 kg) TIDAK melompat ke satuan
+// berikutnya (4 → 5). Nilai yang benar-benar melebihi batas tetap dibulatkan ke atas.
+const TK_QTY_TOLERANSI_GRAM = 10;
+// Minimal 1 satuan beli bila ada kebutuhan nyata (mencegah toleransi mengubah 8 g → 0 kg
+// atau baris hilang dari RAB karena qty <= 0 di-skip).
+function tkCeilAman(v, totalKg) {
+  const q = Math.ceil(v);
+  if (q < 1 && totalKg > 0) return 1;
+  return q;
+}
+
+function tkGcd(a, b) {
+  a = Math.abs(a); b = Math.abs(b);
+  while (b) { const t = b; b = a % b; a = t; }
+  return a;
+}
+
+// Format angka jadi pecahan bila rapi (1/2, 1/3, 1/4, 1/5, 2/3, 3/4 dst.) —
+// penyebut dibatasi 2..6 (pecahan umum dapur) agar nilai tak-rapi (mis. 0,57 kg
+// — hasil 0,5 ÷ porsi × siswa) TIDAK tampil sebagai pecahan menyesatkan "4/7".
+function tkPecahan(v) {
+  if (v == null || isNaN(v)) return '0,00';
+  const n0 = Number(v);
+  if (n0 === 0) return '0';
+  const neg = n0 < 0;
+  let n = Math.abs(n0);
+  const whole = Math.floor(n);
+  const frac = n - whole;
+  if (frac < 0.005) return (neg ? '-' : '') + String(whole);
+  let best = null;
+  for (let d = 2; d <= 6; d++) {
+    const num = Math.round(frac * d);
+    if (num < 1 || num >= d) continue;
+    const err = Math.abs(frac - num / d);
+    if (err < 0.005 && (!best || err < best.err)) best = { num, den: d, err };
+  }
+  if (best) {
+    const g = tkGcd(best.num, best.den);
+    return (neg ? '-' : '') + (whole > 0 ? whole + ' ' : '') + (best.num / g) + '/' + (best.den / g);
+  }
+  return (neg ? '-' : '') + n.toFixed(2).replace('.', ',');
+}
+
+// QTY belanja sebagai teks, sama persis dgn tampilan Total Kebutuhan:
+// "286 kg", "1/2 kg", "5 pcs", "500 g", dst. ('' bila tidak bisa dihitung).
+function tkAutoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
+  const s = String(satuan || 'kg').toLowerCase();
+  if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
+    if (s === 'kg') {
+      // Kebutuhan kecil (< 1 kg) → pecahan aslinya (mis. 0,2 kg → 1/5 kg)
+      // agar kebutuhan kecil tidak dibulatkan ke 1 kg; kebutuhan ≥ 1 kg tetap
+      // dibulatkan ke atas ke kg utuh (belanja aman).
+      if (totalKg > 0 && totalKg < 1) {
+        let qKecil = Math.round(totalKg * 100) / 100;
+        if (qKecil <= 0) qKecil = 0.01;
+        return tkPecahan(qKecil) + ' kg';
+      }
+      return tkCeilAman(totalKg - TK_QTY_TOLERANSI_GRAM / 1000, totalKg) + ' kg';
+    }
+    return tkCeilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g';
+  }
+  if (tkIsSatuanHitung(s)) {
+    const bps = tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
+    if (bps > 0 && totalKg > 0) return tkCeilAman((totalKg * 1000 - TK_QTY_TOLERANSI_GRAM) / bps, totalKg) + ' ' + s;
+    if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') return '';
+    if (totalKg > 0) return tkCeilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g';
+    return (Math.ceil(jumlahSiswa) || 0) + ' ' + s;
+  }
+  return '';
+}
+
+// Parse teks QTY → { qty:number, satuan:string }.
+// Mendukung: "206", "206 kg", "2839 pcs", "1/2", "1,5 kg", "4 CARTON".
+// (salinan parseTkQtySatuan dari public/modul/total-kebutuhan.js)
+function tkParseQtySatuan(str) {
+  let s = String(str || '').trim();
+  if (!s) return { qty: 0, satuan: '' };
+  let satuan = '';
+  const mSat = s.match(/([a-zA-Z]+)\s*$/);
+  if (mSat) {
+    satuan = mSat[1].toUpperCase();
+    s = s.slice(0, mSat.index).trim();
+  }
+  let qty = 0;
+  const mMix = s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  if (mMix) {
+    qty = parseFloat(mMix[1]) + parseFloat(mMix[2]) / parseFloat(mMix[3]);
+  } else if (/^[0-9,.\s]+\/[0-9,.\s]+$/.test(s)) {
+    const parts = s.split('/');
+    const num = parseFloat(parts[0].replace(/\./g, '').replace(/,/g, '.'));
+    const den = parseFloat(parts[1].replace(/\./g, '').replace(/,/g, '.'));
+    if (den) qty = num / den;
+  } else {
+    const cleaned = s.replace(/\./g, '').replace(/,/g, '.');
+    qty = parseFloat(cleaned);
+    if (isNaN(qty)) qty = 0;
+  }
+  return { qty: Math.round(qty * 100) / 100, satuan: satuan };
+}
+
+// Gabungan: teks QTY + hasil parse + bagian angka saja (untuk kolom SATUAN terpisah).
+function tkQtyBelanja(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
+  const text = tkAutoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan);
+  const parsed = tkParseQtySatuan(text);
+  const qtyText = text.replace(/\s*[a-zA-Z]+\s*$/i, '').trim();
+  return { text, qty: parsed.qty, satuan: parsed.satuan, qty_text: qtyText };
+}
+
 module.exports = {
   JENJANG_DISPLAY_ORDER,
   JENJANG_DB_MAP,
@@ -374,4 +507,13 @@ module.exports = {
   buildGridNamaFromData,
   rebuildMenuNama,
   resolveGridBeratPerSiswa,
+  tkIsSatuanHitung,
+  tkBeratPerSatuanEfektif,
+  TK_QTY_TOLERANSI_GRAM,
+  tkCeilAman,
+  tkGcd,
+  tkPecahan,
+  tkAutoQty,
+  tkParseQtySatuan,
+  tkQtyBelanja,
 };

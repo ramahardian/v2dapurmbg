@@ -528,7 +528,7 @@ const tabColors = {
             tabelHtml += '<tr class="border-t border-stone-100 hover:bg-cyan-50/40 transition-colors">' +
               '<td class="px-2 py-3 text-center text-xs text-stone-500">' + no + '</td>' +
               '<td class="px-3 py-3 text-xs font-medium text-stone-700">' + escHtml(it.nama) + '</td>' +
-              '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700">' + fmtNum(it.qty) + '</td>' +
+              '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700">' + (it.qty_text || fmtNum(it.qty)) + '</td>' +
               '<td class="px-3 py-3 text-xs text-stone-500">' + escHtml(it.satuan) + '</td>' +
               '<td class="px-3 py-3 text-right mono text-xs text-stone-600">' + fmtIDR(it.harga) + '</td>' +
               '<td class="px-3 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtIDR(it.jumlah) + '</td>' +
@@ -994,7 +994,7 @@ const tabColors = {
         tabelHtml += '<tr class="border-t border-stone-100 hover:bg-cyan-50/40 transition-colors">' +
           '<td class="px-2 py-3 text-center text-xs text-stone-500">' + no + '</td>' +
           '<td class="px-3 py-3 text-xs font-medium text-stone-700">' + escHtml(it.nama) + '</td>' +
-          '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700">' + fmtNum(it.qty) + '</td>' +
+          '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700">' + (it.qty_text || fmtNum(it.qty)) + '</td>' +
           '<td class="px-3 py-3 text-xs text-stone-500">' + escHtml(it.satuan) + '</td>' +
           '<td class="px-3 py-3 text-right mono text-xs text-stone-600">' + fmtIDR(it.harga) + '</td>' +
           '<td class="px-3 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtIDR(it.jumlah) + '</td>' +

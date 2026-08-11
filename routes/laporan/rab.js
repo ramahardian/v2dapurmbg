@@ -7,7 +7,8 @@ const path = require('path');
 const ExcelJS = require('exceljs');
 const { requireRole } = require('../../middleware/auth');
 const { roleFinance, roleOps } = require('./config');
-const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP } = require('../siklus/helpers');
+const { hitungBDD } = require('../../services/spBddCalculator');
+const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, tkQtyBelanja } = require('../siklus/helpers');
 
 const MONTHS_ID = ['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
 const HARI_ID = ['MINGGU','SENIN','SELASA','RABU','KAMIS','JUMAT','SABTU'];
@@ -980,7 +981,6 @@ function registerRabRoutes(router) {
       }
 
       // Load bahan with prices for all menus
-      const dbToDisplay = buildDbToDisplay();
 
       // Menu yang direferensikan via menu_nama (menu_id null) → resolusi ke id menu
       const unmatchedNames = [...new Set(menuItems.filter(m => !m.menu_id && m.menu_nama).map(m => String(m.menu_nama || '').trim()).filter(Boolean))];
@@ -1010,7 +1010,8 @@ function registerRabRoutes(router) {
         const mph = menuIds.map(() => '?').join(',');
         const [bahanRows] = await db.query(
           `SELECT mb.menu_id, mb.bahan_baku_id, mb.jumlah, mb.keterangan,
-                  b.nama as bahan_nama, b.satuan, b.harga_satuan, b.berat_per_satuan
+                  b.nama as bahan_nama, b.satuan, b.harga_satuan, b.berat_per_satuan,
+                  b.persen_bdd, b.buffer_persen, b.kategori_sp
            FROM menu_bahan mb
            JOIN bahan_baku b ON b.id = mb.bahan_baku_id
            WHERE mb.menu_id IN (${mph})`,
@@ -1025,19 +1026,23 @@ function registerRabRoutes(router) {
             jumlah_per_porsi: Number(br.jumlah) || 0,
             harga_satuan: Number(br.harga_satuan) || 0,
             berat_per_satuan: Number(br.berat_per_satuan) || 0,
+            persen_bdd: Number(br.persen_bdd) || 100,
+            buffer_persen: Number(br.buffer_persen) || 0,
+            kategori_sp: br.kategori_sp || '',
             keterangan: br.keterangan || '',
           });
         }
       }
 
-      // Aggregate bahan across all menus for this day
-      const displayKats = siklusKat.length > 0 ? siklusKat.map(k => dbToDisplay[k] || k) : ['Umum'];
+      // Aggregate bahan across all menus for this day.
+      // Total porsi = gabungan SEMUA jenjang target siklus (konsisten dgn Total
+      // Kebutuhan), bukan hanya jenjang pertama seperti sebelumnya.
+      const totalPm = Object.values(pmMap).reduce((s, v) => s + (Number(v) || 0), 0)
+        || Number(siklusInfo?.jumlah_porsi || 0) || 1;
       let grandTotal = 0;
       const bahanAgg = {}; // key: bahan_baku_id
 
       for (const mi of menuItems) {
-        const dbKeys = Object.keys(pmMap).filter(k => (dbToDisplay[k] || k) === displayKats[0]);
-        const totalPm = dbKeys.reduce((s, k) => s + (pmMap[k] || 0), 0) || Number(siklusInfo?.jumlah_porsi || 0) || 1;
         const porsi = Number(mi.jumlah_porsi) || totalPm;
 
         const mid = effMenuId(mi);
@@ -1045,8 +1050,12 @@ function registerRabRoutes(router) {
         const menuNama = mi.menu_nama || 'Menu #' + mid;
 
         for (const b of bahanList) {
-          const totalGram = b.jumlah_per_porsi * porsi;
-          const totalKg = Math.round((totalGram / 1000) * 1000) / 1000;
+          // Berat KOTOR per porsi (dgn BDD) — sama dgn Total Kebutuhan, agar RAB
+          // = angka belanja (mis. ketik 0,5 kg → tampil 1/2 kg, bukan 500,33 g).
+          // Dijumlahkan dgn presisi penuh (tanpa pembulatan per menu) agar
+          // pembulatan per baris tidak melebar saat dikalikan ribuan porsi.
+          const beratKotorPerPorsi = hitungBDD(b.jumlah_per_porsi, b.persen_bdd);
+          const totalGram = beratKotorPerPorsi * porsi;
 
           if (!bahanAgg[b.bahan_baku_id]) {
             bahanAgg[b.bahan_baku_id] = {
@@ -1054,58 +1063,33 @@ function registerRabRoutes(router) {
               bahan_nama: b.bahan_nama,
               satuan: b.satuan,
               total_gram: 0,
-              total_kg: 0,
               harga_satuan: b.harga_satuan,
               berat_per_satuan: b.berat_per_satuan,
-              total_harga: 0,
+              buffer_persen: b.buffer_persen,
+              kategori_sp: b.kategori_sp,
               keterangan: b.keterangan || '',
             };
           }
           bahanAgg[b.bahan_baku_id].total_gram += totalGram;
-          bahanAgg[b.bahan_baku_id].total_kg += totalKg;
         }
       }
 
-      // Calculate totals with prices and build items array
+      // Calculate totals with prices and build items array.
+      // QTY belanja persis seperti Total Kebutuhan: kebutuhan total + buffer,
+      // pecahan untuk kg < 1 (mis. 1/2 kg), pembulatan ke atas untuk ≥ 1 kg,
+      // konversi satuan unit (pcs/btl/karton) via berat_per_satuan.
       let no = 0;
       const items = Object.values(bahanAgg)
-        .sort((a, b) => b.total_kg - a.total_kg)
+        .sort((a, b) => b.total_gram - a.total_gram)
         .map(b => {
           no++;
-          // Determine display qty and unit - convert to KG if gram >= 1000, else keep as satuan
-          const satuanLower = String(b.satuan || '').toLowerCase();
-          const isGramSatuan = ['g', 'gr', 'gram', 'kg'].includes(satuanLower);
-          const beratPerSatuan = Number(b.berat_per_satuan) || 0;
+          const totalKg = b.total_gram / 1000;
+          const bufferKg = Math.round(totalKg * (1 + b.buffer_persen / 100) * 100) / 100;
+          const qtyInfo = tkQtyBelanja(b.satuan, bufferKg, totalPm, b.kategori_sp, b.berat_per_satuan);
 
-          let displayQty, displaySatuan;
-          if (isGramSatuan) {
-            if (b.total_gram >= 1000) {
-              displayQty = b.total_kg;
-              displaySatuan = 'KG';
-            } else if (b.total_gram > 0) {
-              displayQty = Math.round(b.total_gram * 100) / 100;
-              displaySatuan = satuanLower === 'kg' ? 'KG' : 'GR';
-            } else {
-              displayQty = 0;
-              displaySatuan = 'GR';
-            }
-          } else {
-            // Satuan non-gram (botol/karton/pcs/dll): hitung jumlah satuan dari gram via berat_per_satuan
-            if (b.total_gram > 0 && beratPerSatuan > 0) {
-              displayQty = Math.ceil(b.total_gram / beratPerSatuan);
-              displaySatuan = (b.satuan || '').toUpperCase();
-            } else if (b.total_gram >= 1000) {
-              // Belum ada berat_per_satuan → tampilkan dalam KG
-              displayQty = b.total_kg;
-              displaySatuan = 'KG';
-            } else if (b.total_gram > 0) {
-              displayQty = Math.round(b.total_gram * 100) / 100;
-              displaySatuan = 'GR';
-            } else {
-              displayQty = 0;
-              displaySatuan = 'GR';
-            }
-          }
+          const displayQty = qtyInfo.qty;
+          const displaySatuan = qtyInfo.satuan || String(b.satuan || '').toUpperCase();
+          const qtyText = qtyInfo.qty_text || '0';
 
           const jumlah = Math.round(b.harga_satuan * displayQty);
           grandTotal += jumlah;
@@ -1114,6 +1098,7 @@ function registerRabRoutes(router) {
             no,
             nama: b.bahan_nama,
             qty: displayQty,
+            qty_text: qtyText,
             satuan: displaySatuan,
             harga: b.harga_satuan,
             jumlah,
@@ -1226,9 +1211,12 @@ function registerRabRoutes(router) {
 
     let row = 8;
     items.forEach((it, i) => {
+      // QTY: pecahan (mis. "1/2") ditulis teks; angka biasa ditulis numerik agar
+      // bisa dijumlah di Excel (hindari "number stored as text").
+      const qtyCell = (it.qty_text && /\//.test(String(it.qty_text))) ? it.qty_text : (Number(it.qty) || 0);
       put(row, 1, i + 1, S.itemStyle[0].style);
       put(row, 2, it.nama, S.itemStyle[1].style);
-      put(row, 3, Number(it.qty) || 0, S.itemStyle[2].style);
+      put(row, 3, qtyCell, S.itemStyle[2].style);
       put(row, 4, it.satuan, S.itemStyle[3].style);
       put(row, 5, Number(it.harga) || 0, S.itemStyle[4].style, MONEY_FMT);
       put(row, 6, Number(it.jumlah) || 0, S.itemStyle[5].style, MONEY_FMT);

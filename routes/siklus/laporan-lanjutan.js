@@ -3,7 +3,7 @@ const path = require('path');
 const ExcelJS = require('exceljs');
 const db = require('../../db');
 const { hitungBDD } = require('../../services/spBddCalculator');
-const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandSiklusTargetJenjang, buildPmDisplayMaps, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName, resolveGridBeratPerSiswa } = require('./helpers');
+const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandSiklusTargetJenjang, buildPmDisplayMaps, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName, resolveGridBeratPerSiswa, tkAutoQty } = require('./helpers');
 
 const router = express.Router();
 
@@ -903,88 +903,9 @@ router.get('/siklus/laporan/kebutuhan-pangan/export', async (req, res) => {
   }
 });
 
-/**
- * Helper qty belanja (port dari public/modul/total-kebutuhan.js) —
- * untuk kolom "Kg/pcs/btl" pada export Total Kebutuhan Pangan.
- */
-function tkIsSatuanHitung(s) {
-  const t = String(s || '').toLowerCase();
-  return ['pcs', 'btl', 'botol', 'renceng', 'ctn', 'karton', 'kardus', 'dus', 'pack', 'ikat', 'ekor', 'butir', 'bungkus'].includes(t);
-}
-function tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) {
-  const b = Number(beratPerSatuan) || 0;
-  if (b > 0) return b;
-  if (String(kategoriSp || '').toLowerCase() === 'minyak') {
-    const s = String(satuan || '').toLowerCase();
-    if (s === 'karton' || s === 'ctn' || s === 'kardus' || s === 'dus') return 11000;
-  }
-  return 0;
-}
-// Toleransi sebelum pembulatan ke atas (dalam gram): menyerap noise penyimpanan
-// menu_bahan.jumlah decimal(15,3) × jumlah porsi (mis. 2839 porsi → error ≤ ~1,5 g),
-// agar kebutuhan asli yang nyaris bulat (mis. 4,00015 kg) TIDAK melompat ke satuan
-// berikutnya (4 → 5). Nilai yang benar-benar melebihi batas tetap dibulatkan ke atas.
-const TK_QTY_TOLERANSI_GRAM = 10;
-// Minimal 1 satuan beli bila ada kebutuhan nyata (mencegah toleransi mengubah 8 g → 0 kg).
-function tkCeilAman(v, totalKg) {
-  const q = Math.ceil(v);
-  if (q < 1 && totalKg > 0) return 1;
-  return q;
-}
-// Format angka jadi pecahan bila rapi (1/2, 1/3, 1/4, 1/5, 2/3, 3/4 dst.) —
-// salinan dari fmtTkPecahan di public/modul/total-kebutuhan.js (penyebut ≤ 6)
-// agar export XLSX konsisten dengan tampilan web (kebutuhan kecil mis. 0,5 kg
-// ditampilkan "1/2 kg", bukan dibulatkan jadi 1 kg).
-function tkGcd(a, b) {
-  a = Math.abs(a); b = Math.abs(b);
-  while (b) { const t = b; b = a % b; a = t; }
-  return a;
-}
-function tkPecahan(v) {
-  if (v == null || isNaN(v)) return '0,00';
-  const n0 = Number(v);
-  if (n0 === 0) return '0';
-  const neg = n0 < 0;
-  let n = Math.abs(n0);
-  const whole = Math.floor(n);
-  const frac = n - whole;
-  if (frac < 0.005) return (neg ? '-' : '') + String(whole);
-  let best = null;
-  for (let d = 2; d <= 6; d++) {
-    const num = Math.round(frac * d);
-    if (num < 1 || num >= d) continue;
-    const err = Math.abs(frac - num / d);
-    if (err < 0.005 && (!best || err < best.err)) best = { num, den: d, err };
-  }
-  if (best) {
-    const g = tkGcd(best.num, best.den);
-    return (neg ? '-' : '') + (whole > 0 ? whole + ' ' : '') + (best.num / g) + '/' + (best.den / g);
-  }
-  return (neg ? '-' : '') + n.toFixed(2).replace('.', ',');
-}
-function tkAutoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
-  const s = String(satuan || 'kg').toLowerCase();
-  if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
-    if (s === 'kg') {
-      // Kebutuhan kecil (< 1 kg) → pecahan aslinya, konsisten dgn halaman web
-      if (totalKg > 0 && totalKg < 1) {
-        let qKecil = Math.round(totalKg * 100) / 100;
-        if (qKecil <= 0) qKecil = 0.01;
-        return tkPecahan(qKecil) + ' kg';
-      }
-      return tkCeilAman(totalKg - TK_QTY_TOLERANSI_GRAM / 1000, totalKg) + ' kg';
-    }
-    return tkCeilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g';
-  }
-  if (tkIsSatuanHitung(s)) {
-    const bps = tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
-    if (bps > 0 && totalKg > 0) return tkCeilAman((totalKg * 1000 - TK_QTY_TOLERANSI_GRAM) / bps, totalKg) + ' ' + s;
-    if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') return '';
-    if (totalKg > 0) return tkCeilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g';
-    return (Math.ceil(jumlahSiswa) || 0) + ' ' + s;
-  }
-  return '';
-}
+// Helper QTY belanja (tkAutoQty dll) dipakai bersama dari ./helpers —
+// konsisten dgn RAB Harian & halaman Total Kebutuhan (pecahan utk < 1 kg,
+// pembulatan ke atas utk ≥ 1 kg).
 
 /**
  * GET /siklus/laporan/total-kebutuhan/export
