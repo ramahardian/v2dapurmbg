@@ -47,7 +47,7 @@ function formatItems(aggMap, idKoperasiMap, bufferPersenMap) {
         }
       }
 
-      const bp = bufferPersenMap[b.bahan_baku_id] || 10;
+      const bp = bufferPersenMap[b.bahan_baku_id] || 0;
       const buffer = Math.round(qty * (1 + bp / 100) * 100) / 100;
       return {
         bahan_baku_id: b.bahan_baku_id,
@@ -271,12 +271,13 @@ function registerGenerateRoutes(router) {
       const bufferPersenMap = {};
       if (allBahanIds.length) {
         const [rows] = await db.query(
-          `SELECT id, id_koperasi, COALESCE(buffer_persen, 10) AS buffer_persen FROM bahan_baku WHERE id IN (${allBahanIds.map(() => '?').join(',')}) AND tenant_id=?`,
+          `SELECT id, id_koperasi, COALESCE(buffer_persen, 0) AS buffer_persen FROM bahan_baku WHERE id IN (${allBahanIds.map(() => '?').join(',')}) AND tenant_id=?`,
           [...allBahanIds, req.user.tenant_id]
         );
         for (const r of rows) {
           idKoperasiMap[r.id] = r.id_koperasi;
-          bufferPersenMap[r.id] = Number(r.buffer_persen) || 10;
+          // Hati-hati: Number(0) || 10 = 10 (fallback menghapus buffer 0). Default kosong → 0.
+          bufferPersenMap[r.id] = Number(r.buffer_persen) || 0;
         }
       }
 

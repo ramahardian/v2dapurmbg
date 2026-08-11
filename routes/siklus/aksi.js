@@ -351,11 +351,12 @@ router.post('/siklus/buat-pr', async (req, res) => {
   const bahanIds = Object.keys(bahanTotal).map(Number);
   if (bahanIds.length) {
     const ph = bahanIds.map(() => '?').join(',');
-    const [bahanRefs] = await db.query(`SELECT id, id_koperasi, satuan, COALESCE(buffer_persen, 10) AS buffer_persen, COALESCE(berat_per_satuan, 0) AS berat_per_satuan FROM bahan_baku WHERE id IN (${ph}) AND tenant_id=?`, [...bahanIds, req.user.tenant_id]);
+    const [bahanRefs] = await db.query(`SELECT id, id_koperasi, satuan, COALESCE(buffer_persen, 0) AS buffer_persen, COALESCE(berat_per_satuan, 0) AS berat_per_satuan FROM bahan_baku WHERE id IN (${ph}) AND tenant_id=?`, [...bahanIds, req.user.tenant_id]);
     for (const ref of bahanRefs) {
       if (bahanTotal[ref.id]) {
         bahanTotal[ref.id].id_koperasi = ref.id_koperasi;
-        bahanTotal[ref.id].buffer_persen = Number(ref.buffer_persen) || 10;
+        // Hati-hati: Number(0) || 10 = 10 (fallback menghapus buffer 0). Default kosong → 0.
+        bahanTotal[ref.id].buffer_persen = Number(ref.buffer_persen) || 0;
         if (!bahanTotal[ref.id].satuan) bahanTotal[ref.id].satuan = ref.satuan || 'g';
         if (!bahanTotal[ref.id].berat_per_satuan) bahanTotal[ref.id].berat_per_satuan = Number(ref.berat_per_satuan) || 0;
       }
@@ -378,7 +379,9 @@ router.post('/siklus/buat-pr', async (req, res) => {
       } else {
         const bps = Number(v.berat_per_satuan) || 0;
         if (bps > 0) {
-          qtyBeli = Math.ceil(kebutuhanDenganBuffer / bps);
+          // Toleransi noise penyimpanan (gram) agar kebutuhan nyaris bulat tidak lompat +1 satuan.
+          // Minimal 1 satuan bila ada kebutuhan nyata (kebutuhanDenganBuffer selalu > 0 di sini).
+          qtyBeli = Math.max(1, Math.ceil((kebutuhanDenganBuffer - 10) / bps));
           satuanBeli = v.satuan || 'unit';
         } else {
           qtyBeli = Math.round((kebutuhanDenganBuffer / 1000) * 100) / 100;

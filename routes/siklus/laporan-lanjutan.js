@@ -490,7 +490,10 @@ async function buildPerencanaanData({ tenant_id, query }) {
               }
 
               const beratKotorPerSiswa = hitungBDD(beratPerSiswa, persenBdd);
-              const kebutuhanKg = Math.round((beratKotorPerSiswa * jmlPm / 1000) * 100) / 100;
+              // JANGAN bulatkan kebutuhan per jenjang di sini — pembulatan 2 desimal per jenjang
+              // dijumlahkan lalu di-ceil menghasilkan lompatan palsu (mis. 4,00015 → 5).
+              // Simpan presisi penuh; pembulatan dilakukan di tampilan (fmtTkNum) / QTY (autoQty).
+              const kebutuhanKg = beratKotorPerSiswa * jmlPm / 1000;
 
               // Use namaDisplay as key so overridden items don't mix with originals in the same day
               const keyNama = ov ? (namaDisplay + '__ov') : br.nama;
@@ -535,7 +538,8 @@ async function buildPerencanaanData({ tenant_id, query }) {
           }
 
           const beratKotorPerSiswa = hitungBDD(beratPerSiswa, persenBdd);
-          const kebutuhanKg = Math.round((beratKotorPerSiswa * jmlPm / 1000) * 100) / 100;
+          // JANGAN bulatkan kebutuhan per jenjang di sini — lihat komentar pada loop menu di atas.
+          const kebutuhanKg = beratKotorPerSiswa * jmlPm / 1000;
 
           const keyNama = ov ? (namaDisplay + '__ov') : g.nama;
           if (!bahanMap[keyNama]) bahanMap[keyNama] = { nama: namaDisplay, nama_display: namaDisplay, bahan_baku_id: Number(g.bahan_baku_id) || 0, per_jenjang: {}, buffer_persen: Number(g.buffer_persen) || 0, satuan: g.satuan || '', kategori_sp: g.kategori_sp || '', keterangan: '', berat_per_satuan: Number(g.berat_per_satuan) || 0, harga_satuan: Number(g.harga_satuan) || 0 };
@@ -911,17 +915,28 @@ function tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) {
   }
   return 0;
 }
+// Toleransi sebelum pembulatan ke atas (dalam gram): menyerap noise penyimpanan
+// menu_bahan.jumlah decimal(15,3) × jumlah porsi (mis. 2839 porsi → error ≤ ~1,5 g),
+// agar kebutuhan asli yang nyaris bulat (mis. 4,00015 kg) TIDAK melompat ke satuan
+// berikutnya (4 → 5). Nilai yang benar-benar melebihi batas tetap dibulatkan ke atas.
+const TK_QTY_TOLERANSI_GRAM = 10;
+// Minimal 1 satuan beli bila ada kebutuhan nyata (mencegah toleransi mengubah 8 g → 0 kg).
+function tkCeilAman(v, totalKg) {
+  const q = Math.ceil(v);
+  if (q < 1 && totalKg > 0) return 1;
+  return q;
+}
 function tkAutoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
   const s = String(satuan || 'kg').toLowerCase();
   if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
-    if (s === 'kg') return Math.ceil(totalKg) + ' kg';
-    return Math.ceil(totalKg * 1000) + ' g';
+    if (s === 'kg') return tkCeilAman(totalKg - TK_QTY_TOLERANSI_GRAM / 1000, totalKg) + ' kg';
+    return tkCeilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g';
   }
   if (tkIsSatuanHitung(s)) {
     const bps = tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
-    if (bps > 0 && totalKg > 0) return Math.ceil((totalKg * 1000) / bps) + ' ' + s;
+    if (bps > 0 && totalKg > 0) return tkCeilAman((totalKg * 1000 - TK_QTY_TOLERANSI_GRAM) / bps, totalKg) + ' ' + s;
     if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') return '';
-    if (totalKg > 0) return Math.ceil(totalKg * 1000) + ' g';
+    if (totalKg > 0) return tkCeilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g';
     return (Math.ceil(jumlahSiswa) || 0) + ' ' + s;
   }
   return '';

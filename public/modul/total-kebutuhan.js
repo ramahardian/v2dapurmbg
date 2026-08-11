@@ -297,24 +297,36 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     return 0;
   }
 
+  // Toleransi sebelum pembulatan ke atas (dalam gram): menyerap noise penyimpanan
+  // menu_bahan.jumlah decimal(15,3) × jumlah porsi (mis. 2839 porsi → error ≤ ~1,5 g),
+  // agar kebutuhan asli yang nyaris bulat (mis. 4,00015 kg) TIDAK melompat ke satuan
+  // berikutnya (4 → 5). Nilai yang benar-benar melebihi batas tetap dibulatkan ke atas.
+  var TK_QTY_TOLERANSI_GRAM = 10;
+  // Minimal 1 satuan beli bila ada kebutuhan nyata (mencegah toleransi mengubah 8 g → 0 kg
+  // atau baris hilang dari RAB karena parsed.qty <= 0 di-skip).
+  function ceilAman(v, totalKg) {
+    var q = Math.ceil(v);
+    if (q < 1 && totalKg > 0) q = 1;
+    return q;
+  }
   function autoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
     var s = String(satuan || 'kg').toLowerCase();
     if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
       // Bahan berat → dibulatkan ke atas agar aman untuk belanja
-      if (s === 'kg') return Math.ceil(totalKg) + ' kg';
-      return Math.ceil(totalKg * 1000) + ' g'; // satuan gram
+      if (s === 'kg') return ceilAman(totalKg - TK_QTY_TOLERANSI_GRAM / 1000, totalKg) + ' kg';
+      return ceilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g'; // satuan gram
     }
     if (isSatuanHitung(s)) {
       var bps = beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
       // Ada berat per satuan & ada kebutuhan nyata → konversi ke satuan unit
       if (bps > 0 && totalKg > 0) {
-        return Math.ceil((totalKg * 1000) / bps) + ' ' + s;
+        return ceilAman((totalKg * 1000 - TK_QTY_TOLERANSI_GRAM) / bps, totalKg) + ' ' + s;
       }
       // Kemasan besar tanpa berat_per_satuan → biarkan kosong agar diisi manual
       if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') return '';
       // Bahan satuan unit tanpa berat_per_satuan → tampilkan kebutuhan asli dalam gram (jangan pakai jumlah porsi),
       // agar tidak menghasilkan angka belanja keliru; baris tetap ditandai merah.
-      if (totalKg > 0) return Math.ceil(totalKg * 1000) + ' g';
+      if (totalKg > 0) return ceilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g';
       return (Math.ceil(jumlahSiswa) || 0) + ' ' + s;
     }
     return '';

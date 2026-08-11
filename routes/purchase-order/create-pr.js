@@ -108,7 +108,8 @@ function registerCreatePrRoutes(router) {
                   berat_per_satuan: Number(br.berat_per_satuan) || 0,
                   berat_1_sp: Number(br.berat_1_sp) || 0,
                   kategori_sp: br.kategori_sp,
-                  buffer_persen: Number(br.buffer_persen) || 10,
+                  // Hati-hati: Number(0) || 10 = 10 (fallback menghapus buffer 0). Default kosong → 0.
+                  buffer_persen: Number(br.buffer_persen) || 0,
                   total_berat_kotor: 0, total_porsi: 0, non_gram: false,
                 };
               }
@@ -143,7 +144,8 @@ function registerCreatePrRoutes(router) {
                   berat_per_satuan: Number(gb.berat_per_satuan) || 0,
                   berat_1_sp: Number(gb.berat_1_sp) || 0,
                   kategori_sp: gb.bb_kategori_sp,
-                  buffer_persen: Number(gb.buffer_persen) || 10,
+                  // Hati-hati: Number(0) || 10 = 10 (fallback menghapus buffer 0). Default kosong → 0.
+                  buffer_persen: Number(gb.buffer_persen) || 0,
                   total_berat_kotor: 0, total_porsi: 0, non_gram: false,
                 };
               }
@@ -181,7 +183,7 @@ function registerCreatePrRoutes(router) {
           }
         }
 
-        const bp = b.buffer_persen || 10;
+        const bp = b.buffer_persen || 0;
         const buffer = Math.round(qty * (1 + bp / 100) * 100) / 100;
         return {
           bahan_baku_id: b.bahan_baku_id,
