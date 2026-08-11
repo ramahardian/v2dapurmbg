@@ -289,6 +289,118 @@ router.post('/siklus/hitung-budget-semua', async (req, res) => {
 });
 
 /**
+ * POST /siklus/budget-harian
+ * Isi ANGGARAN BELANJA HARIAN (Rp/hari) langsung dari halaman Siklus.
+ * Total Budget periode = anggaran_harian × total_hari siklus, lalu dibagi
+ * proporsional per kategori (berat jumlah penerima) agar konsisten dgn
+ * struktur budget per kategori (RAB Bulanan tetap rinci). Idempotent:
+ * baris (periode, kategori) yang sudah ada di-UPDATE, sisanya di-INSERT.
+ */
+router.post('/siklus/budget-harian', async (req, res) => {
+  const { siklus_id, periode, anggaran_harian, ganti_semua } = req.body;
+  if (!siklus_id || !periode) return res.status(400).json({ error: 'siklus_id dan periode (YYYY-MM) wajib diisi' });
+  if (!/^\d{4}-\d{2}$/.test(periode)) return res.status(400).json({ error: 'Format periode harus YYYY-MM' });
+  const harian = Number(anggaran_harian);
+  if (!(Number.isFinite(harian) && harian > 0)) return res.status(400).json({ error: 'Anggaran per hari harus lebih dari 0' });
+
+  const [[siklus]] = await db.query('SELECT * FROM siklus_menu WHERE id=? AND tenant_id=?', [siklus_id, req.user.tenant_id]);
+  if (!siklus) return res.status(404).json({ error: 'Siklus tidak ditemukan' });
+
+  // Pembagi anggaran per hari = total_hari siklus (konsisten dgn getRabHarianData
+  // yang memakai total_hari siklus). Jika belum diisi, tolak — agar tidak ada
+  // ketidakcocokan hint vs hasil (fallback hari kerja tidak dipakai di sini).
+  const totalHari = Number(siklus.total_hari);
+  if (!(totalHari > 0)) return res.status(400).json({ error: 'Siklus belum memiliki total_hari — atur dulu lewat Edit Siklus' });
+  const totalBudget = Math.round(harian * totalHari);
+
+  const kategoriList = await kategoriBudgetSiklus(siklus, req.user.tenant_id);
+  const totalPenerima = kategoriList.reduce((s, k) => s + (Number(k.jumlah_penerima) || 0), 0);
+
+  // Opsi "ganti semua": hapus baris budget lain periode ini (kategori di luar
+  // siklus) agar SUM(total_budget) periode = totalBudget PERSIS → ANGGARAN
+  // BELANJA HARIAN di RAB = angka yang diketik, tanpa sisa baris lama menambah.
+  let deleted = 0;
+  if (ganti_semua && kategoriList.length) {
+    const ph = kategoriList.map(() => '?').join(',');
+    const [del] = await db.query(
+      'DELETE FROM budget WHERE tenant_id=? AND periode=? AND kategori_penerima NOT IN (' + ph + ')',
+      [req.user.tenant_id, periode, ...kategoriList.map(k => k.display)]
+    );
+    deleted = del.affectedRows || 0;
+  }
+
+  // Distribusi proporsional: floor untuk semua baris, lalu sisa pembulatan
+  // diberikan ke baris dengan penerima TERBANYAK (bukan baris terakhir) agar
+  // tidak mendarat di kategori kosong. SUM(total_budget) = totalBudget persis.
+  const rowTotals = kategoriList.map(k => {
+    const jml = Number(k.jumlah_penerima) || 0;
+    const share = totalPenerima > 0 ? (jml / totalPenerima) : (1 / kategoriList.length);
+    return Math.floor(totalBudget * share);
+  });
+  const sumRows = rowTotals.reduce((a, b) => a + b, 0);
+  let idxRem = kategoriList.length - 1;
+  if (totalPenerima > 0) {
+    let maxJ = -1;
+    kategoriList.forEach((k, i) => {
+      const jml = Number(k.jumlah_penerima) || 0;
+      if (jml > maxJ) { maxJ = jml; idxRem = i; }
+    });
+  }
+  rowTotals[idxRem] += (totalBudget - sumRows);
+
+  let created = 0, updated = 0;
+  for (let i = 0; i < kategoriList.length; i++) {
+    const kat = kategoriList[i];
+    const jml = Number(kat.jumlah_penerima) || 0;
+    const rowTotal = rowTotals[i];
+    // Harga porsi implisit agar RAB Bulanan tetap konsisten (total ÷ (jml × hari))
+    const hargaPorsi = (jml > 0) ? Math.round(rowTotal / (jml * totalHari)) : 0;
+
+    const [existing] = await db.query(
+      'SELECT id FROM budget WHERE tenant_id=? AND periode=? AND kategori_penerima=?',
+      [req.user.tenant_id, periode, kat.display]
+    );
+    if (existing.length) {
+      await db.query(
+        'UPDATE budget SET jumlah_penerima=?, harga_besar=?, harga_kecil=?, total_budget=?, catatan=? WHERE id=? AND tenant_id=?',
+        [kat.jumlah_penerima, hargaPorsi, hargaPorsi, rowTotal, 'Budget Harian', existing[0].id, req.user.tenant_id]
+      );
+      updated++;
+    } else {
+      await db.query(
+        'INSERT INTO budget (tenant_id, periode, kategori_penerima, jumlah_penerima, harga_besar, harga_kecil, total_budget, realisasi, catatan) VALUES (?,?,?,?,?,?,?,0,?)',
+        [req.user.tenant_id, periode, kat.display, kat.jumlah_penerima, hargaPorsi, hargaPorsi, rowTotal, 'Budget Harian']
+      );
+      created++;
+    }
+  }
+
+  // Info: baris budget lain periode ini yang TIDAK diubah (kalau ganti_semua
+  // mati) — agar tidak mengejutkan saat SUM di RAB Harian lebih besar.
+  let lainInfo = '';
+  if (!ganti_semua && kategoriList.length) {
+    const ph = kategoriList.map(() => '?').join(',');
+    const [others] = await db.query(
+      `SELECT COUNT(*) AS c FROM budget WHERE tenant_id=? AND periode=? AND kategori_penerima NOT IN (${ph})`,
+      [req.user.tenant_id, periode, ...kategoriList.map(k => k.display)]
+    );
+    if (others[0].c > 0) lainInfo = '. Catatan: ' + others[0].c + ' baris budget lain periode ini tidak diubah';
+  }
+
+  res.json({
+    ok: true,
+    message: 'Budget Harian ' + periode + ': Rp ' + harian.toLocaleString('id-ID') + '/hari × ' + totalHari + ' hari = Rp ' + totalBudget.toLocaleString('id-ID') + ' (' + created + ' baru, ' + updated + ' update' + (deleted > 0 ? ', ' + deleted + ' dihapus' : '') + ')' + lainInfo,
+    anggaran_harian: harian,
+    total_hari: totalHari,
+    total_budget: totalBudget,
+    created,
+    updated,
+    deleted,
+    kategori: kategoriList.map(k => k.display),
+  });
+});
+
+/**
  * POST /siklus/buat-pr
  * Auto-generate Purchase Request from total ingredient requirements for a period.
  */

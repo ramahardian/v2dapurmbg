@@ -259,6 +259,7 @@ async function reloadSiklusList() {
         <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onclick="event.stopPropagation();loadSiklusDetail(${s.id})" class="w-7 h-7 flex items-center justify-center text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Detail"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button onclick="event.stopPropagation();bukaKebutuhanPangan(${s.id})" class="w-7 h-7 flex items-center justify-center text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Kebutuhan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></button>
+          <button onclick="event.stopPropagation();budgetHarianSiklus(${s.id}, '${escHtml(s.nama)}', ${Number(s.total_hari) || 0}, '${siklusPeriodeAwal(s.tanggal_mulai)}', ${Number(s.jumlah_porsi) || 0})" class="w-7 h-7 flex items-center justify-center text-teal-600 hover:bg-teal-50 rounded-lg transition-colors" title="Budget Harian — isi ANGGARAN BELANJA HARIAN (Rp/hari)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></button>
           ${s.status === 'Arsip' ? `<button onclick="event.stopPropagation();reaktivasiSiklus(${s.id}, ${s.total_hari}, '${escHtml(s.nama)}')" class="w-7 h-7 flex items-center justify-center text-sky-600 hover:bg-sky-50 rounded-lg transition-colors" title="Reaktivasi — pakai ulang untuk periode baru"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>` : ''}
           <button onclick="event.stopPropagation();editSiklus(${s.id})" class="w-7 h-7 flex items-center justify-center text-stone-600 hover:bg-stone-100 rounded-lg transition-colors" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button onclick="event.stopPropagation();duplikasiSiklus(${s.id}, ${s.total_hari})" class="w-7 h-7 flex items-center justify-center text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Duplikat"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
@@ -272,6 +273,7 @@ async function reloadSiklusList() {
 async function loadSiklusDetail(id) {
   const data = await api.get('/siklus/' + id);
   const wrap = document.getElementById('siklus-detail');
+  const tMulai = siklusPeriodeAwal(data.tanggal_mulai);
   wrap.innerHTML = `
     <div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
       <div class="flex items-center gap-3 mb-4"><div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center shadow-sm"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div><h2 class="text-sm font-bold text-stone-800">${data.nama}</h2><div class="text-xs text-stone-500">Status: <b class="capitalize">${data.status}</b></div></div></div>
@@ -279,6 +281,7 @@ async function loadSiklusDetail(id) {
       <div class="flex flex-wrap gap-1.5 mb-4">
         <button onclick="generateProduksi(${data.id})" class="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-emerald-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Buat Produksi</button>
         <button onclick="hitungBudgetSiklus(${data.id})" class="inline-flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-blue-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Buat Budget</button>
+        <button onclick="budgetHarianSiklus(${data.id}, '${escHtml(data.nama)}', ${Number(data.total_hari) || 0}, '${tMulai}', ${Number(data.jumlah_porsi) || 0})" class="inline-flex items-center gap-1 bg-teal-50 hover:bg-teal-100 text-teal-700 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-teal-200 transition-colors" title="Isi ANGGARAN BELANJA HARIAN (Rp/hari) untuk periode ini"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Budget Harian</button>
         <button onclick="renderProduksiHarian(${data.id})" class="inline-flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-amber-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Produksi Harian</button>
         <button onclick="renderSiklusLaporan(${data.id})" class="inline-flex items-center gap-1 bg-violet-50 hover:bg-violet-100 text-violet-700 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-violet-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Laporan + SP</button>
         <button onclick="editSiklus(${data.id})" class="inline-flex items-center gap-1 bg-white hover:bg-stone-50 text-stone-600 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-stone-200 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
@@ -1395,6 +1398,137 @@ async function hitungBudgetSemuaSiklus() {
 
 async function buatPRSiklus() {
   openBudgetModal(null, 'pr');
+}
+
+// ===== Budget Harian — isi ANGGARAN BELANJA HARIAN (Rp/hari) langsung dari Siklus =====
+// Periode awal dari tanggal_mulai siklus (YYYY-MM), dengan penyesuaian zona WIB
+// yang sama seperti fmtSiklusTanggal.
+function siklusPeriodeAwal(v) {
+  if (!v) return '';
+  var d = new Date(v);
+  if (isNaN(d.getTime())) return '';
+  var dd = new Date(d.getTime() + 7 * 3600 * 1000);
+  return dd.getUTCFullYear() + '-' + String(dd.getUTCMonth() + 1).padStart(2, '0');
+}
+
+async function budgetHarianSiklus(siklusId, nama, totalHari, periodeAwal, porsi) {
+  openBudgetHarianModal(siklusId, nama, totalHari, periodeAwal, porsi);
+}
+
+function openBudgetHarianModal(siklusId, nama, totalHari, periodeAwal, porsi) {
+  var existing = document.getElementById('bh-modal');
+  if (existing) existing.remove();
+
+  var defPeriode = periodeAwal || new Date().toISOString().slice(0, 7);
+  var hari = Math.max(1, Number(totalHari) || 1);
+  window._bhHari = hari;
+
+  var m = document.createElement('div');
+  m.id = 'bh-modal';
+  m.className = 'fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4';
+  m.innerHTML =
+    '<div class="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-hidden transform transition-all duration-200 scale-95 opacity-0">' +
+      '<div class="flex items-center gap-3 px-5 py-4 border-b border-stone-100 dark:border-stone-800 bg-gradient-to-r from-teal-600 to-teal-500 text-white">' +
+        '<div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>' +
+        '<div class="flex-1 min-w-0"><h3 class="font-bold text-sm leading-tight">Budget Harian</h3>' +
+          '<p class="text-white/80 text-xs truncate mt-0.5">' + escHtml(nama || '') + ' · ' + hari + ' hari</p></div>' +
+        '<button onclick="closeBudgetHarianModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/15 text-white/80 hover:text-white transition-colors" title="Tutup"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+      '</div>' +
+      '<div class="p-5 space-y-4">' +
+        '<div class="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-teal-50 dark:bg-teal-900/30 border border-teal-200/70 text-xs text-teal-800 dark:text-teal-200"><svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg><span>Total budget otomatis = <b>Rp/hari × ' + hari + ' hari</b>' + (porsi ? ' untuk <b>' + fmtNum(porsi) + ' porsi/hari</b>' : '') + ', dibagi per kategori sesuai jumlah penerima. Baris yang sudah ada akan diperbarui.</span></div>' +
+        '<div>' +
+          '<label class="block text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Periode Budget</label>' +
+          '<input type="month" id="bh-periode" value="' + defPeriode + '" oninput="bhUpdateHint()" class="mt-1.5 w-full h-11 px-3 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 text-sm bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 transition-all">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Anggaran per Hari (Rp)</label>' +
+          '<input type="number" id="bh-harian" min="0" step="1000" placeholder="mis. 27000000" oninput="bhUpdateHint()" class="mt-1.5 w-full h-11 px-3 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 text-sm bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 transition-all mono">' +
+          '<div id="bh-hint" class="mt-2"></div>' +
+        '</div>' +
+        '<label class="flex items-start gap-2 text-xs text-stone-500 cursor-pointer select-none"><input type="checkbox" id="bh-ganti" checked class="mt-0.5 cb-modern"><span>Ganti semua budget periode ini (hapus baris kategori lain agar anggaran per hari persis)</span></label>' +
+      '</div>' +
+      '<div class="px-5 py-4 border-t border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/60 flex items-center justify-end gap-2">' +
+        '<button onclick="closeBudgetHarianModal()" class="h-11 px-4 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">Batal</button>' +
+        '<button id="bh-submit" onclick="bhSubmit(' + (siklusId || 'null') + ')" class="h-11 px-5 rounded-xl text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 shadow-sm transition-colors inline-flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Simpan Budget</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(m);
+  m.onclick = function(e) { if (e.target === m) closeBudgetHarianModal(); };
+  document.addEventListener('keydown', _bhKeyHandler);
+  document.body.style.overflow = 'hidden';
+
+  requestAnimationFrame(function() {
+    var content = m.querySelector('.transform');
+    if (content) {
+      content.classList.remove('opacity-0', 'scale-95');
+      content.classList.add('opacity-100', 'scale-100');
+    }
+  });
+  setTimeout(function() { var f = document.getElementById('bh-harian'); if (f) f.focus(); }, 120);
+  bhUpdateHint();
+}
+
+function _bhKeyHandler(e) {
+  if (e.key === 'Escape') closeBudgetHarianModal();
+}
+
+function closeBudgetHarianModal() {
+  var m = document.getElementById('bh-modal');
+  if (!m) return;
+  document.removeEventListener('keydown', _bhKeyHandler);
+  var content = m.querySelector('.transform');
+  if (content) {
+    content.classList.add('opacity-0', 'scale-95');
+    content.classList.remove('opacity-100', 'scale-100');
+  }
+  setTimeout(function() {
+    m.remove();
+    document.body.style.overflow = '';
+  }, 180);
+}
+
+function bhUpdateHint() {
+  var pEl = document.getElementById('bh-periode');
+  var hEl = document.getElementById('bh-harian');
+  var hint = document.getElementById('bh-hint');
+  if (!hint) return;
+  var v = pEl ? pEl.value : '';
+  var harian = Number(hEl ? hEl.value : 0) || 0;
+  if (!v) { hint.innerHTML = '<div class="text-xs text-amber-600">Pilih periode terlebih dahulu.</div>'; return; }
+  if (!/^\d{4}-\d{2}$/.test(v)) { hint.innerHTML = '<div class="text-xs text-red-600">Format periode salah. Gunakan YYYY-MM.</div>'; return; }
+  var hari = Math.max(1, Number(window._bhHari) || 1);
+  if (harian <= 0) {
+    hint.innerHTML = '<div class="text-xs text-stone-400">Total Budget Periode = <b>Rp/hari × ' + hari + ' hari</b></div>';
+    return;
+  }
+  var total = harian * hari;
+  hint.innerHTML = '<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 text-xs font-medium border border-teal-200/70 dark:border-teal-800">' + fmtIDR(harian) + '/hari × ' + hari + ' = <b>' + fmtIDR(total) + '</b></div>';
+}
+
+async function bhSubmit(siklusId) {
+  var pEl = document.getElementById('bh-periode');
+  var hEl = document.getElementById('bh-harian');
+  var btn = document.getElementById('bh-submit');
+  var periode = pEl ? pEl.value : '';
+  var harian = Number(hEl ? hEl.value : 0) || 0;
+  if (!periode || !/^\d{4}-\d{2}$/.test(periode)) { showAlert('Periode wajib diisi (YYYY-MM)', 'warning'); return; }
+  if (!(harian > 0)) { showAlert('Isi anggaran per hari (Rp) terlebih dahulu', 'warning'); return; }
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Menyimpan...';
+  }
+  try {
+    var gantiEl = document.getElementById('bh-ganti');
+    var r = await api.post('/siklus/budget-harian', { siklus_id: siklusId, periode: periode, anggaran_harian: harian, ganti_semua: !!(gantiEl && gantiEl.checked) });
+    closeBudgetHarianModal();
+    showAlert('✅ ' + r.message, 'success');
+  } catch (e) {
+    showAlert('❌ ' + (e.message || 'Gagal menyimpan budget'), 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Simpan Budget';
+    }
+  }
 }
 
 async function deleteSelectedSiklus() {
