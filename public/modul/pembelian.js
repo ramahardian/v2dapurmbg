@@ -37,9 +37,9 @@ async function refreshPoList() {
 async function renderPembelianPage(tab) {
   const activeTab = tab || 'pr';
   const content = document.getElementById('content');
-  content.innerHTML = `<div class="flex gap-1 bg-stone-100 rounded-xl p-1 w-fit mb-5">
-      <button onclick="switchPrPoTab('pr')" id="tab-pr" class="px-4 py-2 rounded-lg text-sm font-medium transition-all${activeTab === 'pr' ? ' bg-white text-blue-600 shadow-sm' : ' text-stone-600 hover:text-stone-800'}">PR — Purchase Request</button>
-      <button onclick="switchPrPoTab('po')" id="tab-po" class="px-4 py-2 rounded-lg text-sm font-medium transition-all${activeTab === 'po' ? ' bg-white text-blue-600 shadow-sm' : ' text-stone-600 hover:text-stone-800'}">PO — Purchase Order</button>
+  content.innerHTML = `<div class="flex gap-1 bg-stone-100 rounded-xl p-1 w-full sm:w-fit mb-5">
+      <button onclick="switchPrPoTab('pr')" id="tab-pr" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap${activeTab === 'pr' ? ' bg-white text-blue-600 shadow-sm' : ' text-stone-600 hover:text-stone-800'}">PR — Purchase Request</button>
+      <button onclick="switchPrPoTab('po')" id="tab-po" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap${activeTab === 'po' ? ' bg-white text-blue-600 shadow-sm' : ' text-stone-600 hover:text-stone-800'}">PO — Purchase Order</button>
     </div>
     <div id="pr-po-content"></div>`;
 
@@ -67,9 +67,9 @@ async function renderPembelianPage(tab) {
 function renderPrView() {
   const wrap = document.getElementById('pr-po-content');
   wrap.innerHTML = `
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
       <h2 class="text-base font-bold text-stone-800">Daftar Purchase Request</h2>
-      <button onclick="openBuatPrForm()" class="h-10 px-5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+      <button onclick="openBuatPrForm()" class="flex-1 sm:flex-none justify-center h-10 px-5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Buat PR
       </button>
@@ -386,17 +386,19 @@ async function renderPoView() {
   const wrap = document.getElementById('pr-po-content');
   wrap.innerHTML = `
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <div class="flex items-center gap-2">
-        <button id="po-add-btn" class="h-11 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+      <div class="flex flex-wrap items-stretch gap-2 w-full lg:w-auto">
+        <button id="po-add-btn" class="flex-1 sm:flex-none h-11 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Tambah PO
+          <span class="sm:hidden">Tambah</span><span class="hidden sm:inline">Tambah PO</span>
         </button>
-        <button id="po-from-siklus-btn" class="h-11 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all">+ Buat dari Siklus</button>
-        <button id="po-sync-koperasi-btn" class="h-11 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all" title="Tarik nomor PO/Invoice dari koperasi">Sinkron dari Koperasi</button>
-        <button id="po-riwayat-btn" class="h-11 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all" title="Lihat riwayat invoice/pesanan dari koperasi (riwayat_dapur.php)">Riwayat Koperasi</button>
+        <button id="po-from-siklus-btn" class="flex-1 sm:flex-none h-11 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all whitespace-nowrap">+ Buat dari Siklus</button>
+        <button id="po-sync-koperasi-btn" class="flex-1 sm:flex-none h-11 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all whitespace-nowrap" title="Tarik nomor PO/Invoice dari koperasi">
+          <span class="sm:hidden">Sinkron</span><span class="hidden sm:inline">Sinkron dari Koperasi</span>
+        </button>
+        <button id="po-riwayat-btn" class="flex-1 sm:flex-none h-11 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all whitespace-nowrap" title="Lihat riwayat invoice/pesanan dari koperasi (riwayat_dapur.php)">Riwayat Koperasi</button>
       </div>
-      <div class="relative">
-        <input id="po-search" placeholder="Cari PO..." class="w-56 h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+      <div class="relative w-full lg:w-56">
+        <input id="po-search" placeholder="Cari PO..." class="w-full h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
         <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
       </div>
     </div>
