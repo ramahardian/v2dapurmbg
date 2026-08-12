@@ -313,7 +313,9 @@ router.get('/siklus/fix-telor-ayam-13kg', async (req, res) => {
  *
  * Query params:
  *   ?bahan=<id|nama>   bahan baku (id atau nama, wajib)
- *   ?target_kg=13      target belanja per hari (kg, wajib > 0)
+ *   ?target_kg=13      target belanja per hari (kg) — ATAU:
+ *   ?target_butir=2859 target belanja per hari dalam satuan unit (butir/pcs/dll.)
+ *                      — otomatis dikonversi via bahan_baku.berat_per_satuan (g/satuan)
  *   ?bdd=89            persen BDD (default: bahan_baku.persen_bdd)
  *   ?menu_id=142       batasi perubahan hanya ke resep menu tertentu
  *   ?porsi=2859        override jumlah porsi (default: siklus aktif)
@@ -322,6 +324,7 @@ router.get('/siklus/fix-telor-ayam-13kg', async (req, res) => {
  *
  * Contoh:
  *   GET /api/siklus/fix-target-belanja?bahan=87&target_kg=13
+ *   GET /api/siklus/fix-target-belanja?bahan=87&target_butir=2859
  *   GET /api/siklus/fix-target-belanja?bahan=Telor%20Ayam&target_kg=13
  *   GET /api/siklus/fix-target-belanja?bahan=87&revert=1
  */
@@ -337,13 +340,13 @@ router.get('/siklus/fix-target-belanja', async (req, res) => {
     let bbRows;
     if (/^\d+$/.test(bahan)) {
       [bbRows] = await db.query(
-        `SELECT id, nama, berat_1_sp, persen_bdd, buffer_persen, satuan, harga_satuan
+        `SELECT id, nama, berat_1_sp, persen_bdd, buffer_persen, satuan, harga_satuan, berat_per_satuan
          FROM bahan_baku WHERE id=? AND tenant_id=?`,
         [Number(bahan), tenantId]
       );
     } else {
       [bbRows] = await db.query(
-        `SELECT id, nama, berat_1_sp, persen_bdd, buffer_persen, satuan, harga_satuan
+        `SELECT id, nama, berat_1_sp, persen_bdd, buffer_persen, satuan, harga_satuan, berat_per_satuan
          FROM bahan_baku
          WHERE tenant_id=? AND (nama=? OR nama LIKE CONCAT(?, ' %') OR nama LIKE CONCAT(?, ' 1 SP'))
          ORDER BY (nama=?) DESC, id LIMIT 1`,
@@ -397,11 +400,24 @@ router.get('/siklus/fix-target-belanja', async (req, res) => {
       return res.json({ ok: true, action: 'revert', menu_bahan_changed: m.changedRows, bahan_baku_changed: b.changedRows, sp_ref_changed: s.changedRows });
     }
 
-    // ── 4) Parameter target ──
+    // ── 4) Parameter target (kg ATAU butir — butir dikonversi via berat_per_satuan) ──
     const targetKg = parseFloat(req.query.target_kg);
-    if (!targetKg || isNaN(targetKg) || targetKg <= 0) {
-      return res.status(400).json({ ok: false, error: 'target_kg wajib angka > 0 (contoh: ?bahan=87&target_kg=13)' });
+    let targetButir = null;
+    if (req.query.target_butir) {
+      targetButir = parseFloat(req.query.target_butir);
+      if (!targetButir || isNaN(targetButir) || targetButir <= 0) {
+        return res.status(400).json({ ok: false, error: 'target_butir wajib angka > 0 (contoh: ?bahan=87&target_butir=2859)' });
+      }
     }
+    if ((!targetKg || isNaN(targetKg) || targetKg <= 0) && !targetButir) {
+      return res.status(400).json({ ok: false, error: 'target_kg atau target_butir wajib diisi (contoh: ?bahan=87&target_kg=13 atau ?bahan=87&target_butir=2859)' });
+    }
+    const bps = Number(bb.berat_per_satuan) || 0;
+    if (targetButir && bps <= 0) {
+      return res.status(400).json({ ok: false, error: 'Bahan "' + namaBahan + '" belum punya berat_per_satuan (g/satuan) di master bahan — isi dulu agar target_butir bisa dihitung.' });
+    }
+    // Target dalam kg efektif (butir × berat/satuan), dipakai untuk semua perhitungan gram/porsi
+    const effTargetKg = targetButir ? Math.round(targetButir * bps / 1000 * 100) / 100 : targetKg;
     const bddPersen = parseFloat(req.query.bdd) || Number(bb.persen_bdd) || 100;
     if (bddPersen <= 0 || bddPersen > 100) {
       return res.status(400).json({ ok: false, error: 'bdd harus 1-100 (persen).' });
@@ -421,7 +437,7 @@ router.get('/siklus/fix-target-belanja', async (req, res) => {
 
     // ── 6) Hitung gram/porsi agar belanja pas target ──
     // bersih/porsi = (target_kg × 1000 g × bdd%) ÷ jumlah_porsi
-    const bersih = Math.round(((targetKg * 1000 * (bddPersen / 100)) / porsi) * 10000) / 10000;
+    const bersih = Math.round(((effTargetKg * 1000 * (bddPersen / 100)) / porsi) * 10000) / 10000;
     const kotor = Math.round((bersih / (bddPersen / 100)) * 10000) / 10000;
     // bdd sebagai pecahan (untuk kolom sp_referensi_bahan.bdd_persen, mis. 0.89)
     const bddFrac = Math.round((bddPersen / 100) * 10000) / 10000;
@@ -437,10 +453,10 @@ router.get('/siklus/fix-target-belanja', async (req, res) => {
     );
     const sudahSpRef = spRefRows.length === 0 || spRefRows.every(r =>
       Math.abs(Number(r.berat_bersih || 0) - bersih) < 0.01 &&
-      Math.abs(Number(r.bdd_persen || 0) - bddFrac) < 0.001
+      Math.abs(Number(r.bdd_persen || 0) - bddFrac) < 0.01
     );
     if (sudahBahan && sudahMenu && sudahSpRef && req.query.force !== '1') {
-      return res.json({ ok: true, action: 'noop', message: 'Sudah sesuai target ' + targetKg + ' kg/hari.' });
+      return res.json({ ok: true, action: 'noop', message: 'Sudah sesuai target ' + effTargetKg + ' kg/hari.' });
     }
 
     // ── 8) Backup (hanya sekali — jangan menimpa backup asli) ──
@@ -483,20 +499,33 @@ router.get('/siklus/fix-target-belanja', async (req, res) => {
     // ── 10) Verifikasi ──
     const kebutuhanKg = Math.round((bersih * porsi / (bddPersen / 100) / 1000) * 100) / 100;
     const qty = Math.ceil(kebutuhanKg - 0.01);
+    // Satuan unit (butir/pcs/ekor/dll.) → belanja dihitung per satuan (butir × harga/butir),
+    // bukan per kg — supaya jumlah rupiah konsisten dengan QTY yang tampil di RAB.
+    // Syaratnya satuan bahan memang unit (bukan kg yang kebetulan punya berat_per_satuan).
+    const satuanBahan = String(bb.satuan || 'kg').toLowerCase();
+    const isUnitSatuan = ['pcs','btl','botol','renceng','ctn','karton','kardus','dus','pack','ikat','ekor','butir','bungkus','porsi'].indexOf(satuanBahan) !== -1;
+    const perkiraanButir = bps > 0 ? Math.ceil((kebutuhanKg * 1000 - 10) / bps) : null;
     const harga = Number(bb.harga_satuan) || 0;
+    const qtyTampil = (isUnitSatuan && perkiraanButir != null) ? perkiraanButir : qty;
+    const jumlahRupiah = Math.round(qtyTampil * harga);
     res.json({
       ok: true,
       action: 'apply',
       bahan_id: bahanId,
       bahan_nama: namaBahan,
-      target_kg: targetKg,
+      satuan: bb.satuan,
+      berat_per_satuan: bps,
+      target_kg: effTargetKg,
+      target_butir: targetButir,
       bdd_persen: bddPersen,
       jumlah_porsi: porsi,
       berat_bersih_per_porsi: bersih,
       berat_kotor_per_porsi: kotor,
       perkiraan_kebutuhan_kg: kebutuhanKg,
+      perkiraan_butir: perkiraanButir,
       qty_belanja_kg: qty,
-      jumlah_rupiah: qty * harga,
+      qty_belanja_butir: perkiraanButir,
+      jumlah_rupiah: jumlahRupiah,
       menu_count: mbRows.length,
       menu_ids: mbRows.map(r => r.menu_id),
       catatan: 'Disinkronkan di menu_bahan.jumlah, bahan_baku.berat_1_sp & sp_referensi_bahan. Rollback: ?revert=1',

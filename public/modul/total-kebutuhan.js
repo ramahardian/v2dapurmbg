@@ -588,7 +588,7 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
       html += '<td class="px-2 py-3 text-center text-xs text-stone-500">' + r.no + '</td>';
       html += '<td class="px-3 py-3 text-xs font-medium ' + (r.kekurangan ? 'text-red-700' : 'text-stone-700') + '">' + escHtmlTk(r.uraian);
       if (r.bahanBakuId) {
-        html += ' <button type="button" onclick="tkSetTargetBelanja(this)" data-bahan-id="' + r.bahanBakuId + '" data-nama="' + escHtmlTk(r.uraian) + '" title="Atur target belanja harian (kg) — gram/porsi di resep, master bahan &amp; referensi SP disesuaikan agar total belanja pas target" class="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap hover:bg-emerald-100 hover:border-emerald-300 transition-colors cursor-pointer">🎯 Target</button>';
+        html += ' <button type="button" onclick="tkSetTargetBelanja(this)" data-bahan-id="' + r.bahanBakuId + '" data-nama="' + escHtmlTk(r.uraian) + '" data-satuan="' + escHtmlTk(r.satuan || '') + '" title="Atur target belanja harian (' + (/butir/i.test(r.satuan || '') ? 'butir' : 'kg') + ') — gram/porsi di resep, master bahan &amp; referensi SP disesuaikan agar total belanja pas target" class="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap hover:bg-emerald-100 hover:border-emerald-300 transition-colors cursor-pointer">🎯 Target</button>';
       }
       if (r.kekurangan) {
         var editHref = r.bahanBakuId ? "onclick=\"tkEditBahanBaku(" + r.bahanBakuId + ")\"" : '';
@@ -680,23 +680,33 @@ function tkEditBahanBaku(id) {
 async function tkSetTargetBelanja(btn) {
   var bahanBakuId = btn && Number(btn.dataset && btn.dataset.bahanId);
   var nama = (btn && btn.dataset && btn.dataset.nama) || 'bahan';
+  var satuan = (btn && btn.dataset && btn.dataset.satuan) || '';
+  var isButir = /butir/i.test(satuan);
+  var unit = isButir ? 'butir' : 'kg';
   if (!bahanBakuId) {
     showAlert('Bahan tidak memiliki ID — tidak bisa diatur targetnya', 'warning');
     return;
   }
-  var inp = window.prompt('Set target belanja harian (kg) untuk "' + nama + '"', '');
+  var inp = window.prompt('Set target belanja harian (' + unit + ') untuk "' + nama + '"', '');
   if (inp === null || String(inp).trim() === '') return;
-  var targetKg = parseFloat(String(inp).trim().replace(',', '.'));
-  if (!targetKg || isNaN(targetKg) || targetKg <= 0) {
-    showAlert('Target harus angka > 0 (misalnya 13)', 'warning');
+  var val = parseFloat(String(inp).trim().replace(',', '.'));
+  if (!val || isNaN(val) || val <= 0) {
+    showAlert('Target harus angka > 0 (misalnya ' + (isButir ? '2859' : '13') + ')', 'warning');
     return;
   }
   try {
-    var res = await api.get('/siklus/fix-target-belanja?bahan=' + bahanBakuId + '&target_kg=' + targetKg);
-    var kg = (res && res.perkiraan_kebutuhan_kg != null) ? fmtTkPecahan(res.perkiraan_kebutuhan_kg) : fmtTkPecahan(targetKg);
+    var res = await api.get('/siklus/fix-target-belanja?bahan=' + bahanBakuId + (isButir ? '&target_butir=' : '&target_kg=') + val);
+    var ket;
+    if (isButir) {
+      var bt = (res && res.perkiraan_butir != null) ? fmtTkNum(res.perkiraan_butir) : fmtTkNum(val);
+      ket = '±' + bt + ' butir/hari';
+    } else {
+      var kg = (res && res.perkiraan_kebutuhan_kg != null) ? fmtTkPecahan(res.perkiraan_kebutuhan_kg) : fmtTkPecahan(val);
+      ket = '±' + kg + ' kg/hari';
+    }
     var pesan = (res && res.action === 'noop')
-      ? 'Sudah sesuai target: ±' + kg + ' kg/hari'
-      : 'Target belanja diatur: ±' + kg + ' kg/hari' + (res.menu_count ? ' (' + res.menu_count + ' resep disesuaikan)' : '');
+      ? 'Sudah sesuai target: ' + ket
+      : 'Target belanja diatur: ' + ket + (res.menu_count ? ' (' + res.menu_count + ' resep disesuaikan)' : '');
     showAlert(pesan, 'success');
     if (document.getElementById('total-kebutuhan-content')) loadTotalKebutuhan();
     else if (typeof renderLaporan === 'function') renderLaporan();
