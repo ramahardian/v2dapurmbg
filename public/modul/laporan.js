@@ -528,6 +528,7 @@ const tabColors = {
             tabelHtml += '<tr class="border-t border-stone-100 ' + (it.kekurangan ? 'bg-red-50/70' : 'hover:bg-cyan-50/40 transition-colors') + '">' +
               '<td class="px-2 py-3 text-center text-xs ' + (it.kekurangan ? 'text-red-600' : 'text-stone-500') + '">' + no + '</td>' +
               '<td class="px-3 py-3 text-xs font-medium ' + (it.kekurangan ? 'text-red-700' : 'text-stone-700') + '">' + escHtml(it.nama) +
+                (it.bahan_baku_id ? ' <button type="button" onclick="tkSetTargetBelanja(this)" data-bahan-id="' + it.bahan_baku_id + '" data-nama="' + escHtml(it.nama) + '" title="Atur target belanja harian (kg) — gram/porsi di resep, master bahan &amp; referensi SP disesuaikan agar total belanja pas target" class="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap hover:bg-emerald-100 hover:border-emerald-300 transition-colors cursor-pointer">🎯 Target</button>' : '') +
                 (it.kekurangan ? ' <span class="inline-block ml-1 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap" title="Lengkapi data bahan di master Bahan Baku">' + escHtml(it.ket_kurang || 'Data belum lengkap') + '</span>' : '') +
               '</td>' +
               '<td class="px-3 py-3 text-right mono text-xs font-semibold ' + (it.kekurangan ? 'text-red-700' : 'text-stone-700') + '">' + (it.qty_text || fmtNum(it.qty)) + '</td>' +

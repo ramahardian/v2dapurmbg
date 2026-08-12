@@ -587,6 +587,9 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
       html += '<tr class="' + rowCls + '">';
       html += '<td class="px-2 py-3 text-center text-xs text-stone-500">' + r.no + '</td>';
       html += '<td class="px-3 py-3 text-xs font-medium ' + (r.kekurangan ? 'text-red-700' : 'text-stone-700') + '">' + escHtmlTk(r.uraian);
+      if (r.bahanBakuId) {
+        html += ' <button type="button" onclick="tkSetTargetBelanja(this)" data-bahan-id="' + r.bahanBakuId + '" data-nama="' + escHtmlTk(r.uraian) + '" title="Atur target belanja harian (kg) — gram/porsi di resep, master bahan &amp; referensi SP disesuaikan agar total belanja pas target" class="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap hover:bg-emerald-100 hover:border-emerald-300 transition-colors cursor-pointer">🎯 Target</button>';
+      }
       if (r.kekurangan) {
         var editHref = r.bahanBakuId ? "onclick=\"tkEditBahanBaku(" + r.bahanBakuId + ")\"" : '';
         html += ' <span ' + editHref + ' class="inline-block ml-1 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap cursor-pointer" title="Klik untuk melengkapi di master Bahan Baku">' + escHtmlTk(r.ketKurang || 'Data belum lengkap') + '</span>';
@@ -668,6 +671,38 @@ function fmtTkRp(v) {
 function tkEditBahanBaku(id) {
   if (!id) return;
   navigate('bahan-baku?edit=' + id);
+}
+
+// Atur target belanja harian (kg) untuk sebuah bahan — memanggil endpoint generik
+// /siklus/fix-target-belanja yang menyinkronkan resep menu, master bahan & referensi SP.
+// Data dibaca dari atribut data-* tombol (bukan disisipkan ke string JS) agar
+// nama bahan dengan karakter khusus (kutip, dll.) tidak membahayakan.
+async function tkSetTargetBelanja(btn) {
+  var bahanBakuId = btn && Number(btn.dataset && btn.dataset.bahanId);
+  var nama = (btn && btn.dataset && btn.dataset.nama) || 'bahan';
+  if (!bahanBakuId) {
+    showAlert('Bahan tidak memiliki ID — tidak bisa diatur targetnya', 'warning');
+    return;
+  }
+  var inp = window.prompt('Set target belanja harian (kg) untuk "' + nama + '"', '');
+  if (inp === null || String(inp).trim() === '') return;
+  var targetKg = parseFloat(String(inp).trim().replace(',', '.'));
+  if (!targetKg || isNaN(targetKg) || targetKg <= 0) {
+    showAlert('Target harus angka > 0 (misalnya 13)', 'warning');
+    return;
+  }
+  try {
+    var res = await api.get('/siklus/fix-target-belanja?bahan=' + bahanBakuId + '&target_kg=' + targetKg);
+    var kg = (res && res.perkiraan_kebutuhan_kg != null) ? fmtTkPecahan(res.perkiraan_kebutuhan_kg) : fmtTkPecahan(targetKg);
+    var pesan = (res && res.action === 'noop')
+      ? 'Sudah sesuai target: ±' + kg + ' kg/hari'
+      : 'Target belanja diatur: ±' + kg + ' kg/hari' + (res.menu_count ? ' (' + res.menu_count + ' resep disesuaikan)' : '');
+    showAlert(pesan, 'success');
+    if (document.getElementById('total-kebutuhan-content')) loadTotalKebutuhan();
+    else if (typeof renderLaporan === 'function') renderLaporan();
+  } catch (err) {
+    showAlert('Gagal set target: ' + err.message, 'error');
+  }
 }
 
 // Arahkan dari total-kebutuhan ke halaman edit menu (chip menu hari ini)

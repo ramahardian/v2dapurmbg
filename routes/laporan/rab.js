@@ -1161,6 +1161,7 @@ function registerRabRoutes(router) {
           return {
             no,
             nama: b.bahan_nama,
+            bahan_baku_id: b.bahan_baku_id,
             qty: displayQty,
             qty_text: qtyText,
             satuan: displaySatuan,

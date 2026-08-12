@@ -189,4 +189,322 @@ router.get('/siklus/cek-resep-map', async (req, res) => {
   }
 });
 
+/**
+ * GET /siklus/fix-telor-ayam-13kg
+ * [SUPERSEDED] Gunakan /siklus/fix-target-belanja (generik) untuk kasus baru —
+ * endpoint ini dipertahankan agar URL lama tetap berfungsi.
+ *
+ * Terapkan/putar-balik target kebutuhan Telor Ayam (bahan id 87) agar
+ * /total-kebutuhan tampil sesuai target belanja (default 13 kg).
+ *
+ * Pola sama seperti fix_telor_ayam_target_13kg.sql: porsi per siswa
+ * dihitung ulang dari target_kg, lalu disinkronkan di 3 tempat:
+ *   1) menu_bahan.jumlah (resep menu 142 — diprioritaskan)
+ *   2) bahan_baku.berat_1_sp (master — dipakai hari tanpa resep/grid)
+ *   3) sp_referensi_bahan "Telor Ayam 1 SP" (bdd_persen = pecahan 0.9)
+ *
+ * Query params:
+ *   ?target_kg=13   target belanja (kg) yang diinginkan (default 13)
+ *   ?bdd=89         persen BDD bahan (default 89)
+ *   ?revert=1       kembalikan nilai lama dari tabel backup_*
+ *
+ * Contoh:
+ *   GET /api/siklus/fix-telor-ayam-13kg?target_kg=13
+ *   GET /api/siklus/fix-telor-ayam-13kg?revert=1
+ */
+router.get('/siklus/fix-telor-ayam-13kg', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    const bahanId = 87; // Telor Ayam
+    const menuId = 142; // resep Nasi Uduk + Rendang Telur
+    const bddPersen = parseFloat(req.query.bdd) || 89;
+
+    if (req.query.revert === '1' || req.query.revert === 'true') {
+      const [[mbBackup]] = await db.query(
+        `SELECT COUNT(*) AS n FROM information_schema.tables
+         WHERE table_schema=DATABASE() AND table_name='backup_telor_ayam_target13'`
+      );
+      if (!Number(mbBackup.n)) {
+        return res.status(400).json({ ok: false, error: 'Tabel backup belum ada. Jalankan endpoint tanpa ?revert=1 terlebih dahulu.' });
+      }
+      const [mb] = await db.query(
+        `UPDATE menu_bahan mb JOIN backup_telor_ayam_target13 bk ON bk.menu_id=mb.menu_id AND bk.bahan_baku_id=mb.bahan_baku_id
+         SET mb.jumlah = bk.jumlah WHERE mb.menu_id=? AND mb.bahan_baku_id=?`,
+        [menuId, bahanId]
+      );
+      const [bb] = await db.query(
+        `UPDATE bahan_baku SET berat_1_sp = (SELECT berat_1_sp FROM backup_bahan_baku_telor_13 WHERE id=?) WHERE id=? AND tenant_id=?`,
+        [bahanId, bahanId, tenantId]
+      );
+      const [sp] = await db.query(
+        `UPDATE sp_referensi_bahan sb JOIN backup_sp_ref_telor_13 bk ON bk.nama=sb.nama AND bk.tenant_id=sb.tenant_id
+         SET sb.berat_bersih=bk.berat_bersih, sb.berat_kotor=bk.berat_kotor
+         WHERE sb.tenant_id=? AND sb.nama='Telor Ayam 1 SP'`,
+        [tenantId]
+      );
+      return res.json({ ok: true, action: 'revert', menu_bahan_changed: mb.changedRows, bahan_baku_changed: bb.changedRows, sp_ref_changed: sp.changedRows });
+    }
+
+    const targetKg = parseFloat(req.query.target_kg);
+    if (!targetKg || isNaN(targetKg) || targetKg <= 0) {
+      return res.status(400).json({ ok: false, error: 'target_kg wajib angka > 0 (contoh: ?target_kg=13)' });
+    }
+
+    const [[porsiRow]] = await db.query('SELECT jumlah_porsi FROM menu WHERE id=? AND tenant_id=?', [menuId, tenantId]);
+    const porsi = Number(porsiRow && porsiRow.jumlah_porsi) || 0;
+    if (!porsi) return res.status(400).json({ ok: false, error: 'Menu ' + menuId + ' tidak ditemukan untuk tenant ini.' });
+
+    // bersih/porsi = (target_kg × 1000 g × bdd%) ÷ jumlah_porsi
+    const bersih = Math.round(((targetKg * 1000 * (bddPersen / 100)) / porsi) * 10000) / 10000;
+    const kotor = Math.round((bersih / (bddPersen / 100)) * 10000) / 10000;
+
+    // Backup sekali (idempotent — TABEL DIBUAT ULANG agar selalu mencerminkan
+    // nilai sebelum perubahan terakhir, tanpa menumpuk baris backup lama).
+    await db.query('DROP TABLE IF EXISTS backup_telor_ayam_target13');
+    await db.query(`CREATE TABLE backup_telor_ayam_target13 AS
+      SELECT mb.*, m.tenant_id AS menu_tenant FROM menu_bahan mb
+      JOIN menu m ON m.id=mb.menu_id WHERE mb.bahan_baku_id=?`, [bahanId]);
+    await db.query('DROP TABLE IF EXISTS backup_bahan_baku_telor_13');
+    await db.query(`CREATE TABLE backup_bahan_baku_telor_13 AS SELECT * FROM bahan_baku WHERE id=?`, [bahanId]);
+    await db.query('DROP TABLE IF EXISTS backup_sp_ref_telor_13');
+    await db.query(`CREATE TABLE backup_sp_ref_telor_13 AS
+      SELECT * FROM sp_referensi_bahan WHERE tenant_id=? AND nama LIKE 'Telor Ayam%'`, [tenantId]);
+
+    // 1) Resep menu
+    await db.query('UPDATE menu_bahan SET jumlah=? WHERE menu_id=? AND bahan_baku_id=?', [bersih, menuId, bahanId]);
+    // 2) Master bahan (dipakai hari tanpa resep / grid)
+    await db.query('UPDATE bahan_baku SET berat_1_sp=? WHERE id=? AND tenant_id=?', [bersih, bahanId, tenantId]);
+    // 3) Referensi SP 1 (bdd_persen tersimpan PECAHAN 0.9 → kotor = bersih ÷ bdd)
+    await db.query(`UPDATE sp_referensi_bahan SET berat_bersih=?, berat_kotor=? WHERE tenant_id=? AND nama='Telor Ayam 1 SP'`, [bersih, bersih / 0.9, tenantId]);
+
+    // Verifikasi perhitungan kebutuhan (kg)
+    const kebutuhanKg = Math.round((bersih * porsi / (bddPersen / 100) / 1000) * 100) / 100;
+    const qty = Math.ceil(kebutuhanKg - 0.01);
+    const harga = 27000;
+    res.json({
+      ok: true,
+      action: 'apply',
+      target_kg: targetKg,
+      bdd_persen: bddPersen,
+      jumlah_porsi: porsi,
+      berat_bersih_per_porsi: bersih,
+      berat_kotor_per_porsi: kotor,
+      perkiraan_kebutuhan_kg: kebutuhanKg,
+      qty_belanja_kg: qty,
+      jumlah_rupiah: qty * harga,
+    });
+  } catch (e) {
+    console.error('fix-telor-ayam error:', e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * GET /siklus/fix-target-belanja
+ * GENERIK: set target belanja harian (kg) untuk bahan baku MANA PUN.
+ *
+ * Pola sama seperti fix telor/ayam/semangka, tapi tanpa hardcode: bahan
+ * ditemukan otomatis (by id atau nama), porsi diambil dari siklus Aktif
+ * tenant (fallback: jumlah_porsi resep), lalu disinkronkan di 3 tempat:
+ *   1) menu_bahan.jumlah  — SEMUA resep menu yang memakai bahan ini
+ *                           (dibatasi ?menu_id= bila perlu)
+ *   2) bahan_baku.berat_1_sp — master (dipakai hari grid tanpa resep)
+ *   3) sp_referensi_bahan "<nama> 1 SP" / "<nama>" — referensi ikut sinkron
+ *
+ * Query params:
+ *   ?bahan=<id|nama>   bahan baku (id atau nama, wajib)
+ *   ?target_kg=13      target belanja per hari (kg, wajib > 0)
+ *   ?bdd=89            persen BDD (default: bahan_baku.persen_bdd)
+ *   ?menu_id=142       batasi perubahan hanya ke resep menu tertentu
+ *   ?porsi=2859        override jumlah porsi (default: siklus aktif)
+ *   ?force=1           terapkan ulang walau nilainya sudah sesuai
+ *   ?revert=1          kembalikan nilai lama dari tabel backup_*
+ *
+ * Contoh:
+ *   GET /api/siklus/fix-target-belanja?bahan=87&target_kg=13
+ *   GET /api/siklus/fix-target-belanja?bahan=Telor%20Ayam&target_kg=13
+ *   GET /api/siklus/fix-target-belanja?bahan=87&revert=1
+ */
+router.get('/siklus/fix-target-belanja', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    const bahan = String(req.query.bahan || '').trim();
+    if (!bahan) {
+      return res.status(400).json({ ok: false, error: 'bahan wajib diisi (id atau nama). Contoh: ?bahan=87&target_kg=13' });
+    }
+
+    // ── 1) Temukan bahan (id atau nama, tenant-scoped) ──
+    let bbRows;
+    if (/^\d+$/.test(bahan)) {
+      [bbRows] = await db.query(
+        `SELECT id, nama, berat_1_sp, persen_bdd, buffer_persen, satuan, harga_satuan
+         FROM bahan_baku WHERE id=? AND tenant_id=?`,
+        [Number(bahan), tenantId]
+      );
+    } else {
+      [bbRows] = await db.query(
+        `SELECT id, nama, berat_1_sp, persen_bdd, buffer_persen, satuan, harga_satuan
+         FROM bahan_baku
+         WHERE tenant_id=? AND (nama=? OR nama LIKE CONCAT(?, ' %') OR nama LIKE CONCAT(?, ' 1 SP'))
+         ORDER BY (nama=?) DESC, id LIMIT 1`,
+        [tenantId, bahan, bahan, bahan, bahan]
+      );
+    }
+    if (!bbRows.length) {
+      return res.status(404).json({ ok: false, error: 'Bahan "' + bahan + '" tidak ditemukan untuk tenant ini.' });
+    }
+    const bb = bbRows[0];
+    const bahanId = bb.id;
+    const namaBahan = bb.nama;
+
+    // ── 2) Resep menu yang memakai bahan ini (opsional filter ?menu_id=) ──
+    const menuFilter = /^\d+$/.test(String(req.query.menu_id || '')) ? ' AND mb.menu_id=?' : '';
+    const menuParams = menuFilter ? [bahanId, tenantId, Number(req.query.menu_id)] : [bahanId, tenantId];
+    const [mbRows] = await db.query(
+      `SELECT mb.menu_id, mb.jumlah, m.nama AS menu_nama, m.jumlah_porsi
+       FROM menu_bahan mb JOIN menu m ON m.id=mb.menu_id
+       WHERE mb.bahan_baku_id=? AND m.tenant_id=?${menuFilter}`,
+      menuParams
+    );
+
+    // Nama tabel backup generik per bahan
+    const bakMenu = 'backup_target_menu_' + bahanId;
+    const bakBahan = 'backup_target_bahan_' + bahanId;
+    const bakSp = 'backup_target_spref_' + bahanId;
+
+    // ── 3) Revert ──
+    if (req.query.revert === '1' || req.query.revert === 'true') {
+      const [[chk]] = await db.query(
+        `SELECT COUNT(*) AS n FROM information_schema.tables
+         WHERE table_schema=DATABASE() AND table_name=?`, [bakMenu]
+      );
+      if (!Number(chk.n)) {
+        return res.status(400).json({ ok: false, error: 'Backup belum ada. Jalankan endpoint tanpa ?revert=1 terlebih dahulu.' });
+      }
+      const [m] = await db.query(
+        `UPDATE menu_bahan mb JOIN ${bakMenu} bk ON bk.menu_id=mb.menu_id AND bk.bahan_baku_id=mb.bahan_baku_id
+         SET mb.jumlah=bk.jumlah WHERE mb.bahan_baku_id=?`, [bahanId]
+      );
+      const [b] = await db.query(
+        `UPDATE bahan_baku SET berat_1_sp=(SELECT berat_1_sp FROM ${bakBahan} WHERE id=?)
+         WHERE id=? AND tenant_id=?`, [bahanId, bahanId, tenantId]
+      );
+      const [s] = await db.query(
+        `UPDATE sp_referensi_bahan sb JOIN ${bakSp} bk ON bk.nama=sb.nama AND bk.tenant_id=sb.tenant_id
+         SET sb.berat_bersih=bk.berat_bersih, sb.berat_kotor=bk.berat_kotor, sb.bdd_persen=bk.bdd_persen
+         WHERE sb.tenant_id=? AND (sb.nama=? OR sb.nama=?)`, [tenantId, namaBahan + ' 1 SP', namaBahan]
+      );
+      return res.json({ ok: true, action: 'revert', menu_bahan_changed: m.changedRows, bahan_baku_changed: b.changedRows, sp_ref_changed: s.changedRows });
+    }
+
+    // ── 4) Parameter target ──
+    const targetKg = parseFloat(req.query.target_kg);
+    if (!targetKg || isNaN(targetKg) || targetKg <= 0) {
+      return res.status(400).json({ ok: false, error: 'target_kg wajib angka > 0 (contoh: ?bahan=87&target_kg=13)' });
+    }
+    const bddPersen = parseFloat(req.query.bdd) || Number(bb.persen_bdd) || 100;
+    if (bddPersen <= 0 || bddPersen > 100) {
+      return res.status(400).json({ ok: false, error: 'bdd harus 1-100 (persen).' });
+    }
+
+    // ── 5) Porsi yang dipakai /total-kebutuhan = siklus Aktif tenant ──
+    let porsi = 0;
+    const [sik] = await db.query(
+      'SELECT jumlah_porsi FROM siklus_menu WHERE tenant_id=? AND status="Aktif" ORDER BY id LIMIT 1', [tenantId]
+    );
+    if (sik[0]) porsi = Number(sik[0].jumlah_porsi) || 0;
+    if (!porsi) porsi = Math.max(0, ...mbRows.map(r => Number(r.jumlah_porsi) || 0));
+    if (req.query.porsi) porsi = parseFloat(req.query.porsi) || porsi;
+    if (!porsi) {
+      return res.status(400).json({ ok: false, error: 'jumlah_porsi tidak ditemukan — isi jumlah_porsi di siklus aktif atau pakai ?porsi=2859.' });
+    }
+
+    // ── 6) Hitung gram/porsi agar belanja pas target ──
+    // bersih/porsi = (target_kg × 1000 g × bdd%) ÷ jumlah_porsi
+    const bersih = Math.round(((targetKg * 1000 * (bddPersen / 100)) / porsi) * 10000) / 10000;
+    const kotor = Math.round((bersih / (bddPersen / 100)) * 10000) / 10000;
+    // bdd sebagai pecahan (untuk kolom sp_referensi_bahan.bdd_persen, mis. 0.89)
+    const bddFrac = Math.round((bddPersen / 100) * 10000) / 10000;
+
+    // ── 7) Idempoten: sudah sesuai & tanpa ?force=1 → lapor tanpa mengubah ──
+    // Catatan: bahan_baku.berat_1_sp tersimpan DECIMAL(15,2) (2 desimal), jadi
+    // toleransinya 0.01 (bukan 0.001 seperti menu_bahan.jumlah yang 3 desimal).
+    const sudahBahan = Math.abs(Number(bb.berat_1_sp || 0) - bersih) < 0.01;
+    const sudahMenu = mbRows.length === 0 || mbRows.every(r => r.jumlah !== null && r.jumlah !== undefined && Math.abs(Number(r.jumlah) - bersih) < 0.001);
+    const [spRefRows] = await db.query(
+      `SELECT berat_bersih, bdd_persen FROM sp_referensi_bahan WHERE tenant_id=? AND (nama=? OR nama=?)`,
+      [tenantId, namaBahan + ' 1 SP', namaBahan]
+    );
+    const sudahSpRef = spRefRows.length === 0 || spRefRows.every(r =>
+      Math.abs(Number(r.berat_bersih || 0) - bersih) < 0.01 &&
+      Math.abs(Number(r.bdd_persen || 0) - bddFrac) < 0.001
+    );
+    if (sudahBahan && sudahMenu && sudahSpRef && req.query.force !== '1') {
+      return res.json({ ok: true, action: 'noop', message: 'Sudah sesuai target ' + targetKg + ' kg/hari.' });
+    }
+
+    // ── 8) Backup (hanya sekali — jangan menimpa backup asli) ──
+    const bak = async (tbl, buildSql, getSql, getP, insSql, insP) => {
+      await db.query(`CREATE TABLE IF NOT EXISTS ${tbl} ${buildSql}`);
+      const [[hit]] = await db.query(getSql, getP);
+      if (!hit) await db.query(insSql, insP);
+    };
+    await bak(bakMenu,
+      'AS SELECT mb.*, m.tenant_id AS menu_tenant FROM menu_bahan mb JOIN menu m ON m.id=mb.menu_id WHERE 1=0',
+      'SELECT id FROM ' + bakMenu + ' WHERE bahan_baku_id=? AND menu_tenant=? LIMIT 1', [bahanId, tenantId],
+      'INSERT INTO ' + bakMenu + ' SELECT mb.*, m.tenant_id FROM menu_bahan mb JOIN menu m ON m.id=mb.menu_id WHERE mb.bahan_baku_id=? AND m.tenant_id=?', [bahanId, tenantId]);
+    await bak(bakBahan,
+      'AS SELECT * FROM bahan_baku WHERE 1=0',
+      'SELECT id FROM ' + bakBahan + ' WHERE id=? LIMIT 1', [bahanId],
+      'INSERT INTO ' + bakBahan + ' SELECT * FROM bahan_baku WHERE id=?', [bahanId]);
+    await bak(bakSp,
+      'AS SELECT * FROM sp_referensi_bahan WHERE 1=0',
+      'SELECT id FROM ' + bakSp + ' WHERE tenant_id=? LIMIT 1', [tenantId],
+      'INSERT INTO ' + bakSp + ' SELECT * FROM sp_referensi_bahan WHERE tenant_id=? AND (nama=? OR nama=?)', [tenantId, namaBahan + ' 1 SP', namaBahan]);
+
+    // ── 9) Terapkan di 3 tempat ──
+    if (mbRows.length) {
+      const where = menuFilter ? ' AND menu_id=?' : '';
+      const params = menuFilter ? [bersih, bahanId, tenantId, Number(req.query.menu_id)] : [bersih, bahanId, tenantId];
+      await db.query(
+        `UPDATE menu_bahan SET jumlah=? WHERE bahan_baku_id=? AND menu_id IN (SELECT id FROM menu WHERE tenant_id=?)${where}`,
+        params
+      );
+    }
+    await db.query('UPDATE bahan_baku SET berat_1_sp=? WHERE id=? AND tenant_id=?', [bersih, bahanId, tenantId]);
+    // Referensi SP: berat_bersih + berat_kotor + bdd_persen (pecahan) ikut disamakan
+    // agar konsisten dgn master bahan (mis. bdd 89% → bdd_persen 0,89).
+    await db.query(
+      `UPDATE sp_referensi_bahan SET berat_bersih=?, berat_kotor=?, bdd_persen=?
+       WHERE tenant_id=? AND (nama=? OR nama=?)`,
+      [bersih, kotor, bddFrac, tenantId, namaBahan + ' 1 SP', namaBahan]
+    );
+
+    // ── 10) Verifikasi ──
+    const kebutuhanKg = Math.round((bersih * porsi / (bddPersen / 100) / 1000) * 100) / 100;
+    const qty = Math.ceil(kebutuhanKg - 0.01);
+    const harga = Number(bb.harga_satuan) || 0;
+    res.json({
+      ok: true,
+      action: 'apply',
+      bahan_id: bahanId,
+      bahan_nama: namaBahan,
+      target_kg: targetKg,
+      bdd_persen: bddPersen,
+      jumlah_porsi: porsi,
+      berat_bersih_per_porsi: bersih,
+      berat_kotor_per_porsi: kotor,
+      perkiraan_kebutuhan_kg: kebutuhanKg,
+      qty_belanja_kg: qty,
+      jumlah_rupiah: qty * harga,
+      menu_count: mbRows.length,
+      menu_ids: mbRows.map(r => r.menu_id),
+      catatan: 'Disinkronkan di menu_bahan.jumlah, bahan_baku.berat_1_sp & sp_referensi_bahan. Rollback: ?revert=1',
+    });
+  } catch (e) {
+    console.error('fix-target-belanja error:', e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;
