@@ -8,7 +8,7 @@ const ExcelJS = require('exceljs');
 const { requireRole } = require('../../middleware/auth');
 const { roleFinance, roleOps } = require('./config');
 const { hitungBDD } = require('../../services/spBddCalculator');
-const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, tkQtyBelanja, tkBelanjaKg } = require('../siklus/helpers');
+const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, tkQtyBelanja } = require('../siklus/helpers');
 
 const MONTHS_ID = ['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
 const HARI_ID = ['MINGGU','SENIN','SELASA','RABU','KAMIS','JUMAT','SABTU'];
@@ -1091,15 +1091,7 @@ function registerRabRoutes(router) {
           const displaySatuan = qtyInfo.satuan || String(b.satuan || '').toUpperCase();
           const qtyText = qtyInfo.qty_text || '0';
 
-          // Bahan bersatuan unit dengan berat isi → belanja tampil dalam KG;
-          // harga master (per unit) dikonversi ke per-kg agar JUMLAH benar.
-          const belanjaKg = tkBelanjaKg(b.satuan, b.kategori_sp, b.berat_per_satuan, bufferKg);
-          let hargaTampil = Number(b.harga_satuan) || 0;
-          if (belanjaKg.kg && belanjaKg.bps > 0) {
-            hargaTampil = Math.round((hargaTampil * 1000 / belanjaKg.bps) * 100) / 100;
-          }
-
-          const jumlah = Math.round(hargaTampil * displayQty);
+          const jumlah = Math.round(b.harga_satuan * displayQty);
           grandTotal += jumlah;
 
           return {
@@ -1108,7 +1100,7 @@ function registerRabRoutes(router) {
             qty: displayQty,
             qty_text: qtyText,
             satuan: displaySatuan,
-            harga: hargaTampil,
+            harga: b.harga_satuan,
             jumlah,
             keterangan: b.keterangan,
           };
