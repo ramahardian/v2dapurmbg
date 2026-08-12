@@ -351,7 +351,15 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     return q;
   }
   function autoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
-    var s = String(satuan || 'kg').toLowerCase();
+    var s0 = String(satuan || 'kg').toLowerCase();
+    var isHitung = isSatuanHitung(s0);
+    var bpsEf = isHitung ? beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) : 0;
+    // DINAMIS: bahan bersatuan unit (pcs/btl/karton/dll) yang PUNYA berat isi
+    // (berat_per_satuan) → QTY belanja otomatis tampil dalam KG (= kebutuhan),
+    // bukan dalam unit. Konversi via berat_per_satuan; angka kebutuhan tetap kg.
+    // Bahan unit tanpa berat isi → tetap tampil unit/kebutuhan gram asli.
+    var tampilKg = isHitung && bpsEf > 0 && totalKg > 0;
+    var s = tampilKg ? 'kg' : s0;
     if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
       // Bahan berat → dibulatkan ke atas agar aman untuk belanja
       if (s === 'kg') {
@@ -369,12 +377,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       }
       return ceilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g'; // satuan gram
     }
-    if (isSatuanHitung(s)) {
-      var bps = beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
-      // Ada berat per satuan & ada kebutuhan nyata → konversi ke satuan unit
-      if (bps > 0 && totalKg > 0) {
-        return ceilAman((totalKg * 1000 - TK_QTY_TOLERANSI_GRAM) / bps, totalKg) + ' ' + s;
-      }
+    if (isHitung) {
       // Kemasan besar tanpa berat_per_satuan → biarkan kosong agar diisi manual
       if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') return '';
       // Bahan satuan unit tanpa berat_per_satuan → tampilkan kebutuhan asli dalam gram (jangan pakai jumlah porsi),
@@ -421,11 +424,18 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       var butuhBeratSatuan = isSatuanHitung(String(satuan || '').toLowerCase()) && bpsEfektif <= 0;
       var kekuranganHargaBerat = !hargaSatuan || butuhBeratSatuan;
       var ketKurang = (!hargaSatuan && butuhBeratSatuan) ? 'Harga & Berat kosong' : (!hargaSatuan ? 'Harga kosong' : 'Berat per satuan kosong');
+      // Bahan bersatuan unit dengan berat isi → belanja tampil dalam KG; harga
+      // master (per unit) ikut dikonversi ke harga per kg agar JUMLAH tetap benar.
+      var belanjaDlmKg = isSatuanHitung(String(satuan || '').toLowerCase()) && bpsEfektif > 0 && bufferKg > 0;
+      var hargaTampil = hargaSatuan;
+      if (belanjaDlmKg && bpsEfektif > 0) {
+        hargaTampil = Math.round((hargaSatuan * 1000 / bpsEfektif) * 100) / 100;
+      }
       var qty = autoQty(satuan, bufferKg, rowSiswa, kategoriSp, beratPerSatuan);
       var parsed = parseTkQtySatuan(qty);
       if (parsed.qty <= 0) continue;
       no++;
-      var jumlah = Math.round(parsed.qty * hargaSatuan);
+      var jumlah = Math.round(parsed.qty * hargaTampil);
       grandTotal += jumlah;
 
       // Penjelasan asal QTY (tooltip): tampilkan kebutuhan asli vs hasil pembulatan,
@@ -436,9 +446,20 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
         var satuanKecil = String(parsed.satuan || '').toLowerCase();
         if (satuanKecil === 'kg') {
           var bulatAsli = Math.round(asliKg * 100) / 100;
-          qtyTooltip = bulatAsli === parsed.qty
-            ? 'Kebutuhan asli: ' + fmtTkPecahan(asliKg) + ' kg = QTY belanja'
-            : 'Kebutuhan asli: ' + fmtTkPecahan(asliKg) + ' kg → dibulatkan ke atas menjadi ' + fmtTkPecahan(parsed.qty) + ' kg (belanja aman)';
+          // Bahan bersatuan unit (pcs/btl/dll) yang ditampilkan dalam kg →
+          // tambahkan konversi balik ke unit agar asal QTY tetap terbaca.
+          var bpsUnit = beratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
+          if (belanjaDlmKg && bpsUnit > 0) {
+            var asliUnit = Math.round((asliKg * 1000 / bpsUnit) * 100) / 100;
+            var satAsli = String(satuan || '').toLowerCase();
+            qtyTooltip = bulatAsli === parsed.qty
+              ? 'Kebutuhan asli: ' + fmtTkNum(asliUnit) + ' ' + satAsli + ' (' + fmtTkPecahan(asliKg) + ' kg, @' + fmtTkNum(bpsUnit) + ' g) = QTY belanja'
+              : 'Kebutuhan asli: ' + fmtTkNum(asliUnit) + ' ' + satAsli + ' (' + fmtTkPecahan(asliKg) + ' kg, @' + fmtTkNum(bpsUnit) + ' g) → dibulatkan ke atas menjadi ' + fmtTkPecahan(parsed.qty) + ' kg (belanja aman)';
+          } else {
+            qtyTooltip = bulatAsli === parsed.qty
+              ? 'Kebutuhan asli: ' + fmtTkPecahan(asliKg) + ' kg = QTY belanja'
+              : 'Kebutuhan asli: ' + fmtTkPecahan(asliKg) + ' kg → dibulatkan ke atas menjadi ' + fmtTkPecahan(parsed.qty) + ' kg (belanja aman)';
+          }
         } else if (satuanKecil === 'g') {
           var asliG = Math.round(asliKg * 1000);
           qtyTooltip = asliG === parsed.qty
@@ -465,7 +486,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
         bahanBakuId: Number(b.bahan_baku_id) || 0,
         qty: fmtTkPecahan(parsed.qty),
         satuan: parsed.satuan,
-        harga: hargaSatuan,
+        harga: hargaTampil,
         jumlah: jumlah,
         ket: b.keterangan || '',
         kekurangan: kekuranganHargaBerat,
@@ -495,7 +516,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     html += '<div class="bg-white border border-stone-200 rounded-lg p-4 mt-4 text-xs text-stone-500">';
     html += '<div class="font-semibold text-stone-700 mb-2">Keterangan:</div>';
     html += '<ul class="space-y-1 list-disc list-inside">';
-    html += '<li><strong>QTY</strong> = jumlah belanja per bahan — dihitung otomatis dari kebutuhan pangan (bahan berat → kg; bahan satuan → pcs/btl/dll.). Kebutuhan ≥ 1 kg dibulatkan <em>ke atas</em> ke satuan beli utuh agar aman untuk pembelian (mis. kebutuhan 285,4 kg → QTY 286 kg). Kebutuhan < 1 kg ditampilkan dalam pecahan (mis. 1/2 kg, 1/5 kg) agar tidak membesar menjadi 1 kg. Arahkan kursor ke tanda ⓘ pada QTY untuk melihat rincian asalnya.</li>';
+    html += '<li><strong>QTY</strong> = jumlah belanja per bahan — dihitung otomatis dari kebutuhan pangan (bahan berat → kg; bahan satuan pcs/btl/dll yang punya <em>berat per satuan</em> juga otomatis ditampilkan dalam kg via konversi berat_per_satuan). Kebutuhan ≥ 1 kg dibulatkan <em>ke atas</em> ke satuan beli utuh agar aman untuk pembelian (mis. kebutuhan 285,4 kg → QTY 286 kg). Kebutuhan < 1 kg ditampilkan dalam pecahan (mis. 1/2 kg, 1/5 kg) agar tidak membesar menjadi 1 kg. Arahkan kursor ke tanda ⓘ pada QTY untuk melihat rincian asalnya.</li>';
     html += '<li><strong>HARGA</strong> = harga satuan dari master Bahan Baku (bahan_baku.harga_satuan).</li>';
     html += '<li><strong>JUMLAH</strong> = QTY × HARGA.</li>';
     html += '<li><strong>KETERANGAN</strong> = instruksi bahan (mis. Potong 10, Fillet) dari resep menu.</li>';

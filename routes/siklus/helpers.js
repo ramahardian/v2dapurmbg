@@ -420,7 +420,15 @@ function tkPecahan(v) {
 // QTY belanja sebagai teks, sama persis dgn tampilan Total Kebutuhan:
 // "286 kg", "1/2 kg", "5 pcs", "500 g", dst. ('' bila tidak bisa dihitung).
 function tkAutoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
-  const s = String(satuan || 'kg').toLowerCase();
+  const s0 = String(satuan || 'kg').toLowerCase();
+  const isHitung = tkIsSatuanHitung(s0);
+  const bpsEf = isHitung ? tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) : 0;
+  // DINAMIS: bahan bersatuan unit (pcs/btl/karton/dll) yang PUNYA berat isi
+  // (berat_per_satuan) → QTY belanja otomatis tampil dalam KG (= kebutuhan),
+  // bukan dalam unit. Konversi via berat_per_satuan; angka kebutuhan tetap kg.
+  // Bahan unit tanpa berat isi → tetap tampil unit/kebutuhan gram asli.
+  const tampilKg = isHitung && bpsEf > 0 && totalKg > 0;
+  const s = tampilKg ? 'kg' : s0;
   if (s === 'kg' || s === 'g' || s === 'gram' || s === 'gr') {
     if (s === 'kg') {
       // Kebutuhan kecil (< 1 kg) → pecahan aslinya (mis. 0,2 kg → 1/5 kg)
@@ -435,14 +443,21 @@ function tkAutoQty(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) {
     }
     return tkCeilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g';
   }
-  if (tkIsSatuanHitung(s)) {
-    const bps = tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan);
-    if (bps > 0 && totalKg > 0) return tkCeilAman((totalKg * 1000 - TK_QTY_TOLERANSI_GRAM) / bps, totalKg) + ' ' + s;
+  if (isHitung) {
     if (s === 'karton' || s === 'kardus' || s === 'dus' || s === 'ctn') return '';
     if (totalKg > 0) return tkCeilAman(totalKg * 1000 - TK_QTY_TOLERANSI_GRAM, totalKg) + ' g';
     return (Math.ceil(jumlahSiswa) || 0) + ' ' + s;
   }
   return '';
+}
+
+// Apakah bahan ini ditampilkan belanja-nya dalam KG (bukan unit)?
+// Berlaku untuk satuan-unit (pcs/btl/karton/dll) yang punya berat isi
+// (berat_per_satuan) — konversi dinamis mengikuti master bahan.
+function tkBelanjaKg(satuan, kategoriSp, beratPerSatuan, totalKg) {
+  const isHitung = tkIsSatuanHitung(String(satuan || '').toLowerCase());
+  const bps = isHitung ? tkBeratPerSatuanEfektif(satuan, kategoriSp, beratPerSatuan) : 0;
+  return { kg: isHitung && bps > 0 && Number(totalKg) > 0, bps };
 }
 
 // Parse teks QTY → { qty:number, satuan:string }.
@@ -516,4 +531,5 @@ module.exports = {
   tkAutoQty,
   tkParseQtySatuan,
   tkQtyBelanja,
+  tkBelanjaKg,
 };
