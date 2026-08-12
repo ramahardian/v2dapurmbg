@@ -525,14 +525,16 @@ const tabColors = {
 
           items.forEach(function(it) {
             no++;
-            tabelHtml += '<tr class="border-t border-stone-100 hover:bg-cyan-50/40 transition-colors">' +
-              '<td class="px-2 py-3 text-center text-xs text-stone-500">' + no + '</td>' +
-              '<td class="px-3 py-3 text-xs font-medium text-stone-700">' + escHtml(it.nama) + '</td>' +
-              '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700">' + (it.qty_text || fmtNum(it.qty)) + '</td>' +
-              '<td class="px-3 py-3 text-xs text-stone-500">' + escHtml(it.satuan) + '</td>' +
-              '<td class="px-3 py-3 text-right mono text-xs text-stone-600">' + fmtIDR(it.harga) + '</td>' +
-              '<td class="px-3 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtIDR(it.jumlah) + '</td>' +
-              '<td class="px-3 py-3 text-xs text-stone-400">' + (it.keterangan ? escHtml(it.keterangan) : '') + '</td>' +
+            tabelHtml += '<tr class="border-t border-stone-100 ' + (it.kekurangan ? 'bg-red-50/70' : 'hover:bg-cyan-50/40 transition-colors') + '">' +
+              '<td class="px-2 py-3 text-center text-xs ' + (it.kekurangan ? 'text-red-600' : 'text-stone-500') + '">' + no + '</td>' +
+              '<td class="px-3 py-3 text-xs font-medium ' + (it.kekurangan ? 'text-red-700' : 'text-stone-700') + '">' + escHtml(it.nama) +
+                (it.kekurangan ? ' <span class="inline-block ml-1 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap" title="Lengkapi data bahan di master Bahan Baku">' + escHtml(it.ket_kurang || 'Data belum lengkap') + '</span>' : '') +
+              '</td>' +
+              '<td class="px-3 py-3 text-right mono text-xs font-semibold ' + (it.kekurangan ? 'text-red-700' : 'text-stone-700') + '">' + (it.qty_text || fmtNum(it.qty)) + '</td>' +
+              '<td class="px-3 py-3 text-xs ' + (it.kekurangan ? 'text-red-600' : 'text-stone-500') + '">' + escHtml(it.satuan) + '</td>' +
+              '<td class="px-3 py-3 text-right mono text-xs ' + (it.kekurangan ? 'font-bold text-red-700' : 'text-stone-600') + '">' + fmtIDR(it.harga) + '</td>' +
+              '<td class="px-3 py-3 text-right mono text-xs font-bold ' + (it.kekurangan ? 'text-red-700' : 'text-stone-800') + '">' + fmtIDR(it.jumlah) + '</td>' +
+              '<td class="px-3 py-3 text-xs ' + (it.kekurangan ? 'text-red-500' : 'text-stone-400') + '">' + ((it.kekurangan && it.ket_kurang) ? escHtml(it.ket_kurang) : (it.keterangan ? escHtml(it.keterangan) : '')) + '</td>' +
             '</tr>';
           });
 

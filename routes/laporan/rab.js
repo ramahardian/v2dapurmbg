@@ -8,7 +8,7 @@ const ExcelJS = require('exceljs');
 const { requireRole } = require('../../middleware/auth');
 const { roleFinance, roleOps } = require('./config');
 const { hitungBDD } = require('../../services/spBddCalculator');
-const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, tkQtyBelanja, batchLoadGridBahanBySiklus, resolveGridBeratPerSiswa } = require('../siklus/helpers');
+const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, tkQtyBelanja, tkIsSatuanHitung, tkBeratPerSatuanEfektif, batchLoadGridBahanBySiklus, resolveGridBeratPerSiswa } = require('../siklus/helpers');
 
 const MONTHS_ID = ['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
 const HARI_ID = ['MINGGU','SENIN','SELASA','RABU','KAMIS','JUMAT','SABTU'];
@@ -1141,10 +1141,20 @@ function registerRabRoutes(router) {
           const bufferKg = Math.round(totalKg * (1 + b.buffer_persen / 100) * 100) / 100;
           const qtyInfo = tkQtyBelanja(b.satuan, bufferKg, totalPm, b.kategori_sp, b.berat_per_satuan);
 
-          const displayQty = qtyInfo.qty;
-          const displaySatuan = qtyInfo.satuan || String(b.satuan || '').toUpperCase();
-          const qtyText = qtyInfo.qty_text || '0';
+          // Tanda kekurangan data supaya bahan yang datanya belum lengkap tetap
+          // TAMPAK di RAB dan ditandai (bukan hilang / tampil Rp 0 tanpa info).
+          const bpsEfektif = tkBeratPerSatuanEfektif(b.satuan, b.kategori_sp, b.berat_per_satuan);
+          const butuhBeratSatuan = bpsEfektif <= 0 && tkIsSatuanHitung(String(b.satuan || ''));
+          const kekurangan = !b.harga_satuan || qtyInfo.qty <= 0 || butuhBeratSatuan;
+          let ketKurang = '';
+          if (!b.harga_satuan && butuhBeratSatuan) ketKurang = 'Harga & Berat kosong';
+          else if (!b.harga_satuan) ketKurang = 'Harga kosong';
+          else if (butuhBeratSatuan) ketKurang = 'Berat per satuan kosong';
+          else if (qtyInfo.qty <= 0) ketKurang = 'Berat bahan kosong';
 
+          const displayQty = qtyInfo.qty > 0 ? qtyInfo.qty : 0;
+          const qtyText = qtyInfo.qty > 0 ? (qtyInfo.qty_text || '0') : '–';
+          const displaySatuan = qtyInfo.qty > 0 ? (qtyInfo.satuan || String(b.satuan || '').toUpperCase()) : '';
           const jumlah = Math.round(b.harga_satuan * displayQty);
           grandTotal += jumlah;
 
@@ -1157,6 +1167,8 @@ function registerRabRoutes(router) {
             harga: b.harga_satuan,
             jumlah,
             keterangan: b.keterangan,
+            kekurangan,
+            ket_kurang: ketKurang,
           };
         });
 
