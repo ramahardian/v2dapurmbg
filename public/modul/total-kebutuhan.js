@@ -548,17 +548,17 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
   if (daftarMenu.length) {
     html += '<div class="lg:ml-auto min-w-0">';
     html += '<div class="text-[10px] font-bold uppercase tracking-widest text-emerald-100/90 mb-1.5">Menu Hari Ini</div>';
-    html += '<div class="flex flex-wrap gap-1.5">';
+    html += '<div class="flex flex-wrap items-center gap-x-1.5 gap-y-1">';
     for (var mi = 0; mi < daftarMenu.length; mi++) {
       // Menu yang punya id (terhubung ke master menu) → bisa diklik ke halaman edit /menu
       var menuId = daftarMenuId[mi] || 0;
+      if (mi > 0) html += '<span class="text-emerald-300/90 shrink-0">•</span>';
       if (menuId) {
-        html += '<a href="/menu?edit=' + menuId + '" onclick="tkEditMenu(' + menuId + ');return false;" class="inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/30 border border-white/25 text-white px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer max-w-full" title="Klik untuk mengedit menu">';
+        html += '<a href="/menu?edit=' + menuId + '" onclick="tkEditMenu(' + menuId + ');return false;" class="text-white hover:text-emerald-100 underline decoration-emerald-300/40 hover:decoration-emerald-100 underline-offset-2 text-xs font-semibold transition-colors cursor-pointer" title="Klik untuk mengedit menu">';
       } else {
-        html += '<span class="inline-flex items-center gap-1.5 bg-white/15 border border-white/25 text-white px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm max-w-full">';
+        html += '<span class="text-white text-xs font-semibold">';
       }
-      html += '<svg class="w-3 h-3 shrink-0 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>';
-      html += '<span class="break-words min-w-0">' + escHtmlTk(daftarMenu[mi]) + '</span>';
+      html += escHtmlTk(daftarMenu[mi]);
       html += menuId ? '</a>' : '</span>';
     }
     html += '</div>';
