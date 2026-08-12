@@ -348,11 +348,15 @@ if (cluster.isMaster && WORKERS > 1) {
 
   // Endpoint fix Ayam Potong target belanja 250 kg (admin only).
   // /total-kebutuhan menghitung BERAT KOTOR (belanja) = bersih ÷ BDD, jadi
-  // 87,443 g/porsi (bersih 250 kg) tampil 500 kg. Set bersih/porsi = 43,72 g
-  // agar belanja pas 250 kg. Nama tabel backup sama dengan fix_ayam_potong_target_250.sql.
+  // bersih/porsi yang di-resep tampil 2× lebih besar. Endpoint ini auto-detect
+  // (by nama, bukan id) sehingga jalan di server mana pun:
+  //   - bahan baku "Ayam Potong" milik tenant
+  //   - semua resep menu yang memakainya
+  //   - porsi dari siklus Aktif tenant (fallback: jumlah_porsi terbanyak menu)
+  // Lalu set bersih/porsi agar total belanja pas TARGET_KG.
   app.get('/api/migrate/ayam-potong-target-250', requireAuth, requireRole('admin'), async (req, res) => {
     const tenantId = req.user.tenant_id;
-    const MENU_ID = 143, BAHAN_ID = 4, TARGET_KG = 250, BDD = 50;
+    const TARGET_KG = 250, BDD = 50;
     const wrap = (title, ok, extra = '') => res.send(`
       <div style="font-family:sans-serif;padding:2rem;text-align:center">
         <h2 style="color:${ok ? '#16a34a' : '#dc2626'}">${ok ? '✅' : '❌'} ${title}</h2>
@@ -361,56 +365,68 @@ if (cluster.isMaster && WORKERS > 1) {
            background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali ke Dashboard</a>
       </div>`);
     try {
-      const [[menu]] = await db.query('SELECT jumlah_porsi, tenant_id FROM menu WHERE id=?', [MENU_ID]);
-      if (!menu || Number(menu.tenant_id) !== Number(tenantId)) {
-        return wrap('Menu id ' + MENU_ID + ' tidak ada untuk tenant ini', false, 'Cek menu id & tenant di server produksi.');
-      }
-      const porsi = Number(menu.jumlah_porsi) || 0;
-      if (!porsi) return wrap('jumlah_porsi menu 143 = 0', false, 'Isi jumlah_porsi menu terlebih dahulu.');
+      // 1) Bahan baku "Ayam Potong" milik tenant
+      const [bbRows] = await db.query(
+        `SELECT id, nama, berat_1_sp, persen_bdd FROM bahan_baku
+         WHERE tenant_id=? AND (nama='Ayam Potong' OR nama LIKE 'Ayam Potong %' OR nama LIKE 'Ayam Potong 1 SP')
+         ORDER BY (nama='Ayam Potong') DESC, id LIMIT 1`, [tenantId]);
+      if (!bbRows.length) return wrap('Bahan "Ayam Potong" tidak ditemukan untuk tenant ini', false, 'Cek nama di Master Bahan Baku.');
+      const BAHAN_ID = bbRows[0].id;
+
+      // 2) Semua resep menu yang memakai Ayam Potong (milik tenant)
+      const [mbRows] = await db.query(
+        `SELECT mb.menu_id, mb.jumlah, m.nama AS menu_nama, m.jumlah_porsi
+         FROM menu_bahan mb JOIN menu m ON m.id=mb.menu_id
+         WHERE mb.bahan_baku_id=? AND m.tenant_id=?`, [BAHAN_ID, tenantId]);
+      if (!mbRows.length) return wrap('Ayam Potong belum dipakai resep menu mana pun', false, 'Tambahkan dulu di resep menu yang dipakai siklus.');
+
+      // 3) Porsi yang dipakai /total-kebutuhan = siklus Aktif tenant
+      //    (fallback: jumlah_porsi terbesar dari menu yang memakai ayam)
+      let porsi = 0;
+      const [sik] = await db.query('SELECT jumlah_porsi FROM siklus_menu WHERE tenant_id=? AND status="Aktif" ORDER BY id LIMIT 1', [tenantId]);
+      if (sik[0]) porsi = Number(sik[0].jumlah_porsi) || 0;
+      if (!porsi) porsi = Math.max.apply(null, mbRows.map(r => Number(r.jumlah_porsi) || 0)) || 0;
+      if (!porsi) return wrap('jumlah_porsi tidak ditemukan', false, 'Isi jumlah_porsi di siklus aktif / menu resep.');
+
       const bersih = Math.round((TARGET_KG * 1000 * (BDD / 100)) / porsi * 10000) / 10000; // g/porsi
       const kotor = Math.round(bersih / (BDD / 100) * 100) / 100;
 
-      // Diagnosa sebelum diubah
-      const [[mb]] = await db.query(
-        'SELECT mb.jumlah, b.berat_1_sp, b.persen_bdd FROM menu_bahan mb JOIN bahan_baku b ON b.id=mb.bahan_baku_id WHERE mb.menu_id=? AND mb.bahan_baku_id=? LIMIT 1',
-        [MENU_ID, BAHAN_ID]);
-
-      const sudahSesuai = mb && mb.jumlah !== null && mb.jumlah !== undefined &&
-        Math.abs(Number(mb.jumlah) - bersih) < 0.001 &&
-        Math.abs(Number(mb.persen_bdd || 0) - BDD) < 0.01;
-      if (sudahSesuai && req.query.force !== '1') {
+      // Sudah sesuai? (semua resep menu tsb sudah bersih ≈ bersih)
+      const sudah = mbRows.every(r => r.jumlah !== null && r.jumlah !== undefined && Math.abs(Number(r.jumlah) - bersih) < 0.001);
+      const bddOk = Math.abs(Number(bbRows[0].persen_bdd || 0) - BDD) < 0.01;
+      if (sudah && bddOk && req.query.force !== '1') {
         return wrap('Sudah sesuai target ' + TARGET_KG + ' kg', true,
-          'bersih/porsi menu 143 = ' + bersih + ' g (BDD ' + BDD + '%). Refresh /total-kebutuhan. (pakai ?force=1 untuk re-run)');
+          'bersih/porsi = ' + bersih + ' g (BDD ' + BDD + '%), dipakai di ' + mbRows.length + ' menu. Refresh /total-kebutuhan.');
       }
 
-      // Backup (hanya sekali — jangan timpa backup asli jika sudah ada)
-      const backup = async (tbl, build, getKeySql, getKeyParams, insertSql, insertParams) => {
-        await db.query(`CREATE TABLE IF NOT EXISTS ${tbl} ${build}`);
-        const [[hit]] = await db.query(getKeySql, getKeyParams);
-        if (!hit) await db.query(insertSql, insertParams);
+      // 4) Backup (hanya sekali — jangan menimpa backup asli yang sudah ada)
+      const bak = async (tbl, buildSql, getSql, getP, insSql, insP) => {
+        await db.query(`CREATE TABLE IF NOT EXISTS ${tbl} ${buildSql}`);
+        const [[hit]] = await db.query(getSql, getP);
+        if (!hit) await db.query(insSql, insP);
       };
-      await backup('backup_ayam_potong_target250',
+      await bak('backup_ayam_potong_target250',
         'AS SELECT mb.*, m.tenant_id AS menu_tenant FROM menu_bahan mb JOIN menu m ON m.id=mb.menu_id WHERE 1=0',
-        'SELECT id FROM backup_ayam_potong_target250 WHERE menu_id=? AND bahan_baku_id=? LIMIT 1', [MENU_ID, BAHAN_ID],
-        'INSERT INTO backup_ayam_potong_target250 SELECT mb.*, m.tenant_id FROM menu_bahan mb JOIN menu m ON m.id=mb.menu_id WHERE mb.menu_id=? AND mb.bahan_baku_id=?', [MENU_ID, BAHAN_ID]);
-      await backup('backup_bahan_baku_ayam_250',
+        'SELECT id FROM backup_ayam_potong_target250 WHERE bahan_baku_id=? AND menu_tenant=? LIMIT 1', [BAHAN_ID, tenantId],
+        'INSERT INTO backup_ayam_potong_target250 SELECT mb.*, m.tenant_id FROM menu_bahan mb JOIN menu m ON m.id=mb.menu_id WHERE mb.bahan_baku_id=? AND m.tenant_id=?', [BAHAN_ID, tenantId]);
+      await bak('backup_bahan_baku_ayam_250',
         'AS SELECT * FROM bahan_baku WHERE 1=0',
         'SELECT id FROM backup_bahan_baku_ayam_250 WHERE id=? LIMIT 1', [BAHAN_ID],
         'INSERT INTO backup_bahan_baku_ayam_250 SELECT * FROM bahan_baku WHERE id=?', [BAHAN_ID]);
-      await backup('backup_sp_ref_ayam_250',
+      await bak('backup_sp_ref_ayam_250',
         'AS SELECT * FROM sp_referensi_bahan WHERE 1=0',
         'SELECT id FROM backup_sp_ref_ayam_250 WHERE tenant_id=? LIMIT 1', [tenantId],
         'INSERT INTO backup_sp_ref_ayam_250 SELECT * FROM sp_referensi_bahan WHERE tenant_id=?', [tenantId]);
 
-      // Terapkan
-      await db.query('UPDATE menu_bahan SET jumlah=? WHERE menu_id=? AND bahan_baku_id=?', [bersih, MENU_ID, BAHAN_ID]);
+      // 5) Terapkan
+      await db.query('UPDATE menu_bahan SET jumlah=? WHERE bahan_baku_id=? AND menu_id IN (SELECT id FROM menu WHERE tenant_id=?)', [bersih, BAHAN_ID, tenantId]);
       await db.query('UPDATE bahan_baku SET berat_1_sp=? WHERE id=? AND tenant_id=?', [bersih, BAHAN_ID, tenantId]);
-      await db.query('UPDATE sp_referensi_bahan SET berat_bersih=?, berat_kotor=? WHERE tenant_id=? AND nama="Ayam Potong 1 SP"', [bersih, kotor, tenantId]);
+      await db.query('UPDATE sp_referensi_bahan SET berat_bersih=?, berat_kotor=? WHERE tenant_id=? AND nama LIKE "Ayam Potong%"', [bersih, kotor, tenantId]);
 
-      const [v] = await db.query('SELECT nama, berat_1_sp, persen_bdd FROM bahan_baku WHERE id=?', [BAHAN_ID]);
-      const value = v[0] ? 'berat_1_sp = ' + v[0].berat_1_sp + ' g, BDD ' + v[0].persen_bdd + '%' : 'n/a';
+      const menuNames = mbRows.map(r => r.menu_nama).filter(Boolean).slice(0, 3).join('; ');
       return wrap('Berhasil — Ayam Potong target belanja ' + TARGET_KG + ' kg', true,
-        'bersih/porsi = ' + bersih + ' g → kotor ' + kotor + ' g × ' + porsi + ' porsi = ' + TARGET_KG + ' kg. (' + value + ')');
+        'Bahan id ' + BAHAN_ID + ' | bersih/porsi = ' + bersih + ' g → kotor ' + kotor + ' g × ' + porsi + ' porsi = ' + TARGET_KG + ' kg.' +
+        ' Diterapkan di ' + mbRows.length + ' resep menu (' + (menuNames || '-') + ').');
     } catch (e) {
       return wrap(e.message, false, 'Lihat log server untuk detail.');
     }
