@@ -8,7 +8,7 @@ const ExcelJS = require('exceljs');
 const { requireRole } = require('../../middleware/auth');
 const { roleFinance, roleOps } = require('./config');
 const { hitungBDD } = require('../../services/spBddCalculator');
-const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, tkQtyBelanja } = require('../siklus/helpers');
+const { parseKategoriPenerima, expandJenjangToDbValues, buildDbToDisplay, batchLoadMenuIdByName, lookupMenuIdByName, JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, tkQtyBelanja, batchLoadGridBahanBySiklus, resolveGridBeratPerSiswa } = require('../siklus/helpers');
 
 const MONTHS_ID = ['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
 const HARI_ID = ['MINGGU','SENIN','SELASA','RABU','KAMIS','JUMAT','SABTU'];
@@ -1042,6 +1042,23 @@ function registerRabRoutes(router) {
       let grandTotal = 0;
       const bahanAgg = {}; // key: bahan_baku_id
 
+      // Referensi berat bahan (nama → berat_bersih & BDD) utk bahan GRID
+      // (siklus_menu_item_bahan) yang tidak punya berat_1_sp di master bahan.
+      let spRefMap = {};
+      try {
+        const [refs] = await db.query(
+          'SELECT nama, bdd_persen, berat_bersih FROM sp_referensi_bahan WHERE tenant_id=?',
+          [t]
+        );
+        for (const r of refs) {
+          spRefMap[r.nama] = { bdd_persen: Math.round(Number(r.bdd_persen) * 100) || 100, berat_bersih: Number(r.berat_bersih) || 0 };
+        }
+      } catch (e) { /* tabel optional */ }
+
+      // Kebutuhan dari resep menu (menu_bahan). Bahan yang sudah dihitung dari
+      // resep dicatat supaya bahan grid hari yang sama TIDAK dihitung dua kali.
+      const coveredBahan = new Set(); // `${hari_ke}::${bahan_baku_id}`
+
       for (const mi of menuItems) {
         const porsi = Number(mi.jumlah_porsi) || totalPm;
 
@@ -1071,6 +1088,41 @@ function registerRabRoutes(router) {
             };
           }
           bahanAgg[b.bahan_baku_id].total_gram += totalGram;
+          coveredBahan.add(mi.hari_ke + '::' + b.bahan_baku_id);
+        }
+      }
+
+      // Bahan GRID (siklus_menu_item_bahan) — dipakai utk hari yang resepnya
+      // belum tersimpan sebagai menu (menu_nama tidak cocok dgn tabel menu),
+      // konsisten dgn Total Kebutuhan. Bahan yang sudah masuk resep menu
+      // (coveredBahan) dilewati agar tidak menghitung dua kali.
+      const gridSiklusId = siklusId || (siklusInfo ? siklusInfo.id : 0);
+      if (gridSiklusId && menuItems.length) {
+        const selectedDays = new Set(menuItems.map(mi => mi.hari_ke));
+        const gridBahanBySiklus = await batchLoadGridBahanBySiklus([gridSiklusId]);
+        const gridBahan = (gridBahanBySiklus[gridSiklusId] || [])
+          .filter(g => selectedDays.has(g.hari_ke) && !coveredBahan.has(g.hari_ke + '::' + g.bahan_baku_id));
+        for (const g of gridBahan) {
+          const { beratPerSiswa, persenBdd } = resolveGridBeratPerSiswa(g, spRefMap);
+          if (!beratPerSiswa || beratPerSiswa <= 0) continue; // bahan tanpa berat → tidak bisa dihitung
+          const dayItem = menuItems.find(mi => mi.hari_ke === g.hari_ke);
+          const porsi = (dayItem && Number(dayItem.jumlah_porsi)) || totalPm;
+          const totalGram = hitungBDD(beratPerSiswa, persenBdd) * porsi;
+
+          if (!bahanAgg[g.bahan_baku_id]) {
+            bahanAgg[g.bahan_baku_id] = {
+              bahan_baku_id: g.bahan_baku_id,
+              bahan_nama: g.nama || '',
+              satuan: g.satuan || 'g',
+              total_gram: 0,
+              harga_satuan: Number(g.harga_satuan) || 0,
+              berat_per_satuan: Number(g.berat_per_satuan) || 0,
+              buffer_persen: Number(g.buffer_persen) || 0,
+              kategori_sp: g.kategori_sp || '',
+              keterangan: '',
+            };
+          }
+          bahanAgg[g.bahan_baku_id].total_gram += totalGram;
         }
       }
 
