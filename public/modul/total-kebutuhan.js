@@ -33,6 +33,8 @@ async function loadTotalKebutuhan() {
     const params = new URLSearchParams();
     if (tglMulai) params.set('tanggal_mulai', tglMulai);
     if (tglSelesai) params.set('tanggal_selesai', tglSelesai);
+    const siklusId = new URLSearchParams(location.search).get('siklus_id');
+    if (siklusId) params.set('siklus_id', siklusId);
     const qs = params.toString() ? '?' + params.toString() : '';
     const res = await api.get('/siklus/laporan/perencanaan' + qs);
     const { hari, pm_map, tanggal_mulai, tanggal_selesai, _validation } = res;
@@ -113,6 +115,8 @@ async function exportTotalKebutuhanXlsx() {
   const params = new URLSearchParams();
   if (tglMulai) params.set('tanggal_mulai', tglMulai);
   if (tglSelesai) params.set('tanggal_selesai', tglSelesai);
+  const siklusId = new URLSearchParams(location.search).get('siklus_id');
+  if (siklusId) params.set('siklus_id', siklusId);
   const qs = params.toString();
   if (qs) url += '?' + qs;
   try {

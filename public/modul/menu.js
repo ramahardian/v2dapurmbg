@@ -565,7 +565,6 @@ async function openMenuForm(editing) {
         <span>Tampilkan total untuk</span>
         <input type="number" id="m-porsi" value="0" min="0" step="1" onchange="onPorsiChange()" placeholder="0" class="w-20 h-8 px-2 rounded-lg border border-stone-200 text-sm text-center mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />
         <span>porsi</span>
-        <button type="button" onclick="resetAllToSP()" class="text-xs font-medium border border-stone-200 px-2.5 py-1.5 rounded-lg hover:bg-stone-50 text-stone-500 shadow-sm transition-all ml-auto">↺ Reset Semua ke SP</button>
       </div>
       <div id="bahan-list" class="space-y-2"></div>
     </div>
@@ -1024,22 +1023,6 @@ function applyBahanKalkulator(i) {
   updateBahan(i, 'jumlah', Math.round(displayVal * 100) / 100);
 }
 
-function resetAllToSP() {
-  (window._menuBahan || []).forEach(function(b, i) {
-    resetBahanToSP(i);
-  });
-}
-function resetBahanToSP(i) {
-  var b = window._menuBahan[i];
-  if (!b) return;
-  var sp = window._spRefMap && window._spRefMap[b.nama];
-  var defaultGram = (sp ? Number(sp.berat_bersih) : 0) || Number(b.berat_1_sp) || 0;
-  if (!defaultGram) return;
-  b.jumlah = defaultGram;
-  delete b._autoJumlah;
-  hitungNutrisi();
-  renderBahanList();
-}
 function renderBahanList() {
   var porsi = Number(window._menuPorsi) || 0;
   document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
@@ -1381,11 +1364,12 @@ async function openSiklusMenuPicker() {
       if (!s.names || !s.names.length) continue;
       var statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-600';
       html += '<div class="border border-stone-200 rounded-xl overflow-hidden">' +
-        '<div class="px-4 py-2.5 bg-stone-50 border-b border-stone-200 flex items-center justify-between">' +
+        '<div class="px-4 py-2.5 bg-stone-50 border-b border-stone-200 flex flex-wrap items-center justify-between gap-2">' +
         '<div class="font-semibold text-sm text-stone-700">' + escHtml(s.nama) + '</div>' +
             '<div class="flex items-center gap-2">' +
             (s.jumlah_porsi ? '<span class="text-[10px] text-stone-400">' + s.jumlah_porsi + ' porsi</span>' : '') +
             '<span class="text-[10px] px-2 py-0.5 rounded-full font-medium ' + statusColor + ' capitalize">' + s.status + '</span>' +
+            '<button type="button" onclick="closeSiklusMenuPicker();navigate(\'total-kebutuhan?siklus_id=' + s.id + '\')" class="text-[10px] font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 px-2 py-1 rounded-lg whitespace-nowrap transition-colors" title="Lihat Total Kebutuhan siklus ini">Lihat Total Kebutuhan</button>' +
           '</div>' +
         '</div>' +
         '<div class="divide-y divide-stone-100">';
@@ -1514,7 +1498,7 @@ function showMenuInfo() {
       '</div>' +
       '<div class="flex gap-3 items-start">' +
         '<span class="shrink-0 w-7 h-7 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>' +
-        '<div><span class="font-semibold text-stone-700">Gramasi 0?</span><br>Kolom Gramasi menunjukkan 0 jika menu belum punya bahan atau jumlah bahan belum diisi. <strong>Cara set default:</strong> buka <strong>SP Referensi</strong> → isi Berat Bersih (gram) → saat tambah bahan di form menu, jumlah auto terisi dari nilai tersebut. Bisa juga klik <strong>↺ Reset Semua ke SP</strong> untuk mengembalikan ke default.</div>' +
+        '<div><span class="font-semibold text-stone-700">Gramasi 0?</span><br>Kolom Gramasi menunjukkan 0 jika menu belum punya bahan atau jumlah bahan belum diisi. <strong>Cara set default:</strong> buka <strong>SP Referensi</strong> → isi Berat Bersih (gram) → saat tambah bahan di form menu, jumlah auto terisi dari nilai tersebut.</div>' +
       '</div>' +
       '<div class="flex gap-3 items-start">' +
         '<span class="shrink-0 w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>' +
