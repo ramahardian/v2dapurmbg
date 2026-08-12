@@ -509,6 +509,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
     html += '<li><strong>HARGA</strong> = harga satuan dari master Bahan Baku (bahan_baku.harga_satuan).</li>';
     html += '<li><strong>JUMLAH</strong> = QTY × HARGA.</li>';
     html += '<li><strong>KETERANGAN</strong> = instruksi bahan (mis. Potong 10, Fillet) dari resep menu.</li>';
+    html += '<li><strong>TARGET</strong> = atur target belanja harian bahan (kg/butir) agar kebutuhan (gram/porsi di resep, master bahan &amp; referensi SP) disesuaikan sehingga total belanja pas target.</li>';
     html += '<li><strong>Baris merah</strong> = bahan baku sudah masuk total kebutuhan tapi <em>harga satuan</em> belum diisi, atau bahan bersatuan unit (pcs/btl/renceng) yang <em>berat per satuan</em>-nya masih kosong di master Bahan Baku — wajib dilengkapi agar QTY &amp; JUMLAH akurat.</li>';
     html += '<li>Kebutuhan sudah termasuk <em>buffer</em> 1-10% (jika ada). Angka memakai pembulatan ke atas agar aman.</li>';
     html += '</ul></div>';
@@ -573,6 +574,7 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
     html += '<thead><tr class="bg-stone-50">';
     html += '<th class="text-center px-2 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider w-8">NO</th>';
     html += '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">URAIAN</th>';
+    html += '<th class="text-center px-2 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">TARGET</th>';
     html += '<th class="text-right px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">QTY</th>';
     html += '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">SATUAN</th>';
     html += '<th class="text-right px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">HARGA</th>';
@@ -587,12 +589,14 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
       html += '<tr class="' + rowCls + '">';
       html += '<td class="px-2 py-3 text-center text-xs text-stone-500">' + r.no + '</td>';
       html += '<td class="px-3 py-3 text-xs font-medium ' + (r.kekurangan ? 'text-red-700' : 'text-stone-700') + '">' + escHtmlTk(r.uraian);
-      if (r.bahanBakuId) {
-        html += ' <button type="button" onclick="tkSetTargetBelanja(this)" data-bahan-id="' + r.bahanBakuId + '" data-nama="' + escHtmlTk(r.uraian) + '" data-satuan="' + escHtmlTk(r.satuan || '') + '" title="Atur target belanja harian (' + (/butir/i.test(r.satuan || '') ? 'butir' : 'kg') + ') — gram/porsi di resep, master bahan &amp; referensi SP disesuaikan agar total belanja pas target" class="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap hover:bg-emerald-100 hover:border-emerald-300 transition-colors cursor-pointer">🎯 Target</button>';
-      }
       if (r.kekurangan) {
         var editHref = r.bahanBakuId ? "onclick=\"tkEditBahanBaku(" + r.bahanBakuId + ")\"" : '';
         html += ' <span ' + editHref + ' class="inline-block ml-1 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap cursor-pointer" title="Klik untuk melengkapi di master Bahan Baku">' + escHtmlTk(r.ketKurang || 'Data belum lengkap') + '</span>';
+      }
+      html += '</td>';
+      html += '<td class="px-2 py-3 text-center">';
+      if (r.bahanBakuId) {
+        html += '<button type="button" onclick="tkSetTargetBelanja(this)" data-bahan-id="' + r.bahanBakuId + '" data-nama="' + escHtmlTk(r.uraian) + '" data-satuan="' + escHtmlTk(r.satuan || '') + '" title="Atur target belanja harian (' + (/butir/i.test(r.satuan || '') ? 'butir' : 'kg') + ') — gram/porsi di resep, master bahan &amp; referensi SP disesuaikan agar total belanja pas target" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap hover:bg-emerald-100 hover:border-emerald-300 transition-colors cursor-pointer">🎯 Target</button>';
       }
       html += '</td>';
       html += '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700"' + (r.qtyTooltip ? ' title="' + escHtmlTk(r.qtyTooltip) + '" style="cursor:help"' : '') + '>' + r.qty + (r.qtyTooltip ? ' <span class="text-[9px] text-stone-400 font-normal align-middle">ⓘ</span>' : '') + '</td>';
@@ -604,18 +608,18 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
     });
 
     html += '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-cyan-50 to-blue-50 font-bold">';
-    html += '<td colspan="5" class="px-4 py-3.5 text-xs text-right text-stone-800 uppercase tracking-wider">TOTAL</td>';
+    html += '<td colspan="6" class="px-4 py-3.5 text-xs text-right text-stone-800 uppercase tracking-wider">TOTAL</td>';
     html += '<td class="px-3 py-3.5 text-right mono text-xs font-bold text-blue-700">' + fmtTkRp(grandTotal) + '</td>';
     html += '<td></td>';
     html += '</tr>';
     if (anggaran > 0) {
       html += '<tr class="border-t border-stone-200 bg-white">';
-      html += '<td colspan="5" class="px-4 py-3 text-xs text-right text-stone-600">ANGGARAN BELANJA HARIAN</td>';
+      html += '<td colspan="6" class="px-4 py-3 text-xs text-right text-stone-600">ANGGARAN BELANJA HARIAN</td>';
       html += '<td class="px-3 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtTkRp(anggaran) + '</td>';
       html += '<td></td>';
       html += '</tr>';
       html += '<tr class="border-t border-stone-200 ' + (sisa >= 0 ? 'bg-emerald-50/50' : 'bg-red-50/50') + '">';
-      html += '<td colspan="5" class="px-4 py-3 text-xs text-right font-bold text-' + (sisa >= 0 ? 'emerald' : 'red') + '-700">SISA</td>';
+      html += '<td colspan="6" class="px-4 py-3 text-xs text-right font-bold text-' + (sisa >= 0 ? 'emerald' : 'red') + '-700">SISA</td>';
       html += '<td class="px-3 py-3 text-right mono text-xs font-bold text-' + (sisa >= 0 ? 'emerald' : 'red') + '-600">' + (sisa < 0 ? '-' : '') + fmtTkRp(Math.abs(sisa)) + '</td>';
       html += '<td class="px-3 py-3 text-xs text-' + (sisa >= 0 ? 'emerald' : 'red') + '-500">' + (sisa < 0 ? 'DEFISIT' : '') + '</td>';
       html += '</tr>';
