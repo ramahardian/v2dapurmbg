@@ -423,7 +423,13 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
       var ketKurang = (!hargaSatuan && butuhBeratSatuan) ? 'Harga & Berat kosong' : (!hargaSatuan ? 'Harga kosong' : 'Berat per satuan kosong');
       var qty = autoQty(satuan, bufferKg, rowSiswa, kategoriSp, beratPerSatuan);
       var parsed = parseTkQtySatuan(qty);
-      if (parsed.qty <= 0) continue;
+      // Bahan TIDAK boleh hilang dari RAB: jika qty tidak bisa dihitung (data
+      // belum lengkap: berat bahan / berat per satuan kosong), baris tetap tampil
+      // dengan QTY '-' dan ditandai merah agar tidak "tidak masuk RAB".
+      if (parsed.qty <= 0) {
+        kekuranganHargaBerat = true;
+        ketKurang = butuhBeratSatuan ? 'Berat per satuan kosong' : (!hargaSatuan ? 'Harga kosong' : 'Berat bahan kosong');
+      }
       no++;
       var jumlah = Math.round(parsed.qty * hargaSatuan);
       grandTotal += jumlah;
@@ -463,7 +469,7 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
         no: no,
         uraian: b.nama_display || b.nama,
         bahanBakuId: Number(b.bahan_baku_id) || 0,
-        qty: fmtTkPecahan(parsed.qty),
+        qty: parsed.qty > 0 ? fmtTkPecahan(parsed.qty) : '–',
         satuan: parsed.satuan,
         harga: hargaSatuan,
         jumlah: jumlah,

@@ -1104,10 +1104,12 @@ function registerRabRoutes(router) {
           .filter(g => selectedDays.has(g.hari_ke) && !coveredBahan.has(g.hari_ke + '::' + g.bahan_baku_id));
         for (const g of gridBahan) {
           const { beratPerSiswa, persenBdd } = resolveGridBeratPerSiswa(g, spRefMap);
-          if (!beratPerSiswa || beratPerSiswa <= 0) continue; // bahan tanpa berat → tidak bisa dihitung
+          // Bahan TIDAK boleh hilang dari RAB: tanpa berat (0) tetap masuk daftar
+          // dengan kebutuhan 0 (konsisten dengan bahan resep menu yang jumlahnya 0),
+          // agar bahan yang belum dilengkapi berat tetap terlihat di RAB.
           const dayItem = menuItems.find(mi => mi.hari_ke === g.hari_ke);
           const porsi = (dayItem && Number(dayItem.jumlah_porsi)) || totalPm;
-          const totalGram = hitungBDD(beratPerSiswa, persenBdd) * porsi;
+          const totalGram = beratPerSiswa > 0 ? hitungBDD(beratPerSiswa, persenBdd) * porsi : 0;
 
           if (!bahanAgg[g.bahan_baku_id]) {
             bahanAgg[g.bahan_baku_id] = {
@@ -1119,7 +1121,7 @@ function registerRabRoutes(router) {
               berat_per_satuan: Number(g.berat_per_satuan) || 0,
               buffer_persen: Number(g.buffer_persen) || 0,
               kategori_sp: g.kategori_sp || '',
-              keterangan: '',
+              keterangan: (beratPerSiswa > 0 ? '' : 'Berat bahan kosong'),
             };
           }
           bahanAgg[g.bahan_baku_id].total_gram += totalGram;
