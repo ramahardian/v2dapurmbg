@@ -691,13 +691,8 @@ async function tkSetTargetBelanja(btn) {
     showAlert('Bahan tidak memiliki ID — tidak bisa diatur targetnya', 'warning');
     return;
   }
-  var inp = window.prompt('Set target belanja harian (' + unit + ') untuk "' + nama + '"', '');
-  if (inp === null || String(inp).trim() === '') return;
-  var val = parseFloat(String(inp).trim().replace(',', '.'));
-  if (!val || isNaN(val) || val <= 0) {
-    showAlert('Target harus angka > 0 (misalnya ' + (isButir ? '2859' : '13') + ')', 'warning');
-    return;
-  }
+  var val = await tkPromptTarget(nama, unit, isButir);
+  if (val == null) return;
   try {
     var res = await api.get('/siklus/fix-target-belanja?bahan=' + bahanBakuId + (isButir ? '&target_butir=' : '&target_kg=') + val);
     var ket;
@@ -717,6 +712,92 @@ async function tkSetTargetBelanja(btn) {
   } catch (err) {
     showAlert('Gagal set target: ' + err.message, 'error');
   }
+}
+
+// Dialog modal "Set Target Belanja" — pengganti window.prompt yang polos.
+// Mengembalikan Promise<number|null>: angka target bila OK, null bila batal/tutup.
+function tkPromptTarget(nama, unit, isButir) {
+  return new Promise(function(resolve) {
+    var existing = document.getElementById('tk-target-modal');
+    if (existing) existing.remove();
+
+    var m = document.createElement('div');
+    m.id = 'tk-target-modal';
+    m.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4';
+    m.innerHTML =
+      '<div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-auto overflow-hidden">' +
+        '<div class="px-5 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white flex items-center justify-between">' +
+          '<div class="flex items-center gap-2.5">' +
+            '<span class="w-9 h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center text-base">🎯</span>' +
+            '<div>' +
+              '<div class="font-bold text-sm">Set Target Belanja Harian</div>' +
+              '<div class="text-[11px] text-emerald-100/90">' + escHtmlTk(nama) + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<button type="button" onclick="tkCloseTargetModal()" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-emerald-50">' +
+            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="p-5">' +
+          '<label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">Target (' + unit + ')</label>' +
+          '<input id="tk-target-input" type="number" min="0" step="any" inputmode="decimal" placeholder="mis. ' + (isButir ? '2859' : '13') + '" ' +
+            'class="w-full h-11 px-3.5 border border-stone-300 rounded-xl text-base font-semibold text-stone-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">' +
+          '<p class="text-[11px] text-stone-400 mt-2 leading-relaxed">Gram/porsi di resep, master bahan &amp; referensi SP akan disesuaikan agar total belanja pas dengan target.</p>' +
+          '<div class="flex justify-end gap-2 mt-5">' +
+            '<button type="button" onclick="tkCloseTargetModal()" class="px-4 h-10 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-xl transition-colors">Batal</button>' +
+            '<button type="button" onclick="tkSubmitTargetModal(' + (isButir ? 'true' : 'false') + ')" class="px-5 h-10 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-colors flex items-center gap-1.5">' +
+              '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> Simpan Target' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    var fired = false;
+    m._tkResolve = function(val) {
+      if (fired) return;
+      fired = true;
+      resolve(val);
+    };
+    m.addEventListener('click', function(e) { if (e.target === m) tkCloseTargetModal(); });
+    document.body.appendChild(m);
+
+    var input = document.getElementById('tk-target-input');
+    input.focus();
+    input.select();
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); tkSubmitTargetModal(isButir); }
+      if (e.key === 'Escape') tkCloseTargetModal();
+    });
+  });
+}
+
+function tkCloseTargetModal() {
+  var m = document.getElementById('tk-target-modal');
+  if (m) {
+    if (m._tkResolve) m._tkResolve(null);
+    m.remove();
+  }
+}
+
+function tkSubmitTargetModal(isButir) {
+  var m = document.getElementById('tk-target-modal');
+  var input = document.getElementById('tk-target-input');
+  if (!m || !input) return;
+  var raw = String(input.value).trim().replace(',', '.');
+  if (raw === '') {
+    input.focus();
+    input.classList.add('border-red-400');
+    setTimeout(function() { input.classList.remove('border-red-400'); }, 1200);
+    return;
+  }
+  var val = parseFloat(raw);
+  if (!val || isNaN(val) || val <= 0) {
+    showAlert('Target harus angka > 0 (misalnya ' + (isButir ? '2859' : '13') + ')', 'warning');
+    input.focus();
+    return;
+  }
+  if (m._tkResolve) m._tkResolve(val);
+  m.remove();
 }
 
 // Arahkan dari total-kebutuhan ke halaman edit menu (chip menu hari ini)
