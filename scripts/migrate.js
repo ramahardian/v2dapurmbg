@@ -308,7 +308,7 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi gizi)'); }
 
-  // Seed sp_referensi_bahan untuk tenant_id=1
+  // Seed sp_referensi_bahan hanya untuk tenant_id=1 (cabang baru TIDAK disalin — mulai kosong)
   try {
     const [[{cnt}]] = await q("SELECT COUNT(*) as cnt FROM sp_referensi_bahan WHERE tenant_id=1");
     if (cnt === 0) {
@@ -320,20 +320,6 @@ async function runMigration() {
       }
     }
   } catch (e) { log('  (skip seed sp_referensi_bahan)'); }
-
-  // Copy seed ke tenant lain
-  try {
-    const [missingTenants] = await q("SELECT t.id FROM tenants t LEFT JOIN sp_referensi_bahan s ON s.tenant_id = t.id WHERE s.id IS NULL");
-    if (missingTenants.length) {
-      const [seedRows] = await q("SELECT nama, kategori, berat_bersih, bdd_persen, berat_kotor FROM sp_referensi_bahan WHERE tenant_id=1");
-      for (const t of missingTenants) {
-        for (const row of seedRows) {
-          await q("INSERT IGNORE INTO sp_referensi_bahan (tenant_id, nama, kategori, berat_bersih, bdd_persen, berat_kotor) VALUES (?,?,?,?,?,?)", [t.id, row.nama, row.kategori, row.berat_bersih, row.bdd_persen, row.berat_kotor]);
-        }
-        log(`  ✓ Seed sp_referensi_bahan untuk tenant id=${t.id}`);
-      }
-    }
-  } catch (e) { log('  (skip copy seed)'); }
 
   // Tabel akun
   try {
@@ -362,10 +348,10 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip akun_id kas_bank)'); }
 
-  // Seed default akun per tenant
+  // Seed default akun HANYA untuk tenant utama (id=1) — cabang baru mulai tanpa akun
   try {
     const [tenants] = await q('SELECT id FROM tenants');
-    const [existingAkun] = await q('SELECT COUNT(*) as cnt FROM akun WHERE tenant_id=?', [tenants[0]?.id || 0]);
+    const [existingAkun] = await q('SELECT COUNT(*) as cnt FROM akun WHERE tenant_id=1');
     if (tenants.length && !existingAkun[0].cnt) {
       const seedAkun = [
         ['1000', 'Petty Cash/Cash in Hand', 'BP Kas', 'Manual'],
@@ -375,12 +361,10 @@ async function runMigration() {
         ['2100', 'Dana Operasional', 'BP Jenis Dana', 'Manual'],
         ['3000', 'Hutang Usaha', 'BP Hutang', 'Otomatis'],
       ];
-      for (const t of tenants) {
-        for (const [kode, nama, bp, tipe] of seedAkun) {
-          await q('INSERT IGNORE INTO akun (tenant_id, kode, nama, bp, tipe) VALUES (?,?,?,?,?)', [t.id, kode, nama, bp, tipe]);
-        }
+      for (const [kode, nama, bp, tipe] of seedAkun) {
+        await q('INSERT IGNORE INTO akun (tenant_id, kode, nama, bp, tipe) VALUES (?,?,?,?,?)', [1, kode, nama, bp, tipe]);
       }
-      log('✓ Seed akun: data default untuk semua tenant');
+      log('✓ Seed akun: data default untuk tenant utama');
     }
   } catch (e) { log('  (skip seed akun)'); }
 

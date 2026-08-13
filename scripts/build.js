@@ -18,6 +18,7 @@ const FILES = [
   'notifikasi.js',
   'akun.js',
   'kelola-user.js',
+  'kelola-cabang.js',
   'pembelian.js',
   'bp-operasional.js',
   'sp-referensi.js',

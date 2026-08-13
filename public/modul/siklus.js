@@ -2153,11 +2153,20 @@ function siklusTanggalChange() {
   if (!window._gridData) return;
   var tglMulai = document.getElementById('sk-tgl-mulai').value;
   var tglSelesai = document.getElementById('sk-tgl-selesai').value;
-  if (!tglMulai || !tglSelesai) return;
-  var d1 = new Date(tglMulai + 'T00:00:00');
-  var d2 = new Date(tglSelesai + 'T00:00:00');
-  if (d2 < d1) return;
-  var totalHari = Math.floor((d2 - d1) / 86400000) + 1;
+  if (!tglMulai) return;
+  var totalHari;
+  if (tglSelesai) {
+    var d1 = new Date(tglMulai + 'T00:00:00');
+    var d2 = new Date(tglSelesai + 'T00:00:00');
+    if (d2 < d1) return;
+    totalHari = Math.floor((d2 - d1) / 86400000) + 1;
+  } else {
+    // Hanya tanggal mulai yang diisi → pakai jumlah hari yang ada sekarang
+    totalHari = Math.max(1, Object.keys(window._gridData).length);
+    var _ds = new Date(tglMulai + 'T00:00:00');
+    _ds.setDate(_ds.getDate() + totalHari - 1);
+    tglSelesai = _ds.getFullYear() + '-' + String(_ds.getMonth() + 1).padStart(2, '0') + '-' + String(_ds.getDate()).padStart(2, '0');
+  }
   // Simpan data resep dari DOM ke _gridData sebelum re-render
   var gd = window._gridData;
   var rowKeys = window._rowKeys || [];
@@ -2187,7 +2196,7 @@ function siklusTanggalChange() {
     if (parts.length) d.menu_nama = parts.join(' + ');
   });
   window._gridData = gd;
-  openSiklusFormHariChange({ value: totalHari, tglMulai: tglMulai });
+  openSiklusFormHariChange({ value: totalHari, tglMulai: tglMulai, tglSelesai: tglSelesai });
 }
 
 async function openSiklusFormHariChange(input) {
@@ -2234,13 +2243,14 @@ async function openSiklusFormHariChange(input) {
   var curKat = (document.getElementById('sk-kategori')?.value) || '';
   var curStatus = document.getElementById('sk-status').value;
   var curTglMulai = _tglMulaiStr;
+  var curTglSelesai = input.tglSelesai || document.getElementById('sk-tgl-selesai').value || '';
   var curId = window._siklusFormId;
   var meta = window._siklusMeta || {};
   var items = Object.keys(window._gridData || {}).sort(function(a,b) { return Number(a)-Number(b); }).map(function(hk) {
     var d = window._gridData[hk];
     return { hari_ke: d.hari_ke, hari_nama: d.hari_nama, menu_id: d.menu_id || '', menu_nama: d.menu_nama || '', jumlah_porsi: meta.jumlah_porsi || 0, foto: d.foto || '' };
   });
-  openSiklusForm(curId ? { id: curId, nama: curNama, kategori_penerima: curKat, total_hari: newTotal, status: curStatus, tanggal_mulai: curTglMulai, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: newTotal, status: curStatus, tanggal_mulai: curTglMulai, items: items });
+  openSiklusForm(curId ? { id: curId, nama: curNama, kategori_penerima: curKat, total_hari: newTotal, status: curStatus, tanggal_mulai: curTglMulai, tanggal_selesai: curTglSelesai, items: items } : { nama: curNama, kategori_penerima: curKat, total_hari: newTotal, status: curStatus, tanggal_mulai: curTglMulai, tanggal_selesai: curTglSelesai, items: items });
 }
 
 // Preload menu list for siklus form

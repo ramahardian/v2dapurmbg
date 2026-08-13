@@ -153,7 +153,14 @@ if (cluster.isMaster && WORKERS > 1) {
 
   // Pages
   app.get('/login', (req, res) => res.render('login'));
-  app.get('/signup', (req, res) => res.render('signup'));
+  // Halaman tambah cabang — hanya admin tenant utama (Dapur 001) yang boleh akses
+  app.get('/signup', (req, res) => {
+    try {
+      const payload = jwt.verify(req.cookies?.access_token, process.env.JWT_SECRET);
+      if (payload.tenant_id !== (parseInt(process.env.MAIN_TENANT_ID, 10) || 1)) return res.redirect('/login');
+      return res.render('signup');
+    } catch { return res.redirect('/login'); }
+  });
 
   app.get('/absen', (req, res) => {
     try {
