@@ -1120,9 +1120,19 @@ async function simpanKoperasiSetting() {
 }
 
 async function bukaRiwayatKoperasi() {
-  const setting = await muatKoperasiSetting();
+  // Identitas dapur diambil dari setting tenant (bukan localStorage), karena
+  // di sisi server filter nama/id unit dapur dikunci ke identitas ini.
+  let setting = { id_unit_dapur: '', nama_dapur: '' };
+  try {
+    const d = await api.get('/system/koperasi');
+    if (d) {
+      if (d.id_unit_dapur) setting.id_unit_dapur = d.id_unit_dapur;
+      if (d.nama_dapur) setting.nama_dapur = d.nama_dapur;
+    }
+  } catch (e) { /* biarkan kosong */ }
   const idUnit = setting.id_unit_dapur;
   const namaDapur = setting.nama_dapur;
+  const identitasKosong = !idUnit && !namaDapur;
 
   document.getElementById('modal-title').textContent = 'Riwayat Invoice Koperasi';
   document.getElementById('modal-body').innerHTML = `
@@ -1131,9 +1141,10 @@ async function bukaRiwayatKoperasi() {
         <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         <div>
           <div class="font-semibold">Riwayat dari sistem koperasi</div>
-          <div class="text-[10px] text-indigo-600 mt-0.5">Data diambil dari <span class="mono">/api/riwayat_dapur.php</span> (filter: jenis, nama dapur, rentang tanggal, id unit dapur). "Simpan ke List Pembelian" menyimpan dokumen sebagai PO baru di list /pembelian; "Sinkronkan ke PO Lokal" hanya mengisi nomor invoice di PO yang sudah ada.</div>
+          <div class="text-[10px] text-indigo-600 mt-0.5">Data diambil dari <span class="mono">/api/riwayat_dapur.php</span>. Filter Nama Dapur &amp; ID Unit Dapur <strong>dikunci ke identitas dapur ini</strong> — riwayat dapur/cabang lain tidak akan ditampilkan atau tersimpan. "Simpan ke List Pembelian" menyimpan dokumen sebagai PO baru di list /pembelian; "Sinkronkan ke PO Lokal" hanya mengisi nomor invoice di PO yang sudah ada.</div>
         </div>
       </div>
+      ${identitasKosong ? '<div class="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700"><svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="font-semibold">Identitas dapur belum disimpan</div><div class="text-[10px] mt-0.5">Riwayat koperasi hanya bisa dimuat setelah Nama Dapur / ID Unit Dapur disimpan (klik "💾 Simpan Dapur" oleh admin). Ini mencegah data dapur lain tampil.</div></div></div>' : ''}
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Jenis</label>
@@ -1144,12 +1155,13 @@ async function bukaRiwayatKoperasi() {
           </select>
         </div>
         <div>
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">ID Unit Dapur</label>
-          <input id="rw-id-unit" type="number" min="1" value="${idUnit}" placeholder="contoh: 1" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">ID Unit Dapur <span class="text-[9px] font-medium text-stone-400 normal-case">(terkunci)</span></label>
+          <input id="rw-id-unit" type="number" min="1" value="${idUnit}" placeholder="contoh: 1" disabled class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 bg-stone-100 text-stone-500 text-sm cursor-not-allowed">
         </div>
         <div class="col-span-2">
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Dapur</label>
-          <input id="rw-nama-dapur" value="${escHtml(namaDapur)}" placeholder="contoh: Dapur Pusat" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Dapur <span class="text-[9px] font-medium text-stone-400 normal-case">(terkunci)</span></label>
+          <input id="rw-nama-dapur" value="${escHtml(namaDapur)}" placeholder="contoh: Dapur Pusat" disabled class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 bg-stone-100 text-stone-500 text-sm cursor-not-allowed">
+          <p class="text-[10px] text-stone-400 mt-1">Nilai diambil dari identitas dapur tersimpan (Admin &gt; "💾 Simpan Dapur") — tidak bisa diubah manual per pencarian.</p>
         </div>
         <div>
           <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Awal</label>

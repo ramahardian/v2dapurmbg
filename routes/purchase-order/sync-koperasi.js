@@ -153,6 +153,36 @@ function registerSyncKoperasiRoutes(router) {
 // filter: jenis, nama_dapur, tanggal_awal, tanggal_akhir, id_unit_dapur.
 const KOPERASI_RIWAYAT_API_URL = process.env.KOPERASI_RIWAYAT_API_URL || 'https://koperasi.mealify.id/api/riwayat_dapur.php';
 
+// Pesan saat identitas dapur (nama / id unit) belum disimpan di tenant.
+// Riwayat koperasi sengaja TIDAK boleh dimuat tanpa identitas ini, supaya
+// satu cabang dapur tidak bisa melihat/menarik riwayat dapur lain.
+const MSG_IDENTITAS_BELUM_DISIMPAN =
+  'Identitas dapur belum disimpan. Hubungi admin cabang untuk menyimpan Nama Dapur / ID Unit Dapur ' +
+  '(tombol "💾 Simpan Dapur" di modal Riwayat Koperasi) — tanpa itu riwayat koperasi tidak dapat dimuat ' +
+  'agar data dapur lain tidak tampil.';
+
+// Kunci filter identitas dapur ke tenant yang login.
+// Nilai id_unit_dapur & nama_dapur dari client SELALU diabaikan/diganti
+// dengan setting tenant (koperasi_id_unit_dapur / koperasi_nama_dapur),
+// sehingga setiap cabang hanya bisa melihat riwayat dapur sendiri.
+async function kunciFilterKeDapur(filters, tenantId) {
+  const [[t]] = await db.query(
+    'SELECT koperasi_id_unit_dapur, koperasi_nama_dapur FROM tenants WHERE id=?',
+    [tenantId]
+  );
+  const idUnit = ((t && t.koperasi_id_unit_dapur) || '').toString().trim();
+  const namaDapur = ((t && t.koperasi_nama_dapur) || '').trim();
+
+  // Abaikan identitas yang dikirim client
+  delete filters.id_unit_dapur;
+  delete filters.nama_dapur;
+
+  if (idUnit) filters.id_unit_dapur = idUnit;
+  if (namaDapur) filters.nama_dapur = namaDapur;
+
+  return { id_unit_dapur: idUnit, nama_dapur: namaDapur, terkunci: !!(idUnit || namaDapur) };
+}
+
 // Kunci kandidat nomor invoice pada respons riwayat dapur
 const KEYS_NO_INVOICE_RIWAYAT = ['no_invoice', 'no_dokumen', 'no_invoice_koperasi', 'nomor_invoice'];
 
@@ -225,6 +255,10 @@ function registerRiwayatKoperasiRoutes(router) {
   // GET /purchase_order/riwayat-koperasi?jenis=invoice&nama_dapur=Dapur%20Pusat&tanggal_awal=2026-08-01&tanggal_akhir=2026-08-31&id_unit_dapur=1
   router.get('/purchase_order/riwayat-koperasi', async (req, res) => {
     try {
+      const kunci = await kunciFilterKeDapur(req.query, req.user.tenant_id);
+      if (!kunci.terkunci) {
+        return res.status(400).json({ error: MSG_IDENTITAS_BELUM_DISIMPAN });
+      }
       const data = await fetchRiwayatKoperasi(req.query);
       const records = normalizeRiwayatRecords(data);
       res.json({
@@ -234,6 +268,7 @@ function registerRiwayatKoperasiRoutes(router) {
         dapur: data.dapur || null,
         filter: data.filter || null,
         ringkasan: data.ringkasan || null,
+        dapur_kunci: { id_unit_dapur: kunci.id_unit_dapur, nama_dapur: kunci.nama_dapur },
         records,
       });
     } catch (e) {
@@ -248,6 +283,10 @@ function registerRiwayatKoperasiRoutes(router) {
     try {
       const t = req.user.tenant_id;
       const filters = Object.assign({}, req.body || {}, req.query);
+      const kunci = await kunciFilterKeDapur(filters, t);
+      if (!kunci.terkunci) {
+        return res.status(400).json({ error: MSG_IDENTITAS_BELUM_DISIMPAN });
+      }
       const data = await fetchRiwayatKoperasi(filters);
       const records = normalizeRiwayatRecords(data);
 
@@ -300,6 +339,10 @@ function registerRiwayatKoperasiRoutes(router) {
     try {
       const t = req.user.tenant_id;
       const filters = Object.assign({}, req.body || {}, req.query);
+      const kunci = await kunciFilterKeDapur(filters, t);
+      if (!kunci.terkunci) {
+        return res.status(400).json({ error: MSG_IDENTITAS_BELUM_DISIMPAN });
+      }
       const data = await fetchRiwayatKoperasi(filters);
       const records = normalizeRiwayatRecords(data);
 
