@@ -131,9 +131,6 @@ router.use(require('./alterPenerimaManfaat'));
 // Mengimpor dan mendaftarkan router Konfigurasi Sistem secara langsung (URL root /)
 router.use(require('./system'));
 
-// Mengimpor dan mendaftarkan router Pengaturan Dapur (subdomain, dsb.)
-router.use(require('./settings'));
-
 // Mengimpor dan mendaftarkan router Hari Libur dengan prefix path '/hari-libur'
 router.use('/hari-libur', require('./hariLibur'));
 

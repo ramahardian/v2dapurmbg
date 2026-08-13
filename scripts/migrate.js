@@ -416,33 +416,14 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi telepon tenants)'); }
 
-  // subdomain di tenants — subdomain unik per dapur (mis. sukaluyu.mbg.id)
+  // Hapus kolom subdomain dari tenants (fitur subdomain dihapus dari sistem)
   try {
     const [sdCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tenants' AND COLUMN_NAME = 'subdomain'");
-    if (!sdCols.length) {
-      await q("ALTER TABLE tenants ADD COLUMN subdomain VARCHAR(100) DEFAULT NULL AFTER nama, ADD UNIQUE INDEX uk_subdomain (subdomain)");
-      log('✓ Migrasi tenants: tambah kolom subdomain + unique index');
+    if (sdCols.length) {
+      await q("ALTER TABLE tenants DROP INDEX uk_subdomain, DROP COLUMN subdomain");
+      log('✓ Migrasi tenants: kolom subdomain dihapus (fitur subdomain dinonaktifkan)');
     }
-    // Backfill: buat subdomain slug dari nama untuk tenant yang belum punya
-    const [noSub] = await q('SELECT id, nama FROM tenants WHERE subdomain IS NULL OR subdomain = ""');
-    for (const t of noSub) {
-      const base = (t.nama || 'dapur')
-        .toLowerCase()
-        .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 50) || 'dapur';
-      let slug = base;
-      let suffix = 2;
-      for (;;) {
-        const [[dup]] = await q('SELECT COUNT(*) AS cnt FROM tenants WHERE subdomain=? AND id!=?', [slug, t.id]);
-        if (!dup.cnt) break;
-        slug = `${base}-${suffix++}`;
-      }
-      await q('UPDATE tenants SET subdomain=? WHERE id=?', [slug, t.id]);
-    }
-    if (noSub.length) log(`✓ Migrasi tenants: backfill subdomain untuk ${noSub.length} tenant`);
-  } catch (e) { log('  (skip migrasi subdomain): ' + e.message); }
+  } catch (e) { log('  (skip hapus subdomain): ' + e.message); }
 
   // koperasi_id_unit_dapur & koperasi_nama_dapur di tenants — identitas dapur di sistem koperasi
   // (dipakai default filter Riwayat Koperasi & kirim PO ke koperasi)

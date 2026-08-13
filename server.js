@@ -31,7 +31,6 @@ if (cluster.isMaster && WORKERS > 1) {
   const cookieParser = require('cookie-parser');
   const jwt = require('jsonwebtoken');
   const { requireAuth, requireRole, trackActivity } = require('./middleware/auth');
-  const { resolveTenant } = require('./middleware/tenant');
   const authRoutes = require('./routes/auth');
   const apiRoutes = require('./routes/api');
   const db = require('./db');
@@ -87,10 +86,7 @@ if (cluster.isMaster && WORKERS > 1) {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
 
-  // 7) Resolve tenant dari subdomain (Host header) — ringan, hanya query jika ada subdomain
-  app.use(resolveTenant);
-
-  // 8) API headers — no-cache untuk dynamic content
+  // 7) API headers — no-cache untuk dynamic content
   app.use('/api', (_req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.set('Pragma', 'no-cache');
@@ -98,7 +94,7 @@ if (cluster.isMaster && WORKERS > 1) {
     next();
   });
 
-  // 9) Rate limiting — proteksi abuse
+  // 8) Rate limiting — proteksi abuse
   const rateLimit = require('express-rate-limit');
 
   // Limiter khusus untuk migrate/DML endpoints: 30 request per 15 menit
@@ -156,12 +152,8 @@ if (cluster.isMaster && WORKERS > 1) {
   app.use('/api', trackActivity, apiRoutes);
 
   // Pages
-  app.get('/login', (req, res) => res.render('login', {
-    tenantNama: req.tenant?.nama || 'Dapur Sukaluyu',
-    tenantSubdomain: req.tenantSubdomain || null,
-    baseDomain: process.env.APP_BASE_DOMAIN || 'localhost',
-  }));
-  app.get('/signup', (req, res) => res.render('signup', { baseDomain: process.env.APP_BASE_DOMAIN || 'localhost' }));
+  app.get('/login', (req, res) => res.render('login'));
+  app.get('/signup', (req, res) => res.render('signup'));
 
   app.get('/absen', (req, res) => {
     try {
