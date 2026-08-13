@@ -10,6 +10,7 @@ USE mbg_kitchen;
 CREATE TABLE IF NOT EXISTS tenants (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nama VARCHAR(150) NOT NULL,
+  subdomain VARCHAR(100) DEFAULT NULL,
   alamat TEXT,
   telepon VARCHAR(30),
   plan ENUM('free','pro','enterprise') DEFAULT 'free',
@@ -17,7 +18,8 @@ CREATE TABLE IF NOT EXISTS tenants (
   saldo_awal DECIMAL(15,2) DEFAULT 0,
   koperasi_id_unit_dapur VARCHAR(20) DEFAULT NULL,
   koperasi_nama_dapur VARCHAR(200) DEFAULT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_subdomain (subdomain)
 ) ENGINE=InnoDB;
 
 

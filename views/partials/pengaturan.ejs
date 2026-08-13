@@ -1,0 +1,108 @@
+<div class="max-w-2xl">
+  <div class="bg-white border border-stone-200 rounded-lg p-6">
+    <h3 class="font-bold text-base mb-1">Subdomain Dapur</h3>
+    <p class="text-sm text-stone-500 mb-6">Alamat khusus dapur ini, mis. <b>sukaluyu.mbg.id</b>. Perubahan langsung aktif setelah disimpan.</p>
+    <div class="flex items-center gap-2 mb-1">
+      <input id="subdomain-input" type="text" spellcheck="false"
+        class="flex-1 h-11 px-3 border border-stone-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1e40af]/20 focus:border-[#1e40af]"
+        placeholder="nama-dapur" />
+      <span class="text-sm text-stone-500 font-mono whitespace-nowrap">.<%- baseDomain %></span>
+    </div>
+    <div id="subdomain-status" class="text-xs mb-4"></div>
+    <div class="flex items-center gap-3">
+      <button id="btn-simpan-subdomain" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-5 py-2.5 rounded-lg text-sm font-medium">Simpan</button>
+      <button id="btn-copy-subdomain" class="border border-stone-300 hover:bg-stone-50 text-stone-700 px-5 py-2.5 rounded-lg text-sm font-medium">Salin Alamat</button>
+    </div>
+    <div class="mt-6 pt-5 border-t border-stone-100">
+      <div class="text-sm text-stone-600">Alamat lengkap dapur ini:</div>
+      <div class="mt-1 text-sm font-mono text-[#1e40af]" id="subdomain-full">—</div>
+    </div>
+  </div>
+  <div class="mt-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm p-4 rounded-lg">
+    <b>Catatan:</b> untuk alamat <span id="subdomain-current" class="font-mono">—</span> bisa diakses, pastikan DNS wildcard <span id="subdomain-wildcard" class="font-mono">*.<%- baseDomain %></span> diarahkan ke server ini.
+  </div>
+</div>
+<script>
+  (function () {
+    var baseDomain = '<%- baseDomain %>';
+    var input = document.getElementById('subdomain-input');
+    var status = document.getElementById('subdomain-status');
+    var saveBtn = document.getElementById('btn-simpan-subdomain');
+    var copyBtn = document.getElementById('btn-copy-subdomain');
+    var full = document.getElementById('subdomain-full');
+    var current = document.getElementById('subdomain-current');
+
+    function slugify(name) {
+      return String(name || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || '';
+    }
+    function setStatus(text, cls) {
+      status.textContent = text || '';
+      status.className = 'text-xs mb-4 ' + (cls || '');
+    }
+    var debounceTimer = null;
+    input.addEventListener('input', function () {
+      input.value = slugify(input.value);
+      full.textContent = (input.value || '-') + '.' + baseDomain;
+      clearTimeout(debounceTimer);
+      if (input.value.length >= 3) {
+        debounceTimer = setTimeout(function () { cekSubdomain(input.value); }, 400);
+      } else {
+        setStatus('Minimal 3 karakter', 'text-stone-400');
+      }
+    });
+
+    async function cekSubdomain(s) {
+      try {
+        var r = await fetch('/api/settings/subdomain?s=' + encodeURIComponent(s), { credentials: 'include' });
+        var d = await r.json();
+        if (d.error) return setStatus(d.error, 'text-red-600');
+        if (d.available) setStatus('✓ Subdomain tersedia', 'text-emerald-600');
+        else setStatus('✗ Subdomain sudah dipakai dapur lain', 'text-red-600');
+      } catch (e) { setStatus('Gagal memeriksa', 'text-stone-400'); }
+    }
+
+    saveBtn.addEventListener('click', async function () {
+      var s = input.value.trim();
+      if (s.length < 3) return setStatus('Minimal 3 karakter', 'text-red-600');
+      saveBtn.disabled = true;
+      try {
+        var r = await fetch('/api/settings/subdomain', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', body: JSON.stringify({ subdomain: s })
+        });
+        var d = await r.json();
+        if (!r.ok) return setStatus(d.error || 'Gagal menyimpan', 'text-red-600');
+        input.value = d.subdomain;
+        full.textContent = d.subdomain + '.' + baseDomain;
+        current.textContent = d.subdomain + '.' + baseDomain;
+        setStatus('✓ Subdomain berhasil diubah', 'text-emerald-600');
+        showToast('Subdomain diperbarui', 'success');
+      } catch (e) {
+        setStatus('Gagal menyimpan', 'text-red-600');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    copyBtn.addEventListener('click', function () {
+      if (!input.value) return;
+      var url = 'https://' + input.value + '.' + baseDomain;
+      (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () {
+        showToast('Alamat disalin', 'success');
+      }).catch(function () {
+        prompt('Salin alamat:', url);
+      });
+    });
+
+    // Muat subdomain saat ini
+    fetch('/api/settings/subdomain', { credentials: 'include' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.subdomain) {
+        input.value = d.subdomain;
+        full.textContent = d.subdomain + '.' + baseDomain;
+        current.textContent = d.subdomain + '.' + baseDomain;
+        setStatus('', '');
+      }
+    }).catch(function () {});
+  })();
+</script>

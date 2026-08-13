@@ -14,6 +14,7 @@
     <form id="form" class="space-y-3">
       <div><label class="text-sm text-stone-700">Nama Dapur / Unit</label>
         <input id="nama_tenant" required class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" placeholder="Mis. Dapur Sukaluyu Kelurahan Sukamaju" /></div>
+      <div class="text-xs text-stone-400">Subdomain otomatis: <span id="subdomain_preview">dapur-sukaluyu</span><span class="ml-1">.<%- baseDomain %></span></div>
       <div><label class="text-sm text-stone-700">Alamat</label>
         <input id="alamat" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-md" /></div>
       <div class="grid grid-cols-2 gap-3">
@@ -32,6 +33,13 @@
     </div>
   </div>
   <script>
+    function slugify(name) {
+      return String(name || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'dapur';
+    }
+    nama_tenant.addEventListener('input', () => {
+      subdomain_preview.textContent = slugify(nama_tenant.value);
+    });
     document.getElementById('form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const err = document.getElementById('err'); err.classList.add('hidden');

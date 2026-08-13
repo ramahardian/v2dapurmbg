@@ -294,4 +294,9 @@ router.get('/kelola-user', requireRole('admin'), (req, res) => {
   res.render('partials/kelola_user');
 });
 
+// Pengaturan Dapur template — admin only (subdomain, dsb.)
+router.get('/pengaturan', requireRole('admin'), (req, res) => {
+  res.render('partials/pengaturan', { baseDomain: process.env.APP_BASE_DOMAIN || 'localhost' });
+});
+
 module.exports = router;

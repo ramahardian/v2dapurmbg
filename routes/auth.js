@@ -3,6 +3,23 @@ const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { sign, requireAuth, logUserActivity, invalidateUserCache } = require('../middleware/auth');
+
+// Buat slug subdomain unik dari nama tenant (mis. "Dapur Sukaluyu" → "dapur-sukaluyu")
+async function generateSubdomain(namaTenant) {
+  const base = (namaTenant || 'dapur')
+    .toLowerCase()
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50) || 'dapur';
+  let slug = base;
+  let suffix = 2;
+  for (;;) {
+    const [rows] = await db.query('SELECT id FROM tenants WHERE subdomain=?', [slug]);
+    if (!rows.length) return slug;
+    slug = `${base}-${suffix++}`;
+  }
+}
 function saveBase64Foto(base64Data) {
   if (!base64Data || !base64Data.startsWith('data:image')) return null;
   const matches = base64Data.match(/^data:image\/(png|jpeg|jpg|gif|webp);base64,(.+)$/);
@@ -22,14 +39,15 @@ router.post('/signup', signupLimiter, async (req, res) => {
   try {
     const [exist] = await db.query('SELECT id FROM users WHERE email=?', [email.toLowerCase()]);
     if (exist.length) return res.status(400).json({ error: 'Email sudah terdaftar' });
-    const [t] = await db.query('INSERT INTO tenants (nama, alamat) VALUES (?,?)', [nama_tenant, alamat || null]);
+    const subdomain = await generateSubdomain(nama_tenant);
+    const [t] = await db.query('INSERT INTO tenants (nama, subdomain, alamat, saldo_awal) VALUES (?,?,?,0)', [nama_tenant, subdomain, alamat || null]);
     const hash = await bcrypt.hash(password, 10);
-    const [u] = await db.query('INSERT INTO users (tenant_id, email, password_hash, nama, role) VALUES (?,?,?,?,?)',
+    const [u] = await db.query('INSERT INTO users (tenant_id, email, password_hash, nama, role, karyawan_id, updated_at) VALUES (?,?,?,?,?,0,NOW())',
       [t.insertId, email.toLowerCase(), hash, nama, 'admin']);
     const user = { id: u.insertId, tenant_id: t.insertId, email: email.toLowerCase(), nama, role: 'admin' };
     const token = sign(user);
     res.cookie('access_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 8 * 3600 * 1000, path: '/' });
-    res.json({ user, tenant_id: t.insertId });
+    res.json({ user, tenant_id: t.insertId, subdomain });
   } catch (e) {
     console.error(e); res.status(500).json({ error: 'Gagal mendaftar' });
   }
@@ -39,7 +57,19 @@ router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email & password wajib' });
-    const [rows] = await db.query('SELECT * FROM users WHERE email=?', [email.toLowerCase()]);
+    // Jika diakses via subdomain tenant (mis. sukaluyu.mbg.id), hanya izinkan login
+    // user dari tenant subdomain tersebut. Host utama tetap bisa login ke tenant mana pun.
+    let forcedTenantId = null;
+    if (req.tenant) {
+      forcedTenantId = req.tenant.id;
+      if (req.tenant.is_active === 0) return res.status(403).json({ error: 'Dapur ini dinonaktifkan' });
+    }
+    const [rows] = await db.query(
+      forcedTenantId
+        ? 'SELECT * FROM users WHERE email=? AND tenant_id=?'
+        : 'SELECT * FROM users WHERE email=?',
+      forcedTenantId ? [email.toLowerCase(), forcedTenantId] : [email.toLowerCase()]
+    );
     if (!rows.length) return res.status(401).json({ error: 'Email atau password salah' });
     const u = rows[0];
     const ok = await bcrypt.compare(password, u.password_hash);
@@ -179,7 +209,7 @@ router.post('/logout', (req, res) => {
 
 router.get('/me', requireAuth, async (req, res) => {
   const [rows] = await db.query('SELECT id, tenant_id, email, nama, role, foto, karyawan_id FROM users WHERE id=?', [req.user.id]);
-  const [t] = await db.query('SELECT id, nama, alamat, telepon FROM tenants WHERE id=?', [req.user.tenant_id]);
+  const [t] = await db.query('SELECT id, nama, subdomain, alamat, telepon FROM tenants WHERE id=?', [req.user.tenant_id]);
   res.json({ user: rows[0] || null, tenant: t[0] });
 });
 
@@ -189,7 +219,7 @@ router.post('/users', requireAuth, async (req, res) => {
   const { email, password, nama, role } = req.body;
   try {
     const hash = await bcrypt.hash(password, 10);
-    const [u] = await db.query('INSERT INTO users (tenant_id, email, password_hash, nama, role) VALUES (?,?,?,?,?)',
+    const [u] = await db.query('INSERT INTO users (tenant_id, email, password_hash, nama, role, karyawan_id, updated_at) VALUES (?,?,?,?,?,0,NOW())',
       [req.user.tenant_id, email.toLowerCase(), hash, nama, role || 'produksi']);
     res.json({ id: u.insertId, email, nama, role });
   } catch (e) {
