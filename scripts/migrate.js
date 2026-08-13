@@ -152,6 +152,35 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi nutrisi bahan_baku)'); }
 
+  // Per-cabang: tabel jabatan — tambah tenant_id jika belum ada
+  try {
+    const [jbCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'jabatan' AND COLUMN_NAME = 'tenant_id'");
+    if (!jbCols.length) {
+      await q("ALTER TABLE jabatan ADD COLUMN tenant_id INT NULL AFTER id, ADD INDEX idx_jabatan_tenant (tenant_id)");
+      await q("UPDATE jabatan SET tenant_id=1 WHERE tenant_id IS NULL");
+      log('✓ Migrasi jabatan: tambah kolom tenant_id');
+    }
+    // Perbaiki id jabatan agar AUTO_INCREMENT (dulu dibuat tanpa auto increment)
+    const [jbAuto] = await q("SELECT EXTRA FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'jabatan' AND COLUMN_NAME = 'id'");
+    if (jbAuto.length && jbAuto[0].EXTRA !== 'auto_increment') {
+      await q('ALTER TABLE jabatan MODIFY id INT NOT NULL AUTO_INCREMENT');
+      log('✓ Migrasi jabatan: id → AUTO_INCREMENT');
+    }
+  } catch (e) { log('  (skip migrasi jabatan tenant): ' + e.message); }
+
+  // Per-cabang: tabel standar_sp — tambah tenant_id + unique key per tenant
+  try {
+    const [ssCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'standar_sp' AND COLUMN_NAME = 'tenant_id'");
+    if (!ssCols.length) {
+      await q("ALTER TABLE standar_sp ADD COLUMN tenant_id INT NULL AFTER id, ADD INDEX idx_standar_sp_tenant (tenant_id)");
+      await q("UPDATE standar_sp SET tenant_id=1 WHERE tenant_id IS NULL");
+      // Ganti unique key lama (jenjang, kategori_sp) → (tenant_id, jenjang, kategori_sp)
+      await q("ALTER TABLE standar_sp DROP INDEX uk_jenjang_kategori");
+      await q("ALTER TABLE standar_sp ADD UNIQUE KEY uk_jenjang_kategori_tenant (tenant_id, jenjang, kategori_sp)");
+      log('✓ Migrasi standar_sp: tambah kolom tenant_id');
+    }
+  } catch (e) { log('  (skip migrasi standar_sp tenant): ' + e.message); }
+
   // Karyawan jabatan
   try {
     const [jabCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'karyawan' AND COLUMN_NAME = 'jabatan'");
@@ -274,28 +303,33 @@ async function runMigration() {
   try {
     await q(`CREATE TABLE IF NOT EXISTS standar_sp (
       id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id INT NULL,
       jenjang VARCHAR(50) NOT NULL,
       kategori_sp VARCHAR(50) NOT NULL,
       sp_value DECIMAL(5,2) NOT NULL,
-      UNIQUE KEY uk_jenjang_kategori (jenjang, kategori_sp)
+      INDEX idx_standar_sp_tenant (tenant_id),
+      UNIQUE KEY uk_jenjang_kategori_tenant (tenant_id, jenjang, kategori_sp)
     ) ENGINE=InnoDB`);
-    await q(`INSERT IGNORE INTO standar_sp (jenjang, kategori_sp, sp_value) VALUES
-      ('Ibu Hamil', 'Karbohidrat', 2.5), ('Ibu Hamil', 'Protein Hewani', 2), ('Ibu Hamil', 'Protein Nabati', 1),
-      ('Ibu Hamil', 'Sayur', 1), ('Ibu Hamil', 'Buah', 1), ('Ibu Hamil', 'Susu', 1), ('Ibu Hamil', 'Minyak', 1.5),
-      ('Ibu Menyusui', 'Karbohidrat', 2.5), ('Ibu Menyusui', 'Protein Hewani', 2), ('Ibu Menyusui', 'Protein Nabati', 1),
-      ('Ibu Menyusui', 'Sayur', 1), ('Ibu Menyusui', 'Buah', 1), ('Ibu Menyusui', 'Susu', 1), ('Ibu Menyusui', 'Minyak', 1.5),
-      ('Balita', 'Karbohidrat', 0.8), ('Balita', 'Protein Hewani', 1), ('Balita', 'Protein Nabati', 0.25),
-      ('Balita', 'Sayur', 0.25), ('Balita', 'Buah', 1), ('Balita', 'Susu', 1), ('Balita', 'Minyak', 1),
-      ('TK/PAUD', 'Karbohidrat', 0.8), ('TK/PAUD', 'Protein Hewani', 1), ('TK/PAUD', 'Protein Nabati', 0.25),
-      ('TK/PAUD', 'Sayur', 0.25), ('TK/PAUD', 'Buah', 1), ('TK/PAUD', 'Susu', 1), ('TK/PAUD', 'Minyak', 1),
-      ('SD 1-3', 'Karbohidrat', 1), ('SD 1-3', 'Protein Hewani', 1), ('SD 1-3', 'Protein Nabati', 0.25),
-      ('SD 1-3', 'Sayur', 0.25), ('SD 1-3', 'Buah', 1), ('SD 1-3', 'Susu', 1), ('SD 1-3', 'Minyak', 1),
-      ('SD 4-6', 'Karbohidrat', 1.75), ('SD 4-6', 'Protein Hewani', 1.5), ('SD 4-6', 'Protein Nabati', 0.5),
-      ('SD 4-6', 'Sayur', 0.5), ('SD 4-6', 'Buah', 1), ('SD 4-6', 'Susu', 1), ('SD 4-6', 'Minyak', 1.5),
-      ('SMP', 'Karbohidrat', 2), ('SMP', 'Protein Hewani', 1.5), ('SMP', 'Protein Nabati', 1),
-      ('SMP', 'Sayur', 0.5), ('SMP', 'Buah', 1), ('SMP', 'Susu', 1), ('SMP', 'Minyak', 1.5),
-      ('SMA', 'Karbohidrat', 2), ('SMA', 'Protein Hewani', 2), ('SMA', 'Protein Nabati', 1),
-      ('SMA', 'Sayur', 1), ('SMA', 'Buah', 1), ('SMA', 'Susu', 1), ('SMA', 'Minyak', 1.5)`);
+    const [[standarCnt]] = await q("SELECT COUNT(*) as c FROM standar_sp");
+    if (standarCnt.c === 0) {
+      await q(`INSERT IGNORE INTO standar_sp (tenant_id, jenjang, kategori_sp, sp_value) VALUES
+      (1, 'Ibu Hamil', 'Karbohidrat', 2.5), (1, 'Ibu Hamil', 'Protein Hewani', 2), (1, 'Ibu Hamil', 'Protein Nabati', 1),
+      (1, 'Ibu Hamil', 'Sayur', 1), (1, 'Ibu Hamil', 'Buah', 1), (1, 'Ibu Hamil', 'Susu', 1), (1, 'Ibu Hamil', 'Minyak', 1.5),
+      (1, 'Ibu Menyusui', 'Karbohidrat', 2.5), (1, 'Ibu Menyusui', 'Protein Hewani', 2), (1, 'Ibu Menyusui', 'Protein Nabati', 1),
+      (1, 'Ibu Menyusui', 'Sayur', 1), (1, 'Ibu Menyusui', 'Buah', 1), (1, 'Ibu Menyusui', 'Susu', 1), (1, 'Ibu Menyusui', 'Minyak', 1.5),
+      (1, 'Balita', 'Karbohidrat', 0.8), (1, 'Balita', 'Protein Hewani', 1), (1, 'Balita', 'Protein Nabati', 0.25),
+      (1, 'Balita', 'Sayur', 0.25), (1, 'Balita', 'Buah', 1), (1, 'Balita', 'Susu', 1), (1, 'Balita', 'Minyak', 1),
+      (1, 'TK/PAUD', 'Karbohidrat', 0.8), (1, 'TK/PAUD', 'Protein Hewani', 1), (1, 'TK/PAUD', 'Protein Nabati', 0.25),
+      (1, 'TK/PAUD', 'Sayur', 0.25), (1, 'TK/PAUD', 'Buah', 1), (1, 'TK/PAUD', 'Susu', 1), (1, 'TK/PAUD', 'Minyak', 1),
+      (1, 'SD 1-3', 'Karbohidrat', 1), (1, 'SD 1-3', 'Protein Hewani', 1), (1, 'SD 1-3', 'Protein Nabati', 0.25),
+      (1, 'SD 1-3', 'Sayur', 0.25), (1, 'SD 1-3', 'Buah', 1), (1, 'SD 1-3', 'Susu', 1), (1, 'SD 1-3', 'Minyak', 1),
+      (1, 'SD 4-6', 'Karbohidrat', 1.75), (1, 'SD 4-6', 'Protein Hewani', 1.5), (1, 'SD 4-6', 'Protein Nabati', 0.5),
+      (1, 'SD 4-6', 'Sayur', 0.5), (1, 'SD 4-6', 'Buah', 1), (1, 'SD 4-6', 'Susu', 1), (1, 'SD 4-6', 'Minyak', 1.5),
+      (1, 'SMP', 'Karbohidrat', 2), (1, 'SMP', 'Protein Hewani', 1.5), (1, 'SMP', 'Protein Nabati', 1),
+      (1, 'SMP', 'Sayur', 0.5), (1, 'SMP', 'Buah', 1), (1, 'SMP', 'Susu', 1), (1, 'SMP', 'Minyak', 1.5),
+      (1, 'SMA', 'Karbohidrat', 2), (1, 'SMA', 'Protein Hewani', 2), (1, 'SMA', 'Protein Nabati', 1),
+      (1, 'SMA', 'Sayur', 1), (1, 'SMA', 'Buah', 1), (1, 'SMA', 'Susu', 1), (1, 'SMA', 'Minyak', 1.5)`);
+    }
     log('✓ Migrasi standar_sp: tabel dan seed data');
   } catch (e) { log('  (skip migrasi standar_sp): ' + e.message); }
 
@@ -308,7 +342,7 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi gizi)'); }
 
-  // Seed sp_referensi_bahan hanya untuk tenant_id=1 (cabang baru TIDAK disalin — mulai kosong)
+  // Seed sp_referensi_bahan untuk tenant utama (id=1); cabang baru disalin dari sini saat signup
   try {
     const [[{cnt}]] = await q("SELECT COUNT(*) as cnt FROM sp_referensi_bahan WHERE tenant_id=1");
     if (cnt === 0) {

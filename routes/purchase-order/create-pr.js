@@ -86,7 +86,7 @@ function registerCreatePrRoutes(router) {
           if (!porsiCount) continue;
 
           // Load SP spesifik untuk jenjang ini
-          const spMap = await loadSpMap([jDisplay]);
+          const spMap = await loadSpMap(t, [jDisplay]);
 
           // A. Menu-based calculation
           for (const it of items) {

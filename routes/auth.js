@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { sign, requireAuth, logUserActivity, invalidateUserCache } = require('../middleware/auth');
+const { seedBranch } = require('../services/seedBranch');
 
 // Tenant utama (Dapur 001 / Dapur Sukaluyu) — satu-satunya yang boleh mengelola cabang.
 const MAIN_TENANT_ID = parseInt(process.env.MAIN_TENANT_ID, 10) || 1;
@@ -20,22 +21,32 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { e
 const signupLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { error: 'Terlalu banyak pendaftaran. Coba lagi 1 jam.' } });
 
 // Daftarkan cabang dapur baru (SaaS) — HANYA admin tenant utama (Dapur 001) yang boleh.
-// Cabang baru mulai dengan data kosong (semua tabel, termasuk akun & referensi gizi).
+// Cabang baru mulai dengan data kosong (akun, menu, bahan, SDM transaksi) —
+// kecuali master data yang di-seed per cabang: Referensi SP Bahan, Standar SP,
+// dan master SDM (jabatan, shift, divisi, shift_divisi) yang disalin dari dapur utama.
 router.post('/signup', signupLimiter, requireAuth, async (req, res) => {
   if (req.user.tenant_id !== MAIN_TENANT_ID) return res.status(403).json({ error: 'Hanya admin Dapur 001 yang boleh menambah cabang' });
   const { nama_tenant, alamat, email, password, nama } = req.body;
   if (!nama_tenant || !email || !password || !nama) return res.status(400).json({ error: 'Field wajib tidak lengkap' });
+  const conn = await db.getConnection();
   try {
-    const [exist] = await db.query('SELECT id FROM users WHERE email=?', [email.toLowerCase()]);
+    const [exist] = await conn.query('SELECT id FROM users WHERE email=?', [email.toLowerCase()]);
     if (exist.length) return res.status(400).json({ error: 'Email sudah terdaftar' });
-    const [t] = await db.query('INSERT INTO tenants (nama, alamat, saldo_awal) VALUES (?,?,0)', [nama_tenant, alamat || null]);
+    await conn.beginTransaction();
+    const [t] = await conn.query('INSERT INTO tenants (nama, alamat, saldo_awal) VALUES (?,?,0)', [nama_tenant, alamat || null]);
     const hash = await bcrypt.hash(password, 10);
-    const [u] = await db.query('INSERT INTO users (tenant_id, email, password_hash, nama, role, karyawan_id, updated_at) VALUES (?,?,?,?,?,0,NOW())',
+    const [u] = await conn.query('INSERT INTO users (tenant_id, email, password_hash, nama, role, karyawan_id, updated_at) VALUES (?,?,?,?,?,0,NOW())',
       [t.insertId, email.toLowerCase(), hash, nama, 'admin']);
+    // Salin master data gizi & SDM dari dapur utama ke cabang baru
+    await seedBranch(conn, t.insertId, MAIN_TENANT_ID);
+    await conn.commit();
     const user = { id: u.insertId, tenant_id: t.insertId, email: email.toLowerCase(), nama, role: 'admin' };
     res.json({ ok: true, user, tenant_id: t.insertId });
   } catch (e) {
+    await conn.rollback().catch(() => {});
     console.error(e); res.status(500).json({ error: 'Gagal mendaftar' });
+  } finally {
+    conn.release();
   }
 });
 
@@ -97,6 +108,14 @@ router.delete('/branches/:id', requireAuth, async (req, res) => {
     await conn.query('DELETE FROM pm_harian WHERE tenant_id=?', [id]);
     await conn.query('DELETE FROM karyawan WHERE tenant_id=?', [id]);
     await conn.query('DELETE FROM penerima_manfaat WHERE tenant_id=?', [id]);
+    // Master data per-cabang (diseed saat signup)
+    await conn.query('DELETE FROM shift_divisi WHERE tenant_id=?', [id]);
+    await conn.query('DELETE FROM jabatan WHERE tenant_id=?', [id]);
+    await conn.query('DELETE FROM standar_sp WHERE tenant_id=?', [id]);
+    await conn.query('DELETE FROM shift WHERE tenant_id=?', [id]);
+    await conn.query('DELETE FROM divisi WHERE tenant_id=?', [id]);
+    await conn.query('DELETE FROM sp_referensi_bahan WHERE tenant_id=?', [id]);
+    await conn.query('DELETE FROM users WHERE tenant_id=?', [id]);
     await conn.query('DELETE FROM tenants WHERE id=?', [id]);
     await conn.commit();
     res.json({ ok: true, id });

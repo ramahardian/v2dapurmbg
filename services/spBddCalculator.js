@@ -67,23 +67,23 @@ function hitungBDD(beratBersih, persenBdd) {
   return bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
 }
 
-async function getSpMapByJenjang(jenjang) {
+async function getSpMapByJenjang(jenjang, tenantId) {
   const [spRows] = await db.query(
-    'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
-    [jenjang]
+    'SELECT kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang=?',
+    [tenantId, jenjang]
   );
   const spMap = {};
   for (const r of spRows) spMap[r.kategori_sp] = Number(r.sp_value);
   return spMap;
 }
 
-async function getSpMapByJenjangList(jenjangList) {
+async function getSpMapByJenjangList(jenjangList, tenantId) {
   const spMap = {};
   if (!jenjangList.length) return spMap;
   const jh = jenjangList.map(() => '?').join(',');
   const [spRows] = await db.query(
-    `SELECT jenjang, kategori_sp, sp_value FROM standar_sp WHERE jenjang IN (${jh})`,
-    jenjangList
+    `SELECT jenjang, kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang IN (${jh})`,
+    [tenantId, ...jenjangList]
   );
   for (const r of spRows) {
     if (!spMap[r.jenjang]) spMap[r.jenjang] = {};

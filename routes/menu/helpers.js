@@ -32,8 +32,8 @@ async function loadSpData(tenantId, kategoriPenerima) {
   let jumlahPorsi = 0;
   if (kategoriPenerima) {
     const [spRows] = await db.query(
-      'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
-      [kategoriPenerima]
+      'SELECT kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang=?',
+      [tenantId, kategoriPenerima]
     );
     for (const r of spRows) spMap[r.kategori_sp] = Number(r.sp_value);
     const [pmRow] = await db.query(

@@ -98,7 +98,7 @@ function registerWarehouseRoutes(router) {
     );
 
     const targetJenjang = mapJenjang(siklus.kategori_penerima);
-    const spMap = await getSpMapByJenjang(targetJenjang);
+    const spMap = await getSpMapByJenjang(targetJenjang, req.user.tenant_id);
 
     const days = [];
 

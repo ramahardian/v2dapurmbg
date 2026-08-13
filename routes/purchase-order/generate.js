@@ -171,7 +171,7 @@ function registerGenerateRoutes(router) {
         // SP map per jenjang — tidak bergantung grup, muat sekali per siklus
         const spMapByDisplay = {};
         for (const jDisplay of matchingDisplay) {
-          spMapByDisplay[jDisplay] = await loadSpMap([jDisplay]);
+          spMapByDisplay[jDisplay] = await loadSpMap(req.user.tenant_id, [jDisplay]);
         }
 
         // LOOP PER MENU

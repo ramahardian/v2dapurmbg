@@ -130,7 +130,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   } catch (e) { /* table optional */ }
 
   // Standar SP
-  const [spStandar] = await db.query('SELECT DISTINCT jenjang, kategori_sp, sp_value FROM standar_sp');
+  const [spStandar] = await db.query('SELECT DISTINCT jenjang, kategori_sp, sp_value FROM standar_sp WHERE tenant_id=?', [req.user.tenant_id]);
   const spByJenjangKat = {};
   for (const s of spStandar) {
     if (!spByJenjangKat[s.jenjang]) spByJenjangKat[s.jenjang] = {};
@@ -368,7 +368,7 @@ async function buildPerencanaanData({ tenant_id, query }) {
   } catch (e) { /* table optional */ }
 
   // Standar SP
-  const [spStandar] = await db.query('SELECT DISTINCT jenjang, kategori_sp, sp_value FROM standar_sp');
+  const [spStandar] = await db.query('SELECT DISTINCT jenjang, kategori_sp, sp_value FROM standar_sp WHERE tenant_id=?', [tenant_id]);
   const spByJenjangKat = {};
   for (const s of spStandar) {
     if (!spByJenjangKat[s.jenjang]) spByJenjangKat[s.jenjang] = {};

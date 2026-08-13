@@ -74,14 +74,14 @@ function buildPmMap(pmByJenjang, dbToDisplay) {
 /**
  * Load SP values for a list of jenjang display labels
  */
-async function loadSpMap(jenjangList) {
+async function loadSpMap(tenantId, jenjangList) {
   const dbVariants = expandJenjang(jenjangList);
   const spMap = {};
   if (dbVariants.length) {
     const spSql = dbVariants.length === 1
-      ? 'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?'
-      : `SELECT kategori_sp, MAX(sp_value) AS sp_value FROM standar_sp WHERE jenjang IN (${dbVariants.map(() => '?').join(',')}) GROUP BY kategori_sp`;
-    const [spRows] = await db.query(spSql, dbVariants.length === 1 ? [dbVariants[0]] : dbVariants);
+      ? 'SELECT kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang=?'
+      : `SELECT kategori_sp, MAX(sp_value) AS sp_value FROM standar_sp WHERE tenant_id=? AND jenjang IN (${dbVariants.map(() => '?').join(',')}) GROUP BY kategori_sp`;
+    const [spRows] = await db.query(spSql, [tenantId, ...dbVariants]);
     for (const sr of spRows) spMap[sr.kategori_sp] = Number(sr.sp_value);
   }
   return spMap;

@@ -132,14 +132,14 @@ router.get('/departemen', requireRole('admin', 'keuangan'), async (req, res) => 
 });
 
 router.get('/jabatan', requireRole('admin', 'keuangan'), async (req, res) => {
-  const [rows] = await db.query(`SELECT * FROM jabatan ORDER BY id`);
+  const [rows] = await db.query(`SELECT * FROM jabatan WHERE tenant_id=? ORDER BY id`, [req.user.tenant_id]);
   res.json(rows);
 });
 
 router.post('/jabatan', requireRole('admin', 'keuangan'), async (req, res) => {
   const { name, description, shift_id } = req.body;
   if (!name || !name.trim()) return res.status(400).json({ error: 'Nama jabatan wajib diisi' });
-  const [r] = await db.query('INSERT INTO jabatan (name, description, shift_id) VALUES (?,?,?)', [name.trim(), description || null, shift_id || null]);
+  const [r] = await db.query('INSERT INTO jabatan (tenant_id, name, description, shift_id) VALUES (?,?,?,?)', [req.user.tenant_id, name.trim(), description || null, shift_id || null]);
   const [rows] = await db.query('SELECT * FROM jabatan WHERE id=?', [r.insertId]);
   res.json(rows[0]);
 });
@@ -151,14 +151,14 @@ router.put('/jabatan/:id', requireRole('admin', 'keuangan'), async (req, res) =>
   if (description !== undefined) { sets.push('description=?'); vals.push(description); }
   if (shift_id !== undefined) { sets.push('shift_id=?'); vals.push(shift_id); }
   if (!vals.length) return res.status(400).json({ error: 'Tidak ada perubahan' });
-  vals.push(req.params.id);
-  await db.query(`UPDATE jabatan SET ${sets.join(',')} WHERE id=?`, vals);
-  const [rows] = await db.query('SELECT * FROM jabatan WHERE id=?', [req.params.id]);
+  vals.push(req.params.id, req.user.tenant_id);
+  await db.query(`UPDATE jabatan SET ${sets.join(',')} WHERE id=? AND tenant_id=?`, vals);
+  const [rows] = await db.query('SELECT * FROM jabatan WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
   res.json(rows[0]);
 });
 
 router.delete('/jabatan/:id', requireRole('admin', 'keuangan'), async (req, res) => {
-  await db.query('DELETE FROM jabatan WHERE id=?', [req.params.id]);
+  await db.query('DELETE FROM jabatan WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
   res.json({ ok: true });
 });
 
