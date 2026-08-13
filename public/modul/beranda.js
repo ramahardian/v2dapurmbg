@@ -161,7 +161,7 @@ function dashMenuGenImageBlob(m) {
 
     const G9 = '#14532D', G7 = '#166534', G6 = '#15803D', OR = '#F97316', OR4 = '#FB923C',
           INK = '#1C1917', MUT = '#6B7280';
-    const tenant = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama) || 'SPPG Sukaluyu Tamansari';
+    const tenant = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama) || 'Dapur Sukaluyu';
     const tenantShort = String(tenant);
 
     // ── Background putih + doodle makanan sangat tipis ──

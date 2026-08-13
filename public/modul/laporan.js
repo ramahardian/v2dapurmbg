@@ -1,4 +1,8 @@
 // ===== Laporan =====
+// Nama tenant untuk kop laporan cetak — otomatis mengikuti nama cabang.
+function lapKopTenant() {
+  return (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama) || 'Dapur Sukaluyu';
+}
 async function renderLaporan() {
   const c = document.getElementById('content');
   c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
@@ -499,7 +503,7 @@ const tabColors = {
           var reportHeader = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">' +
             '<div class="px-5 py-4 text-center border-b border-stone-100" style="background:linear-gradient(135deg,#0e7490,#0891b2)">' +
               '<h1 class="text-sm font-bold text-white uppercase tracking-wider">RENCANA ANGGARAN BELANJA (RAB) BAHAN BAKU HARIAN</h1>' +
-              '<div class="text-[10px] text-cyan-100 mt-1">SPPG BOGOR TAMANSARI SUKALUYU</div>' +
+              '<div class="text-[10px] text-cyan-100 mt-1">' + lapKopTenant().toUpperCase() + '</div>' +
               '<div class="text-[10px] text-cyan-100">YAYASAN SHAIMA ANAK SHOLEHA</div>' +
             '</div>' +
             '<div class="px-5 py-3 bg-white border-b border-stone-100">' +
@@ -962,7 +966,7 @@ const tabColors = {
       var reportHeader = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">' +
         '<div class="px-5 py-4 text-center border-b border-stone-100" style="background:linear-gradient(135deg,#0e7490,#0891b2)">' +
           '<h1 class="text-sm font-bold text-white uppercase tracking-wider">RENCANA ANGGARAN BELANJA (RAB) BAHAN BAKU HARIAN</h1>' +
-          '<div class="text-[10px] text-cyan-100 mt-1">SPPG BOGOR TAMANSARI SUKALUYU</div>' +
+          '<div class="text-[10px] text-cyan-100 mt-1">' + lapKopTenant().toUpperCase() + '</div>' +
           '<div class="text-[10px] text-cyan-100">YAYASAN SHAIMA ANAK SHOLEHA</div>' +
         '</div>' +
         '<div class="px-5 py-3 bg-white border-b border-stone-100">' +
@@ -1449,7 +1453,7 @@ const tabColors = {
       var d = apiData || { bahan_baku: { diajukan: 0, terpakai: 0, sisa: 0 }, operasional: { diajukan: 0, terpakai: 0, sisa: 0 }, insentif: { diajukan: 0, terpakai: 0, sisa: 0 }, total: { diajukan: 0, terpakai: 0, sisa: 0 } };
 
       var rekening = baState.pa_rekening || '';
-      var lokasi = 'sukaluyu taman sari';
+      var lokasi = lapKopTenant();
       var tglStr = baState.pa_tanggal || nowDate.toISOString().slice(0,10);      var tglPanjang = fmtDateIndonesia(tglStr);
 
       var fmtIdr = fmtIDR;
@@ -1543,7 +1547,7 @@ const tabColors = {
         '<p class="mb-1">' + lokasi + ', ' + tglPanjang + '</p>' +
         '<p class="font-semibold mb-1">Pihak Kedua,</p>' +
         '<div class="mt-12">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</div>' +
-        '<p class="mt-2 font-semibold">SPPG SUKALUYU</p>' +
+        '<p class="mt-2 font-semibold">' + lapKopTenant().toUpperCase() + '</p>' +
         '</div></div></div>';
 
       window._lapData = null;

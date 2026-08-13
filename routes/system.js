@@ -485,8 +485,14 @@ router.get('/system/kop-surat', async (req, res) => {
 router.put('/system/kop-surat', requireRole('admin'), async (req, res) => {
   try {
     const { kop_nama, kop_alamat, kop_telepon } = req.body || {};
+    // Jika nama dikosongkan, pertahankan nama tenant yang sudah ada (jangan di-reset).
+    let nama = (kop_nama || '').trim();
+    if (!nama) {
+      const [[t]] = await db.query('SELECT nama FROM tenants WHERE id=?', [req.user.tenant_id]);
+      nama = (t && t.nama) ? t.nama : '';
+    }
     await db.query('UPDATE tenants SET nama=?, alamat=?, telepon=? WHERE id=?', [
-      (kop_nama || '').trim() || 'Dapur Sukaluyu',
+      nama,
       (kop_alamat || '').trim(),
       (kop_telepon || '').trim(),
       req.user.tenant_id

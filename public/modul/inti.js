@@ -1,6 +1,39 @@
 let currentUser = null;
 let currentTenant = null;
 
+// ── Branding per cabang ──
+// Nama tampilan tenant: tenant utama (id=1) = "Dapur Sukaluyu", cabang = nama tenant.
+function tenantBrandName() {
+  const t = currentTenant;
+  if (!t) return 'Dapur Sukaluyu';
+  return (t.nama && t.id !== 1) ? t.nama : 'Dapur Sukaluyu';
+}
+function isBranchTenant() {
+  return !!(currentTenant && currentTenant.id !== 1);
+}
+// Tampilkan nama cabang di bawah judul "Dapur Sukaluyu" (sidebar logo, header mobile, splash).
+function applyTenantBranding() {
+  const cabang = isBranchTenant() && currentTenant.nama ? currentTenant.nama : null;
+  // Sidebar logo
+  const logoSub = document.getElementById('sidebar-logo-sub');
+  if (logoSub) {
+    if (cabang) { logoSub.textContent = cabang; logoSub.classList.remove('hidden'); }
+    else { logoSub.textContent = ''; logoSub.classList.add('hidden'); }
+  }
+  // Mobile header
+  const mobSub = document.getElementById('mobile-header-sub');
+  if (mobSub) {
+    if (cabang) { mobSub.textContent = cabang; mobSub.classList.remove('hidden'); }
+    else { mobSub.textContent = ''; mobSub.classList.add('hidden'); }
+  }
+  // Splash screen
+  const splashSub = document.getElementById('splash-sub');
+  if (splashSub) {
+    if (cabang) { splashSub.textContent = cabang; splashSub.classList.remove('hidden'); }
+    else { splashSub.textContent = 'Makan Bergizi Gratis'; splashSub.classList.remove('hidden'); }
+  }
+}
+
 (function() {
   var s = document.createElement('style');
   s.textContent = '.cb-modern{appearance:none!important;-webkit-appearance:none!important;width:18px!important;height:18px!important;border:2px solid #d4d4d4!important;border-radius:5px!important;background:#fff!important;cursor:pointer!important;position:relative!important;transition:all .2s ease!important;flex-shrink:0!important}.cb-modern:hover{border-color:#a3a3a3!important;background:#fafafa!important}.cb-modern:checked{border-color:#059669!important;background:#059669!important}.cb-modern:checked::after{content:"";position:absolute;top:2px;left:5px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}.cb-modern:focus-visible{outline:2px solid #05966944;outline-offset:2px;border-color:#059669}';
@@ -27,6 +60,7 @@ async function init() {
     splashStep('Memverifikasi sesi...');
     const me = await api.get('/auth/me');
     currentUser = me.user; currentTenant = me.tenant;
+    applyTenantBranding();
     document.getElementById('user-name').textContent = currentUser.nama;
     document.getElementById('user-role').textContent = currentUser.role.replace('_', ' ');
     if (currentUser.foto) {
@@ -348,7 +382,7 @@ function route() {
     dd.classList.toggle('open', !!hasActive);
     dd.querySelector('.sidebar-dropdown-parent')?.classList.toggle('active', !!isParentMatch);
   });
-  document.title = m.title + ' — Dapur Sukaluyu';
+  document.title = m.title + ' — ' + tenantBrandName();
   document.getElementById('page-title').textContent = m.title;
   document.getElementById('page-sub').textContent = m.sub;
   renderMobileBreadcrumb(MODULES[key] ? key : 'dashboard');

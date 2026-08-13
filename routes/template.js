@@ -156,10 +156,11 @@ router.get('/dashboard', async (req, res) => {
       menu_aktif_list: menuAktifList
     };
     
+    const [[tenant]] = await db.query('SELECT id, nama, alamat FROM tenants WHERE id=?', [req.user.tenant_id]);
     res.render('partials/dashboard', { 
       summary,
       user: req.user || { nama: 'User' },
-      tenant: req.tenant || { nama: 'Dapur' }
+      tenant: tenant || { id: req.user.tenant_id, nama: 'Dapur Sukaluyu', alamat: '' }
     });
   } catch (err) {
     console.error('Dashboard template error:', err);

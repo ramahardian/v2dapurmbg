@@ -42,6 +42,7 @@
     #sidebar.collapsed .sidebar-link .nav-label,
     #sidebar.collapsed .nav-group-label { opacity:0;width:0;display:none; }
     #sidebar.collapsed .sidebar-logo-text,
+    #sidebar.collapsed .sidebar-logo-sub,
     #sidebar.collapsed .user-info-text,
     #sidebar.collapsed .sidebar-toggle-label { display:none; }
     #sidebar.collapsed .sidebar-logo-wrap { justify-content:center;padding:.5rem; }
@@ -52,7 +53,7 @@
     #sidebar.collapsed .sidebar-badge { display:none !important; }
     #sidebar.collapsed .sidebar-toggle { display:none; }
     #app.sidebar-collapsed main { margin-left:64px; }
-    @media (max-width:1023px) { #sidebar.collapsed { width:260px; } #sidebar.collapsed .sidebar-link { justify-content:flex-start;padding:.5rem .875rem;gap:.75rem; } #sidebar.collapsed .sidebar-link .nav-label, #sidebar.collapsed .nav-group-label { opacity:1;width:auto;display:block; } #sidebar.collapsed .sidebar-logo-text, #sidebar.collapsed .user-info-text { display:block; } #sidebar.collapsed .sidebar-logo-wrap { justify-content:flex-start;padding:.5rem 1.25rem; } #sidebar.collapsed .user-area { display:flex;justify-content:flex-start;padding:0; } #sidebar.collapsed .logout-text { display:inline; } #app.sidebar-collapsed main { margin-left:0; } }
+    @media (max-width:1023px) { #sidebar.collapsed { width:260px; } #sidebar.collapsed .sidebar-link { justify-content:flex-start;padding:.5rem .875rem;gap:.75rem; } #sidebar.collapsed .sidebar-link .nav-label, #sidebar.collapsed .nav-group-label { opacity:1;width:auto;display:block; } #sidebar.collapsed .sidebar-logo-text, #sidebar.collapsed .sidebar-logo-sub, #sidebar.collapsed .user-info-text { display:block; } #sidebar.collapsed .sidebar-logo-wrap { justify-content:flex-start;padding:.5rem 1.25rem; } #sidebar.collapsed .user-area { display:flex;justify-content:flex-start;padding:0; } #sidebar.collapsed .logout-text { display:inline; } #app.sidebar-collapsed main { margin-left:0; } }
     .modal-content { background: var(--bg-body); border: 1px solid var(--border); }
     .modal-backdrop, [class*="bg-black/"] { background: rgba(0,0,0,.65); }
     html.dark .modal-backdrop, html.dark [class*="bg-black/"] { background: rgba(0,0,0,.8); }
@@ -153,7 +154,7 @@
       <!-- Title -->
       <div class="text-center">
         <h1 class="text-2xl font-bold text-white tracking-tight">Dapur Sukaluyu</h1>
-        <p class="text-white/60 text-sm mt-1 font-medium">Makan Bergizi Gratis</p>
+        <p id="splash-sub" class="text-white/60 text-sm mt-1 font-medium">Makan Bergizi Gratis</p>
       </div>
       <!-- Progress bar -->
       <div class="splash-bar-track mt-2">
@@ -177,7 +178,10 @@
     <button onclick="toggleSidebar()" class="p-2 -ml-2 rounded-md" style="color:var(--text-body)">
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
-    <div class="font-bold text-lg flex-1 truncate" style="color:var(--text-body)">Dapur Sukaluyu</div>
+    <div class="flex-1 min-w-0">
+      <div id="mobile-header-title" class="font-bold text-lg truncate" style="color:var(--text-body)">Dapur Sukaluyu</div>
+      <div id="mobile-header-sub" class="hidden text-[10px] font-medium truncate" style="color:var(--text-body);opacity:.6">—</div>
+    </div>
         <div class="flex items-center gap-1">
           <div class="relative">
             <button id="chat-header-btn-mobile" onclick="toggleChatPanel()" class="p-2 rounded-lg relative" style="color:var(--text-body)" title="Chat">
@@ -206,7 +210,10 @@
     <aside id="sidebar" class="w-[260px] shrink-0 fixed inset-y-0 left-0 flex flex-col transform -translate-x-full lg:translate-x-0 transition-all duration-200 z-40" style="background:var(--bg-sidebar);color:var(--text-body);border-right:1px solid var(--border)">
       <div class="sidebar-logo-wrap flex items-center gap-3 px-5 py-5 cursor-pointer" onclick="expandSidebar()" style="border-bottom:1px solid var(--border)">
         <img src="/asset/logo.png" alt="Dapur Sukaluyu" class="h-9 w-9 rounded-md shrink-0 object-contain" style="background:var(--border)" />
-        <span class="sidebar-logo-text font-bold leading-tight truncate">Dapur Sukaluyu</span>
+        <div class="min-w-0">
+          <div class="sidebar-logo-text font-bold leading-tight truncate">Dapur Sukaluyu</div>
+          <div id="sidebar-logo-sub" class="hidden text-[10px] font-medium truncate" style="opacity:.6">—</div>
+        </div>
       </div>
       <!-- Sidebar Search -->
       <div id="sidebar-search-wrap" class="relative px-3 pt-3 shrink-0">

@@ -1,7 +1,7 @@
 <div class="rounded-2xl bg-gradient-to-r from-[#1e40af] to-[#1d4ed8] text-white p-6 lg:p-8 mb-6 shadow-sm dash-card-item" style="animation-delay:0ms">
   <div class="flex items-center justify-between gap-4">
     <div>
-      <div class="text-[10px] uppercase tracking-wider text-white/60 font-bold mb-2">Sistem Operasional Dapur Sukaluyu</div>
+      <div class="text-[10px] uppercase tracking-wider text-white/60 font-bold mb-2">Sistem Operasional <%= tenant && tenant.nama ? tenant.nama : 'Dapur Sukaluyu' %></div>
       <h2 class="text-2xl font-bold">Selamat datang kembali, <%= user.nama %></h2>
     </div>
     <div class="hidden md:block text-right shrink-0">
