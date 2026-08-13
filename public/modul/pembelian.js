@@ -1133,6 +1133,19 @@ async function bukaRiwayatKoperasi() {
   const idUnit = setting.id_unit_dapur;
   const namaDapur = setting.nama_dapur;
   const identitasKosong = !idUnit && !namaDapur;
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin';
+
+  // Admin boleh mengisi & menyimpan identitas dapur; non-admin hanya melihat.
+  const readonlyAttr = isAdmin ? '' : ' disabled';
+  const inputCls = 'mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all' + (isAdmin ? '' : ' bg-stone-100 text-stone-500 cursor-not-allowed');
+  const labelKunci = isAdmin ? '' : ' <span class="text-[9px] font-medium text-stone-400 normal-case">(terkunci)</span>';
+  const namaDapurHint = isAdmin
+    ? 'Isi lalu klik "💾 Simpan Dapur" untuk menyimpan identitas dapur ini — dipakai sebagai filter riwayat koperasi.'
+    : 'Nilai diambil dari identitas dapur tersimpan — hubungi admin cabang untuk mengubah.';
+
+  const identitasWarning = identitasKosong
+    ? `<div class="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700"><svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="font-semibold">Identitas dapur belum disimpan</div><div class="text-[10px] mt-0.5">${isAdmin ? 'Isi Nama Dapur / ID Unit Dapur di bawah lalu klik "💾 Simpan Dapur".' : 'Riwayat koperasi hanya bisa dimuat setelah Nama Dapur / ID Unit Dapur disimpan oleh admin cabang (klik "💾 Simpan Dapur").'}</div></div></div>`
+    : '';
 
   document.getElementById('modal-title').textContent = 'Riwayat Invoice Koperasi';
   document.getElementById('modal-body').innerHTML = `
@@ -1144,7 +1157,7 @@ async function bukaRiwayatKoperasi() {
           <div class="text-[10px] text-indigo-600 mt-0.5">Data diambil dari <span class="mono">/api/riwayat_dapur.php</span>. Filter Nama Dapur &amp; ID Unit Dapur <strong>dikunci ke identitas dapur ini</strong> — riwayat dapur/cabang lain tidak akan ditampilkan atau tersimpan. "Simpan ke List Pembelian" menyimpan dokumen sebagai PO baru di list /pembelian; "Sinkronkan ke PO Lokal" hanya mengisi nomor invoice di PO yang sudah ada.</div>
         </div>
       </div>
-      ${identitasKosong ? '<div class="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700"><svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="font-semibold">Identitas dapur belum disimpan</div><div class="text-[10px] mt-0.5">Riwayat koperasi hanya bisa dimuat setelah Nama Dapur / ID Unit Dapur disimpan (klik "💾 Simpan Dapur" oleh admin). Ini mencegah data dapur lain tampil.</div></div></div>' : ''}
+      ${identitasWarning}
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Jenis</label>
@@ -1155,13 +1168,13 @@ async function bukaRiwayatKoperasi() {
           </select>
         </div>
         <div>
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">ID Unit Dapur <span class="text-[9px] font-medium text-stone-400 normal-case">(terkunci)</span></label>
-          <input id="rw-id-unit" type="number" min="1" value="${idUnit}" placeholder="contoh: 1" disabled class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 bg-stone-100 text-stone-500 text-sm cursor-not-allowed">
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">ID Unit Dapur${labelKunci}</label>
+          <input id="rw-id-unit" type="number" min="1" value="${idUnit}" placeholder="contoh: 1"${readonlyAttr} class="${inputCls}">
         </div>
         <div class="col-span-2">
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Dapur <span class="text-[9px] font-medium text-stone-400 normal-case">(terkunci)</span></label>
-          <input id="rw-nama-dapur" value="${escHtml(namaDapur)}" placeholder="contoh: Dapur Pusat" disabled class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 bg-stone-100 text-stone-500 text-sm cursor-not-allowed">
-          <p class="text-[10px] text-stone-400 mt-1">Nilai diambil dari identitas dapur tersimpan (Admin &gt; "💾 Simpan Dapur") — tidak bisa diubah manual per pencarian.</p>
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Dapur${labelKunci}</label>
+          <input id="rw-nama-dapur" value="${escHtml(namaDapur)}" placeholder="contoh: Dapur Pusat"${readonlyAttr} class="${inputCls}">
+          <p class="text-[10px] text-stone-400 mt-1">${namaDapurHint}</p>
         </div>
         <div>
           <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Awal</label>
