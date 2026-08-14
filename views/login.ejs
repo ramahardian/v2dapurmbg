@@ -32,7 +32,7 @@
       </div>
       <h2 class="text-4xl font-bold text-white mb-4">Dapur Sukaluyu</h2>
       <p class="text-white/70 text-lg leading-relaxed">Platform manajemen operasional dapur Makan Bergizi Gratis — kelola menu, bahan baku, produksi, distribusi, dan akuntansi dalam satu tempat.</p>
-        <div class="grid grid-cols-3 gap-4 mt-10 text-center" id="hero-stats">
+        <div class="grid grid-cols-2 gap-4 mt-10 text-center" id="hero-stats">
           <div class="bg-white/10 backdrop-blur rounded-xl p-4">
             <div class="text-2xl font-bold text-white" id="stat-porsi">—</div>
             <div class="text-xs text-white/60 mt-1">Porsi/Hari</div>
@@ -40,10 +40,14 @@
           <div class="bg-white/10 backdrop-blur rounded-xl p-4">
             <div class="text-2xl font-bold text-white" id="stat-menu">—</div>
             <div class="text-xs text-white/60 mt-1">Menu Gizi</div>
-          </div>  
+          </div>
           <div class="bg-white/10 backdrop-blur rounded-xl p-4">
-            <div class="text-2xl font-bold text-white" id="stat-kategori">—</div>
-            <div class="text-xs text-white/60 mt-1">Kategori</div>
+            <div class="text-2xl font-bold text-white" id="stat-cabang">—</div>
+            <div class="text-xs text-white/60 mt-1">Cabang Terdaftar</div>
+          </div>
+          <div class="bg-white/10 backdrop-blur rounded-xl p-4">
+            <div class="text-2xl font-bold text-white" id="stat-karyawan">—</div>
+            <div class="text-xs text-white/60 mt-1">Karyawan Aktif</div>
           </div>
         </div>
     </div>
@@ -108,7 +112,8 @@
     fetch('/api/public/stats').then(function(r) { return r.json(); }).then(function(d) {
       document.getElementById('stat-porsi').textContent = d.porsi_per_hari && d.porsi_per_hari > 0 ? d.porsi_per_hari + '+' : '0';
       document.getElementById('stat-menu').textContent = d.total_menu;
-      document.getElementById('stat-kategori').textContent = d.total_kategori;
+      document.getElementById('stat-cabang').textContent = d.total_cabang != null ? d.total_cabang : '0';
+      document.getElementById('stat-karyawan').textContent = d.total_karyawan_aktif != null ? d.total_karyawan_aktif : '0';
     }).catch(function() {});
     // Toggle password visibility
     document.getElementById('toggle-pass').addEventListener('click', function() {

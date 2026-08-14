@@ -128,6 +128,9 @@ router.use(require('./alterBahanSumber'));
 // Mengimpor dan mendaftarkan router ALTER tabel Penerima Manfaat secara langsung (URL root /)
 router.use(require('./alterPenerimaManfaat'));
 
+// Mengimpor dan mendaftarkan router ALTER kolom tenant_id (standar_sp, jabatan) secara langsung (URL root /)
+router.use(require('./alterTenantKolom'));
+
 // Mengimpor dan mendaftarkan router Konfigurasi Sistem secara langsung (URL root /)
 router.use(require('./system'));
 
