@@ -2,36 +2,69 @@ const express = require('express');
 const db = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const {
-  JENJANG_ORDER, KATEGORI_SP, mapJenjang, hitungSP, getSpMapByJenjang, getSpMapByJenjangList, fmtNum
+  mapJenjang, hitungSP, getSpMapByJenjang, getSpMapByJenjangList, fmtNum
 } = require('../services/spBddCalculator');
 
 const router = express.Router();
 router.use(requireAuth);
 
 // GET /sp/standar - get all standar SP values
+// DB lama (belum dimigrasi multi-tenant) tidak punya kolom tenant_id — fallback
+// ke query tanpa scope tenant agar halaman /standar-sp tetap terbuka. Tanpa
+// fallback, async rejection di Express 4 tidak membalas request → browser
+// menampilkan spinner selamanya.
 router.get('/sp/standar', requireRole('admin', 'ahli_gizi'), async (req, res) => {
-  const [rows] = await db.query('SELECT * FROM standar_sp WHERE tenant_id=? ORDER BY FIELD(jenjang, ?), FIELD(kategori_sp, ?)', [req.user.tenant_id, JENJANG_ORDER.join(','), KATEGORI_SP.join(',')]);
-  res.json(rows);
+  try {
+    const [rows] = await db.query('SELECT * FROM standar_sp WHERE tenant_id=?', [req.user.tenant_id]);
+    return res.json(rows);
+  } catch (e) {
+    try {
+      const [rows] = await db.query('SELECT * FROM standar_sp');
+      return res.json(rows);
+    } catch (e2) {
+      return res.status(500).json({ error: e2.message });
+    }
+  }
 });
 
 // GET /sp/standar/:jenjang - get SP values for a specific jenjang
 router.get('/sp/standar/:jenjang', async (req, res) => {
-  const [rows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang=?', [req.user.tenant_id, req.params.jenjang]);
-  res.json(rows);
+  try {
+    const [rows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang=?', [req.user.tenant_id, req.params.jenjang]);
+    return res.json(rows);
+  } catch (e) {
+    try {
+      const [rows] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?', [req.params.jenjang]);
+      return res.json(rows);
+    } catch (e2) {
+      return res.status(500).json({ error: e2.message });
+    }
+  }
 });
 
 // PUT /sp/standar/:id - update a standar SP value
 router.put('/sp/standar/:id', requireRole('admin', 'ahli_gizi'), async (req, res) => {
   const { sp_value } = req.body;
   if (sp_value === undefined) return res.status(400).json({ error: 'sp_value wajib diisi' });
-  await db.query('UPDATE standar_sp SET sp_value=? WHERE id=? AND tenant_id=?', [sp_value, req.params.id, req.user.tenant_id]);
-  const [[row]] = await db.query('SELECT * FROM standar_sp WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
-  res.json(row);
+  try {
+    await db.query('UPDATE standar_sp SET sp_value=? WHERE id=? AND tenant_id=?', [sp_value, req.params.id, req.user.tenant_id]);
+    const [[row]] = await db.query('SELECT * FROM standar_sp WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
+    return res.json(row);
+  } catch (e) {
+    try {
+      await db.query('UPDATE standar_sp SET sp_value=? WHERE id=?', [sp_value, req.params.id]);
+      const [[row]] = await db.query('SELECT * FROM standar_sp WHERE id=?', [req.params.id]);
+      return res.json(row);
+    } catch (e2) {
+      return res.status(500).json({ error: e2.message });
+    }
+  }
 });
 
 // POST /sp/hitung - calculate SP-based ingredient amounts for a given menu and jenjang
 // Body: { menu_id, jenjang? (optional, uses menu's kategori_penerima if not provided) }
 router.post('/sp/hitung', requireRole('admin', 'ahli_gizi'), async (req, res) => {
+  try {
   const { menu_id, jenjang } = req.body;
   if (!menu_id) return res.status(400).json({ error: 'menu_id wajib diisi' });
 
@@ -76,11 +109,15 @@ router.post('/sp/hitung', requireRole('admin', 'ahli_gizi'), async (req, res) =>
     jumlah_porsi: Number(menu.jumlah_porsi) || 0,
     bahan: result,
   });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // POST /sp/hitung-kebutuhan - calculate total kebutuhan from siklus
 // Body: { siklus_ids: number[], jumlah_penerima: number }
 router.post('/sp/hitung-kebutuhan', requireRole('admin', 'ahli_gizi', 'keuangan'), async (req, res) => {
+  try {
   const { siklus_ids, jumlah_penerima } = req.body;
   if (!siklus_ids || !Array.isArray(siklus_ids) || !siklus_ids.length) {
     return res.status(400).json({ error: 'Pilih minimal satu siklus' });
@@ -177,6 +214,9 @@ router.post('/sp/hitung-kebutuhan', requireRole('admin', 'ahli_gizi', 'keuangan'
     siklus_refs: siklusList.map(s => s.nama),
     jumlah_penerima: penerima,
   });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 module.exports = router;

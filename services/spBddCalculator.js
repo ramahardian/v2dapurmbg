@@ -67,11 +67,22 @@ function hitungBDD(beratBersih, persenBdd) {
   return bdd > 0 ? beratBersih / (bdd / 100) : beratBersih;
 }
 
+// DB lama (belum dimigrasi multi-tenant) tidak punya kolom tenant_id di
+// standar_sp — fallback ke query tanpa scope tenant agar perhitungan SP tetap
+// jalan di semua DB (pola sama seperti loadStandarSp di routes/siklus/helpers.js).
 async function getSpMapByJenjang(jenjang, tenantId) {
-  const [spRows] = await db.query(
-    'SELECT kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang=?',
-    [tenantId, jenjang]
-  );
+  let spRows;
+  try {
+    [spRows] = await db.query(
+      'SELECT kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang=?',
+      [tenantId, jenjang]
+    );
+  } catch (e) {
+    [spRows] = await db.query(
+      'SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?',
+      [jenjang]
+    );
+  }
   const spMap = {};
   for (const r of spRows) spMap[r.kategori_sp] = Number(r.sp_value);
   return spMap;
@@ -81,10 +92,18 @@ async function getSpMapByJenjangList(jenjangList, tenantId) {
   const spMap = {};
   if (!jenjangList.length) return spMap;
   const jh = jenjangList.map(() => '?').join(',');
-  const [spRows] = await db.query(
-    `SELECT jenjang, kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang IN (${jh})`,
-    [tenantId, ...jenjangList]
-  );
+  let spRows;
+  try {
+    [spRows] = await db.query(
+      `SELECT jenjang, kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang IN (${jh})`,
+      [tenantId, ...jenjangList]
+    );
+  } catch (e) {
+    [spRows] = await db.query(
+      `SELECT jenjang, kategori_sp, sp_value FROM standar_sp WHERE jenjang IN (${jh})`,
+      jenjangList
+    );
+  }
   for (const r of spRows) {
     if (!spMap[r.jenjang]) spMap[r.jenjang] = {};
     spMap[r.jenjang][r.kategori_sp] = Number(r.sp_value);
