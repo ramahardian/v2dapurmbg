@@ -300,27 +300,31 @@ async function hitungEstimasiGiziManual(items, gridBahan) {
   }
 }
 
-// Resolusi berat per siswa utk item grid & resep menu:
-// 1) jumlah (resep) jika > 0
-// 2) berat_1_sp bahan_baku jika > 0
-// 3) fallback ke referensi "<nama> 1 SP" di sp_referensi_bahan (berat_bersih + bdd_persen)
-// 4) default 0
+// Resolusi berat & BDD per siswa utk item grid & resep menu.
+// Sumber BDD: SP Referensi (dicocokkan by nama, prioritas) → bahan_baku.persen_bdd → 100.
+// Sumber berat: 1) jumlah (resep)  2) berat_1_sp bahan_baku  3) sp_referensi.berat_bersih  4) 0.
+// Mengembalikan { beratPerSiswa, persenBdd, sumberBdd } — sumberBdd menandai
+// asal nilai BDD ('sp_referensi' / 'bahan_baku') utk sorotan di /perhitungan-bdd.
 function resolveGridBeratPerSiswa(g, spRefMap) {
+  const nama = String(g.nama || '').trim();
+  const ref = (spRefMap && (spRefMap[nama + ' 1 SP'] || spRefMap[nama])) || {};
+  const refBdd = ref.bdd_persen != null ? Number(ref.bdd_persen) : null;
+  const persenBdd = refBdd != null ? refBdd : Number(g.persen_bdd || 100);
+  const sumberBdd = refBdd != null ? 'sp_referensi' : 'bahan_baku';
+
   const jumlah = Number(g.jumlah || 0);
   if (jumlah > 0) {
-    return { beratPerSiswa: jumlah, persenBdd: Number(g.persen_bdd || 100) };
+    return { beratPerSiswa: jumlah, persenBdd, sumberBdd };
   }
   const beratLangsung = Number(g.berat_1_sp || 0);
   if (beratLangsung > 0) {
-    return { beratPerSiswa: beratLangsung, persenBdd: Number(g.persen_bdd || 100) };
+    return { beratPerSiswa: beratLangsung, persenBdd, sumberBdd };
   }
-  const nama = String(g.nama || '').trim();
-  const ref = (spRefMap && (spRefMap[nama + ' 1 SP'] || spRefMap[nama])) || {};
   const beratRef = Number(ref.berat_bersih || 0);
   if (beratRef > 0) {
-    return { beratPerSiswa: beratRef, persenBdd: Number(ref.bdd_persen || g.persen_bdd || 100) };
+    return { beratPerSiswa: beratRef, persenBdd, sumberBdd };
   }
-  return { beratPerSiswa: 0, persenBdd: Number(g.persen_bdd || 100) };
+  return { beratPerSiswa: 0, persenBdd, sumberBdd };
 }
 
 function buildGridNamaFromData(hariKe, gridNamaByHari) {

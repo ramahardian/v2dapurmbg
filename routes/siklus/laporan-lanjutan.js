@@ -172,7 +172,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
           const resolved = resolveGridBeratPerSiswa(br, spRefMap);
           const beratBersih = resolved.beratPerSiswa * jmlPmSiklus;
           const beratKotor = hitungBDD(beratBersih, resolved.persenBdd);
-          return { bahan_baku_id: br.bahan_baku_id, nama: br.nama, nama_display: br.nama, satuan: br.satuan, kategori_sp: br.kategori_sp, persen_bdd: resolved.persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 };
+          return { bahan_baku_id: br.bahan_baku_id, nama: br.nama, nama_display: br.nama, satuan: br.satuan, kategori_sp: br.kategori_sp, persen_bdd: resolved.persenBdd, sumber_bdd: resolved.sumberBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 };
         });
         dayData.push({ hari_ke: it.hari_ke, hari_nama: it.hari_nama, menu_nama: it.menu_nama || '-', menu_label: 'Menu', bahan: bahanItems });
       }
@@ -183,7 +183,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
         const gridItem = gridItems.find(it => it.hari_ke === hk);
         const hariNama = gridItem ? gridItem.hari_nama : 'Hari ' + hk;
         const menuNama = gridItem ? (gridItem.menu_nama || '-') : '-';
-        const { beratPerSiswa: berat1sp, persenBdd } = resolveGridBeratPerSiswa(g, spRefMap);
+        const { beratPerSiswa: berat1sp, persenBdd, sumberBdd } = resolveGridBeratPerSiswa(g, spRefMap);
         const beratBersih = berat1sp * jmlPmSiklus;
         const beratKotor = hitungBDD(beratBersih, persenBdd);
         const label = processedDays.has(hk) ? 'Bahan Tambahan' : 'Menu';
@@ -194,7 +194,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
         }
         const dayEntry = dayData.find(d => d.hari_ke === hk);
         if (dayEntry) {
-          dayEntry.bahan.push({ bahan_baku_id: g.bahan_baku_id, nama: g.nama, nama_display: g.nama, satuan: g.satuan || 'g', kategori_sp: g.kategori_sp, persen_bdd: persenBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 });
+          dayEntry.bahan.push({ bahan_baku_id: g.bahan_baku_id, nama: g.nama, nama_display: g.nama, satuan: g.satuan || 'g', kategori_sp: g.kategori_sp, persen_bdd: persenBdd, sumber_bdd: sumberBdd, berat_bersih: Math.round(beratBersih * 100) / 100, berat_kotor: Math.round(beratKotor * 100) / 100, kebutuhan_kg: Math.round((beratKotor / 1000) * 100) / 100 });
         }
       }
       siklusData.push({ siklus_id: s.id, siklus_nama: s.nama, hari: dayData });
