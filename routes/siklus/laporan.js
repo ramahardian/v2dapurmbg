@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../../db');
 const { FIXED_KATEGORI, KATEGORI_MAP_DISPLAY, mapToDisplay, hitungBDD } = require('../../services/spBddCalculator');
-const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, batchLoadItems, batchLoadBahanCounts, batchLoadGridBahanBySiklus, batchLoadMenuBahan, rebuildMenuNama, hitungEstimasiGiziManual } = require('./helpers');
+const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, batchLoadItems, batchLoadBahanCounts, batchLoadGridBahanBySiklus, batchLoadMenuBahan, rebuildMenuNama, hitungEstimasiGiziManual, loadStandarSp } = require('./helpers');
 
 const router = express.Router();
 
@@ -322,10 +322,7 @@ router.get('/siklus/:id/laporan', async (req, res) => {
 
   // SP Comparison
   const jenjangList = parseKategoriPenerima(siklus.kategori_penerima);
-  const [spStandar] = await db.query(
-    'SELECT kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang=?',
-    [req.user.tenant_id, jenjangList[0] || '']
-  );
+  const [spStandar] = await loadStandarSp(req.user.tenant_id, jenjangList[0] || '');
   const spByKat = {};
   for (const s of spStandar) spByKat[s.kategori_sp] = Number(s.sp_value) || 0;
 
@@ -538,7 +535,7 @@ router.get('/siklus/:id/laporan/produksi-harian', async (req, res) => {
   }
 
   // SP values
-  const [spStandar] = await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang=?', [req.user.tenant_id, jenjangList[0] || '']);
+  const [spStandar] = await loadStandarSp(req.user.tenant_id, jenjangList[0] || '');
   const spMap = {};
   for (const s of spStandar) spMap[s.kategori_sp] = Number(s.sp_value) || 1;
 

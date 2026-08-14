@@ -3,7 +3,7 @@ const path = require('path');
 const ExcelJS = require('exceljs');
 const db = require('../../db');
 const { hitungBDD } = require('../../services/spBddCalculator');
-const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandSiklusTargetJenjang, buildPmDisplayMaps, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName, resolveGridBeratPerSiswa, tkAutoQty } = require('./helpers');
+const { JENJANG_DISPLAY_ORDER, JENJANG_DB_MAP, KAT_ORDER, buildDbToDisplay, parseKategoriPenerima, expandSiklusTargetJenjang, buildPmDisplayMaps, expandJenjangToDbValues, batchLoadItems, batchLoadMenuBahan, batchLoadGridBahanBySiklus, loadMenuBahanByName, lookupMenuIdByName, resolveGridBeratPerSiswa, tkAutoQty, loadStandarSp } = require('./helpers');
 
 const router = express.Router();
 
@@ -130,7 +130,7 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   } catch (e) { /* table optional */ }
 
   // Standar SP
-  const [spStandar] = await db.query('SELECT DISTINCT jenjang, kategori_sp, sp_value FROM standar_sp WHERE tenant_id=?', [req.user.tenant_id]);
+  const [spStandar] = await loadStandarSp(req.user.tenant_id);
   const spByJenjangKat = {};
   for (const s of spStandar) {
     if (!spByJenjangKat[s.jenjang]) spByJenjangKat[s.jenjang] = {};
@@ -368,7 +368,7 @@ async function buildPerencanaanData({ tenant_id, query }) {
   } catch (e) { /* table optional */ }
 
   // Standar SP
-  const [spStandar] = await db.query('SELECT DISTINCT jenjang, kategori_sp, sp_value FROM standar_sp WHERE tenant_id=?', [tenant_id]);
+  const [spStandar] = await loadStandarSp(tenant_id);
   const spByJenjangKat = {};
   for (const s of spStandar) {
     if (!spByJenjangKat[s.jenjang]) spByJenjangKat[s.jenjang] = {};

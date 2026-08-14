@@ -1,5 +1,24 @@
 const db = require('../../db');
 
+// ── Query helpers ─────────────────────────────────────────────────
+
+// Ambil standar SP. DB lama (belum dimigrasi multi-tenant) tidak punya kolom
+// tenant_id — fallback ke query tanpa scope tenant agar halaman tidak error
+// "Unknown column 'tenant_id'" (mis. di /total-kebutuhan).
+async function loadStandarSp(tenantId, jenjang) {
+  try {
+    if (jenjang) {
+      return await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE tenant_id=? AND jenjang=?', [tenantId, jenjang]);
+    }
+    return await db.query('SELECT DISTINCT jenjang, kategori_sp, sp_value FROM standar_sp WHERE tenant_id=?', [tenantId]);
+  } catch (e) {
+    if (jenjang) {
+      return await db.query('SELECT kategori_sp, sp_value FROM standar_sp WHERE jenjang=?', [jenjang]);
+    }
+    return await db.query('SELECT DISTINCT jenjang, kategori_sp, sp_value FROM standar_sp');
+  }
+}
+
 // ── Constants ─────────────────────────────────────────────────────
 
 const JENJANG_DISPLAY_ORDER = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
@@ -483,6 +502,7 @@ function tkQtyBelanja(satuan, totalKg, jumlahSiswa, kategoriSp, beratPerSatuan) 
 }
 
 module.exports = {
+  loadStandarSp,
   JENJANG_DISPLAY_ORDER,
   JENJANG_DB_MAP,
   KAT_ORDER,
