@@ -149,7 +149,7 @@
     <div class="flex flex-col items-center gap-5">
       <!-- Logo -->
       <div class="splash-logo w-20 h-20 rounded-2xl bg-white flex items-center justify-center overflow-hidden p-1.5">
-        <img src="/asset/logo.png" alt="Dapur Sukaluyu" class="w-full h-full object-contain" />
+        <img src="/asset/logo.png?v=<%= logoVer %>" alt="Dapur Sukaluyu" class="w-full h-full object-contain" />
       </div>
       <!-- Title -->
       <div class="text-center">
@@ -209,7 +209,7 @@
 
     <aside id="sidebar" class="w-[260px] shrink-0 fixed inset-y-0 left-0 flex flex-col transform -translate-x-full lg:translate-x-0 transition-all duration-200 z-40" style="background:var(--bg-sidebar);color:var(--text-body);border-right:1px solid var(--border)">
       <div class="sidebar-logo-wrap flex items-center gap-3 px-5 py-5 cursor-pointer" onclick="expandSidebar()" style="border-bottom:1px solid var(--border)">
-        <img src="/asset/logo.png" alt="Dapur Sukaluyu" class="h-9 w-9 rounded-md shrink-0 object-contain" style="background:var(--border)" />
+        <img src="/asset/logo.png?v=<%= logoVer %>" alt="Dapur Sukaluyu" class="h-9 w-9 rounded-md shrink-0 object-contain" style="background:var(--border)" />
         <div class="min-w-0">
           <div class="sidebar-logo-text font-bold leading-tight truncate">Dapur Sukaluyu</div>
           <div id="sidebar-logo-sub" class="hidden text-[10px] font-medium truncate" style="opacity:.6">—</div>

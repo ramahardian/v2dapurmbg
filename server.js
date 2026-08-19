@@ -161,7 +161,7 @@ if (cluster.isMaster && WORKERS > 1) {
   app.use('/api', trackActivity, apiRoutes);
 
   // Pages
-  app.get('/login', (req, res) => res.render('login'));
+  app.get('/login', (req, res) => res.render('login', { logoVer: getLogoVer() }));
   // Halaman tambah cabang — hanya admin tenant utama (Dapur 001) yang boleh akses
   app.get('/signup', (req, res) => {
     try {
@@ -176,7 +176,7 @@ if (cluster.isMaster && WORKERS > 1) {
       const token = req.cookies?.access_token;
       if (token) { jwt.verify(token, process.env.JWT_SECRET); return res.redirect('/absen/dashboard'); }
     } catch {}
-    res.render('login-karyawan');
+    res.render('login-karyawan', { logoVer: getLogoVer() });
   });
   app.get('/absen/dashboard', requireKaryawanAuth, (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -265,16 +265,35 @@ if (cluster.isMaster && WORKERS > 1) {
     } catch {}
     return distVerCache.ver || Date.now();
   }
+  // Cache-buster logo: hash konten public/asset/logo.png (berbasis mtime+size,
+  // re-hash hanya saat file berubah). Dipakai sebagai `?v=` pada src logo agar
+  // browser yang meng-cache immutable tetap mendapat logo terbaru.
+  const LOGO_PATH = path.join(__dirname, 'public', 'asset', 'logo.png');
+  let logoVerCache = { mtime: null, size: null, ver: null };
+  function getLogoVer() {
+    const fs = require('fs');
+    try {
+      const st = fs.statSync(LOGO_PATH);
+      if (logoVerCache.ver === null || logoVerCache.mtime !== st.mtimeMs || logoVerCache.size !== st.size) {
+        logoVerCache.mtime = st.mtimeMs;
+        logoVerCache.size = st.size;
+        logoVerCache.ver = require('crypto').createHash('md5').update(fs.readFileSync(LOGO_PATH)).digest('hex').slice(0, 8);
+      }
+      return logoVerCache.ver;
+    } catch {
+      return logoVerCache.ver || Date.now();
+    }
+  }
   // Halaman HTML selalu di-revalidate (Cache-Control: no-cache) agar `?v=` terbaru
   // langsung dimuat browser tanpa hard refresh; file bundle-nya sendiri tetap
   // disajikan immutable 7 hari (aman karena URL ber-version).
   app.get('/', requirePageAuth, (req, res) => {
     res.set('Cache-Control', 'no-cache');
-    res.render('app', { distVer: getDistVer() });
+    res.render('app', { distVer: getDistVer(), logoVer: getLogoVer() });
   });
   app.get(/^\/(?!api).*/, requirePageAuth, (req, res) => {
     res.set('Cache-Control', 'no-cache');
-    res.render('app', { distVer: getDistVer() });
+    res.render('app', { distVer: getDistVer(), logoVer: getLogoVer() });
   });
 
   // ── MIGRASI / UTILITY ──────────────────────
