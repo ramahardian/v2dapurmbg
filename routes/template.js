@@ -160,7 +160,7 @@ router.get('/dashboard', async (req, res) => {
     res.render('partials/dashboard', { 
       summary,
       user: req.user || { nama: 'User' },
-      tenant: tenant || { id: req.user.tenant_id, nama: 'Dapur Sukaluyu', alamat: '' }
+      tenant: tenant || { id: req.user.tenant_id, nama: 'Sppg Sukaluyu Tamansari', alamat: '' }
     });
   } catch (err) {
     console.error('Dashboard template error:', err);

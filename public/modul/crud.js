@@ -867,7 +867,7 @@ async function cetakSuratJalan(id) {
     var tgl = fmtDate(d.tanggal_distribusi) || d.tanggal_distribusi;
     var no = d.no_surat_jalan || ('SJ/' + String(d.id).padStart(4, '0') + '/' + (d.tanggal_distribusi ? d.tanggal_distribusi.slice(0, 7).replace('-', '/') : ''));
     // Kop surat diambil dari data tenant (bisa diatur di master tenant), fallback ke default
-    var kopNama = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama) || 'Dapur Sukaluyu';
+    var kopNama = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama) || 'Sppg Sukaluyu Tamansari';
     var kopAlamat = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.alamat) || '';
     var kopTelp = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.telepon) || '';
     var html = '<html><head><meta charset="utf-8"><title>Surat Jalan</title>' +

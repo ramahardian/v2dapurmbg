@@ -2,16 +2,16 @@ let currentUser = null;
 let currentTenant = null;
 
 // ── Branding per cabang ──
-// Nama tampilan tenant: tenant utama (id=1) = "Dapur Sukaluyu", cabang = nama tenant.
+// Nama tampilan tenant: tenant utama (id=1) = "Sppg Sukaluyu Tamansari", cabang = nama tenant.
 function tenantBrandName() {
   const t = currentTenant;
-  if (!t) return 'Dapur Sukaluyu';
-  return (t.nama && t.id !== 1) ? t.nama : 'Dapur Sukaluyu';
+  if (!t) return 'Sppg Sukaluyu Tamansari';
+  return (t.nama && t.id !== 1) ? t.nama : 'Sppg Sukaluyu Tamansari';
 }
 function isBranchTenant() {
   return !!(currentTenant && currentTenant.id !== 1);
 }
-// Tampilkan nama cabang di bawah judul "Dapur Sukaluyu" (sidebar logo, header mobile, splash).
+// Tampilkan nama cabang di bawah judul "Sppg Sukaluyu Tamansari" (sidebar logo, header mobile, splash).
 function applyTenantBranding() {
   const cabang = isBranchTenant() && currentTenant.nama ? currentTenant.nama : null;
   // Sidebar logo

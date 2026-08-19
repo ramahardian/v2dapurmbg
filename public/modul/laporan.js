@@ -1,7 +1,7 @@
 // ===== Laporan =====
 // Nama tenant untuk kop laporan cetak — otomatis mengikuti nama cabang.
 function lapKopTenant() {
-  return (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama) || 'Dapur Sukaluyu';
+  return (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama) || 'Sppg Sukaluyu Tamansari';
 }
 async function renderLaporan() {
   const c = document.getElementById('content');

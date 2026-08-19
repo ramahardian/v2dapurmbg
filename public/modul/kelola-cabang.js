@@ -11,7 +11,7 @@ async function renderKelolaCabang() {
       <div class="space-y-4">
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <p class="text-sm text-stone-500">Halaman ini hanya untuk admin <b>Dapur 001 / Dapur Sukaluyu</b> (tenant utama).</p>
+            <p class="text-sm text-stone-500">Halaman ini hanya untuk admin <b>Dapur 001 / Sppg Sukaluyu Tamansari</b> (tenant utama).</p>
             <p class="text-sm text-stone-500">Cabang baru dibuat dengan data <b>kosong</b> — tabel akuntansi &amp; gizi diisi oleh admin cabang masing-masing.</p>
           </div>
           <a href="/signup" class="inline-flex items-center gap-2 bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-4 py-2.5 rounded-lg text-sm font-medium">+ Tambah Cabang</a>
