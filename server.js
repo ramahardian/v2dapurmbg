@@ -11,13 +11,11 @@ const WORKERS = parseInt(process.env.CLUSTER_WORKERS) || 1;
 if (cluster.isMaster && WORKERS > 1) {
   console.log(`🚀 Master PID ${process.pid} — Forking ${WORKERS} workers...`);
   for (let i = 0; i < WORKERS; i++) cluster.fork();
-
   // Restart worker yang mati
   cluster.on('exit', (worker, code, signal) => {
     console.warn(`⚰️ Worker ${worker.process.pid} exited (${signal || code}). Restarting...`);
     cluster.fork();
   });
-
   // Graceful shutdown
   process.on('SIGTERM', () => {
     for (const id in cluster.workers) cluster.workers[id].kill();
