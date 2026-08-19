@@ -24,7 +24,7 @@ if (cluster.isMaster && WORKERS > 1) {
     process.exit(0);
   });
 } else {
-  // ─── WORKER PROCESS ──────────────────────
+  // ─── WORKER PROCESS ─────────login background ─────────────
   const express = require('express');
   const compression = require('compression');
   const helmet = require('helmet');
