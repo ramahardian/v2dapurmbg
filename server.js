@@ -161,7 +161,10 @@ if (cluster.isMaster && WORKERS > 1) {
   app.use('/api', trackActivity, apiRoutes);
 
   // Pages
-  app.get('/login', (req, res) => res.render('login', { logoVer: getLogoVer() }));
+  app.get('/login', (req, res) => {
+    res.set('Cache-Control', 'no-cache');
+    res.render('login', { logoVer: getLogoVer() });
+  });
   // Halaman tambah cabang — hanya admin tenant utama (Dapur 001) yang boleh akses
   app.get('/signup', (req, res) => {
     try {
@@ -176,6 +179,7 @@ if (cluster.isMaster && WORKERS > 1) {
       const token = req.cookies?.access_token;
       if (token) { jwt.verify(token, process.env.JWT_SECRET); return res.redirect('/absen/dashboard'); }
     } catch {}
+    res.set('Cache-Control', 'no-cache');
     res.render('login-karyawan', { logoVer: getLogoVer() });
   });
   app.get('/absen/dashboard', requireKaryawanAuth, (req, res) => {

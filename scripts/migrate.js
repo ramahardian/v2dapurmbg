@@ -576,7 +576,7 @@ async function runMigration() {
   const [tExist] = await q('SELECT id FROM tenants LIMIT 1');
   if (!tExist.length) {
     const [t] = await q('INSERT INTO tenants (nama, plan) VALUES (?, ?)',
-      [process.env.ADMIN_TENANT_NAME || 'Dapur Sukaluyu', 'enterprise']);
+      [process.env.ADMIN_TENANT_NAME || 'Sppg Sukaluyu Tamansari', 'enterprise']);
     const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 10);
     await q('INSERT INTO users (tenant_id, email, password_hash, nama, role) VALUES (?,?,?,?,?)',
       [t.insertId, (process.env.ADMIN_EMAIL || 'admin@sukaluyu.id').toLowerCase(), hash, 'Administrator', 'admin']);
