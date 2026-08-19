@@ -8,7 +8,7 @@ router.use(requireAuth);
 // Dashboard template
 router.get('/dashboard', async (req, res) => {
   try {
-    const [penerima] = await db.query('SELECT COUNT(*) as total_penerima_manfaat, COALESCE(SUM(paket_besar),0) as paket_besar, COALESCE(SUM(paket_kecil),0) as paket_kecil FROM penerima_manfaat WHERE tenant_id=?', [req.user.tenant_id]);
+    const [penerima] = await db.query('SELECT COALESCE(SUM(paket_besar + paket_kecil),0) as total_penerima_manfaat, COALESCE(SUM(paket_besar),0) as paket_besar, COALESCE(SUM(paket_kecil),0) as paket_kecil FROM penerima_manfaat WHERE tenant_id=?', [req.user.tenant_id]);
     const [produksi] = await db.query('SELECT COALESCE(SUM(jumlah_porsi), 0) as total_porsi_diproduksi FROM produksi WHERE tenant_id=?', [req.user.tenant_id]);
     const [budget] = await db.query('SELECT COALESCE(SUM(total_budget), 0) as total_budget, COALESCE(SUM(realisasi), 0) as total_realisasi FROM budget WHERE tenant_id=?', [req.user.tenant_id]);
     const [bahan] = await db.query('SELECT COUNT(*) as jumlah_bahan_baku FROM bahan_baku WHERE tenant_id=?', [req.user.tenant_id]);

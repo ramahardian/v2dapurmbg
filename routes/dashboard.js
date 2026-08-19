@@ -35,7 +35,7 @@ router.get('/dashboard/summary', async (req, res) => {
   
   // 1. Agregasi Penerima Manfaat
   const [[pm]] = await db.query(
-    'SELECT COUNT(*) AS total, COALESCE(SUM(paket_besar),0) AS paket_besar, COALESCE(SUM(paket_kecil),0) AS paket_kecil FROM penerima_manfaat WHERE tenant_id=?', 
+    'SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total, COALESCE(SUM(paket_besar),0) AS paket_besar, COALESCE(SUM(paket_kecil),0) AS paket_kecil FROM penerima_manfaat WHERE tenant_id=?', 
     [t]
   );
   
