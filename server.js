@@ -77,6 +77,11 @@ if (cluster.isMaster && WORKERS > 1) {
   app.use(compression());
 
   // 4) Static files — ringan, sebelum body parser
+  // Asset yang sering diganti (logo dll) tidak di-cache immutable — selalu revalidate
+  app.use('/asset', (_req, res, next) => {
+    res.set('Cache-Control', 'no-cache');
+    next();
+  });
   app.use(express.static(path.join(__dirname, 'public'), { maxAge: '7d', immutable: true }));
 
   // 5) Cookie parser — ringan
