@@ -561,10 +561,24 @@ async function openMenuForm(editing) {
           <button type="button" onclick="addBahanRow()" class="text-xs font-medium border border-stone-200 px-3 py-1.5 rounded-lg hover:bg-stone-50 shadow-sm transition-all">+ Tambah Bahan</button>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5 mb-2 text-xs text-stone-500">
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-2 text-xs text-stone-500">
         <span>Tampilkan total untuk</span>
-        <input type="number" id="m-porsi" value="0" min="0" step="1" onchange="onPorsiChange()" placeholder="0" class="w-20 h-8 px-2 rounded-lg border border-stone-200 text-sm text-center mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />
-        <span>porsi</span>
+        <label class="inline-flex items-center gap-1.5">
+          <span class="font-semibold text-amber-700">Porsi Besar</span>
+          <input type="number" id="m-porsi-besar" value="0" min="0" step="1" onchange="onPorsiChange()" placeholder="0" class="w-20 h-8 px-2 rounded-lg border border-amber-200 bg-amber-50/60 text-sm text-center mono focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" />
+          <span>porsi</span>
+        </label>
+        <label class="inline-flex items-center gap-1.5">
+          <span class="font-semibold text-emerald-700">Porsi Kecil</span>
+          <input type="number" id="m-porsi-kecil" value="0" min="0" step="1" onchange="onPorsiChange()" placeholder="0" class="w-20 h-8 px-2 rounded-lg border border-emerald-200 bg-emerald-50/60 text-sm text-center mono focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all" />
+          <span>porsi</span>
+        </label>
+      </div>
+      <div class="hidden sm:grid grid-cols-12 gap-1.5 mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+        <div class="col-span-4">Bahan</div>
+        <div class="col-span-4" title="Total bahan untuk Porsi Besar. Bila Porsi Besar = 0, kolom menampilkan jumlah per porsi.">Porsi Besar</div>
+        <div class="col-span-3 text-right" title="Preview total bahan untuk Porsi Kecil (tidak ikut disimpan)">Porsi Kecil</div>
+        <div class="col-span-1"></div>
       </div>
       <div id="bahan-list" class="space-y-2"></div>
     </div>
@@ -575,9 +589,14 @@ async function openMenuForm(editing) {
   if (badgeEl) badgeEl.remove();
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, satuan: menuSatuanTampil(b), kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, keterangan: b.keterangan || '' }));
   // Biarkan nilai tersimpan dari DB — user bisa klik "↺ Reset ke SP" jika ingin reset
+  // Porsi Besar = jumlah porsi yang dipakai untuk input total (perilaku lama, disimpan sebagai jumlah_porsi).
+  // Porsi Kecil hanya untuk preview total bahan (tidak disimpan).
   var savedPorsi = Number(m.jumlah_porsi) || 0;
   window._menuPorsi = savedPorsi;
-  document.getElementById('m-porsi').value = savedPorsi;
+  window._menuPorsiBesar = savedPorsi;
+  window._menuPorsiKecil = 0;
+  document.getElementById('m-porsi-besar').value = savedPorsi;
+  document.getElementById('m-porsi-kecil').value = 0;
   renderBahanList();
   hitungNutrisi();
   
@@ -625,7 +644,7 @@ async function openMenuForm(editing) {
         karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
         lemak: +document.getElementById('m-lemak').value || 0,
         serat: +document.getElementById('m-serat').value || 0,
-        jumlah_porsi: Number(document.getElementById('m-porsi').value) || 0,
+        jumlah_porsi: Number(document.getElementById('m-porsi-besar').value) || 0,
         bahan: window._menuBahan.filter(function(b) { return b.bahan_baku_id || b.nama; }),
       };
       if (editing) await api.put('/menu/' + editing.id, payload);
@@ -1025,6 +1044,7 @@ function applyBahanKalkulator(i) {
 
 function renderBahanList() {
   var porsi = Number(window._menuPorsi) || 0;
+  var porsiKecil = Number(window._menuPorsiKecil) || 0;
   document.getElementById('bahan-list').innerHTML = window._menuBahan.map((b, i) => {
     var displayNama = b.nama || '';
     var displaySatuan = menuSatuanTampil(b);
@@ -1035,28 +1055,40 @@ function renderBahanList() {
       }
       var totalJumlah = porsi > 0 ? displayJumlah * porsi : 0;
       var inputValue = porsi > 0 ? (totalJumlah ? Math.round(totalJumlah * 100) / 100 : '0') : (displayJumlah ? Math.round(displayJumlah * 100) / 100 : '0');
-      var inputTitle = porsi > 0 ? 'Total untuk ' + porsi + ' porsi (' + displaySatuan + ')' : (displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')');
+      var inputTitle = porsi > 0 ? 'Total untuk ' + porsi + ' porsi besar (' + displaySatuan + ')' : (displaySatuan === 'g' ? 'Gram per porsi' : 'Jumlah per porsi (' + displaySatuan + ')');
+      // Preview total untuk Porsi Kecil (tidak disimpan — hanya perhitungan tampilan)
+      var kecilTotal = (porsiKecil > 0 && displayJumlah) ? Math.round(displayJumlah * porsiKecil * 100) / 100 : null;
+      var kecilHtml = kecilTotal === null
+        ? '<span class="text-stone-300">—</span>'
+        : '<span class="mono text-xs font-semibold text-emerald-700">' + fmtNum(kecilTotal) + '</span> <span class="text-[10px] text-stone-400">' + escHtml(displaySatuan) + '</span>';
       var calcSatuan = bahanKalkulatorSatuan(b);
       var kalkTitle = isSatuanUnit(calcSatuan) ? 'Kalkulator ' + escHtml(calcSatuan) + ' ↔ Gram' : 'Kalkulator Gram ↔ Kg';
       return '<div class="mb-1.5">' +
         '<div class="grid grid-cols-12 gap-1.5 items-center">' +
-          '<div class="order-1 col-span-12 sm:col-span-5 relative">' +
+          '<div class="order-1 col-span-12 sm:col-span-4 relative">' +
             '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
             '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-lg shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
           '</div>' +
-          '<div class="order-2 col-span-10 sm:col-span-6 flex">' +
+          '<div class="order-2 col-span-10 sm:col-span-4 flex">' +
             '<input type="text" inputmode="decimal" autocomplete="off" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 w-full h-10 px-3 border border-stone-200 rounded-l-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" title="' + inputTitle + ' — bisa diisi pecahan, mis. 1/5 kg" />' +
             '<span class="inline-flex items-center px-2 sm:px-2.5 h-10 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 whitespace-nowrap">' + displaySatuan + '</span>' +
             '<button type="button" onclick="openBahanKalkulator(' + i + ')" class="shrink-0 inline-flex items-center justify-center w-8 h-10 text-blue-500 hover:bg-blue-50 border border-l-0 border-stone-200 rounded-r-lg transition-all" title="' + kalkTitle + '"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 8h.01M15 8h.01M9 12h.01M15 12h.01M9 16h.01M15 16h.01"/></svg></button>' +
           '</div>' +
-          '<button type="button" onclick="removeBahanRow(' + i + ')" class="order-3 col-span-2 sm:col-span-1 inline-flex items-center justify-center h-10 w-full text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Hapus bahan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
+          '<div class="hidden sm:flex sm:order-3 col-span-3 items-center justify-end gap-1 text-right whitespace-nowrap" title="' + (porsiKecil > 0 ? 'Total bahan untuk ' + porsiKecil + ' porsi kecil' : 'Isi jumlah Porsi Kecil untuk melihat total') + '">' + kecilHtml + '</div>' +
+          '<button type="button" onclick="removeBahanRow(' + i + ')" class="order-3 sm:order-4 col-span-2 sm:col-span-1 inline-flex items-center justify-center h-10 w-full text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Hapus bahan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
+          (porsiKecil > 0 ? '<div class="sm:hidden order-4 col-span-12 pl-1 text-[10px] text-stone-500">Porsi Kecil (' + porsiKecil + ' porsi): ' + kecilHtml + '</div>' : '') +
         '</div>' +
       '</div>';
   }).join('');
 }
 
 function onPorsiChange() {
-  window._menuPorsi = Number(document.getElementById('m-porsi').value) || 0;
+  var pb = document.getElementById('m-porsi-besar');
+  var pk = document.getElementById('m-porsi-kecil');
+  window._menuPorsiBesar = pb ? (Number(pb.value) || 0) : 0;
+  window._menuPorsiKecil = pk ? (Number(pk.value) || 0) : 0;
+  // Kolom jumlah memakai Porsi Besar (total) seperti perilaku sebelumnya; Porsi Kecil hanya preview.
+  window._menuPorsi = window._menuPorsiBesar;
   renderBahanList();
 }
 function onBahanSearch(i, el) {
@@ -1446,7 +1478,9 @@ async function selectSiklusMenuName(nama, bahanJson, siklusPorsi, kategoriPeneri
   
   // Auto-fill jumlah porsi jika > 0
   if (siklusPorsi > 0) {
-    document.getElementById('m-porsi').value = siklusPorsi;
+    var pbEl = document.getElementById('m-porsi-besar');
+    if (pbEl) pbEl.value = siklusPorsi;
+    window._menuPorsiBesar = siklusPorsi;
     window._menuPorsi = siklusPorsi;
   }
   
@@ -1550,7 +1584,7 @@ function saveCurrentMenuFromForm() {
     karbohidrat: editingData.karbohidrat || 0,
     lemak: editingData.lemak || 0,
     serat: editingData.serat || 0,
-    jumlah_porsi: Number(document.getElementById('m-porsi').value) || 0,
+    jumlah_porsi: Number(document.getElementById('m-porsi-besar').value) || 0,
     bahan: bahan,
     status: editingData.status || ''
   };
