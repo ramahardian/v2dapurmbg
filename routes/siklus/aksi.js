@@ -632,8 +632,8 @@ router.post('/siklus/:id/jadikan-resep', async (req, res) => {
     // Insert komposisi bahan
     for (const b of bahanList) {
       await conn.query(
-        'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, keterangan) VALUES (?,?,?,?)',
-        [r.insertId, b.bahan_baku_id, b.jumlah, null]
+        'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, jumlah_besar, jumlah_kecil, keterangan) VALUES (?,?,?,?,?,?)',
+        [r.insertId, b.bahan_baku_id, b.jumlah, b.jumlah, b.jumlah, null]
       );
     }
 

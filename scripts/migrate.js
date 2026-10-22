@@ -741,6 +741,17 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi porsi_besar/harga_kecil budget): ' + e.message); }
 
+  // menu_bahan: jumlah per porsi untuk Porsi Besar & Porsi Kecil (input manual per bahan)
+  try {
+    const [mbCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'menu_bahan' AND COLUMN_NAME IN ('jumlah_besar','jumlah_kecil')");
+    const mbExisting = new Set(mbCols.map(c => c.COLUMN_NAME));
+    if (!mbExisting.has('jumlah_besar')) await q('ALTER TABLE menu_bahan ADD COLUMN jumlah_besar DECIMAL(15,3) DEFAULT NULL AFTER jumlah');
+    if (!mbExisting.has('jumlah_kecil')) await q('ALTER TABLE menu_bahan ADD COLUMN jumlah_kecil DECIMAL(15,3) DEFAULT NULL AFTER jumlah_besar');
+    if (!mbExisting.has('jumlah_besar') || !mbExisting.has('jumlah_kecil')) {
+      log('✓ Migrasi menu_bahan: tambah kolom jumlah_besar & jumlah_kecil');
+    }
+  } catch (e) { log('  (skip migrasi menu_bahan jumlah_besar/kecil): ' + e.message); }
+
   // Soft-delete untuk notifikasi (deleted_by_pengirim / deleted_by_penerima)
   try {
     const [dpCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notifikasi' AND COLUMN_NAME = 'deleted_by_pengirim'");

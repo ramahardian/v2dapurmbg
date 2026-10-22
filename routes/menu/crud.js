@@ -40,11 +40,14 @@ function registerCrudRoutes(router) {
       let hasBahan = false;
       if (Array.isArray(bahan)) {
         for (const b of bahan) {
-          const result = await processBahanItem(b, conn, req.user.tenant_id, spMap, jumlahPorsi, spRefMap, bbNamaMap);
-          if (!result || result.jumlah <= 0) continue;
+          const itemBesar = { ...b, jumlah: (b.jumlah_besar != null ? b.jumlah_besar : b.jumlah) };
+          const result = await processBahanItem(itemBesar, conn, req.user.tenant_id, spMap, jumlahPorsi, spRefMap, bbNamaMap);
+          if (!result) continue;
+          const jumlahKecil = (b.jumlah_kecil !== undefined && b.jumlah_kecil !== null) ? (Number(b.jumlah_kecil) || 0) : result.jumlah;
+          if (result.jumlah <= 0 && jumlahKecil <= 0) continue;
           await conn.query(
-            'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, keterangan) VALUES (?,?,?,?)',
-            [r.insertId, result.idBahan, result.jumlah, b.keterangan || null]
+            'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, jumlah_besar, jumlah_kecil, keterangan) VALUES (?,?,?,?,?,?)',
+            [r.insertId, result.idBahan, result.jumlah, result.jumlah, jumlahKecil, b.keterangan || null]
           );
           hasBahan = true;
         }
@@ -105,11 +108,14 @@ function registerCrudRoutes(router) {
         await conn.query('DELETE FROM menu_bahan WHERE menu_id=?', [req.params.id]);
 
         for (const b of f.bahan) {
-          const result = await processBahanItem(b, conn, req.user.tenant_id, spMap, jumlahPorsi, spRefMap, bbNamaMap);
-          if (!result || result.jumlah <= 0) continue;
+          const itemBesar = { ...b, jumlah: (b.jumlah_besar != null ? b.jumlah_besar : b.jumlah) };
+          const result = await processBahanItem(itemBesar, conn, req.user.tenant_id, spMap, jumlahPorsi, spRefMap, bbNamaMap);
+          if (!result) continue;
+          const jumlahKecil = (b.jumlah_kecil !== undefined && b.jumlah_kecil !== null) ? (Number(b.jumlah_kecil) || 0) : result.jumlah;
+          if (result.jumlah <= 0 && jumlahKecil <= 0) continue;
           await conn.query(
-            'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, keterangan) VALUES (?,?,?,?)',
-            [req.params.id, result.idBahan, result.jumlah, b.keterangan || null]
+            'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, jumlah_besar, jumlah_kecil, keterangan) VALUES (?,?,?,?,?,?)',
+            [req.params.id, result.idBahan, result.jumlah, result.jumlah, jumlahKecil, b.keterangan || null]
           );
           hasBahan = true;
         }

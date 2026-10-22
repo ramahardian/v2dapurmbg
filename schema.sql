@@ -98,6 +98,8 @@ CREATE TABLE IF NOT EXISTS menu_bahan (
   menu_id INT NOT NULL,
   bahan_baku_id INT NOT NULL,
   jumlah DECIMAL(15,3) NOT NULL,
+  jumlah_besar DECIMAL(15,3) DEFAULT NULL,
+  jumlah_kecil DECIMAL(15,3) DEFAULT NULL,
   keterangan VARCHAR(255) DEFAULT '',
   FOREIGN KEY (menu_id) REFERENCES menu(id) ON DELETE CASCADE,
   FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id) ON DELETE CASCADE,

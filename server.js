@@ -929,6 +929,25 @@ CREATE TABLE menu_bahan (
     }
   });
 
+  // Endpoint migrasi: tambah kolom jumlah_besar & jumlah_kecil di menu_bahan
+  // (input manual jumlah per bahan untuk Porsi Besar & Porsi Kecil)
+  app.get('/api/migrate/porsi-menu-bahan', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+      const [cols] = await db.query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='menu_bahan' AND COLUMN_NAME IN ('jumlah_besar','jumlah_kecil')"
+      );
+      const ada = new Set(cols.map(c => c.COLUMN_NAME));
+      if (ada.has('jumlah_besar') && ada.has('jumlah_kecil')) {
+        return res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Kolom jumlah_besar & jumlah_kecil sudah ada</h2><a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
+      }
+      if (!ada.has('jumlah_besar')) await db.query('ALTER TABLE menu_bahan ADD COLUMN jumlah_besar DECIMAL(15,3) DEFAULT NULL AFTER jumlah');
+      if (!ada.has('jumlah_kecil')) await db.query('ALTER TABLE menu_bahan ADD COLUMN jumlah_kecil DECIMAL(15,3) DEFAULT NULL AFTER jumlah_besar');
+      res.send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#16a34a">✅ Kolom jumlah_besar & jumlah_kecil berhasil ditambahkan</h2><a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>`);
+    } catch (e) {
+      res.status(500).send(`<div style="font-family:sans-serif;padding:2rem;text-align:center"><h2 style="color:#dc2626">❌ Gagal</h2><p>${e.message}</p></div>`);
+    }
+  });
+
   // Endpoint migrasi: tambah kolom gramasi_besar & gramasi_kecil ke menu
   app.get('/api/migrate/gramasi-besar-kecil', requireAuth, requireRole('admin'), async (req, res) => {
     try {
@@ -1283,6 +1302,25 @@ CREATE TABLE menu_bahan (
   app.listen(PORT, () => {
     const label = isWorker ? `⚡ Worker ${process.pid}` : '🚀 Server';
     console.log(`${label} — http://localhost:${PORT}`);
+
+    // Idempotent: pastikan kolom porsi per bahan (menu_bahan.jumlah_besar /
+    // jumlah_kecil) tersedia, agar fitur input manual Porsi Besar & Porsi Kecil
+    // di popup Edit Menu langsung jalan tanpa migrasi manual.
+    (async () => {
+      try {
+        const [cols] = await db.query(
+          "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='menu_bahan' AND COLUMN_NAME IN ('jumlah_besar','jumlah_kecil')"
+        );
+        const ada = new Set(cols.map(c => c.COLUMN_NAME));
+        if (!ada.has('jumlah_besar')) await db.query('ALTER TABLE menu_bahan ADD COLUMN jumlah_besar DECIMAL(15,3) DEFAULT NULL AFTER jumlah');
+        if (!ada.has('jumlah_kecil')) await db.query('ALTER TABLE menu_bahan ADD COLUMN jumlah_kecil DECIMAL(15,3) DEFAULT NULL AFTER jumlah_besar');
+        if (!ada.has('jumlah_besar') || !ada.has('jumlah_kecil')) {
+          console.log('Migrasi: kolom menu_bahan.jumlah_besar & jumlah_kecil ditambahkan');
+        }
+      } catch (e) {
+        console.error('Migrasi menu_bahan porsi (besar/kecil):', e.message);
+      }
+    })();
 
     // Auto-arsip siklus menu yang sudah lewat tanggal_selesai (idempotent).
     // Selain berjalan berkala, juga dipanggil lazy saat GET /siklus & /menu/by-siklus.
