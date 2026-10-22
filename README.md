@@ -28,7 +28,7 @@ Sistem **SaaS multi-tenant** untuk operasional dapur & akuntansi program **Makan
 - **Laporan** — Budget vs Realisasi, Persediaan, Distribusi, Keuangan + Export CSV
 
 ### SaaS & Lainnya
-- **Multi-tenant** — sign up dapur baru, data terisolasi per tenant
+- **Multi-tenant** — data terisolasi per tenant
 - **JWT auth** dengan role (admin, ahli_gizi, gudang, keuangan, produksi)
 - **Brute-force protection** (rate limit login)
 - **AI Menu Suggestion** (opsional, butuh OPENAI_API_KEY)
@@ -100,8 +100,6 @@ Server berjalan di **http://localhost:3000**
 - Email: `admin@mbg.id`
 - Password: `admin123`
 
-Untuk daftar **dapur baru (tenant baru)**: http://localhost:3000/signup
-
 ---
 
 ## 📁 Struktur Proyek
@@ -116,11 +114,10 @@ mbg-nodejs/
 ├── middleware/
 │   └── auth.js            # JWT auth + role guard
 ├── routes/
-│   ├── auth.js            # /api/auth/* (signup, login, logout, me)
+│   ├── auth.js            # /api/auth/* (login, logout, me)
 │   └── api.js             # /api/* (semua CRUD + dashboard + HPP + laporan)
 ├── views/
 │   ├── login.ejs          # halaman login
-│   ├── signup.ejs         # halaman daftar tenant
 │   └── app.ejs            # shell SPA dashboard
 ├── public/
 │   └── app.js             # frontend vanilla JS (semua modul)
@@ -133,7 +130,6 @@ mbg-nodejs/
 ## 🔑 API Endpoints
 
 ### Auth
-- `POST /api/auth/signup` — daftar tenant baru (sekaligus admin user)
 - `POST /api/auth/login` — login (set cookie JWT)
 - `POST /api/auth/logout` — logout
 - `GET /api/auth/me` — info user + tenant aktif

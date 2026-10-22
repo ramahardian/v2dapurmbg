@@ -1141,10 +1141,10 @@ async function bukaRiwayatKoperasi() {
   const labelKunci = isAdmin ? '' : ' <span class="text-[9px] font-medium text-stone-400 normal-case">(terkunci)</span>';
   const namaDapurHint = isAdmin
     ? 'Isi lalu klik "💾 Simpan Dapur" untuk menyimpan identitas dapur ini — dipakai sebagai filter riwayat koperasi.'
-    : 'Nilai diambil dari identitas dapur tersimpan — hubungi admin cabang untuk mengubah.';
+    : 'Nilai diambil dari identitas dapur tersimpan — hubungi admin untuk mengubah.';
 
   const identitasWarning = identitasKosong
-    ? `<div class="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700"><svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="font-semibold">Identitas dapur belum disimpan</div><div class="text-[10px] mt-0.5">${isAdmin ? 'Isi Nama Dapur / ID Unit Dapur di bawah lalu klik "💾 Simpan Dapur".' : 'Riwayat koperasi hanya bisa dimuat setelah Nama Dapur / ID Unit Dapur disimpan oleh admin cabang (klik "💾 Simpan Dapur").'}</div></div></div>`
+    ? `<div class="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700"><svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="font-semibold">Identitas dapur belum disimpan</div><div class="text-[10px] mt-0.5">${isAdmin ? 'Isi Nama Dapur / ID Unit Dapur di bawah lalu klik "💾 Simpan Dapur".' : 'Riwayat koperasi hanya bisa dimuat setelah Nama Dapur / ID Unit Dapur disimpan oleh admin (klik "💾 Simpan Dapur").'}</div></div></div>`
     : '';
 
   document.getElementById('modal-title').textContent = 'Riwayat Invoice Koperasi';
@@ -1154,7 +1154,7 @@ async function bukaRiwayatKoperasi() {
         <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         <div>
           <div class="font-semibold">Riwayat dari sistem koperasi</div>
-          <div class="text-[10px] text-indigo-600 mt-0.5">Data diambil dari <span class="mono">/api/riwayat_dapur.php</span>. Filter Nama Dapur &amp; ID Unit Dapur <strong>dikunci ke identitas dapur ini</strong> — riwayat dapur/cabang lain tidak akan ditampilkan atau tersimpan. "Simpan ke List Pembelian" menyimpan dokumen sebagai PO baru di list /pembelian; "Sinkronkan ke PO Lokal" hanya mengisi nomor invoice di PO yang sudah ada.</div>
+          <div class="text-[10px] text-indigo-600 mt-0.5">Data diambil dari <span class="mono">/api/riwayat_dapur.php</span>. Filter Nama Dapur &amp; ID Unit Dapur <strong>dikunci ke identitas dapur ini</strong> — riwayat dapur lain tidak akan ditampilkan atau tersimpan. "Simpan ke List Pembelian" menyimpan dokumen sebagai PO baru di list /pembelian; "Sinkronkan ke PO Lokal" hanya mengisi nomor invoice di PO yang sudah ada.</div>
         </div>
       </div>
       ${identitasWarning}

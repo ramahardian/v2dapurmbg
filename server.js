@@ -139,18 +139,16 @@ if (cluster.isMaster && WORKERS > 1) {
       const [[menuCount]] = await db.query('SELECT COUNT(*) AS total FROM menu WHERE tenant_id=?', [tenantId]);
       const [[katCount]] = await db.query('SELECT COUNT(DISTINCT kategori_penerima) AS total FROM menu WHERE tenant_id=? AND kategori_penerima IS NOT NULL', [tenantId]);
       const [[prod]] = await db.query('SELECT COALESCE(SUM(jumlah_porsi),0) AS total, COUNT(DISTINCT DATE(tanggal_produksi)) AS days FROM produksi WHERE tenant_id=?', [tenantId]);
-      const [[cabangCount]] = await db.query('SELECT COUNT(*) AS total FROM tenants');
       const [[karyawanCount]] = await db.query("SELECT COUNT(*) AS total FROM karyawan WHERE status='Aktif'");
       const porsiPerHari = prod.days > 0 ? Math.round(prod.total / prod.days) : 0;
       res.json({
         porsi_per_hari: porsiPerHari,
         total_menu: Number(menuCount.total),
         total_kategori: Number(katCount.total),
-        total_cabang: Number(cabangCount.total),
         total_karyawan_aktif: Number(karyawanCount.total)
       });
     } catch (e) {
-      res.json({ porsi_per_hari: 0, total_menu: 0, total_kategori: 0, total_cabang: 0, total_karyawan_aktif: 0 });
+      res.json({ porsi_per_hari: 0, total_menu: 0, total_kategori: 0, total_karyawan_aktif: 0 });
     }
   });
 
@@ -163,14 +161,8 @@ if (cluster.isMaster && WORKERS > 1) {
     res.set('Cache-Control', 'no-cache');
     res.render('login', { logoVer: getLogoVer() });
   });
-  // Halaman tambah cabang — hanya admin tenant utama (Dapur 001) yang boleh akses
-  app.get('/signup', (req, res) => {
-    try {
-      const payload = jwt.verify(req.cookies?.access_token, process.env.JWT_SECRET);
-      if (payload.tenant_id !== (parseInt(process.env.MAIN_TENANT_ID, 10) || 1)) return res.redirect('/login');
-      return res.render('signup');
-    } catch { return res.redirect('/login'); }
-  });
+  // Pendaftaran cabang dapur sudah dihapus — arahkan URL lama kembali ke dashboard/login.
+  app.get('/signup', (req, res) => res.redirect('/'));
 
   app.get('/absen', (req, res) => {
     try {

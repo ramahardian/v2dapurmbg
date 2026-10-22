@@ -72,7 +72,7 @@
           Masuk
         </button>
       </form>
-      <div class="grid grid-cols-2 gap-3 mt-6 text-center" id="hero-stats">
+      <div class="grid grid-cols-3 gap-3 mt-6 text-center" id="hero-stats">
         <div class="bg-blue-50 border border-blue-100 rounded-xl p-3">
           <div class="text-xl font-bold text-blue-700" id="stat-porsi">—</div>
           <div class="text-[11px] text-stone-500 mt-0.5">Porsi/Hari</div>
@@ -80,10 +80,6 @@
         <div class="bg-blue-50 border border-blue-100 rounded-xl p-3">
           <div class="text-xl font-bold text-blue-700" id="stat-menu">—</div>
           <div class="text-[11px] text-stone-500 mt-0.5">Menu Gizi</div>
-        </div>
-        <div class="bg-blue-50 border border-blue-100 rounded-xl p-3">
-          <div class="text-xl font-bold text-blue-700" id="stat-cabang">—</div>
-          <div class="text-[11px] text-stone-500 mt-0.5">Cabang Terdaftar</div>
         </div>
         <div class="bg-blue-50 border border-blue-100 rounded-xl p-3">
           <div class="text-xl font-bold text-blue-700" id="stat-karyawan">—</div>
@@ -110,7 +106,6 @@
     fetch('/api/public/stats').then(function(r) { return r.json(); }).then(function(d) {
       document.getElementById('stat-porsi').textContent = d.porsi_per_hari && d.porsi_per_hari > 0 ? d.porsi_per_hari + '+' : '0';
       document.getElementById('stat-menu').textContent = d.total_menu;
-      document.getElementById('stat-cabang').textContent = d.total_cabang != null ? d.total_cabang : '0';
       document.getElementById('stat-karyawan').textContent = d.total_karyawan_aktif != null ? d.total_karyawan_aktif : '0';
     }).catch(function() {});
     // Toggle password visibility

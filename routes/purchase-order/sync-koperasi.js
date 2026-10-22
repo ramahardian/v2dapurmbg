@@ -157,7 +157,7 @@ const KOPERASI_RIWAYAT_API_URL = process.env.KOPERASI_RIWAYAT_API_URL || 'https:
 // Riwayat koperasi sengaja TIDAK boleh dimuat tanpa identitas ini, supaya
 // satu cabang dapur tidak bisa melihat/menarik riwayat dapur lain.
 const MSG_IDENTITAS_BELUM_DISIMPAN =
-  'Identitas dapur belum disimpan. Hubungi admin cabang untuk menyimpan Nama Dapur / ID Unit Dapur ' +
+  'Identitas dapur belum disimpan. Hubungi admin untuk menyimpan Nama Dapur / ID Unit Dapur ' +
   '(tombol "💾 Simpan Dapur" di modal Riwayat Koperasi) — tanpa itu riwayat koperasi tidak dapat dimuat ' +
   'agar data dapur lain tidak tampil.';
 
