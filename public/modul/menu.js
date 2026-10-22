@@ -1040,19 +1040,16 @@ function renderBahanList() {
       var kalkTitle = isSatuanUnit(calcSatuan) ? 'Kalkulator ' + escHtml(calcSatuan) + ' ↔ Gram' : 'Kalkulator Gram ↔ Kg';
       return '<div class="mb-1.5">' +
         '<div class="grid grid-cols-12 gap-1.5 items-center">' +
-          '<div class="order-1 col-span-12 sm:col-span-4 relative">' +
+          '<div class="order-1 col-span-12 sm:col-span-5 relative">' +
             '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
             '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-lg shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
           '</div>' +
-          '<div class="order-2 col-span-10 sm:col-span-3 flex">' +
+          '<div class="order-2 col-span-10 sm:col-span-6 flex">' +
             '<input type="text" inputmode="decimal" autocomplete="off" value="' + inputValue + '" onchange="updateBahan(' + i + ', \'jumlah\', this.value)" class="flex-1 min-w-0 w-full h-10 px-3 border border-stone-200 rounded-l-lg text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" title="' + inputTitle + ' — bisa diisi pecahan, mis. 1/5 kg" />' +
             '<span class="inline-flex items-center px-2 sm:px-2.5 h-10 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 whitespace-nowrap">' + displaySatuan + '</span>' +
             '<button type="button" onclick="openBahanKalkulator(' + i + ')" class="shrink-0 inline-flex items-center justify-center w-8 h-10 text-blue-500 hover:bg-blue-50 border border-l-0 border-stone-200 rounded-r-lg transition-all" title="' + kalkTitle + '"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 8h.01M15 8h.01M9 12h.01M15 12h.01M9 16h.01M15 16h.01"/></svg></button>' +
           '</div>' +
-          '<button type="button" onclick="removeBahanRow(' + i + ')" class="order-3 sm:order-4 col-span-2 sm:col-span-1 inline-flex items-center justify-center h-10 w-full text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Hapus bahan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
-          '<div class="order-4 sm:order-3 col-span-12 sm:col-span-4">' +
-            '<input type="text" value="' + (b.keterangan || '') + '" onchange="updateBahan(' + i + ', \'keterangan\', this.value)" placeholder="catatan" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
-          '</div>' +
+          '<button type="button" onclick="removeBahanRow(' + i + ')" class="order-3 col-span-2 sm:col-span-1 inline-flex items-center justify-center h-10 w-full text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Hapus bahan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
         '</div>' +
       '</div>';
   }).join('');
