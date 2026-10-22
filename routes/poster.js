@@ -3,8 +3,8 @@
  *
  * Endpoint:
  *   GET  /template-poster          → baca template (semua user login; dipakai tombol Bagikan menu)
- *   PUT  /template-poster          → simpan template (admin)
- *   POST /template-poster/reset    → kembalikan ke default (admin)
+ *   PUT  /template-poster          → simpan template (admin & ahli gizi)
+ *   POST /template-poster/reset    → kembalikan ke default (admin & ahli gizi)
  *
  * Gambar logo/background dikirim sebagai base64 lalu disimpan ke
  * public/uploads/poster/ agar tidak membebani kolom database.
@@ -136,8 +136,8 @@ router.get('/template-poster', async (req, res) => {
   }
 });
 
-// PUT — simpan perubahan (admin)
-router.put('/template-poster', requireRole('admin'), async (req, res) => {
+// PUT — simpan perubahan (admin & ahli gizi)
+router.put('/template-poster', requireRole('ahli_gizi'), async (req, res) => {
   try {
     const body = req.body || {};
     const tenantId = req.user.tenant_id;
@@ -209,7 +209,7 @@ router.put('/template-poster', requireRole('admin'), async (req, res) => {
 });
 
 // POST reset — kembali ke template default (admin)
-router.post('/template-poster/reset', requireRole('admin'), async (req, res) => {
+router.post('/template-poster/reset', requireRole('ahli_gizi'), async (req, res) => {
   try {
     const tenantId = req.user.tenant_id;
     const [rows] = await db.query(

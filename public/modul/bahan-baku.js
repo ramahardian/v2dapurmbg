@@ -13,7 +13,6 @@ const BAHAN_BAKU_CRUD_BASE = {
     { k: 'kategori_sp', l: 'Kategori SP', type: 'select', opts: ['Karbohidrat','Protein Hewani','Protein Nabati','Sayur','Buah','Bumbu','Susu','Minyak'], desc: 'Kategori untuk perhitungan Standar Porsi (SP)', group: 'info' },
     { k: 'satuan', l: 'Satuan (kg/gr/liter)', req: true, group: 'info' },
     { k: 'harga_satuan', l: 'Harga Satuan (IDR)', type: 'number', fmt: 'idr', group: 'harga_stok' },
-    { k: 'stok_saat_ini', l: 'Stok Saat Ini', type: 'number', fmt: 'num', group: 'harga_stok' },
     { k: 'stok_minimum', l: 'Stok Minimum', type: 'number', fmt: 'num', group: 'harga_stok' },
     { k: 'berat_per_satuan', l: 'Berat per Satuan (gram)', type: 'number', fmt: 'num', desc: 'Isi jika satuan bukan gram (misal 1 pcs = 50g, 1 ikat = 30g)', group: 'info' },
     { k: 'buffer_persen', l: 'Buffer (%)', type: 'number', fmt: 'num', info: 'Cadangan belanja (0-10). Menambah QTY di halaman Total Kebutuhan — isi 0 jika ingin QTY sama dengan jumlah porsi.', group: 'harga_stok' },
@@ -23,7 +22,7 @@ const BAHAN_BAKU_CRUD_BASE = {
     { k: 'karbohidrat', l: 'Karbohidrat (g)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
     { k: 'serat', l: 'Serat (g)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
   ],
-  cols: ['nama','kategori','kategori_sp','satuan','kalori','protein','harga_satuan','stok_saat_ini']
+  cols: ['nama','kategori','kategori_sp','satuan','kalori','protein','harga_satuan']
 };
 
 let spRefLookup = {};
