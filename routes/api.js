@@ -50,6 +50,9 @@ const userRoutes = require('./users');
 // Mengimpor router cetak/export template
 const templateRoutes = require('./template');
 
+// Mengimpor router pengaturan template poster share menu harian
+const posterRoutes = require('./poster');
+
 // Mengimpor router manajemen bahan baku
 const bahanBakuRoutes = require('./bahanBaku');
 
@@ -103,6 +106,9 @@ router.use(payrollRoutes);
 
 // Mendaftarkan router template dengan prefix path '/template'
 router.use('/template', templateRoutes);
+
+// Mendaftarkan router pengaturan template poster (URL root /template-poster)
+router.use(posterRoutes);
 
 // Mendaftarkan router ijin/cuti dengan prefix path '/ijin-cuti'
 router.use('/ijin-cuti', ijinCutiRoutes);

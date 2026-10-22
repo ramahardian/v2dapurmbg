@@ -1320,6 +1320,28 @@ CREATE TABLE menu_bahan (
       } catch (e) {
         console.error('Migrasi menu_bahan porsi (besar/kecil):', e.message);
       }
+      try {
+        await db.query(`CREATE TABLE IF NOT EXISTS tenant_poster_template (
+          tenant_id INT NOT NULL PRIMARY KEY,
+          judul VARCHAR(120) NOT NULL DEFAULT 'Informasi Nilai Gizi',
+          tagline VARCHAR(180) NOT NULL DEFAULT 'Partner Nutrisi & Gaya Hidup Sehat',
+          badge1 VARCHAR(80) NOT NULL DEFAULT '✓   Menu MBG',
+          badge2 VARCHAR(80) NOT NULL DEFAULT 'Makanan Bergizi Gratis',
+          catatan_judul VARCHAR(80) NOT NULL DEFAULT 'Catatan',
+          catatan_mode ENUM('manual','menu') NOT NULL DEFAULT 'manual',
+          catatan_json TEXT,
+          footer_text VARCHAR(200) DEFAULT '',
+          warna_utama VARCHAR(20) NOT NULL DEFAULT '#14532D',
+          warna_aksen VARCHAR(20) NOT NULL DEFAULT '#F97316',
+          logo_url VARCHAR(255) DEFAULT NULL,
+          background_url VARCHAR(255) DEFAULT NULL,
+          tampilkan_foto TINYINT(1) NOT NULL DEFAULT 1,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB`);
+      } catch (e) {
+        console.error('Migrasi tenant_poster_template:', e.message);
+      }
     })();
 
     // Auto-arsip siklus menu yang sudah lewat tanggal_selesai (idempotent).

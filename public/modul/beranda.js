@@ -144,146 +144,303 @@ async function dashMenuShare() {
   }
 }
 
+// ── Template poster share menu — default, normalisasi & util warna ──
+var POSTER_TPL_DEFAULTS = {
+  judul: 'Informasi Nilai Gizi',
+  tagline: 'Partner Nutrisi & Gaya Hidup Sehat',
+  badge1: '✓   Menu MBG',
+  badge2: 'Makanan Bergizi Gratis',
+  catatan_judul: 'Catatan',
+  catatan_mode: 'manual',
+  catatan: [
+    'Karbohidrat, lauk, sayur & buah dalam satu porsi',
+    'Protein hewani & nabati untuk tumbuh kembang',
+    'Serat tinggi membantu kesehatan pencernaan',
+    'Diolah higienis sesuai standar gizi MBG',
+  ],
+  footer_text: '',
+  warna_utama: '#14532D',
+  warna_aksen: '#F97316',
+  logo_url: '',
+  background_url: '',
+  tampilkan_foto: 1,
+};
+
+function _posterHexRgb(hex) {
+  var h = String(hex || '').replace('#', '');
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return { r: 20, g: 83, b: 45 };
+  return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
+}
+
+function _posterRgba(hex, alpha) {
+  var c = _posterHexRgb(hex);
+  return 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + alpha + ')';
+}
+
+// pct > 0 → lebih terang, pct < 0 → lebih gelap
+function _posterShade(hex, pct) {
+  var c = _posterHexRgb(hex);
+  var p = Math.max(-100, Math.min(100, Number(pct) || 0)) / 100;
+  var t = p >= 0 ? 255 : 0;
+  var k = Math.abs(p);
+  var f = function(v) { return Math.round(v + (t - v) * k); };
+  var hx = function(v) { return ('0' + v.toString(16)).slice(-2); };
+  return '#' + hx(f(c.r)) + hx(f(c.g)) + hx(f(c.b));
+}
+
+function _posterNormalizeTemplate(tpl) {
+  tpl = tpl || {};
+  var d = POSTER_TPL_DEFAULTS;
+  var catatan = Array.isArray(tpl.catatan)
+    ? tpl.catatan.map(String).filter(Boolean).slice(0, 6)
+    : d.catatan.slice();
+  var hex = function(v, fb) {
+    return /^#[0-9a-fA-F]{6}$/.test(String(v || '')) ? String(v).toUpperCase() : fb;
+  };
+  return {
+    judul: String(tpl.judul || d.judul).slice(0, 120),
+    tagline: tpl.tagline != null ? String(tpl.tagline).slice(0, 180) : d.tagline,
+    badge1: tpl.badge1 != null ? String(tpl.badge1).slice(0, 80) : d.badge1,
+    badge2: tpl.badge2 != null ? String(tpl.badge2).slice(0, 80) : d.badge2,
+    catatan_judul: String(tpl.catatan_judul || d.catatan_judul).slice(0, 80),
+    catatan_mode: tpl.catatan_mode === 'menu' ? 'menu' : 'manual',
+    catatan: catatan,
+    footer_text: tpl.footer_text != null ? String(tpl.footer_text).slice(0, 200) : '',
+    warna_utama: hex(tpl.warna_utama, d.warna_utama),
+    warna_aksen: hex(tpl.warna_aksen, d.warna_aksen),
+    logo_url: tpl.logo_url ? String(tpl.logo_url) : '',
+    background_url: tpl.background_url ? String(tpl.background_url) : '',
+    tampilkan_foto: tpl.tampilkan_foto == null ? 1 : (Number(tpl.tampilkan_foto) ? 1 : 0),
+  };
+}
+
+var _posterImgCache = {};
+function _posterLoadImg(url) {
+  if (!url) return Promise.resolve(null);
+  if (_posterImgCache[url]) return _posterImgCache[url];
+  var p = new Promise(function(resolve) {
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() { resolve(img); };
+    img.onerror = function() { resolve(null); };
+    img.src = url;
+  });
+  _posterImgCache[url] = p;
+  return p;
+}
+
+function _posterResolveCatatan(tpl, m) {
+  var bullets = tpl.catatan.slice();
+  if (tpl.catatan_mode === 'menu' && m && m.deskripsi) {
+    var fromMenu = String(m.deskripsi)
+      .split(/\r?\n|;|•/)
+      .map(function(s) { return s.trim(); })
+      .filter(Boolean);
+    if (fromMenu.length) bullets = fromMenu.slice(0, 6);
+  }
+  return bullets;
+}
+
 /**
- * dashMenuGenImageBlob — Buat gambar post (1080x1350) ala poster infografis gizi.
- * Layout: background putih + doodle tipis, header logo brand, judul + badge,
- * foto/tray menu, catatan + tabel gizi, dan footer brand (hijau tua + oranye).
+ * dashMenuGenImageBlob — Buat gambar post menu (1080x1200) memakai template tenant.
+ * tplOverride dipakai untuk preview live di halaman pengaturan template.
  */
-function dashMenuGenImageBlob(m) {
+async function dashMenuGenImageBlob(m, tplOverride) {
   m = m || dashMenuCurrent();
-  return _dashLogoImg().then(function(logo) {
-    return new Promise(function(resolve) {
-    if (!m) { resolve(null); return; }
-    const W = 1080, H = 1200, PAD = 64;
-    const cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
-    const ctx = cv.getContext('2d');
+  if (!m) return null;
 
-    const G9 = '#14532D', G7 = '#166534', G6 = '#15803D', OR = '#F97316', OR4 = '#FB923C',
-          INK = '#1C1917', MUT = '#6B7280';
-    const tenant = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama) || 'Sppg Sukaluyu Tamansari';
-    const tenantShort = String(tenant);
+  var tpl = tplOverride;
+  if (!tpl && typeof posterEnsureTemplate === 'function') {
+    try { tpl = await posterEnsureTemplate(); } catch (e) { tpl = null; }
+  }
+  tpl = _posterNormalizeTemplate(tpl || window._posterTemplate || {});
 
-    // ── Background putih + doodle makanan sangat tipis ──
-    ctx.fillStyle = '#FFFFFF';
+  var photoUrl = (tpl.tampilkan_foto && m.foto) ? m.foto : '';
+  var imgs = await Promise.all([
+    _posterLoadImg(tpl.logo_url || '/asset/logo.png'),
+    tpl.background_url ? _posterLoadImg(tpl.background_url) : Promise.resolve(null),
+    photoUrl ? _posterLoadImg(photoUrl) : Promise.resolve(null),
+  ]);
+
+  var cv = document.createElement('canvas');
+  _posterDrawCanvas(cv, m, tpl, imgs[0], imgs[1], imgs[2]);
+  return await new Promise(function(resolve) {
+    cv.toBlob(function(b) { resolve(b); }, 'image/png');
+  });
+}
+
+function _posterDrawCanvas(cv, m, tpl, logo, bg, photo) {
+  var W = 1080, H = 1200, PAD = 64;
+  cv.width = W; cv.height = H;
+  var ctx = cv.getContext('2d');
+
+  var G9 = tpl.warna_utama, G7 = _posterShade(G9, 16), G6 = _posterShade(G9, 30);
+  var OR = tpl.warna_aksen, OR4 = _posterShade(OR, 22);
+  var INK = '#1C1917', MUT = '#6B7280';
+  var tenant = (typeof currentTenant !== 'undefined' && currentTenant && currentTenant.nama) || 'SPPG';
+  var tenantShort = String(tenant);
+
+  // ── Background: putih (atau gambar custom + overlay) + doodle tipis ──
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, W, H);
+  if (bg) {
+    _dashDrawImageCover(ctx, bg, 0, 0, W, H, 0);
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
     ctx.fillRect(0, 0, W, H);
-    _dashDoodle(ctx, PAD + 6, 96, 96, 0.35, 'rgba(21,101,45,0.05)');
-    _dashDoodle(ctx, W - 150, 620, 92, -0.4, 'rgba(249,115,22,0.05)');
-    _dashDoodle(ctx, PAD + 4, 660, 86, 0.22, 'rgba(21,101,45,0.05)');
-    _dashDoodle(ctx, W - 160, 240, 104, -0.28, 'rgba(21,101,45,0.05)');
+  }
+  _dashDoodle(ctx, PAD + 6, 96, 96, 0.35, _posterRgba(G9, 0.05));
+  _dashDoodle(ctx, W - 150, 620, 92, -0.4, _posterRgba(OR, 0.05));
+  _dashDoodle(ctx, PAD + 4, 660, 86, 0.22, _posterRgba(G9, 0.05));
+  _dashDoodle(ctx, W - 160, 240, 104, -0.28, _posterRgba(G9, 0.05));
 
-    // ── Header: logo kiri atas + tagline kanan atas ──
-    if (logo) {
-      ctx.drawImage(logo, PAD, 44, 92, 92);
-      ctx.fillStyle = G9; ctx.font = '800 25px sans-serif'; ctx.fillText('SPPG', PAD + 108, 86);
-      ctx.fillStyle = OR; ctx.font = '700 11px sans-serif'; ctx.fillText(tenantShort.toUpperCase(), PAD + 108, 106);
-    } else {
-      _dashDrawLogo(ctx, PAD, 52, 74);
-      ctx.fillStyle = G9; ctx.font = '800 25px sans-serif'; ctx.fillText('SPPG', PAD + 90, 86);
-      ctx.fillStyle = OR; ctx.font = '700 11px sans-serif'; ctx.fillText(tenantShort.toUpperCase(), PAD + 90, 106);
-    }
+  // ── Header: logo kiri atas + tagline kanan atas ──
+  if (logo) {
+    _dashDrawImageCover(ctx, logo, PAD, 44, 92, 92, 14);
+    ctx.fillStyle = G9; ctx.font = '800 25px sans-serif'; ctx.fillText('SPPG', PAD + 108, 86);
+    ctx.fillStyle = OR; ctx.font = '700 11px sans-serif'; ctx.fillText(tenantShort.toUpperCase(), PAD + 108, 106);
+  } else {
+    _dashDrawLogo(ctx, PAD, 52, 74);
+    ctx.fillStyle = G9; ctx.font = '800 25px sans-serif'; ctx.fillText('SPPG', PAD + 90, 86);
+    ctx.fillStyle = OR; ctx.font = '700 11px sans-serif'; ctx.fillText(tenantShort.toUpperCase(), PAD + 90, 106);
+  }
+  if (tpl.tagline) {
     ctx.fillStyle = MUT; ctx.font = '600 12px sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText('Partner Nutrisi & Gaya Hidup Sehat', W - PAD, 88);
+    ctx.fillText(tpl.tagline, W - PAD, 88);
     ctx.textAlign = 'left';
+  }
 
-    // ── Judul utama + badge ──
-    ctx.fillStyle = G9; ctx.font = '800 54px sans-serif';
-    ctx.fillText('Informasi Nilai Gizi', PAD, 208);
-    const b1 = '✓   Menu MBG', b2 = 'Makanan Bergizi Gratis';
-    ctx.font = '700 14px sans-serif';
-    const bw1 = ctx.measureText(b1).width + 40;
-    _dashRoundRect(ctx, PAD, 226, bw1, 44, 22);
+  // ── Judul utama (auto-shrink agar 1 baris) + badge ──
+  var titleSize = 54;
+  var titleText = tpl.judul;
+  ctx.fillStyle = G9;
+  ctx.font = '800 ' + titleSize + 'px sans-serif';
+  while (titleSize > 26 && ctx.measureText(titleText).width > W - PAD * 2) {
+    titleSize -= 2;
+    ctx.font = '800 ' + titleSize + 'px sans-serif';
+  }
+  if (ctx.measureText(titleText).width > W - PAD * 2) {
+    while (titleText.length > 3 && ctx.measureText(titleText + '…').width > W - PAD * 2) {
+      titleText = titleText.slice(0, -1);
+    }
+    titleText += '…';
+  }
+  ctx.fillText(titleText, PAD, 208);
+
+  ctx.font = '700 14px sans-serif';
+  var bx = PAD;
+  if (tpl.badge1) {
+    var bw1 = Math.min(ctx.measureText(tpl.badge1).width + 40, W - PAD * 2);
+    _dashRoundRect(ctx, bx, 226, bw1, 44, 22);
     ctx.fillStyle = '#FFFFFF'; ctx.fill();
     ctx.strokeStyle = G6; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = G7; ctx.fillText(b1, PAD + 20, 255);
-    const bx2 = PAD + bw1 + 14;
-    const bw2 = ctx.measureText(b2).width + 60;
-    const g2 = ctx.createLinearGradient(bx2, 0, bx2 + bw2, 0);
+    ctx.save();
+    _dashRoundRect(ctx, bx, 226, bw1, 44, 22);
+    ctx.clip();
+    ctx.fillStyle = G7; ctx.fillText(tpl.badge1, bx + 20, 255);
+    ctx.restore();
+    bx += bw1 + 14;
+  }
+  if (tpl.badge2 && bx < W - PAD - 90) {
+    var bw2 = Math.min(ctx.measureText(tpl.badge2).width + 60, W - PAD - bx);
+    var g2 = ctx.createLinearGradient(bx, 0, bx + bw2, 0);
     g2.addColorStop(0, G6); g2.addColorStop(1, G9);
-    _dashRoundRect(ctx, bx2, 226, bw2, 44, 22);
+    _dashRoundRect(ctx, bx, 226, bw2, 44, 22);
     ctx.fillStyle = g2; ctx.fill();
-    ctx.fillStyle = '#FFFFFF'; ctx.fillText(b2, bx2 + 22, 255);
+    ctx.save();
+    _dashRoundRect(ctx, bx, 226, bw2, 44, 22);
+    ctx.clip();
+    ctx.fillStyle = '#FFFFFF'; ctx.fillText(tpl.badge2, bx + 46, 255);
+    ctx.restore();
     ctx.fillStyle = OR4;
-    ctx.beginPath(); ctx.arc(bx2 + 28, 248, 7, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(bx2 + 28, 248, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bx + 25, 248, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(bx + 25, 248, 3, 0, Math.PI * 2); ctx.fill();
+  }
 
-    // ── Nama menu ──
-    ctx.fillStyle = INK; ctx.font = '800 36px sans-serif';
-    const nameLines = _dashWrapText(ctx, m.menu_nama || 'Menu hari ini', W - PAD * 2).slice(0, 2);
-    nameLines.forEach(function(l, i) { ctx.fillText(l, PAD, 322 + i * 48); });
-    const nameEnd = 322 + nameLines.length * 48;
+  // ── Nama menu ──
+  ctx.fillStyle = INK; ctx.font = '800 36px sans-serif';
+  var nameLines = _dashWrapText(ctx, m.menu_nama || 'Menu hari ini', W - PAD * 2).slice(0, 2);
+  nameLines.forEach(function(l, i) { ctx.fillText(l, PAD, 322 + i * 48); });
+  var nameEnd = 322 + nameLines.length * 48;
 
-    // ── Visual tengah: foto menu atau ilustrasi tray ──
-    const visW = 700, visH = 430;
-    const visX = (W - visW) / 2;
-    const visY = nameEnd + 34;
+  // ── Visual tengah: foto menu atau ilustrasi tray ──
+  // Nama menu 2 baris → area visual dipendekkan agar tidak menabrak footer.
+  var visW = 700, visH = nameLines.length > 1 ? 372 : 430;
+  var visX = (W - visW) / 2;
+  var visY = nameEnd + 34;
+  if (photo) _dashDrawImageCover(ctx, photo, visX, visY, visW, visH, 24);
+  else _dashDrawTray(ctx, visX, visY, visW, visH);
 
-    const drawLower = function() {
-      // strip tanggal aktual menu
-      ctx.fillStyle = MUT; ctx.font = '700 23px sans-serif';
-      const tgl = _dashFmtTanggal(m.tanggal);
-      ctx.fillText(tgl, PAD, visY + visH + 54);
+  // ── Tanggal ──
+  ctx.fillStyle = MUT; ctx.font = '700 23px sans-serif';
+  ctx.fillText(_dashFmtTanggal(m.tanggal), PAD, visY + visH + 54);
 
-      // kartu Catatan + tabel gizi
-      const cardY = visY + visH + 84;
-      const cardH = 180;
-      const catW = Math.round((W - PAD * 2) * 0.52);
-      const tblX = PAD + catW + 24;
-      const tblW = W - PAD * 2 - catW - 24;
+  // ── Kartu catatan + tabel gizi ──
+  var cardY = visY + visH + 84;
+  var cardH = 180;
+  var catW = Math.round((W - PAD * 2) * 0.52);
+  var tblX = PAD + catW + 24;
+  var tblW = W - PAD * 2 - catW - 24;
 
-      _dashCard(ctx, PAD, cardY, catW, cardH);
-      ctx.fillStyle = G9; ctx.font = '800 16px sans-serif'; ctx.fillText('Catatan', PAD + 22, cardY + 34);
-      const bullets = [
-        'Karbohidrat, lauk, sayur & buah dalam satu porsi',
-        'Protein hewani & nabati untuk tumbuh kembang',
-        'Serat tinggi membantu kesehatan pencernaan',
-        'Diolah higienis sesuai standar gizi MBG',
-      ];
-      bullets.forEach(function(b, i) {
-        const by = cardY + 58 + i * 29;
-        ctx.fillStyle = OR; ctx.beginPath(); ctx.arc(PAD + 17, by - 5, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#44403C'; ctx.font = '600 13px sans-serif'; ctx.fillText(b, PAD + 31, by);
-      });
+  _dashCard(ctx, PAD, cardY, catW, cardH);
+  ctx.fillStyle = G9; ctx.font = '800 16px sans-serif';
+  ctx.fillText(tpl.catatan_judul, PAD + 22, cardY + 34);
 
-      _dashCard(ctx, tblX, cardY, tblW, cardH);
-      ctx.fillStyle = G9; ctx.font = '800 21px sans-serif'; ctx.fillText('Informasi Gizi', tblX + 22, cardY + 36);
-      ctx.fillStyle = MUT; ctx.font = '600 12px sans-serif'; ctx.textAlign = 'right';
-      ctx.fillText('per porsi', tblX + tblW - 22, cardY + 36); ctx.textAlign = 'left';
-      const rows = [
-        ['Energi', Number(m.kalori || 0).toLocaleString('id-ID') + ' kkal'],
-        ['Protein', Number(m.protein || 0).toLocaleString('id-ID') + ' g'],
-        ['Lemak', Number(m.lemak || 0).toLocaleString('id-ID') + ' g'],
-        ['Karbohidrat', Number(m.karbohidrat || 0).toLocaleString('id-ID') + ' g'],
-        ['Serat', Number(m.serat || 0).toLocaleString('id-ID') + ' g'],
-      ];
-      rows.forEach(function(r, i) {
-        const y0 = cardY + 62 + i * 26;
-        if (i > 0) {
-          ctx.strokeStyle = '#F1EFEC'; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(tblX + 22, y0 - 13); ctx.lineTo(tblX + tblW - 22, y0 - 13); ctx.stroke();
-        }
-        ctx.fillStyle = MUT; ctx.font = '600 13px sans-serif'; ctx.fillText(r[0], tblX + 22, y0);
-        ctx.fillStyle = INK; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'right'; ctx.fillText(r[1], tblX + tblW - 22, y0); ctx.textAlign = 'left';
-      });
-
-      cv.toBlob(function(b) { resolve(b); }, 'image/png');
-    };
-
-    if (m.foto) {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = function() {
-        _dashDrawImageCover(ctx, img, visX, visY, visW, visH, 24);
-        drawLower();
-      };
-      img.onerror = function() { _dashDrawTray(ctx, visX, visY, visW, visH); drawLower(); };
-      img.src = m.foto;
-    } else {
-      _dashDrawTray(ctx, visX, visY, visW, visH);
-      drawLower();
+  var bullets = _posterResolveCatatan(tpl, m);
+  var maxTextW = catW - 53;
+  var by = cardY + 58;
+  var bottomLimit = cardY + cardH - 12;
+  for (var bi = 0; bi < bullets.length && by <= bottomLimit; bi++) {
+    ctx.font = '600 13px sans-serif';
+    var lines = _dashWrapText(ctx, bullets[bi], maxTextW);
+    for (var li = 0; li < lines.length && by <= bottomLimit; li++) {
+      if (li === 0) {
+        ctx.fillStyle = OR;
+        ctx.beginPath(); ctx.arc(PAD + 17, by - 5, 4, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = '#44403C'; ctx.font = '600 13px sans-serif';
+      ctx.fillText(lines[li], PAD + 31, by);
+      by += 17;
     }
-    });
+    by += 7;
+  }
+
+  _dashCard(ctx, tblX, cardY, tblW, cardH);
+  ctx.fillStyle = G9; ctx.font = '800 21px sans-serif';
+  ctx.fillText('Informasi Gizi', tblX + 22, cardY + 36);
+  ctx.fillStyle = MUT; ctx.font = '600 12px sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText('per porsi', tblX + tblW - 22, cardY + 36); ctx.textAlign = 'left';
+  var rows = [
+    ['Energi', Number(m.kalori || 0).toLocaleString('id-ID') + ' kkal'],
+    ['Protein', Number(m.protein || 0).toLocaleString('id-ID') + ' g'],
+    ['Lemak', Number(m.lemak || 0).toLocaleString('id-ID') + ' g'],
+    ['Karbohidrat', Number(m.karbohidrat || 0).toLocaleString('id-ID') + ' g'],
+    ['Serat', Number(m.serat || 0).toLocaleString('id-ID') + ' g'],
+  ];
+  rows.forEach(function(r, i) {
+    var y0 = cardY + 62 + i * 26;
+    if (i > 0) {
+      ctx.strokeStyle = '#F1EFEC'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(tblX + 22, y0 - 13); ctx.lineTo(tblX + tblW - 22, y0 - 13); ctx.stroke();
+    }
+    ctx.fillStyle = MUT; ctx.font = '600 13px sans-serif'; ctx.fillText(r[0], tblX + 22, y0);
+    ctx.fillStyle = INK; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'right'; ctx.fillText(r[1], tblX + tblW - 22, y0); ctx.textAlign = 'left';
   });
+
+  // ── Footer band warna utama ──
+  var footH = 86;
+  var footY = H - footH;
+  ctx.fillStyle = G9; ctx.fillRect(0, footY, W, footH);
+  ctx.fillStyle = OR; ctx.fillRect(0, footY, W, 6);
+  var footText = tpl.footer_text || tenant;
+  ctx.fillStyle = '#FFFFFF'; ctx.font = '600 15px sans-serif'; ctx.textAlign = 'center';
+  var footLines = _dashWrapText(ctx, footText, W - PAD * 2).slice(0, 2);
+  var fy = footY + (footLines.length === 1 ? 50 : 36);
+  footLines.forEach(function(l) {
+    ctx.fillText(l, W / 2, fy);
+    fy += 20;
+  });
+  ctx.textAlign = 'left';
 }
 
 // Logo asli dari public/asset/logo.png (cached)

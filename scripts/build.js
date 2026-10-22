@@ -6,6 +6,7 @@ const FILES = [
   'utilitas.js',
   'crud.js',
   'beranda.js',
+  'poster.js',
   'menu.js',
   'bahan-baku.js',
   'gudang.js',

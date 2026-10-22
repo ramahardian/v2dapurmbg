@@ -73,8 +73,12 @@ router.get('/dashboard', async (req, res) => {
         const totalHari = Math.max(1, Number(s.total_hari || 7));
         // Muat menu SEMUA hari sekaligus untuk navigasi prev/next di dashboard
         const [menuItems] = await db.query(
-          `SELECT hari_ke, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, foto
-           FROM siklus_menu_item WHERE siklus_id=? ORDER BY hari_ke`,
+          `SELECT smi.hari_ke, smi.menu_id, smi.menu_nama, smi.jumlah_porsi, smi.kalori,
+                  smi.protein, smi.karbohidrat, smi.lemak, smi.serat, smi.foto,
+                  m.deskripsi AS menu_deskripsi
+           FROM siklus_menu_item smi
+           LEFT JOIN menu m ON m.id = smi.menu_id
+           WHERE smi.siklus_id=? ORDER BY smi.hari_ke`,
           [s.id]
         );
         const menuByHari = {};
@@ -101,6 +105,7 @@ router.get('/dashboard', async (req, res) => {
             menu_id: mi ? mi.menu_id : null,
             menu_nama: mi ? (mi.menu_nama || '-') : null,
             foto: mi ? (mi.foto || null) : null,
+            deskripsi: mi ? (mi.menu_deskripsi || '') : '',
             porsi_item: mi ? Number(mi.jumlah_porsi || 0) : 0,
             kalori: mi ? Number(mi.kalori || 0) : 0,
             protein: mi ? Number(mi.protein || 0) : 0,
