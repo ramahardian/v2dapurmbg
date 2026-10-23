@@ -7,6 +7,7 @@ const FILES = [
   'crud.js',
   'beranda.js',
   'poster.js',
+  'social-editor.js',
   'menu.js',
   'bahan-baku.js',
   'gudang.js',

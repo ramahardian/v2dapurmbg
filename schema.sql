@@ -40,6 +40,27 @@ CREATE TABLE IF NOT EXISTS tenant_poster_template (
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Riwayat postingan media sosial (editor gambar menu)
+CREATE TABLE IF NOT EXISTS social_posts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  menu_id INT DEFAULT NULL,
+  menu_nama VARCHAR(255) DEFAULT '',
+  tanggal DATE DEFAULT NULL,
+  format ENUM('square','portrait','story') NOT NULL DEFAULT 'portrait',
+  caption TEXT,
+  hashtags TEXT,
+  image_url VARCHAR(255) NOT NULL,
+  background_url VARCHAR(255) DEFAULT NULL,
+  photo_url VARCHAR(255) DEFAULT NULL,
+  draft_json MEDIUMTEXT,
+  created_by INT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_social_posts_tenant_created (tenant_id, created_at),
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 
 -- Penerima Manfaat
 CREATE TABLE IF NOT EXISTS penerima_manfaat (

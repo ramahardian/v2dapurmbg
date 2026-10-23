@@ -816,6 +816,30 @@ async function runMigration() {
     log('[OK] Tabel tenant_poster_template tersedia');
   } catch (e) { log('  (skip tabel tenant_poster_template): ' + e.message); }
 
+  // Tabel riwayat postingan media sosial (editor gambar menu)
+  try {
+    await q(`CREATE TABLE IF NOT EXISTS social_posts (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id INT NOT NULL,
+      menu_id INT DEFAULT NULL,
+      menu_nama VARCHAR(255) DEFAULT '',
+      tanggal DATE DEFAULT NULL,
+      format ENUM('square','portrait','story') NOT NULL DEFAULT 'portrait',
+      caption TEXT,
+      hashtags TEXT,
+      image_url VARCHAR(255) NOT NULL,
+      background_url VARCHAR(255) DEFAULT NULL,
+      photo_url VARCHAR(255) DEFAULT NULL,
+      draft_json MEDIUMTEXT,
+      created_by INT DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_social_posts_tenant_created (tenant_id, created_at),
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB`);
+    log('[OK] Tabel social_posts tersedia');
+  } catch (e) { log('  (skip tabel social_posts): ' + e.message); }
+
   // Event hapus foto absensi setiap hari Minggu 23:59
   try {
     await q(`SET GLOBAL event_scheduler = ON`);

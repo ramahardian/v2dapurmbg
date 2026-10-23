@@ -53,6 +53,9 @@ const templateRoutes = require('./template');
 // Mengimpor router pengaturan template poster share menu harian
 const posterRoutes = require('./poster');
 
+// Mengimpor router editor & riwayat postingan media sosial
+const socialRoutes = require('./social');
+
 // Mengimpor router manajemen bahan baku
 const bahanBakuRoutes = require('./bahanBaku');
 
@@ -109,6 +112,9 @@ router.use('/template', templateRoutes);
 
 // Mendaftarkan router pengaturan template poster (URL root /template-poster)
 router.use(posterRoutes);
+
+// Mendaftarkan router editor & riwayat postingan media sosial (URL root /social-posts)
+router.use(socialRoutes);
 
 // Mendaftarkan router ijin/cuti dengan prefix path '/ijin-cuti'
 router.use('/ijin-cuti', ijinCutiRoutes);

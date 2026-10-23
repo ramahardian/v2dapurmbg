@@ -124,6 +124,18 @@ function dashMenuJenjang(m) {
   return jn.length > 1 ? jn[0] + ' +' + (jn.length - 1) : (jn[0] || '');
 }
 
+function dashMenuOpenEditor() {
+  const m = dashMenuCurrent();
+  if (!m) { showAlert('Belum ada menu untuk dibuat postingan.', 'warning'); return; }
+  try {
+    sessionStorage.setItem('social_editor_menu', JSON.stringify(m));
+  } catch (e) {
+    showAlert('Gagal membuka editor: ' + (e.message || 'penyimpanan browser penuh'), 'error');
+    return;
+  }
+  navigate('editor-postingan');
+}
+
 async function dashMenuShare() {
   const m = dashMenuCurrent();
   if (!m) { showAlert('Belum ada menu untuk dibagikan.', 'warning'); return; }
