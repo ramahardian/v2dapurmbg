@@ -108,9 +108,6 @@ function dashMenuRender() {
   body.innerHTML = h;
 }
 
-/**
- * dashMenuShare — Buat gambar post menu lalu langsung unduh PNG.
- */
 function dashMenuCurrent() {
   const list = dashMenuGetList();
   if (!list.length) return null;
@@ -134,26 +131,6 @@ function dashMenuOpenEditor() {
     return;
   }
   navigate('editor-postingan');
-}
-
-async function dashMenuShare() {
-  const m = dashMenuCurrent();
-  if (!m) { showAlert('Belum ada menu untuk dibagikan.', 'warning'); return; }
-  showToast('Membuat gambar menu...', 'info');
-  try {
-    const blob = await dashMenuGenImageBlob(m);
-    if (!blob) throw new Error('Gagal membuat gambar');
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'menu-hari-ini.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
-  } catch (e) {
-    showAlert('Gagal mengunduh gambar: ' + (e.message || 'Unknown error'), 'error');
-  }
 }
 
 // ── Template poster share menu — default, normalisasi & util warna ──
