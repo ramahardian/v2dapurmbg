@@ -78,8 +78,9 @@ function gvPrepareImage(file) {
 function gvUpdateRunState() {
   const btn = document.getElementById('gv-run');
   if (!btn) return;
-  const configured = !_gvState.status || _gvState.status.configured !== false;
-  btn.disabled = _gvState.busy || !_gvState.dataUrl || !configured;
+  // Tombol hanya bergantung pada gambar & proses berjalan — tidak dikunci
+  // oleh status konfigurasi API key.
+  btn.disabled = _gvState.busy || !_gvState.dataUrl;
 }
 
 function gvSetLoading(on) {
@@ -275,7 +276,7 @@ async function gvLoadStatus() {
     if (apiStatus) {
       apiStatus.innerHTML = s.configured
         ? '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span><span>Terkonfigurasi & siap dipakai</span>'
-        : '<span class="inline-block w-2 h-2 rounded-full bg-red-500"></span><span>API key belum diset</span>';
+        : '<span></span>';
     }
     gvUpdateRunState();
   } catch (err) {
