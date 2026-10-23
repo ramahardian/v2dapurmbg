@@ -109,12 +109,11 @@ if (cluster.isMaster && WORKERS > 1) {
 
   // API limiter umum: 200 request per menit per IP
   // Skip /api/public/* (tidak dilimit agar publik bisa akses), /api/migrate/* (punya limiter sendiri),
-  // dan endpoint realtime ringan yang butuh auth (polling chat, online-users, online-history, notifikasi)
+  // dan endpoint realtime ringan yang butuh auth (polling chat, online-users, online-history)
   const isRealtimePoll = (req) =>
     req.path.startsWith('/chat') ||
     req.path.startsWith('/dashboard/online-users') ||
-    req.path.startsWith('/dashboard/online-history') ||
-    req.path.startsWith('/notifikasi');
+    req.path.startsWith('/dashboard/online-history');
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 200,

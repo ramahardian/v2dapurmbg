@@ -164,8 +164,7 @@ function renderNav() {
         </div>`;
       }
       const m = MODULES[key];
-      const badge = key === 'notifikasi' ? `<span id="notif-sidebar-badge" class="sidebar-badge hidden ml-auto text-[9px] font-bold bg-red-500 text-white px-1.5 py-[1px] rounded-full min-w-[18px] text-center leading-tight shrink-0">0</span>` : '';
-      return `<a href="/${key}" data-key="${key}" class="sidebar-link" onclick="closeSidebar()" title="${m.title}"><span class="text-base w-5 text-center shrink-0">${m.icon}</span><span class="nav-label truncate">${m.title}</span>${badge}</a>`;
+      return `<a href="/${key}" data-key="${key}" class="sidebar-link" onclick="closeSidebar()" title="${m.title}"><span class="text-base w-5 text-center shrink-0">${m.icon}</span><span class="nav-label truncate">${m.title}</span></a>`;
     }).join('');
   }).join('');
 }
@@ -395,37 +394,17 @@ function route() {
   else if (m.crud) renderCrud(m.crud);
 }
 
-// ===== Notifications (Stock + Siklus + Pesan) =====
+// ===== Notifications (Stock + Siklus) =====
 let stockNotifTimer = null;
-
-async function updateNotifSidebarBadge() {
-  try {
-    const r = await fetch('/api/notifikasi/belum-dibaca', { credentials: 'include' });
-    if (r.ok) {
-      const d = await r.json();
-      const count = (d && d.count) || 0;
-      const badge = document.getElementById('notif-sidebar-badge');
-      if (badge) {
-        if (count > 0) {
-          badge.textContent = count > 99 ? '99+' : count;
-          badge.classList.remove('hidden');
-        } else {
-          badge.classList.add('hidden');
-        }
-      }
-    }
-  } catch { /* silent */ }
-}
 
 async function fetchNotif() {
   try {
-    const [stock, siklus, pesan] = await Promise.all([
+    const [stock, siklus] = await Promise.all([
       fetch('/api/dashboard/low-stock', { credentials: 'include' }).then(r => r.ok ? r.json() : { count: 0, items: [] }),
       fetch('/api/dashboard/siklus-notif', { credentials: 'include' }).then(r => r.ok ? r.json() : { count: 0, items: [] }),
-      fetch('/api/notifikasi/belum-dibaca', { credentials: 'include' }).then(r => r.ok ? r.json() : { count: 0 }),
     ]);
 
-    const totalNotif = (stock.count || 0) + (siklus.count || 0) + (pesan.count || 0);
+    const totalNotif = (stock.count || 0) + (siklus.count || 0);
 
     // Update badge
     ['stock-notif-badge', 'stock-notif-badge-mobile'].forEach(id => {
@@ -544,9 +523,5 @@ preloadMenus();
 if (stockNotifTimer) clearInterval(stockNotifTimer);
 stockNotifTimer = setInterval(fetchNotif, 120000);
 setTimeout(fetchNotif, 3000); // first check after 3s
-
-// Sidebar unread badge: update every 30s, first check immediately
-setTimeout(updateNotifSidebarBadge, 1000);
-setInterval(updateNotifSidebarBadge, 60000);
 
 // ===== Dashboard =====

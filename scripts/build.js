@@ -16,7 +16,6 @@ const FILES = [
   'absensi.js',
   'penggajian.js',
   'jadwal.js',
-  'notifikasi.js',
   'akun.js',
   'kelola-user.js',
   'pembelian.js',

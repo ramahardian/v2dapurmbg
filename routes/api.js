@@ -113,9 +113,6 @@ router.use(posterRoutes);
 // Mendaftarkan router ijin/cuti dengan prefix path '/ijin-cuti'
 router.use('/ijin-cuti', ijinCutiRoutes);
 
-// Mengimpor dan mendaftarkan router notifikasi
-router.use(require('./notifikasi'));
-
 // Mengimpor dan mendaftarkan router Purchase Order secara langsung (URL root /)
 router.use(require('./purchase_order'));
 
