@@ -38,6 +38,7 @@ function registerCrudRoutes(router) {
 
       // 2. Insert bahan
       let hasBahan = false;
+      const bufferUpdates = new Map();
       if (Array.isArray(bahan)) {
         for (const b of bahan) {
           const itemBesar = { ...b, jumlah: (b.jumlah_besar != null ? b.jumlah_besar : b.jumlah) };
@@ -49,9 +50,14 @@ function registerCrudRoutes(router) {
             'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, jumlah_besar, jumlah_kecil, keterangan) VALUES (?,?,?,?,?,?)',
             [r.insertId, result.idBahan, result.jumlah, result.jumlah, jumlahKecil, b.keterangan || null]
           );
+          if (b.buffer_persen !== undefined && b.buffer_persen !== null && b.buffer_persen !== '') {
+            const bp = Math.max(0, Math.min(100, Number(b.buffer_persen) || 0));
+            bufferUpdates.set(result.idBahan, bp);
+          }
           hasBahan = true;
         }
       }
+      await applyBufferUpdates(conn, bufferUpdates, req.user.tenant_id);
 
       // 3. Auto-calculate nutrition
       if (hasBahan) {
@@ -104,6 +110,7 @@ function registerCrudRoutes(router) {
 
       // 2. Delete & re-insert bahan
       let hasBahan = false;
+      const bufferUpdates = new Map();
       if (Array.isArray(f.bahan)) {
         await conn.query('DELETE FROM menu_bahan WHERE menu_id=?', [req.params.id]);
 
@@ -117,9 +124,14 @@ function registerCrudRoutes(router) {
             'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, jumlah_besar, jumlah_kecil, keterangan) VALUES (?,?,?,?,?,?)',
             [req.params.id, result.idBahan, result.jumlah, result.jumlah, jumlahKecil, b.keterangan || null]
           );
+          if (b.buffer_persen !== undefined && b.buffer_persen !== null && b.buffer_persen !== '') {
+            const bp = Math.max(0, Math.min(100, Number(b.buffer_persen) || 0));
+            bufferUpdates.set(result.idBahan, bp);
+          }
           hasBahan = true;
         }
       }
+      await applyBufferUpdates(conn, bufferUpdates, req.user.tenant_id);
 
       // 3. Auto-calculate nutrition
       if (hasBahan) {
@@ -214,6 +226,20 @@ async function updateMenuNutrition(conn, menuId, tenantId, spRefMap) {
     }
   } catch (e) {
     console.error('Gagal hitung nutrisi menu:', e.message);
+  }
+}
+
+/**
+ * Simpan buffer_persen ke master bahan_baku.
+ * Buffer sengaja tetap disimpan di bahan_baku (satu sumber kebenaran) agar
+ * Total Kebutuhan, Perencanaan, Siklus, RAB, dan PR memakai angka yang sama.
+ */
+async function applyBufferUpdates(conn, updates, tenantId) {
+  for (const [idBahan, bufferPersen] of updates) {
+    await conn.query(
+      'UPDATE bahan_baku SET buffer_persen=? WHERE id=? AND tenant_id=?',
+      [bufferPersen, idBahan, tenantId]
+    );
   }
 }
 

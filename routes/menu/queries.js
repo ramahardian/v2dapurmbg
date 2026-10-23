@@ -39,7 +39,7 @@ function registerQueryRoutes(router) {
       const bahanMap = {};
       if (menuIds.length > 0) {
         const [bahanRows] = await db.query(
-          `SELECT mb.menu_id, mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan
+          `SELECT mb.menu_id, mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, COALESCE(bb.buffer_persen, 0) AS buffer_persen, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan
            FROM menu_bahan mb
            LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
            WHERE mb.menu_id IN (${menuIds.map(() => '?').join(',')})`,
@@ -51,7 +51,7 @@ function registerQueryRoutes(router) {
             bahan_baku_id: row.bahan_baku_id,
             nama: row.bahan_nama, satuan: row.satuan, kategori_sp: row.kategori_sp,
             berat_1_sp: row.berat_1_sp, persen_bdd: row.persen_bdd,
-            berat_per_satuan: row.berat_per_satuan, jumlah: row.jumlah,
+            berat_per_satuan: row.berat_per_satuan, buffer_persen: Number(row.buffer_persen) || 0, jumlah: row.jumlah,
             jumlah_besar: row.jumlah_besar != null ? row.jumlah_besar : row.jumlah,
             jumlah_kecil: row.jumlah_kecil != null ? row.jumlah_kecil : (row.jumlah_besar != null ? row.jumlah_besar : row.jumlah),
             keterangan: row.keterangan || '',
@@ -110,7 +110,7 @@ function registerQueryRoutes(router) {
   router.get('/menu/:id(\\d+)', async (req, res) => {
     const [menus] = await db.query(
       `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.jumlah_porsi,
-              mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan
+              mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, COALESCE(bb.buffer_persen, 0) AS buffer_persen, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan
        FROM menu m
        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
@@ -132,6 +132,7 @@ function registerQueryRoutes(router) {
           bahan_baku_id: row.bahan_baku_id, nama: row.bahan_nama, satuan: row.satuan,
           kategori_sp: row.kategori_sp, berat_1_sp: row.berat_1_sp,
           persen_bdd: row.persen_bdd, berat_per_satuan: row.berat_per_satuan,
+          buffer_persen: Number(row.buffer_persen) || 0,
           jumlah: row.jumlah,
           jumlah_besar: row.jumlah_besar != null ? row.jumlah_besar : row.jumlah,
           jumlah_kecil: row.jumlah_kecil != null ? row.jumlah_kecil : (row.jumlah_besar != null ? row.jumlah_besar : row.jumlah),
@@ -149,7 +150,7 @@ function registerQueryRoutes(router) {
     const ph = ids.map(() => '?').join(',');
     const [rows] = await db.query(
       `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat,
-              mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan
+              mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, COALESCE(bb.buffer_persen, 0) AS buffer_persen, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan
        FROM menu m
        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
@@ -172,6 +173,7 @@ function registerQueryRoutes(router) {
           bahan_baku_id: row.bahan_baku_id, nama: row.bahan_nama, satuan: row.satuan,
           kategori_sp: row.kategori_sp, berat_1_sp: row.berat_1_sp,
           persen_bdd: row.persen_bdd, berat_per_satuan: row.berat_per_satuan,
+          buffer_persen: Number(row.buffer_persen) || 0,
           jumlah: row.jumlah,
           jumlah_besar: row.jumlah_besar != null ? row.jumlah_besar : row.jumlah,
           jumlah_kecil: row.jumlah_kecil != null ? row.jumlah_kecil : (row.jumlah_besar != null ? row.jumlah_besar : row.jumlah),

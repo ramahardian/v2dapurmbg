@@ -14,7 +14,7 @@ const BAHAN_BAKU_CRUD_BASE = {
     { k: 'satuan', l: 'Satuan (kg/gr/liter)', req: true, group: 'info' },
     { k: 'harga_satuan', l: 'Harga Satuan (IDR)', type: 'number', fmt: 'idr', group: 'harga_stok' },
     { k: 'berat_per_satuan', l: 'Berat per Satuan (gram)', type: 'number', fmt: 'num', desc: 'Isi jika satuan bukan gram (misal 1 pcs = 50g, 1 ikat = 30g)', group: 'info' },
-    { k: 'buffer_persen', l: 'Buffer (%)', type: 'number', fmt: 'num', info: 'Cadangan belanja (0-10). Menambah QTY di halaman Total Kebutuhan — isi 0 jika ingin QTY sama dengan jumlah porsi.', group: 'harga_stok' },
+    { k: 'buffer_persen', l: 'Buffer (%)', type: 'number', fmt: 'num', info: 'Cadangan belanja (0-100). Bisa diatur di sini atau langsung saat Edit Menu; dipakai di Total Kebutuhan, Perencanaan, dan Siklus. Isi 0 jika ingin QTY sama dengan jumlah porsi.', group: 'harga_stok' },
     { k: 'kalori', l: 'Energi (kkal)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
     { k: 'protein', l: 'Protein (g)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },
     { k: 'lemak', l: 'Lemak (g)', type: 'number', fmt: 'num', decimals: 1, group: 'nutrisi', ai: true },

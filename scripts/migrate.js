@@ -706,7 +706,7 @@ async function runMigration() {
   try {
     const [bpCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'buffer_persen'");
     if (!bpCol.length) {
-      await q("ALTER TABLE bahan_baku ADD COLUMN buffer_persen DECIMAL(5,1) DEFAULT 10 COMMENT 'Buffer cadangan % (1-10), default 10' AFTER persen_bdd");
+      await q("ALTER TABLE bahan_baku ADD COLUMN buffer_persen DECIMAL(5,1) DEFAULT 10 COMMENT 'Buffer cadangan % (0-100), default 10' AFTER persen_bdd");
       log('✓ Migrasi bahan_baku: tambah kolom buffer_persen');
     }
   } catch (e) { log('  (skip migrasi buffer_persen)'); }

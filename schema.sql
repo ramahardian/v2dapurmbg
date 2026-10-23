@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS bahan_baku (
   kategori_sp VARCHAR(50) NULL, -- VARCHAR (bukan ENUM) agar kategori 'Bumbu' dll. dari aplikasi tidak memicu 'Data truncated'
   berat_1_sp DECIMAL(10,2) DEFAULT 0,
   persen_bdd DECIMAL(5,1) DEFAULT 100,
+  buffer_persen DECIMAL(5,1) DEFAULT 10 COMMENT 'Buffer cadangan % (0-100)',
   berat_per_satuan DECIMAL(10,2) DEFAULT 0 COMMENT 'Berat 1 satuan dalam gram (misal 1 pcs = 50g)',
   satuan VARCHAR(20) NOT NULL,
   harga_satuan DECIMAL(15,2) DEFAULT 0,
