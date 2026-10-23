@@ -24,7 +24,7 @@ router.use(requireAuth);
 
 // Konfigurasi Groq (OpenAI-compatible API)
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = process.env.GROQ_VISION_MODEL || 'qwen/qwen3.8-27b';
+const GROQ_MODEL = (process.env.GROQ_VISION_MODEL || 'qwen/qwen3.8-27b').trim();
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // 6 MB gambar asli
 const REQUEST_TIMEOUT_MS = 90 * 1000;     // Groq vision bisa lambat untuk dokumen padat
 
