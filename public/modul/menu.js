@@ -837,12 +837,27 @@ function openBahanKalkulator(i) {
   var m = document.createElement('div');
   m.id = 'bahan-kalkulator-modal';
   m.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-black/40';
-  m.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-5" onclick="event.stopPropagation()">' +
+  m.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-5 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">' +
     '<div class="flex items-center justify-between mb-4">' +
       '<h3 class="font-bold text-stone-700">Kalkulator ' + (isUnitSatuan ? escHtml(satuan) + ' ↔ Gram' : 'Gram ↔ Kg') + '</h3>' +
       '<button onclick="document.getElementById(\'bahan-kalkulator-modal\').remove()" class="text-stone-400 hover:text-stone-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
     '</div>' +
     '<div class="text-xs text-stone-500 mb-3">Bahan: <span class="font-semibold text-stone-700">' + escHtml(b.nama || '') + '</span> · Satuan: <span class="font-semibold text-stone-700">' + escHtml(satuan) + '</span>' + (porsi > 0 ? ' · Total ' + porsi + ' porsi' : '') + '</div>' +
+    '<details open class="mb-3 rounded-xl bg-blue-50/70 border border-blue-100 px-3 py-2 text-[11px] leading-relaxed text-blue-900">' +
+      '<summary class="cursor-pointer font-semibold text-blue-800">Cara hitung</summary>' +
+      '<div class="mt-1.5 space-y-0.5">' +
+        (isUnitSatuan
+          ? '<div>• Gram = jumlah ' + escHtml(satuan) + ' × faktor (1 ' + escHtml(satuan) + ' = ... g).</div>' +
+            '<div>• Kilogram = Gram ÷ 1.000.</div>' +
+            '<div>• Komposisi: jumlah isi × ukuran × berat jenis (L/ml), atau jumlah isi × berat (g).</div>' +
+            '<div>• Jika faktor diubah, hasil mengikuti kolom terakhir yang diedit (unit atau Gram/Kg).</div>'
+          : '<div>• 1 kg = 1.000 g.</div>' +
+            '<div>• Kilogram = Gram ÷ 1.000; Gram = Kilogram × 1.000.</div>') +
+        '<div>• ' + (porsi > 0 ? 'Nilai Gram/Kg = total ' + porsi + ' porsi. Per porsi = total gram ÷ ' + porsi + '.' : 'Porsi Besar = 0, jadi nilai dianggap per porsi.') + '</div>' +
+        '<div>• Klik Terapkan untuk mengisi jumlah bahan.</div>' +
+        '<div>• Buffer dihitung terpisah dari master bahan.</div>' +
+      '</div>' +
+    '</details>' +
     '<div class="space-y-3">' +
       unitField +
       '<div><label class="text-xs font-medium text-stone-600">Gram</label>' +
