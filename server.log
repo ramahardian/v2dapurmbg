@@ -1,22 +1,2 @@
-Dapur Sukaluyu berjalan di http://localhost:3000
-Dapur Sukaluyu berjalan di http://localhost:3000
-Dapur Sukaluyu berjalan di http://localhost:3000
 🚀 Server — http://localhost:3000
-🚀 Server — http://localhost:3000
-🚀 Server — http://localhost:3000
-[DB_ERROR] SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='menu_bahan' AND COLUMN_NAME IN ('jumlah_besar','jumlah_kecil') Unknown database 'mbg_kitchen'
-Migrasi menu_bahan porsi (besar/kecil): Unknown database 'mbg_kitchen'
-[DB_ERROR] CREATE TABLE IF NOT EXISTS tenant_poster_template (
-          tenant_id INT NOT NULL PRIMARY KEY,
-          judul VARCHAR(120) NOT NULL DEFAULT 'Informasi Nilai Gizi',
-          tagline VARCHAR(180) N Unknown database 'mbg_kitchen'
-Migrasi tenant_poster_template: Unknown database 'mbg_kitchen'
-[DB_ERROR] CREATE TABLE IF NOT EXISTS social_posts (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          tenant_id INT NOT NULL,
-          menu_id INT DEFAULT NULL,
-          menu_nama VARCHAR(255) DEFAULT '' Unknown database 'mbg_kitchen'
-Migrasi social_posts: Unknown database 'mbg_kitchen'
-[DB_ERROR] UPDATE siklus_menu SET status='Arsip'
-       WHERE status != 'Arsip' AND tanggal_selesai IS NOT NULL AND tanggal_selesai < CURDATE() Unknown database 'mbg_kitchen'
-[autoArchiveSiklus] gagal: Unknown database 'mbg_kitchen'
+[DB_ERROR] UPDATE users SET last_activity = NOW() WHERE id = ? Unknown column 'last_activity' in 'field list'

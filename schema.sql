@@ -398,6 +398,7 @@ CREATE TABLE IF NOT EXISTS users (
   nama VARCHAR(150) NOT NULL,
   role ENUM('admin','ahli_gizi','gudang','keuangan','produksi') DEFAULT 'produksi',
   karyawan_id INT DEFAULT NULL,
+  last_activity DATETIME DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   FOREIGN KEY (karyawan_id) REFERENCES karyawan(id) ON DELETE SET NULL,
@@ -453,6 +454,16 @@ CREATE TABLE IF NOT EXISTS shift (
   jam_keluar TIME NOT NULL,
   warna VARCHAR(7) DEFAULT '#3B82F6',
   is_active TINYINT(1) DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  INDEX idx_tenant (tenant_id)
+) ENGINE=InnoDB;
+
+-- Divisi (didefinisikan sebelum shift_divisi karena menjadi rujukan FK)
+CREATE TABLE IF NOT EXISTS divisi (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  nama VARCHAR(100) NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   INDEX idx_tenant (tenant_id)
@@ -544,16 +555,6 @@ CREATE TABLE IF NOT EXISTS akun (
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
   INDEX idx_tenant (tenant_id),
   UNIQUE KEY uk_kode_tenant (kode, tenant_id)
-) ENGINE=InnoDB;
-
--- Divisi
-CREATE TABLE IF NOT EXISTS divisi (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  tenant_id INT NOT NULL,
-  nama VARCHAR(100) NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-  INDEX idx_tenant (tenant_id)
 ) ENGINE=InnoDB;
 
 -- Standar Satuan Penukar (SP)
