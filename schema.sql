@@ -62,6 +62,14 @@ CREATE TABLE IF NOT EXISTS social_posts (
 ) ENGINE=InnoDB;
 
 
+-- Pengaturan aplikasi global (key-value). Dipakai untuk menyimpan
+-- konfigurasi yang bisa diubah tanpa restart, mis. GROQ_API_KEY vision.
+CREATE TABLE IF NOT EXISTS app_settings (
+  setting_key VARCHAR(64) NOT NULL PRIMARY KEY,
+  setting_value TEXT,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 -- Penerima Manfaat
 CREATE TABLE IF NOT EXISTS penerima_manfaat (
   id INT AUTO_INCREMENT PRIMARY KEY,

@@ -4,8 +4,10 @@
  *            terstruktur (JSON) menggunakan model vision Groq.
  *
  * Endpoint:
- *   GET  /vision/status   -> cek konfigurasi API key + daftar mode + model aktif
- *   POST /vision/extract  -> kirim gambar (data URL base64) & terima hasil ekstraksi
+ *   GET    /vision/status -> cek konfigurasi API key + daftar mode + model aktif
+ *   POST   /vision/extract-> kirim gambar (data URL base64) & terima hasil ekstraksi
+ *   PUT    /vision/key    -> (admin) simpan/update GROQ_API_KEY di database
+ *   DELETE /vision/key    -> (admin) hapus key dari database (kembali ke .env)
  *
  * Catatan keamanan:
  *   - Semua endpoint wajib login (requireAuth).
@@ -15,7 +17,8 @@
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireRole } = require('../middleware/auth');
+const db = require('../db');
 
 const router = express.Router();
 
@@ -87,8 +90,38 @@ const visionLimiter = rateLimit({
   message: { error: 'Terlalu banyak permintaan ekstraksi. Coba lagi beberapa menit lagi.' },
 });
 
-function apiKey() {
-  return (process.env.GROQ_API_KEY || '').trim();
+// ── API key: DB (app_settings) dulu, fallback ke .env ──────────────────
+// Key disimpan di tabel app_settings (setting_key='groq_api_key') sehingga
+// bisa diganti lewat admin tanpa restart server. Hasil baca di-cache singkat
+// agar request ekstraksi tidak menambah query DB tiap gambar.
+const KEY_SETTING = 'groq_api_key';
+const KEY_CACHE_TTL_MS = 60 * 1000;
+let keyCache = { value: null, expires: 0 };
+
+async function dbApiKey() {
+  const now = Date.now();
+  if (keyCache.expires > now) return keyCache.value;
+  try {
+    const [rows] = await db.query(
+      'SELECT setting_value FROM app_settings WHERE setting_key = ?',
+      [KEY_SETTING]
+    );
+    const val = rows.length ? String(rows[0].setting_value || '').trim() : '';
+    keyCache = { value: val, expires: now + KEY_CACHE_TTL_MS };
+    return val;
+  } catch (e) {
+    // Tabel belum ada (migrasi belum jalan) — pakai cache terakhir / kosong
+    console.error('[groq-vision] gagal baca app_settings:', e.message);
+    return keyCache.value || '';
+  }
+}
+
+async function apiKey() {
+  return (await dbApiKey()) || (process.env.GROQ_API_KEY || '').trim();
+}
+
+function invalidateKeyCache() {
+  keyCache = { value: null, expires: 0 };
 }
 
 // Validasi & normalisasi data URL gambar -> { mime, base64, bytes }
@@ -133,9 +166,12 @@ function stripCodeFence(text) {
 }
 
 // GET /vision/status -> info konfigurasi untuk halaman frontend
-router.get('/status', (req, res) => {
+router.get('/status', async (req, res) => {
+  const dbKey = await dbApiKey();
+  const envKey = (process.env.GROQ_API_KEY || '').trim();
   res.json({
-    configured: !!apiKey(),
+    configured: !!(dbKey || envKey),
+    source: dbKey ? 'db' : (envKey ? 'env' : null),
     model: GROQ_MODEL,
     max_image_mb: Math.round(MAX_IMAGE_BYTES / (1024 * 1024)),
     modes: Object.entries(MODES).map(([key, v]) => ({ key, label: v.label, json: !!v.json })),
@@ -144,10 +180,10 @@ router.get('/status', (req, res) => {
 
 // POST /vision/extract -> { image, mode, prompt }
 router.post('/extract', visionLimiter, async (req, res) => {
-  const key = apiKey();
+  const key = await apiKey();
   if (!key) {
     return res.status(503).json({
-      error: 'GROQ_API_KEY belum diset di .env. Tambahkan API key Groq lalu restart server.',
+      error: 'GROQ_API_KEY belum diset. Simpan API key Groq lewat halaman admin (atau di .env) lalu coba lagi.',
     });
   }
 
@@ -244,6 +280,43 @@ router.post('/extract', visionLimiter, async (req, res) => {
     res.status(502).json({ error: 'Gagal menghubungi Groq: ' + (err.message || 'kesalahan jaringan') });
   } finally {
     clearTimeout(timer);
+  }
+});
+
+// PUT /vision/key -> simpan/update API key Groq di database (admin only)
+// Body: { api_key: 'gsk_...' }. Kosongkan ?clear=1 untuk menghapus.
+router.put('/key', requireRole('admin'), async (req, res) => {
+  const key = String(req.body?.api_key || '').trim();
+  if (!key) {
+    return res.status(400).json({ error: 'API key tidak boleh kosong.' });
+  }
+  if (key.length > 255) {
+    return res.status(400).json({ error: 'API key terlalu panjang (maks 255 karakter).' });
+  }
+  try {
+    await db.query(
+      'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ' +
+      'ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
+      [KEY_SETTING, key]
+    );
+    invalidateKeyCache();
+    res.json({ ok: true, source: 'db', configured: true });
+  } catch (e) {
+    console.error('[groq-vision] gagal simpan key:', e);
+    res.status(500).json({ error: 'Gagal menyimpan API key ke database.' });
+  }
+});
+
+// DELETE /vision/key -> hapus key dari database (kembali pakai .env)
+router.delete('/key', requireRole('admin'), async (req, res) => {
+  try {
+    await db.query('DELETE FROM app_settings WHERE setting_key = ?', [KEY_SETTING]);
+    invalidateKeyCache();
+    const envKey = (process.env.GROQ_API_KEY || '').trim();
+    res.json({ ok: true, source: envKey ? 'env' : null, configured: !!envKey });
+  } catch (e) {
+    console.error('[groq-vision] gagal hapus key:', e);
+    res.status(500).json({ error: 'Gagal menghapus API key dari database.' });
   }
 });
 

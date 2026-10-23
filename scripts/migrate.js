@@ -924,6 +924,16 @@ async function runMigration() {
     log('✓ Migrasi chat_reads: tabel dibuat');
   } catch (e) { log('  (skip chat_reads): ' + e.message); }
 
+  // Tabel app_settings — pengaturan global key-value (mis. GROQ_API_KEY vision)
+  try {
+    await q(`CREATE TABLE IF NOT EXISTS app_settings (
+      setting_key VARCHAR(64) NOT NULL PRIMARY KEY,
+      setting_value TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB`);
+    log('✓ Migrasi app_settings: tabel dibuat');
+  } catch (e) { log('  (skip app_settings): ' + e.message); }
+
   log('✓ Migrasi selesai!');
   return logs;
 }
