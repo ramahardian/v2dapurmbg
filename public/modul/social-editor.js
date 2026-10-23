@@ -23,6 +23,84 @@ var SOCIAL_OBJECT_TYPES = {
   triangle: 'Segitiga',
 };
 
+var SOCIAL_ARROW_STYLES = {
+  classic: 'Klasik (garis)',
+  cartoon: 'Kartun (melengkung)',
+  block: 'Blok (tebal)',
+  double: 'Dua arah',
+};
+
+var SOCIAL_FONTS = {
+  system: { label: 'Sistem (default)', css: 'system-ui, -apple-system, "Segoe UI", sans-serif' },
+  comic: { label: 'Comic Neue (mirip Comic Sans)', css: '"Comic Neue", "Comic Sans MS", cursive' },
+  baloo: { label: 'Baloo 2 (bulat lucu)', css: '"Baloo 2", cursive' },
+  fredoka: { label: 'Fredoka (bulat lucu)', css: 'Fredoka, sans-serif' },
+  grandstander: { label: 'Grandstander (lucu)', css: 'Grandstander, cursive' },
+  luckiest: { label: 'Luckiest Guy (komik)', css: '"Luckiest Guy", cursive' },
+  bangers: { label: 'Bangers (komik)', css: 'Bangers, cursive' },
+  chewy: { label: 'Chewy (lucu)', css: 'Chewy, cursive' },
+  sniglet: { label: 'Sniglet (lucu)', css: 'Sniglet, cursive' },
+  patrick: { label: 'Patrick Hand (tulisan tangan)', css: '"Patrick Hand", cursive' },
+  caveat: { label: 'Caveat (tulisan tangan)', css: 'Caveat, cursive' },
+  pacifico: { label: 'Pacifico (script)', css: 'Pacifico, cursive' },
+  lobster: { label: 'Lobster (script)', css: 'Lobster, cursive' },
+  bungee: { label: 'Bungee (judul tebal)', css: 'Bungee, cursive' },
+  righteous: { label: 'Righteous (judul)', css: 'Righteous, cursive' },
+  montserrat: { label: 'Montserrat (modern)', css: 'Montserrat, sans-serif' },
+  poppins: { label: 'Poppins (modern)', css: 'Poppins, sans-serif' },
+  nunito: { label: 'Nunito (bulat)', css: 'Nunito, sans-serif' },
+  quicksand: { label: 'Quicksand (bulat)', css: 'Quicksand, sans-serif' },
+};
+
+var SOCIAL_FONT_URL = 'https://fonts.googleapis.com/css2?family=Baloo+2:wght@400..800&family=Bangers&family=Bungee&family=Caveat:wght@400..700&family=Chewy&family=Comic+Neue:wght@400;700&family=Fredoka:wght@300..700&family=Grandstander:wght@400..800&family=Lobster&family=Luckiest+Guy&family=Montserrat:wght@400..800&family=Nunito:wght@400..800&family=Pacifico&family=Patrick+Hand&family=Poppins:wght@400..800&family=Quicksand:wght@400..700&family=Righteous&family=Sniglet:wght@400;800&display=swap';
+
+var SOCIAL_CURVE_MAX_ANGLE = 1.75;
+
+function socialFontCss(key) {
+  return (SOCIAL_FONTS[key] || SOCIAL_FONTS.system).css;
+}
+
+var _socialFontsPromise = null;
+
+function socialEnsureFonts() {
+  if (_socialFontsPromise) return _socialFontsPromise;
+  _socialFontsPromise = new Promise(function(resolve) {
+    if (typeof document === 'undefined') { resolve(); return; }
+    if (document.getElementById('social-google-fonts')) { resolve(); return; }
+    const link = document.createElement('link');
+    link.id = 'social-google-fonts';
+    link.rel = 'stylesheet';
+    link.href = SOCIAL_FONT_URL;
+    link.onload = function() { resolve(); };
+    link.onerror = function() { resolve(); };
+    document.head.appendChild(link);
+  });
+  return _socialFontsPromise;
+}
+
+function socialLoadFont(key) {
+  return socialEnsureFonts().then(function() {
+    if (typeof document === 'undefined' || !document.fonts || !document.fonts.load) return null;
+    const css = socialFontCss(key);
+    return Promise.all([
+      document.fonts.load('400 40px ' + css).catch(function() { return null; }),
+      document.fonts.load('800 40px ' + css).catch(function() { return null; }),
+    ]);
+  });
+}
+
+async function socialPreloadFonts() {
+  await socialEnsureFonts();
+  if (!_socialEd || typeof document === 'undefined' || !document.fonts || !document.fonts.load) return;
+  const keys = { system: true };
+  (_socialEd.layers || []).forEach(function(l) { keys[l.font || 'system'] = true; });
+  const jobs = Object.keys(keys).map(function(k) {
+    return socialLoadFont(k).catch(function() { return null; });
+  });
+  try { await Promise.all(jobs); } catch (e) {}
+  try { await document.fonts.ready; } catch (e) {}
+}
+
 function socialEsc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -97,6 +175,7 @@ function socialNormalizeLayer(l) {
     weight: 600,
     align: 'left',
     maxWidthPct: 0.86,
+    font: 'system',
     shadow: true,
     shadowColor: '#000000',
     shadowBlur: 10,
@@ -106,11 +185,14 @@ function socialNormalizeLayer(l) {
     strokeWidth: 2,
     opacity: 100,
     lineHeight: 118,
+    curve: 0,
   };
   const src = l || {};
   Object.keys(src).forEach(function(k) {
     if (src[k] !== undefined && src[k] !== null) out[k] = src[k];
   });
+  if (!SOCIAL_FONTS[out.font]) out.font = 'system';
+  out.curve = socialClamp(out.curve, -100, 100);
   return out;
 }
 
@@ -127,12 +209,14 @@ function socialNormalizeObject(o) {
     strokeWidth: 8,
     rotation: 0,
     opacity: 100,
+    arrowStyle: 'classic',
   };
   const src = o || {};
   Object.keys(src).forEach(function(k) {
     if (src[k] !== undefined && src[k] !== null) out[k] = src[k];
   });
   if (!SOCIAL_OBJECT_TYPES[out.type]) out.type = 'rect';
+  if (!SOCIAL_ARROW_STYLES[out.arrowStyle]) out.arrowStyle = 'classic';
   return out;
 }
 
@@ -206,11 +290,6 @@ function socialSelectedLayer() {
 function socialSelectedObject() {
   if (!_socialEd || _socialEd.active !== 'object' || !_socialEd.objects) return null;
   return _socialEd.objects[_socialEd.selectedObject] || null;
-}
-
-function socialTitleLayer() {
-  if (!_socialEd || !_socialEd.layers || !_socialEd.layers.length) return null;
-  return _socialEd.layers.find(function(l) { return l.id === 'title'; }) || _socialEd.layers[0];
 }
 
 function socialImageSrc(img) {
@@ -341,6 +420,7 @@ function socialRenderEditor() {
   const c = document.getElementById('content');
   if (!c || !_socialEd) return;
   c.innerHTML = socialEditorHtml(_socialEd);
+  socialEnsureFonts();
   socialBindCanvas();
   socialRenderLayerList();
   socialRenderObjectList();
@@ -355,7 +435,6 @@ function socialRenderEditor() {
 function socialEditorHtml(st) {
   const m = st.menu || {};
   const sel = socialSelectedLayer();
-  const titleLayer = socialTitleLayer();
   const pr = socialNormalizePhotoRect(st.photoRect);
   const inputCls = 'mt-1 w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all';
   const textareaCls = 'mt-1 w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all';
@@ -387,8 +466,6 @@ function socialEditorHtml(st) {
             <div class="text-sm font-bold text-stone-800">${socialEsc(m.menu_nama || 'Tanpa menu')}</div>
             <div class="text-[11px] text-stone-500 mt-0.5">${socialEsc(socialFmtTanggal(m.tanggal))}${jn ? ' · ' + socialEsc(jn) : ''}</div>
           </div>
-          <label class="block mt-3 ${labelCls}">Judul (bisa diubah)</label>
-          <input id="social-title-input" type="text" maxlength="120" value="${socialEsc(titleLayer ? titleLayer.text : '')}" oninput="socialSetTitle(this.value)" class="${inputCls}" placeholder="Judul bebas, tidak harus nama menu" />
           <label class="block mt-3 ${labelCls}">Format</label>
           <select id="social-format" onchange="socialSetFormat(this.value)" class="${inputCls}">
             ${socialFormatOption('portrait', st.format, SOCIAL_FORMATS.portrait.label)}
@@ -503,6 +580,12 @@ function socialEditorHtml(st) {
                 <input id="social-object-opacity" type="range" min="10" max="100" step="1" oninput="socialUpdateObject('opacity', this.value)" class="mt-3 w-full accent-emerald-600" />
               </div>
             </div>
+            <div id="social-object-arrow-wrap" class="mt-3 hidden">
+              <label class="${labelCls}">Gaya Panah</label>
+              <select id="social-object-arrow-style" onchange="socialUpdateObject('arrowStyle', this.value)" class="${inputCls}">
+                ${Object.keys(SOCIAL_ARROW_STYLES).map(function(k) { return socialFormatOption(k, 'classic', SOCIAL_ARROW_STYLES[k].label); }).join('')}
+              </select>
+            </div>
             <label class="inline-flex items-center gap-2 mt-3 text-xs font-medium text-stone-600"><input id="social-object-fill" type="checkbox" onchange="socialUpdateObject('fill', this.checked)" class="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" /> Isi penuh (kotak/lingkaran/segitiga)</label>
             <button type="button" onclick="socialDeleteObject()" class="mt-3 text-[11px] font-semibold text-red-600 hover:text-red-700 px-2.5 py-1.5 rounded-lg hover:bg-red-50">Hapus objek ini</button>
           </div>
@@ -524,6 +607,13 @@ function socialEditorHtml(st) {
             <div class="sm:col-span-2">
               <label class="${labelCls}">Isi Teks</label>
               <textarea id="social-layer-text" rows="3" oninput="socialUpdateLayer('text', this.value)" class="${textareaCls}"></textarea>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="${labelCls}">Font Teks</label>
+              <select id="social-layer-font" onchange="socialUpdateLayer('font', this.value)" class="${inputCls}">
+                ${Object.keys(SOCIAL_FONTS).map(function(k) { return socialFormatOption(k, sel && sel.font, SOCIAL_FONTS[k].label); }).join('')}
+              </select>
+              <div class="text-[10px] text-stone-400 mt-1">Font Google dimuat otomatis saat dipilih.</div>
             </div>
             <div>
               <label class="${labelCls}">Ukuran (px)</label>
@@ -597,6 +687,11 @@ function socialEditorHtml(st) {
                   <label class="${labelCls}">Jarak Baris <span id="social-layer-lineheight-val" class="text-stone-400 normal-case">${sel ? Math.round(Number(sel.lineHeight) || 118) : 118}%</span></label>
                   <input id="social-layer-lineheight" type="range" min="80" max="200" step="5" value="${sel ? Math.round(Number(sel.lineHeight) || 118) : 118}" oninput="socialUpdateLayer('lineHeight', this.value)" class="mt-3 w-full accent-emerald-600" />
                 </div>
+              </div>
+              <div class="mt-3">
+                <label class="${labelCls}">Lengkungan Teks <span id="social-layer-curve-val" class="text-stone-400 normal-case">${sel ? Math.round(Number(sel.curve) || 0) : 0}%</span></label>
+                <input id="social-layer-curve" type="range" min="-100" max="100" step="1" value="${sel ? Math.round(Number(sel.curve) || 0) : 0}" oninput="socialUpdateLayer('curve', this.value)" class="mt-3 w-full accent-emerald-600" />
+                <div class="text-[10px] text-stone-400 mt-1">Kanan = melengkung ke atas, kiri = ke bawah. 0% = lurus.</div>
               </div>
             </div>
           </div>
@@ -706,10 +801,10 @@ function socialRenderLayerList() {
 function socialSyncLayerControls() {
   const l = socialSelectedLayer();
   const ids = ['social-layer-text', 'social-layer-size', 'social-layer-color',
-    'social-layer-weight', 'social-layer-align', 'social-layer-width',
+    'social-layer-weight', 'social-layer-align', 'social-layer-width', 'social-layer-font',
     'social-layer-shadow', 'social-layer-shadow-color', 'social-layer-shadow-blur',
     'social-layer-shadow-offset', 'social-layer-stroke', 'social-layer-stroke-color',
-    'social-layer-stroke-width', 'social-layer-opacity', 'social-layer-lineheight'];
+    'social-layer-stroke-width', 'social-layer-opacity', 'social-layer-lineheight', 'social-layer-curve'];
   ids.forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.disabled = !l;
@@ -729,6 +824,9 @@ function socialSyncLayerControls() {
   if (width) width.value = Math.round((Number(l.maxWidthPct) || 0.86) * 100);
   const widthVal = document.getElementById('social-layer-width-val');
   if (widthVal) widthVal.textContent = Math.round((Number(l.maxWidthPct) || 0.86) * 100) + '%';
+
+  const font = document.getElementById('social-layer-font');
+  if (font) font.value = l.font || 'system';
 
   const shadow = document.getElementById('social-layer-shadow');
   if (shadow) shadow.checked = !!l.shadow;
@@ -752,6 +850,10 @@ function socialSyncLayerControls() {
   if (lineHeight) lineHeight.value = Math.round(Number(l.lineHeight) || 118);
   const lineHeightVal = document.getElementById('social-layer-lineheight-val');
   if (lineHeightVal) lineHeightVal.textContent = Math.round(Number(l.lineHeight) || 118) + '%';
+  const curve = document.getElementById('social-layer-curve');
+  if (curve) curve.value = Math.round(Number(l.curve) || 0);
+  const curveVal = document.getElementById('social-layer-curve-val');
+  if (curveVal) curveVal.textContent = Math.round(Number(l.curve) || 0) + '%';
 }
 
 function socialSelectLayer(i) {
@@ -760,24 +862,6 @@ function socialSelectLayer(i) {
   _socialEd.active = 'text';
   _socialEd.selectedObject = -1;
   _socialEd.photoSelected = false;
-  socialRenderLayerList();
-  socialRenderObjectList();
-  socialSyncLayerControls();
-  socialSyncObjectControls();
-  socialDrawPreview();
-}
-
-function socialSetTitle(v) {
-  const l = socialTitleLayer();
-  if (!l) return;
-  l.text = String(v == null ? '' : v);
-  const idx = _socialEd.layers.indexOf(l);
-  _socialEd.active = 'text';
-  _socialEd.selected = idx >= 0 ? idx : 0;
-  _socialEd.selectedObject = -1;
-  _socialEd.photoSelected = false;
-  const textEl = document.getElementById('social-layer-text');
-  if (textEl) textEl.value = l.text;
   socialRenderLayerList();
   socialRenderObjectList();
   socialSyncLayerControls();
@@ -892,6 +976,7 @@ function socialUpdateObject(key, value) {
   else if (key === 'hPct') o.hPct = socialClamp(value, 0, 110) / 100;
   else if (key === 'rotation') o.rotation = socialClamp(value, -180, 180);
   else if (key === 'opacity') o.opacity = socialClamp(value, 10, 100);
+  else if (key === 'arrowStyle') o.arrowStyle = SOCIAL_ARROW_STYLES[value] ? value : 'classic';
   socialRenderObjectList();
   socialSyncObjectControls();
   socialDrawPreview();
@@ -929,6 +1014,10 @@ function socialSyncObjectControls() {
   setVal('social-object-opacity', Math.round(Number(o.opacity) || 100));
   const fill = document.getElementById('social-object-fill');
   if (fill) fill.checked = !!o.fill;
+  const arrowWrap = document.getElementById('social-object-arrow-wrap');
+  if (arrowWrap) arrowWrap.classList.toggle('hidden', o.type !== 'arrow');
+  const arrowStyle = document.getElementById('social-object-arrow-style');
+  if (arrowStyle) arrowStyle.value = o.arrowStyle || 'classic';
   setText('social-object-w-val', Math.round((Number(o.wPct) || 0.26) * 100) + '%');
   setText('social-object-h-val', Math.round((Number(o.hPct) || 0) * 100) + '%');
   setText('social-object-rot-val', Math.round(Number(o.rotation) || 0) + '°');
@@ -981,6 +1070,10 @@ function socialUpdateLayer(key, value) {
   else if (key === 'color') l.color = value || '#FFFFFF';
   else if (key === 'weight') l.weight = parseInt(value, 10) || 600;
   else if (key === 'align') l.align = (value === 'center' || value === 'right') ? value : 'left';
+  else if (key === 'font') {
+    l.font = SOCIAL_FONTS[value] ? value : 'system';
+    socialLoadFont(l.font).then(function() { socialDrawPreview(); });
+  }
   else if (key === 'width') {
     l.maxWidthPct = socialClamp(parseInt(value, 10) / 100, 0.2, 1);
     const wv = document.getElementById('social-layer-width-val');
@@ -1003,9 +1096,10 @@ function socialUpdateLayer(key, value) {
     const lv = document.getElementById('social-layer-lineheight-val');
     if (lv) lv.textContent = Math.round(l.lineHeight) + '%';
   }
-  if (key === 'text' && l === socialTitleLayer()) {
-    const t = document.getElementById('social-title-input');
-    if (t && t.value !== l.text) t.value = l.text;
+  else if (key === 'curve') {
+    l.curve = socialClamp(value, -100, 100);
+    const cv = document.getElementById('social-layer-curve-val');
+    if (cv) cv.textContent = Math.round(l.curve) + '%';
   }
   socialRenderLayerList();
   socialDrawPreview();
@@ -1136,6 +1230,8 @@ async function socialPreloadImages() {
     }));
   }
   await Promise.all(jobs);
+  await socialPreloadFonts();
+  if (typeof document !== 'undefined' && document.getElementById('social-preview')) socialDrawPreview();
 }
 
 async function socialCompressFile(file, maxDim, onProgress) {
@@ -1367,6 +1463,83 @@ function socialDrawSelectionBox(ctx, b, label, pad) {
   ctx.restore();
 }
 
+function socialArrowHead(ctx, ex, ey, ang, head) {
+  ctx.beginPath();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - Math.cos(ang - 0.45) * head, ey - Math.sin(ang - 0.45) * head);
+  ctx.lineTo(ex - Math.cos(ang + 0.45) * head, ey - Math.sin(ang + 0.45) * head);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function socialDrawArrow(ctx, o, x, y, w, h, sw) {
+  const ex = x + w;
+  const ey = y + h;
+  const len = Math.hypot(w, h);
+  if (len < 1) return;
+  const style = o.arrowStyle || 'classic';
+  const ang = Math.atan2(h, w);
+  const head = Math.min(Math.max(18, sw * 2.6), Math.max(16, len * 0.36));
+
+  if (style === 'block') {
+    const ux = Math.cos(ang);
+    const uy = Math.sin(ang);
+    const px = -uy;
+    const py = ux;
+    const headLen = Math.min(Math.max(24, sw * 3.2), len * 0.42);
+    const tail = Math.max(4, sw * 0.95);
+    const wing = Math.max(tail * 2.1, sw * 2.6);
+    const bx = ex - ux * headLen;
+    const by = ey - uy * headLen;
+    ctx.beginPath();
+    ctx.moveTo(x + px * tail, y + py * tail);
+    ctx.lineTo(bx + px * tail, by + py * tail);
+    ctx.lineTo(bx + px * wing, by + py * wing);
+    ctx.lineTo(ex, ey);
+    ctx.lineTo(bx - px * wing, by - py * wing);
+    ctx.lineTo(bx - px * tail, by - py * tail);
+    ctx.lineTo(x - px * tail, y - py * tail);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  if (style === 'cartoon') {
+    const nx = -h / len;
+    const ny = w / len;
+    const bend = Math.min(70, Math.max(16, len * 0.24));
+    const mx = x + w / 2 + nx * bend;
+    const my = y + h / 2 + ny * bend;
+    const cpx = 2 * mx - (x + ex) / 2;
+    const cpy = 2 * my - (y + ey) / 2;
+    const endAng = Math.atan2(ey - cpy, ex - cpx);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(cpx, cpy, ex - Math.cos(endAng) * head * 0.55, ey - Math.sin(endAng) * head * 0.55);
+    ctx.stroke();
+    socialArrowHead(ctx, ex, ey, endAng, head);
+    return;
+  }
+
+  if (style === 'double') {
+    const ux = Math.cos(ang);
+    const uy = Math.sin(ang);
+    ctx.beginPath();
+    ctx.moveTo(x + ux * head * 0.6, y + uy * head * 0.6);
+    ctx.lineTo(ex - ux * head * 0.6, ey - uy * head * 0.6);
+    ctx.stroke();
+    socialArrowHead(ctx, ex, ey, ang, head);
+    socialArrowHead(ctx, x, y, ang + Math.PI, head);
+    return;
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(ex - Math.cos(ang) * head * 0.7, ey - Math.sin(ang) * head * 0.7);
+  ctx.stroke();
+  socialArrowHead(ctx, ex, ey, ang, head);
+}
+
 function socialDrawObject(ctx, o, W, H) {
   if (!o) return;
   const x = W * Number(o.xPct || 0);
@@ -1398,21 +1571,7 @@ function socialDrawObject(ctx, o, W, H) {
     ctx.lineTo(x + w, y + h);
     ctx.stroke();
   } else if (type === 'arrow') {
-    const ex = x + w;
-    const ey = y + h;
-    const ang = Math.atan2(h, w);
-    const len = Math.hypot(w, h);
-    const head = Math.min(Math.max(16, sw * 2.4), Math.max(14, len * 0.35));
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(ex - Math.cos(ang) * head * 0.7, ey - Math.sin(ang) * head * 0.7);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(ex, ey);
-    ctx.lineTo(ex - Math.cos(ang - 0.45) * head, ey - Math.sin(ang - 0.45) * head);
-    ctx.lineTo(ex - Math.cos(ang + 0.45) * head, ey - Math.sin(ang + 0.45) * head);
-    ctx.closePath();
-    ctx.fill();
+    socialDrawArrow(ctx, o, x, y, w, h, sw);
   } else if (type === 'triangle') {
     ctx.beginPath();
     ctx.moveTo(cx, y);
@@ -1442,14 +1601,51 @@ function socialPhotoRect(W, H) {
   };
 }
 
+function socialCurveMetrics(lineWidth, curve) {
+  const angle = SOCIAL_CURVE_MAX_ANGLE * socialClamp(Math.abs(Number(curve) || 0), 0, 100) / 100;
+  if (!lineWidth || !angle) return { angle: 0, radius: 0, sagitta: 0 };
+  const radius = lineWidth / angle;
+  const sagitta = radius * (1 - Math.cos(angle / 2));
+  return { angle: angle, radius: radius, sagitta: sagitta };
+}
+
+function socialDrawCurvedLine(ctx, text, left, centerY, curve, mode) {
+  const lineW = ctx.measureText(text).width;
+  const metrics = socialCurveMetrics(lineW, curve);
+  if (!text || !lineW || !metrics.angle) return;
+  const archUp = curve > 0;
+  const midX = left + lineW / 2;
+  const circleY = archUp ? centerY + metrics.radius : centerY - metrics.radius;
+  const midAngle = archUp ? -Math.PI / 2 : Math.PI / 2;
+  const start = midAngle + (archUp ? -1 : 1) * metrics.angle / 2;
+  const step = archUp ? 1 : -1;
+  let acc = 0;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  Array.from(text).forEach(function(ch) {
+    const chW = ctx.measureText(ch).width;
+    const a = start + step * ((acc + chW / 2) / metrics.radius);
+    ctx.save();
+    ctx.translate(midX + Math.cos(a) * metrics.radius, circleY + Math.sin(a) * metrics.radius);
+    ctx.rotate(a + (archUp ? Math.PI / 2 : -Math.PI / 2));
+    if (mode === 'stroke') ctx.strokeText(ch, 0, 0);
+    else ctx.fillText(ch, 0, 0);
+    ctx.restore();
+    acc += chW;
+  });
+  ctx.restore();
+}
+
 function socialDrawLayer(ctx, l, W, H) {
   if (!l || !String(l.text || '').trim()) { l._bbox = null; return; }
   const size = socialClamp(l.size, 10, 200);
   const weight = Number(l.weight) || 600;
   const maxW = W * socialClamp(l.maxWidthPct || 0.86, 0.2, 1);
   const lineHPct = socialClamp(l.lineHeight == null ? 118 : l.lineHeight, 80, 200) / 100;
+  const curve = socialClamp(l.curve == null ? 0 : l.curve, -100, 100);
   ctx.save();
-  ctx.font = weight + ' ' + size + 'px system-ui, -apple-system, "Segoe UI", sans-serif';
+  ctx.font = weight + ' ' + size + 'px ' + socialFontCss(l.font);
   const lines = socialWrapText(ctx, l.text, maxW);
   const lineH = Math.round(size * lineHPct);
   const anchorX = W * socialClamp(l.xPct, -0.2, 1.2);
@@ -1460,7 +1656,27 @@ function socialDrawLayer(ctx, l, W, H) {
   let left = anchorX;
   if (l.align === 'center') left = anchorX + (maxW - textW) / 2;
   else if (l.align === 'right') left = anchorX + maxW - textW;
-  l._bbox = { x: left, y: y, w: Math.max(textW, 12), h: Math.max(lines.length * lineH, size) };
+
+  if (curve && textW > 0) {
+    const cm = socialCurveMetrics(textW, curve);
+    const firstCenter = y + size / 2;
+    const lastCenter = y + (lines.length - 1) * lineH + size / 2;
+    const padY = cm.sagitta + size * 0.72;
+    l._bbox = {
+      x: left - size * 0.4,
+      y: firstCenter - padY,
+      w: Math.max(textW, 12) + size * 0.8,
+      h: (lastCenter - firstCenter) + padY * 2,
+    };
+  } else {
+    l._bbox = { x: left, y: y, w: Math.max(textW, 12), h: Math.max(lines.length * lineH, size) };
+  }
+
+  function drawLine(line, i, mode) {
+    if (curve) socialDrawCurvedLine(ctx, line, left, y + i * lineH + size / 2, curve, mode);
+    else if (mode === 'stroke') ctx.strokeText(line, left, y + i * lineH);
+    else ctx.fillText(line, left, y + i * lineH);
+  }
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
@@ -1474,7 +1690,7 @@ function socialDrawLayer(ctx, l, W, H) {
     ctx.miterLimit = 2;
     ctx.shadowColor = 'transparent';
     lines.forEach(function(line, i) {
-      ctx.strokeText(line, left, y + i * lineH);
+      drawLine(line, i, 'stroke');
     });
   }
 
@@ -1493,7 +1709,7 @@ function socialDrawLayer(ctx, l, W, H) {
 
   ctx.fillStyle = l.color || '#FFFFFF';
   lines.forEach(function(line, i) {
-    ctx.fillText(line, left, y + i * lineH);
+    drawLine(line, i, 'fill');
   });
   ctx.restore();
 }
@@ -1725,16 +1941,18 @@ async function socialBuildPayload(imageDataUrl) {
         return {
           id: l.id, text: l.text, xPct: l.xPct, yPct: l.yPct, size: l.size,
           color: l.color, weight: l.weight, align: l.align, maxWidthPct: l.maxWidthPct,
+          font: l.font || 'system',
           shadow: l.shadow !== false, shadowColor: l.shadowColor, shadowBlur: l.shadowBlur,
           shadowOffsetY: l.shadowOffsetY, stroke: !!l.stroke, strokeColor: l.strokeColor,
           strokeWidth: l.strokeWidth, opacity: l.opacity, lineHeight: l.lineHeight,
+          curve: Number(l.curve) || 0,
         };
       }),
       objects: (st.objects || []).map(function(o) {
         return {
           id: o.id, type: o.type, xPct: o.xPct, yPct: o.yPct, wPct: o.wPct, hPct: o.hPct,
           color: o.color, fill: !!o.fill, strokeWidth: o.strokeWidth,
-          rotation: o.rotation, opacity: o.opacity,
+          rotation: o.rotation, opacity: o.opacity, arrowStyle: o.arrowStyle || 'classic',
         };
       }),
       photoRect: socialNormalizePhotoRect(st.photoRect),
