@@ -152,14 +152,24 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi nutrisi bahan_baku)'); }
 
-  // Per-cabang: tabel jabatan — tambah tenant_id jika belum ada
+  // Per-cabang: tabel jabatan — buat jika belum ada, lalu tambah tenant_id
   try {
+    await q(`CREATE TABLE IF NOT EXISTS jabatan (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id INT NULL,
+      name VARCHAR(100) NOT NULL,
+      description TEXT,
+      shift_id INT,
+      INDEX idx_jabatan_tenant (tenant_id)
+    ) ENGINE=InnoDB`);
+
     const [jbCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'jabatan' AND COLUMN_NAME = 'tenant_id'");
     if (!jbCols.length) {
       await q("ALTER TABLE jabatan ADD COLUMN tenant_id INT NULL AFTER id, ADD INDEX idx_jabatan_tenant (tenant_id)");
-      await q("UPDATE jabatan SET tenant_id=1 WHERE tenant_id IS NULL");
       log('✓ Migrasi jabatan: tambah kolom tenant_id');
     }
+    await q("UPDATE jabatan SET tenant_id=1 WHERE tenant_id IS NULL");
+
     // Perbaiki id jabatan agar AUTO_INCREMENT (dulu dibuat tanpa auto increment)
     const [jbAuto] = await q("SELECT EXTRA FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'jabatan' AND COLUMN_NAME = 'id'");
     if (jbAuto.length && jbAuto[0].EXTRA !== 'auto_increment') {
@@ -196,6 +206,37 @@ async function runMigration() {
       }
     }
   } catch (e) { log('  (skip migrasi jabatan)'); }
+
+  // Karyawan: pastikan kolom jabatan_id ada dan terhubung ke tabel jabatan
+  try {
+    const [kjIdCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'karyawan' AND COLUMN_NAME = 'jabatan_id'");
+    if (!kjIdCols.length) {
+      await q('ALTER TABLE karyawan ADD COLUMN jabatan_id INT NULL');
+      log('✓ Migrasi karyawan: tambah kolom jabatan_id');
+    }
+
+    const [kjIdx] = await q("SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'karyawan' AND INDEX_NAME = 'idx_jabatan'");
+    if (!kjIdx.length) {
+      await q('ALTER TABLE karyawan ADD INDEX idx_jabatan (jabatan_id)');
+    }
+
+    // Isi jabatan_id dari kolom teks jabatan lama (berdasarkan nama).
+    const [kjJabCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'karyawan' AND COLUMN_NAME = 'jabatan'");
+    if (kjJabCol.length) {
+      // Jika tabel jabatan masih kosong, salin nilai teks lama menjadi master jabatan.
+      try {
+        await q(`INSERT INTO jabatan (tenant_id, name)
+          SELECT 1, x.jabatan FROM (
+            SELECT DISTINCT jabatan FROM karyawan
+            WHERE jabatan IS NOT NULL AND jabatan <> ''
+          ) x
+          WHERE NOT EXISTS (SELECT 1 FROM jabatan j WHERE j.name = x.jabatan)`);
+      } catch (e) { log('  (skip seed jabatan dari teks karyawan): ' + e.message); }
+      await q("UPDATE karyawan k JOIN jabatan j ON j.name=k.jabatan SET k.jabatan_id=j.id WHERE k.jabatan_id IS NULL AND k.jabatan IS NOT NULL AND k.jabatan <> ''");
+    }
+
+    await q('UPDATE karyawan SET tenant_id=1 WHERE tenant_id IS NULL');
+  } catch (e) { log('  (skip migrasi karyawan jabatan_id): ' + e.message); }
 
   // Karyawan photo
   try {

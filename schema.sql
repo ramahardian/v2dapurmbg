@@ -325,6 +325,17 @@ CREATE TABLE IF NOT EXISTS siklus_menu_item (
 
 -- Tambah kolom nutrisi ke bahan_baku (dijalankan oleh migrate.js dengan pengecekan)
 
+-- Jabatan / Divisi
+CREATE TABLE IF NOT EXISTS jabatan (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  shift_id INT,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  INDEX idx_jabatan_tenant (tenant_id)
+) ENGINE=InnoDB;
+
 -- Karyawan
 CREATE TABLE IF NOT EXISTS karyawan (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -332,6 +343,7 @@ CREATE TABLE IF NOT EXISTS karyawan (
   nama VARCHAR(200) NOT NULL,
   nik VARCHAR(50),
   jabatan VARCHAR(100),
+  jabatan_id INT,
   departemen VARCHAR(100),
   gaji_pokok DECIMAL(15,2) DEFAULT 0,
   status ENUM('Aktif','Cuti','Resign') DEFAULT 'Aktif',
@@ -342,7 +354,9 @@ CREATE TABLE IF NOT EXISTS karyawan (
   photo VARCHAR(255),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-  INDEX idx_tenant (tenant_id)
+  FOREIGN KEY (jabatan_id) REFERENCES jabatan(id) ON DELETE SET NULL,
+  INDEX idx_tenant (tenant_id),
+  INDEX idx_jabatan (jabatan_id)
 ) ENGINE=InnoDB;
 
 -- Users (per tenant) — dipindah setelah karyawan agar FK karyawan_id bisa inline

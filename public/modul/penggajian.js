@@ -24,26 +24,40 @@ let karyawanState = { page: 1, limit: 10, search: '', total: 0, totalPages: 1 };
 async function loadKaryawan() {
   try {
     const params = new URLSearchParams({ page: karyawanState.page, limit: karyawanState.limit, search: karyawanState.search });
-    const results = await Promise.allSettled([
+    const [karyawanRes, deptRes, jabatanRes] = await Promise.allSettled([
       api.get('/karyawan?' + params),
       api.get('/departemen'),
       api.get('/jabatan')
     ]);
-    const failed = results.find(r => r.status === 'rejected');
-    if (failed) throw failed.reason;
-    const res = results[0].value;
+
+    // Data karyawan adalah data utama: jika ini gagal, tampilkan error.
+    if (karyawanRes.status === 'rejected') throw karyawanRes.reason;
+
+    // Endpoint pendukung (dropdown) tidak boleh menggagalkan seluruh halaman.
+    if (deptRes.status === 'rejected') console.warn('Gagal memuat departemen:', deptRes.reason);
+    if (jabatanRes.status === 'rejected') console.warn('Gagal memuat jabatan:', jabatanRes.reason);
+
+    const res = karyawanRes.value;
     const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
     const pagination = res.pagination || { total: data.length, totalPages: 1, page: 1 };
     karyawanState = { ...karyawanState, total: pagination.total, totalPages: pagination.totalPages, page: pagination.page };
     karyawanData = data;
     renderKaryawanTable(data);
     renderKaryawanPagination();
-    const depts = results[1].value;
+
+    const depts = deptRes.status === 'fulfilled' ? deptRes.value : [];
     const dd = document.getElementById('karyawan-departemen');
-    if (dd) dd.innerHTML = '<option value="">— Pilih Departemen —</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
-    const jabatanList = results[2].value;
+    if (dd) {
+      dd.innerHTML = '<option value="">— Pilih Departemen —</option>' +
+        (Array.isArray(depts) ? depts : []).map(d => `<option value="${d}">${d}</option>`).join('');
+    }
+
+    const jabatanList = jabatanRes.status === 'fulfilled' ? jabatanRes.value : [];
     const jl = document.getElementById('karyawan-jabatan');
-    if (jl) jl.innerHTML = '<option value="">— Pilih Jabatan —</option>' + jabatanList.map(j => `<option value="${j.id}">${j.name}</option>`).join('');
+    if (jl) {
+      jl.innerHTML = '<option value="">— Pilih Jabatan —</option>' +
+        (Array.isArray(jabatanList) ? jabatanList : []).map(j => `<option value="${j.id}">${j.name}</option>`).join('');
+    }
   } catch (e) {
     console.error('loadKaryawan error:', e);
     const tb = document.querySelector('#karyawan-modal')?.parentElement?.querySelector('tbody');
@@ -57,7 +71,7 @@ function renderKaryawanTable(list) {
     <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
       <td class="px-4 py-3 text-xs font-medium"><a href="/karyawan?id=${k.id}" onclick="event.preventDefault();navigate('karyawan?id=${k.id}')" class="text-blue-600 hover:text-blue-800 font-semibold">${k.nama}</a></td>
       <td class="px-4 py-3 text-xs text-stone-600">${k.nik || '-'}</td>
-      <td class="px-4 py-3 text-xs text-stone-600">${k.jabatan_nama || '-'}</td>
+      <td class="px-4 py-3 text-xs text-stone-600">${k.jabatan_nama || k.jabatan || '-'}</td>
       <td class="px-4 py-3 text-xs text-stone-600">${k.departemen || '-'}</td>
       <td class="px-4 py-3 text-xs text-right mono text-stone-700 font-medium">${fmtIDR(k.gaji_pokok)}</td>
       <td class="px-4 py-3 text-xs">${k.status}</td>
@@ -109,7 +123,12 @@ function openKaryawanForm(k) {
   document.getElementById('karyawan-id').value = k ? k.id : '';
   document.getElementById('karyawan-nama').value = k ? k.nama : '';
   document.getElementById('karyawan-nik').value = k ? k.nik || '' : '';
-  document.getElementById('karyawan-jabatan').value = k ? k.jabatan_id || '' : '';
+  const jlJabatan = document.getElementById('karyawan-jabatan');
+  jlJabatan.value = k ? k.jabatan_id || '' : '';
+  if (k && !jlJabatan.value && k.jabatan) {
+    const match = Array.from(jlJabatan.options).find(o => o.text === k.jabatan);
+    if (match) jlJabatan.value = match.value;
+  }
   document.getElementById('karyawan-departemen').value = k ? k.departemen || '' : '';
   document.getElementById('karyawan-gaji').value = k ? k.gaji_pokok : '';
   document.getElementById('karyawan-status').value = k ? k.status : 'Aktif';
@@ -124,6 +143,10 @@ function openKaryawanForm(k) {
     api.get('/jabatan').then(function(list) {
       jl.innerHTML = '<option value="">— Pilih Jabatan —</option>' + list.map(function(j) { return '<option value="' + j.id + '">' + j.name + '</option>'; }).join('');
       if (k && k.jabatan_id) jl.value = k.jabatan_id;
+      else if (k && k.jabatan) {
+        const match = Array.from(jl.options).find(function(o) { return o.text === k.jabatan; });
+        if (match) jl.value = match.value;
+      }
     });
   }
   const dd = document.getElementById('karyawan-departemen');
@@ -170,10 +193,16 @@ function openKaryawanForm(k) {
 }
 async function saveKaryawan() {
   let karyawanId = document.getElementById('karyawan-id').value;
+  const jabatanSel = document.getElementById('karyawan-jabatan');
+  const jabatanId = jabatanSel ? (jabatanSel.value || null) : null;
+  const jabatanNama = jabatanSel && jabatanSel.selectedIndex > 0
+    ? jabatanSel.options[jabatanSel.selectedIndex].text
+    : null;
   const payload = {
     nama: document.getElementById('karyawan-nama').value,
     nik: document.getElementById('karyawan-nik').value,
-    jabatan_id: document.getElementById('karyawan-jabatan').value || null,
+    jabatan_id: jabatanId,
+    jabatan: jabatanNama,
     departemen: document.getElementById('karyawan-departemen').value,
     gaji_pokok: +(document.getElementById('karyawan-gaji').value || 0),
     status: document.getElementById('karyawan-status').value,
@@ -215,14 +244,14 @@ async function loadKaryawanOptions() {
     const rows = await api.get('/karyawan?status=Aktif');
     karyawanOptions = Array.isArray(rows) ? rows : [];
     const opts = '<option value="">Semua Karyawan</option>' +
-      karyawanOptions.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+      karyawanOptions.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || k.jabatan || '-'}</option>`).join('');
     const paySel = document.getElementById('pay-filter-karyawan');
     if (paySel) paySel.innerHTML = opts;
     const absSel = document.getElementById('abs-filter-karyawan');
     if (absSel) absSel.innerHTML = opts;
     const absFormSel = document.getElementById('absensi-karyawan');
     if (absFormSel) absFormSel.innerHTML = '<option value="">— Pilih —</option>' +
-      karyawanOptions.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+      karyawanOptions.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || k.jabatan || '-'}</option>`).join('');
   } catch (e) {
     console.error('loadKaryawanOptions error:', e);
     karyawanOptions = [];
