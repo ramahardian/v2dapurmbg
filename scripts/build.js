@@ -31,6 +31,7 @@ const FILES = [
   'total-kebutuhan.js',
   'ijin-cuti.js',
   'hari-libur.js',
+  'groq-vision.js',
   'definisi.js',
   'idle-timeout.js',
   'ticker.js',

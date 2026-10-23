@@ -26,6 +26,9 @@ const dashboardRoutes = require('./dashboard');
 // Mengimpor router fitur integrasi AI (saran menu, nutrisi, dll.)
 // const aiRoutes = require('./aiRoutes'); // AI disabled temporarily
 
+// Mengimpor router ekstraksi teks/data dari gambar via Groq Vision
+const groqVisionRoutes = require('./groqVision');
+
 // Mengimpor router laporan operasional
 const laporanRoutes = require('./laporan');
 
@@ -91,6 +94,9 @@ router.use(dashboardRoutes);
 
 // Mendaftarkan router fitur AI (URL root /)
 // router.use(aiRoutes); // AI disabled temporarily
+
+// Mendaftarkan router ekstraksi gambar Groq Vision dengan prefix path '/vision'
+router.use('/vision', groqVisionRoutes);
 
 // Mendaftarkan router laporan (URL root /)
 router.use(laporanRoutes);
