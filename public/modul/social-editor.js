@@ -14,6 +14,15 @@ var SOCIAL_FORMATS = {
   story: { w: 1080, h: 1920, label: 'Story 9:16 — 1080 × 1920' },
 };
 
+var SOCIAL_PHOTO_RECT = { xPct: 0.07, yPct: 0.27, wPct: 0.86, hPct: 0.36 };
+var SOCIAL_OBJECT_TYPES = {
+  rect: 'Kotak',
+  ellipse: 'Lingkaran',
+  line: 'Garis',
+  arrow: 'Panah',
+  triangle: 'Segitiga',
+};
+
 function socialEsc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -77,6 +86,66 @@ function socialDefaultCaption(m) {
     '\n\n' + socialNutritionText(m));
 }
 
+function socialNormalizeLayer(l) {
+  const out = {
+    id: 'layer-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    text: '',
+    xPct: 0.07,
+    yPct: 0.1,
+    size: 32,
+    color: '#FFFFFF',
+    weight: 600,
+    align: 'left',
+    maxWidthPct: 0.86,
+    shadow: true,
+    shadowColor: '#000000',
+    shadowBlur: 10,
+    shadowOffsetY: 3,
+    stroke: false,
+    strokeColor: '#000000',
+    strokeWidth: 2,
+    opacity: 100,
+    lineHeight: 118,
+  };
+  const src = l || {};
+  Object.keys(src).forEach(function(k) {
+    if (src[k] !== undefined && src[k] !== null) out[k] = src[k];
+  });
+  return out;
+}
+
+function socialNormalizeObject(o) {
+  const out = {
+    id: 'object-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    type: 'rect',
+    xPct: 0.6,
+    yPct: 0.1,
+    wPct: 0.26,
+    hPct: 0.16,
+    color: '#F97316',
+    fill: false,
+    strokeWidth: 8,
+    rotation: 0,
+    opacity: 100,
+  };
+  const src = o || {};
+  Object.keys(src).forEach(function(k) {
+    if (src[k] !== undefined && src[k] !== null) out[k] = src[k];
+  });
+  if (!SOCIAL_OBJECT_TYPES[out.type]) out.type = 'rect';
+  return out;
+}
+
+function socialNormalizePhotoRect(r) {
+  const src = r || {};
+  return {
+    xPct: socialClamp(src.xPct == null ? SOCIAL_PHOTO_RECT.xPct : src.xPct, -0.5, 1.2),
+    yPct: socialClamp(src.yPct == null ? SOCIAL_PHOTO_RECT.yPct : src.yPct, -0.5, 1.2),
+    wPct: socialClamp(src.wPct == null ? SOCIAL_PHOTO_RECT.wPct : src.wPct, 0.08, 1.2),
+    hPct: socialClamp(src.hPct == null ? SOCIAL_PHOTO_RECT.hPct : src.hPct, 0.08, 1.2),
+  };
+}
+
 function socialDefaultLayers(m) {
   m = m || {};
   const tgl = m.tanggal ? socialFmtTanggal(m.tanggal) : '';
@@ -115,8 +184,13 @@ function socialNewState(menu) {
     bgOverlay: 38,
     bgImage: null,
     photo: null,
-    layers: socialDefaultLayers(menu),
+    photoRect: socialNormalizePhotoRect(SOCIAL_PHOTO_RECT),
+    objects: [],
+    layers: socialDefaultLayers(menu).map(socialNormalizeLayer),
     selected: 0,
+    selectedObject: -1,
+    photoSelected: false,
+    active: 'text',
     caption: socialDefaultCaption(menu),
     hashtags: '#MBG #MenuSehat #MakananBergizi',
     saving: false,
@@ -125,13 +199,117 @@ function socialNewState(menu) {
 }
 
 function socialSelectedLayer() {
-  if (!_socialEd || !_socialEd.layers || !_socialEd.layers.length) return null;
+  if (!_socialEd || _socialEd.active !== 'text' || !_socialEd.layers || !_socialEd.layers.length) return null;
   return _socialEd.layers[Math.max(0, Math.min(_socialEd.layers.length - 1, _socialEd.selected))] || null;
+}
+
+function socialSelectedObject() {
+  if (!_socialEd || _socialEd.active !== 'object' || !_socialEd.objects) return null;
+  return _socialEd.objects[_socialEd.selectedObject] || null;
+}
+
+function socialTitleLayer() {
+  if (!_socialEd || !_socialEd.layers || !_socialEd.layers.length) return null;
+  return _socialEd.layers.find(function(l) { return l.id === 'title'; }) || _socialEd.layers[0];
 }
 
 function socialImageSrc(img) {
   if (!img) return '';
   return img.dataUrl || img.url || '';
+}
+
+// Sumber gambar dengan alpha (PNG/WEBP) harus tetap transparan.
+function socialSourceHasAlpha(src) {
+  if (!src) return false;
+  if (/^data:image\/(png|webp)/i.test(src)) return true;
+  return /\.(png|webp)(?:[?#].*)?$/i.test(String(src));
+}
+
+function socialProgressHtml(kind) {
+  return '<div id="social-' + kind + '-progress" class="mt-2 hidden">' +
+    '<div class="flex items-center justify-between text-[10px] text-stone-500 mb-1">' +
+    '<span id="social-' + kind + '-progress-text">Menyiapkan...</span>' +
+    '<span id="social-' + kind + '-progress-pct">0%</span>' +
+    '</div>' +
+    '<div class="h-1.5 w-full rounded-full bg-stone-200 overflow-hidden">' +
+    '<div id="social-' + kind + '-progress-bar" class="h-full bg-emerald-500 transition-all duration-150" style="width:0%"></div>' +
+    '</div>' +
+    '</div>';
+}
+
+function socialSetProgress(kind, pct, text) {
+  const wrap = document.getElementById('social-' + kind + '-progress');
+  if (!wrap) return;
+  const value = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
+  wrap.classList.remove('hidden');
+  const bar = document.getElementById('social-' + kind + '-progress-bar');
+  if (bar) bar.style.width = value + '%';
+  const pctEl = document.getElementById('social-' + kind + '-progress-pct');
+  if (pctEl) pctEl.textContent = value + '%';
+  const textEl = document.getElementById('social-' + kind + '-progress-text');
+  if (textEl && text) textEl.textContent = text;
+}
+
+function socialHideProgress(kind) {
+  const wrap = document.getElementById('social-' + kind + '-progress');
+  if (wrap) wrap.classList.add('hidden');
+  const bar = document.getElementById('social-' + kind + '-progress-bar');
+  if (bar) bar.style.width = '0%';
+}
+
+function socialNextFrame() {
+  return new Promise(function(resolve) {
+    let done = false;
+    const finish = function() { if (!done) { done = true; resolve(); } };
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(function() { requestAnimationFrame(finish); });
+    }
+    // Jangan menggantung bila tab sedang tidak aktif (rAF di-throttle).
+    setTimeout(finish, 40);
+  });
+}
+
+function socialSetSaveProgress(pct, text) {
+  const wrap = document.getElementById('social-save-progress');
+  if (!wrap) return;
+  const value = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
+  wrap.classList.remove('hidden');
+  const bar = document.getElementById('social-save-progress-bar');
+  if (bar) bar.style.width = value + '%';
+  const pctEl = document.getElementById('social-save-progress-pct');
+  if (pctEl) pctEl.textContent = value + '%';
+  const textEl = document.getElementById('social-save-progress-text');
+  if (textEl && text) textEl.textContent = text;
+}
+
+function socialHideSaveProgress() {
+  const wrap = document.getElementById('social-save-progress');
+  if (wrap) wrap.classList.add('hidden');
+  const bar = document.getElementById('social-save-progress-bar');
+  if (bar) bar.style.width = '0%';
+}
+
+// Kirim JSON lewat XHR agar progress unggahan ke server bisa ditampilkan.
+function socialSendJson(method, path, body, onProgress) {
+  return new Promise(function(resolve, reject) {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, '/api' + path, true);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.upload.onprogress = function(e) {
+      if (onProgress && e.lengthComputable && e.total) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+    xhr.onload = function() {
+      let data = null;
+      try { data = JSON.parse(xhr.responseText || 'null'); } catch (e) {}
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(new Error((data && (data.error || data.message)) || ('Permintaan gagal (' + xhr.status + ')')));
+    };
+    xhr.onerror = function() { reject(new Error('Koneksi gagal saat menyimpan.')); };
+    xhr.send(JSON.stringify(body));
+  });
 }
 
 // ── Render halaman ─────────────────────────────────────────────────────────
@@ -165,7 +343,10 @@ function socialRenderEditor() {
   c.innerHTML = socialEditorHtml(_socialEd);
   socialBindCanvas();
   socialRenderLayerList();
+  socialRenderObjectList();
   socialSyncLayerControls();
+  socialSyncObjectControls();
+  socialSyncPhotoControls();
   socialUpdateImageUI();
   socialDrawPreview();
   socialLoadHistory();
@@ -174,6 +355,8 @@ function socialRenderEditor() {
 function socialEditorHtml(st) {
   const m = st.menu || {};
   const sel = socialSelectedLayer();
+  const titleLayer = socialTitleLayer();
+  const pr = socialNormalizePhotoRect(st.photoRect);
   const inputCls = 'mt-1 w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all';
   const textareaCls = 'mt-1 w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all';
   const labelCls = 'text-xs font-semibold text-stone-500 uppercase tracking-wide';
@@ -187,10 +370,10 @@ function socialEditorHtml(st) {
     ${st.notice ? `<div class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800"><span class="text-base leading-none">⚠️</span><div>${socialEsc(st.notice)}</div></div>` : ''}
     <div class="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-xs text-emerald-800">
       <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-      <div>Buat gambar postingan menu untuk Instagram/media sosial. Geser teks langsung di preview, unggah background/foto, lalu <b>Simpan ke Riwayat</b> atau <b>Unduh JPEG</b>.</div>
+      <div>Buat gambar postingan menu untuk Instagram/media sosial. Geser teks, foto, dan objek langsung di preview, unggah background/foto, lalu <b>Simpan ke Riwayat</b> atau <b>Unduh JPEG</b>.</div>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4 items-start">
+    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4">
       <div class="xl:col-span-3 space-y-4">
         <div class="${cardCls}">
           <div class="flex items-center justify-between gap-3 mb-4">
@@ -204,6 +387,8 @@ function socialEditorHtml(st) {
             <div class="text-sm font-bold text-stone-800">${socialEsc(m.menu_nama || 'Tanpa menu')}</div>
             <div class="text-[11px] text-stone-500 mt-0.5">${socialEsc(socialFmtTanggal(m.tanggal))}${jn ? ' · ' + socialEsc(jn) : ''}</div>
           </div>
+          <label class="block mt-3 ${labelCls}">Judul (bisa diubah)</label>
+          <input id="social-title-input" type="text" maxlength="120" value="${socialEsc(titleLayer ? titleLayer.text : '')}" oninput="socialSetTitle(this.value)" class="${inputCls}" placeholder="Judul bebas, tidak harus nama menu" />
           <label class="block mt-3 ${labelCls}">Format</label>
           <select id="social-format" onchange="socialSetFormat(this.value)" class="${inputCls}">
             ${socialFormatOption('portrait', st.format, SOCIAL_FORMATS.portrait.label)}
@@ -214,7 +399,7 @@ function socialEditorHtml(st) {
 
         <div class="${cardCls}">
           <h3 class="text-sm font-bold text-stone-800 mb-1">Latar &amp; Foto</h3>
-          <div class="text-[11px] text-stone-400 mb-3">Gambar akan dikompres otomatis sebelum disimpan.</div>
+          <div class="text-[11px] text-stone-400 mb-3">PNG transparan didukung. Gambar dikompres otomatis; garis panduan tengah di preview membantu posisi ompreng.</div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -239,16 +424,87 @@ function socialEditorHtml(st) {
               <img id="social-bg-thumb" alt="Background" class="w-full h-20 object-cover rounded-lg border border-stone-200 hidden" />
               <div id="social-bg-empty" class="w-full h-20 rounded-lg border border-dashed border-stone-200 bg-stone-50 flex items-center justify-center text-[11px] text-stone-400">Belum ada gambar latar</div>
               <input type="file" accept="image/png,image/jpeg,image/webp" onchange="socialPickImage('background', this)" class="mt-2 block w-full text-[11px] text-stone-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
+              ${socialProgressHtml('background')}
             </div>
             <div class="rounded-xl border border-stone-200 p-3">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-xs font-semibold text-stone-700">Foto Menu</div>
                 <button type="button" id="social-photo-remove" onclick="socialRemoveImage('photo')" class="text-[10px] font-semibold text-red-600 hover:text-red-700 hidden">Hapus</button>
               </div>
-              <img id="social-photo-thumb" alt="Foto menu" class="w-full h-20 object-cover rounded-lg border border-stone-200 hidden" />
+              <img id="social-photo-thumb" alt="Foto menu" class="w-full h-20 object-cover rounded-lg border border-stone-200 hidden" style="background-image:linear-gradient(45deg,#e7e5e4 25%,transparent 25%),linear-gradient(-45deg,#e7e5e4 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e7e5e4 75%),linear-gradient(-45deg,transparent 75%,#e7e5e4 75%);background-size:12px 12px;background-position:0 0,0 6px,6px -6px,-6px 0" />
               <div id="social-photo-empty" class="w-full h-20 rounded-lg border border-dashed border-stone-200 bg-stone-50 flex items-center justify-center text-[11px] text-stone-400">Belum ada foto menu</div>
               <input type="file" accept="image/png,image/jpeg,image/webp" onchange="socialPickImage('photo', this)" class="mt-2 block w-full text-[11px] text-stone-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
+              ${socialProgressHtml('photo')}
             </div>
+          </div>
+
+          <div class="mt-4 border-t border-stone-200 pt-3">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-semibold text-stone-700">Posisi &amp; Ukuran Foto</div>
+              <button type="button" onclick="socialResetPhotoRect()" class="text-[10px] font-semibold text-emerald-700 hover:text-emerald-800 px-2 py-1 rounded-md hover:bg-emerald-50">Reset</button>
+            </div>
+            <div class="grid grid-cols-2 gap-x-3 gap-y-2 mt-2">
+              <label class="block text-[10px] font-medium text-stone-500">X <span id="social-photo-x-val" class="text-stone-400">${Math.round(pr.xPct * 100)}%</span>
+                <input id="social-photo-x" type="range" min="-20" max="95" step="1" value="${Math.round(pr.xPct * 100)}" oninput="socialUpdatePhotoRect('xPct', this.value)" class="mt-1 w-full accent-emerald-600" />
+              </label>
+              <label class="block text-[10px] font-medium text-stone-500">Y <span id="social-photo-y-val" class="text-stone-400">${Math.round(pr.yPct * 100)}%</span>
+                <input id="social-photo-y" type="range" min="-20" max="95" step="1" value="${Math.round(pr.yPct * 100)}" oninput="socialUpdatePhotoRect('yPct', this.value)" class="mt-1 w-full accent-emerald-600" />
+              </label>
+              <label class="block text-[10px] font-medium text-stone-500">Lebar <span id="social-photo-w-val" class="text-stone-400">${Math.round(pr.wPct * 100)}%</span>
+                <input id="social-photo-w" type="range" min="10" max="110" step="1" value="${Math.round(pr.wPct * 100)}" oninput="socialUpdatePhotoRect('wPct', this.value)" class="mt-1 w-full accent-emerald-600" />
+              </label>
+              <label class="block text-[10px] font-medium text-stone-500">Tinggi <span id="social-photo-h-val" class="text-stone-400">${Math.round(pr.hPct * 100)}%</span>
+                <input id="social-photo-h" type="range" min="10" max="110" step="1" value="${Math.round(pr.hPct * 100)}" oninput="socialUpdatePhotoRect('hPct', this.value)" class="mt-1 w-full accent-emerald-600" />
+              </label>
+            </div>
+            <div class="text-[10px] text-stone-400 mt-1">Geser kotak foto langsung di preview.</div>
+          </div>
+        </div>
+
+        <div class="${cardCls}">
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-stone-800">Objek &amp; Bentuk</h3>
+              <div class="text-[11px] text-stone-400">Tambah kotak, lingkaran, garis, panah, atau segitiga. Geser langsung di preview.</div>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" onclick="socialAddObject('rect')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[11px] font-semibold text-stone-600 transition-colors">+ Kotak</button>
+            <button type="button" onclick="socialAddObject('ellipse')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[11px] font-semibold text-stone-600 transition-colors">+ Lingkaran</button>
+            <button type="button" onclick="socialAddObject('line')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[11px] font-semibold text-stone-600 transition-colors">+ Garis</button>
+            <button type="button" onclick="socialAddObject('arrow')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[11px] font-semibold text-stone-600 transition-colors">+ Panah</button>
+            <button type="button" onclick="socialAddObject('triangle')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[11px] font-semibold text-stone-600 transition-colors">+ Segitiga</button>
+          </div>
+          <div id="social-object-list" class="flex flex-wrap gap-1.5 mt-3"></div>
+          <div id="social-object-controls" class="mt-3 border-t border-stone-200 pt-3 hidden">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="${labelCls}">Warna</label>
+                <input id="social-object-color" type="color" oninput="socialUpdateObject('color', this.value)" class="mt-1 w-full h-10 rounded-lg border border-stone-200 bg-white cursor-pointer" />
+              </div>
+              <div>
+                <label class="${labelCls}">Ketebalan</label>
+                <input id="social-object-stroke" type="number" min="1" max="60" step="1" oninput="socialUpdateObject('strokeWidth', this.value)" class="${inputCls}" />
+              </div>
+              <div>
+                <label class="${labelCls}">Lebar <span id="social-object-w-val" class="text-stone-400 normal-case">26%</span></label>
+                <input id="social-object-w" type="range" min="4" max="110" step="1" oninput="socialUpdateObject('wPct', this.value)" class="mt-3 w-full accent-emerald-600" />
+              </div>
+              <div>
+                <label class="${labelCls}">Tinggi <span id="social-object-h-val" class="text-stone-400 normal-case">16%</span></label>
+                <input id="social-object-h" type="range" min="0" max="110" step="1" oninput="socialUpdateObject('hPct', this.value)" class="mt-3 w-full accent-emerald-600" />
+              </div>
+              <div>
+                <label class="${labelCls}">Rotasi <span id="social-object-rot-val" class="text-stone-400 normal-case">0°</span></label>
+                <input id="social-object-rotation" type="range" min="-180" max="180" step="1" oninput="socialUpdateObject('rotation', this.value)" class="mt-3 w-full accent-emerald-600" />
+              </div>
+              <div>
+                <label class="${labelCls}">Opasitas <span id="social-object-opacity-val" class="text-stone-400 normal-case">100%</span></label>
+                <input id="social-object-opacity" type="range" min="10" max="100" step="1" oninput="socialUpdateObject('opacity', this.value)" class="mt-3 w-full accent-emerald-600" />
+              </div>
+            </div>
+            <label class="inline-flex items-center gap-2 mt-3 text-xs font-medium text-stone-600"><input id="social-object-fill" type="checkbox" onchange="socialUpdateObject('fill', this.checked)" class="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" /> Isi penuh (kotak/lingkaran/segitiga)</label>
+            <button type="button" onclick="socialDeleteObject()" class="mt-3 text-[11px] font-semibold text-red-600 hover:text-red-700 px-2.5 py-1.5 rounded-lg hover:bg-red-50">Hapus objek ini</button>
           </div>
         </div>
 
@@ -297,6 +553,52 @@ function socialEditorHtml(st) {
               <label class="${labelCls}">Lebar Teks <span id="social-layer-width-val" class="text-stone-400 normal-case">${sel ? Math.round((sel.maxWidthPct || 0.86) * 100) : 86}%</span></label>
               <input id="social-layer-width" type="range" min="20" max="100" step="1" value="${sel ? Math.round((sel.maxWidthPct || 0.86) * 100) : 86}" oninput="socialUpdateLayer('width', this.value)" class="mt-3 w-full accent-emerald-600" />
             </div>
+            <div class="sm:col-span-2 border-t border-stone-200 pt-3 mt-1">
+              <label class="inline-flex items-center gap-2 text-xs font-semibold text-stone-700">
+                <input id="social-layer-shadow" type="checkbox" ${sel && sel.shadow ? 'checked' : ''} onchange="socialUpdateLayer('shadow', this.checked)" class="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+                Bayangan teks
+              </label>
+              <div class="grid grid-cols-3 gap-2 mt-2">
+                <div>
+                  <label class="text-[10px] font-medium text-stone-500">Warna</label>
+                  <input id="social-layer-shadow-color" type="color" value="${(sel && sel.shadowColor) || '#000000'}" oninput="socialUpdateLayer('shadowColor', this.value)" class="mt-1 w-full h-9 rounded-lg border border-stone-200 bg-white cursor-pointer" />
+                </div>
+                <div>
+                  <label class="text-[10px] font-medium text-stone-500">Blur</label>
+                  <input id="social-layer-shadow-blur" type="number" min="0" max="60" step="1" value="${sel ? Math.round(Number(sel.shadowBlur) || 0) : 10}" oninput="socialUpdateLayer('shadowBlur', this.value)" class="${inputCls}" />
+                </div>
+                <div>
+                  <label class="text-[10px] font-medium text-stone-500">Offset Y</label>
+                  <input id="social-layer-shadow-offset" type="number" min="-40" max="40" step="1" value="${sel ? Math.round(Number(sel.shadowOffsetY) || 0) : 3}" oninput="socialUpdateLayer('shadowOffsetY', this.value)" class="${inputCls}" />
+                </div>
+              </div>
+
+              <label class="inline-flex items-center gap-2 mt-3 text-xs font-semibold text-stone-700">
+                <input id="social-layer-stroke" type="checkbox" ${sel && sel.stroke ? 'checked' : ''} onchange="socialUpdateLayer('stroke', this.checked)" class="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+                Garis tepi (outline)
+              </label>
+              <div class="grid grid-cols-2 gap-2 mt-2">
+                <div>
+                  <label class="text-[10px] font-medium text-stone-500">Warna tepi</label>
+                  <input id="social-layer-stroke-color" type="color" value="${(sel && sel.strokeColor) || '#000000'}" oninput="socialUpdateLayer('strokeColor', this.value)" class="mt-1 w-full h-9 rounded-lg border border-stone-200 bg-white cursor-pointer" />
+                </div>
+                <div>
+                  <label class="text-[10px] font-medium text-stone-500">Ketebalan</label>
+                  <input id="social-layer-stroke-width" type="number" min="0" max="20" step="0.5" value="${sel ? Number(sel.strokeWidth) || 0 : 2}" oninput="socialUpdateLayer('strokeWidth', this.value)" class="${inputCls}" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 mt-3">
+                <div>
+                  <label class="${labelCls}">Opasitas <span id="social-layer-opacity-val" class="text-stone-400 normal-case">${sel ? Math.round(Number(sel.opacity) || 100) : 100}%</span></label>
+                  <input id="social-layer-opacity" type="range" min="10" max="100" step="1" value="${sel ? Math.round(Number(sel.opacity) || 100) : 100}" oninput="socialUpdateLayer('opacity', this.value)" class="mt-3 w-full accent-emerald-600" />
+                </div>
+                <div>
+                  <label class="${labelCls}">Jarak Baris <span id="social-layer-lineheight-val" class="text-stone-400 normal-case">${sel ? Math.round(Number(sel.lineHeight) || 118) : 118}%</span></label>
+                  <input id="social-layer-lineheight" type="range" min="80" max="200" step="5" value="${sel ? Math.round(Number(sel.lineHeight) || 118) : 118}" oninput="socialUpdateLayer('lineHeight', this.value)" class="mt-3 w-full accent-emerald-600" />
+                </div>
+              </div>
+            </div>
           </div>
           <button type="button" onclick="socialDeleteLayer()" class="mt-3 text-[11px] font-semibold text-red-600 hover:text-red-700 px-2.5 py-1.5 rounded-lg hover:bg-red-50">Hapus layer teks ini</button>
         </div>
@@ -331,11 +633,20 @@ function socialEditorHtml(st) {
           <button type="button" onclick="socialNewPost()" class="inline-flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">Postingan Baru</button>
           ${st.postId ? `<button type="button" onclick="socialDeletePost(${Number(st.postId)})" class="inline-flex items-center gap-2 border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">Hapus Postingan</button>` : ''}
           <span id="social-save-status" class="text-[11px] text-stone-400"></span>
+          <div id="social-save-progress" class="w-full mt-1 hidden">
+            <div class="flex items-center justify-between text-[10px] text-stone-500 mb-1">
+              <span id="social-save-progress-text">Menyiapkan...</span>
+              <span id="social-save-progress-pct">0%</span>
+            </div>
+            <div class="h-1.5 w-full rounded-full bg-stone-200 overflow-hidden">
+              <div id="social-save-progress-bar" class="h-full bg-emerald-500 transition-all duration-150" style="width:0%"></div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="xl:col-span-2">
-        <div class="xl:sticky xl:top-20 bg-white rounded-xl border border-stone-200 p-4">
+        <div class="xl:sticky xl:top-20 bg-white rounded-xl border border-stone-200 p-4 xl:max-h-[calc(100vh_-_6rem)] xl:overflow-y-auto">
           <div class="flex items-center justify-between mb-3">
             <div>
               <div class="text-sm font-bold text-stone-800">Preview</div>
@@ -346,7 +657,7 @@ function socialEditorHtml(st) {
           <div class="rounded-xl overflow-hidden border border-stone-200 bg-stone-100">
             <canvas id="social-preview" class="w-full block" style="touch-action:none"></canvas>
           </div>
-          <p class="text-[11px] text-stone-400 mt-2 leading-relaxed">Geser teks langsung di preview. Gambar final disimpan sebagai JPEG terkompresi.</p>
+          <p class="text-[11px] text-stone-400 mt-2 leading-relaxed">Geser teks, foto, atau objek langsung di preview. Gambar final disimpan sebagai JPEG terkompresi.</p>
         </div>
       </div>
     </div>
@@ -382,7 +693,7 @@ function socialRenderLayerList() {
   const el = document.getElementById('social-layer-list');
   if (!el || !_socialEd) return;
   el.innerHTML = _socialEd.layers.map(function(l, i) {
-    const active = i === _socialEd.selected;
+    const active = i === _socialEd.selected && _socialEd.active === 'text';
     const raw = String(l.text || 'Teks').split('\n')[0] || 'Teks';
     return '<button type="button" onclick="socialSelectLayer(' + i + ')" class="inline-flex items-center gap-1.5 max-w-[210px] px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ' +
       (active ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50') + '">' +
@@ -394,7 +705,11 @@ function socialRenderLayerList() {
 
 function socialSyncLayerControls() {
   const l = socialSelectedLayer();
-  const ids = ['social-layer-text', 'social-layer-size', 'social-layer-color', 'social-layer-weight', 'social-layer-align', 'social-layer-width'];
+  const ids = ['social-layer-text', 'social-layer-size', 'social-layer-color',
+    'social-layer-weight', 'social-layer-align', 'social-layer-width',
+    'social-layer-shadow', 'social-layer-shadow-color', 'social-layer-shadow-blur',
+    'social-layer-shadow-offset', 'social-layer-stroke', 'social-layer-stroke-color',
+    'social-layer-stroke-width', 'social-layer-opacity', 'social-layer-lineheight'];
   ids.forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.disabled = !l;
@@ -414,20 +729,216 @@ function socialSyncLayerControls() {
   if (width) width.value = Math.round((Number(l.maxWidthPct) || 0.86) * 100);
   const widthVal = document.getElementById('social-layer-width-val');
   if (widthVal) widthVal.textContent = Math.round((Number(l.maxWidthPct) || 0.86) * 100) + '%';
+
+  const shadow = document.getElementById('social-layer-shadow');
+  if (shadow) shadow.checked = !!l.shadow;
+  const shadowColor = document.getElementById('social-layer-shadow-color');
+  if (shadowColor) shadowColor.value = l.shadowColor || '#000000';
+  const shadowBlur = document.getElementById('social-layer-shadow-blur');
+  if (shadowBlur) shadowBlur.value = Math.round(Number(l.shadowBlur) || 0);
+  const shadowOffset = document.getElementById('social-layer-shadow-offset');
+  if (shadowOffset) shadowOffset.value = Math.round(Number(l.shadowOffsetY) || 0);
+  const stroke = document.getElementById('social-layer-stroke');
+  if (stroke) stroke.checked = !!l.stroke;
+  const strokeColor = document.getElementById('social-layer-stroke-color');
+  if (strokeColor) strokeColor.value = l.strokeColor || '#000000';
+  const strokeWidth = document.getElementById('social-layer-stroke-width');
+  if (strokeWidth) strokeWidth.value = Number(l.strokeWidth) || 0;
+  const opacity = document.getElementById('social-layer-opacity');
+  if (opacity) opacity.value = Math.round(Number(l.opacity) || 100);
+  const opacityVal = document.getElementById('social-layer-opacity-val');
+  if (opacityVal) opacityVal.textContent = Math.round(Number(l.opacity) || 100) + '%';
+  const lineHeight = document.getElementById('social-layer-lineheight');
+  if (lineHeight) lineHeight.value = Math.round(Number(l.lineHeight) || 118);
+  const lineHeightVal = document.getElementById('social-layer-lineheight-val');
+  if (lineHeightVal) lineHeightVal.textContent = Math.round(Number(l.lineHeight) || 118) + '%';
 }
 
 function socialSelectLayer(i) {
   if (!_socialEd || !_socialEd.layers[i]) return;
   _socialEd.selected = i;
+  _socialEd.active = 'text';
+  _socialEd.selectedObject = -1;
+  _socialEd.photoSelected = false;
   socialRenderLayerList();
+  socialRenderObjectList();
+  socialSyncLayerControls();
+  socialSyncObjectControls();
+  socialDrawPreview();
+}
+
+function socialSetTitle(v) {
+  const l = socialTitleLayer();
+  if (!l) return;
+  l.text = String(v == null ? '' : v);
+  const idx = _socialEd.layers.indexOf(l);
+  _socialEd.active = 'text';
+  _socialEd.selected = idx >= 0 ? idx : 0;
+  _socialEd.selectedObject = -1;
+  _socialEd.photoSelected = false;
+  const textEl = document.getElementById('social-layer-text');
+  if (textEl) textEl.value = l.text;
+  socialRenderLayerList();
+  socialRenderObjectList();
+  socialSyncLayerControls();
+  socialSyncObjectControls();
+  socialDrawPreview();
+}
+
+function socialUpdatePhotoRect(key, value) {
+  if (!_socialEd) return;
+  const r = socialNormalizePhotoRect(_socialEd.photoRect);
+  const v = Number(value);
+  if (!Number.isFinite(v)) return;
+  if (key === 'xPct' || key === 'yPct' || key === 'wPct' || key === 'hPct') {
+    r[key] = v / 100;
+  }
+  _socialEd.photoRect = socialNormalizePhotoRect(r);
+  _socialEd.active = 'photo';
+  _socialEd.photoSelected = true;
+  _socialEd.selectedObject = -1;
+  socialSyncPhotoControls();
+  socialRenderObjectList();
+  socialRenderLayerList();
+  socialSyncObjectControls();
   socialSyncLayerControls();
   socialDrawPreview();
+}
+
+function socialResetPhotoRect() {
+  if (!_socialEd) return;
+  _socialEd.photoRect = socialNormalizePhotoRect(SOCIAL_PHOTO_RECT);
+  _socialEd.active = 'photo';
+  _socialEd.photoSelected = true;
+  _socialEd.selectedObject = -1;
+  socialSyncPhotoControls();
+  socialRenderLayerList();
+  socialDrawPreview();
+}
+
+function socialSyncPhotoControls() {
+  if (!_socialEd) return;
+  const r = socialNormalizePhotoRect(_socialEd.photoRect);
+  const map = { x: 'xPct', y: 'yPct', w: 'wPct', h: 'hPct' };
+  Object.keys(map).forEach(function(k) {
+    const key = map[k];
+    const input = document.getElementById('social-photo-' + k);
+    if (input) input.value = Math.round(r[key] * 100);
+    const val = document.getElementById('social-photo-' + k + '-val');
+    if (val) val.textContent = Math.round(r[key] * 100) + '%';
+  });
+}
+
+function socialAddObject(type) {
+  if (!_socialEd || !SOCIAL_OBJECT_TYPES[type]) return;
+  const n = (_socialEd.objects || []).length;
+  const isLine = type === 'line' || type === 'arrow';
+  const o = socialNormalizeObject({
+    type: type,
+    xPct: isLine ? 0.2 : 0.1 + (n % 3) * 0.29,
+    yPct: isLine ? 0.45 : 0.1 + (n % 3) * 0.23,
+    wPct: isLine ? 0.3 : 0.26,
+    hPct: isLine ? 0.1 : 0.16,
+  });
+  if (!_socialEd.objects) _socialEd.objects = [];
+  _socialEd.objects.push(o);
+  _socialEd.active = 'object';
+  _socialEd.selectedObject = _socialEd.objects.length - 1;
+  _socialEd.photoSelected = false;
+  socialRenderObjectList();
+  socialRenderLayerList();
+  socialSyncObjectControls();
+  socialSyncLayerControls();
+  socialDrawPreview();
+}
+
+function socialRenderObjectList() {
+  const el = document.getElementById('social-object-list');
+  if (!el || !_socialEd) return;
+  const items = _socialEd.objects || [];
+  if (!items.length) {
+    el.innerHTML = '<div class="text-[11px] text-stone-400">Belum ada objek.</div>';
+    return;
+  }
+  el.innerHTML = items.map(function(o, i) {
+    const active = _socialEd.active === 'object' && i === _socialEd.selectedObject;
+    return '<button type="button" onclick="socialSelectObject(' + i + ')" class="inline-flex items-center gap-1.5 max-w-[190px] px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ' +
+      (active ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50') + '">' +
+      '<span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background:' + socialEsc(o.color || '#F97316') + '"></span>' +
+      '<span class="truncate">' + socialEsc(SOCIAL_OBJECT_TYPES[o.type] || o.type) + '</span>' +
+      '</button>';
+  }).join('');
+}
+
+function socialSelectObject(i) {
+  if (!_socialEd || !_socialEd.objects || !_socialEd.objects[i]) return;
+  _socialEd.active = 'object';
+  _socialEd.selectedObject = i;
+  _socialEd.photoSelected = false;
+  socialRenderObjectList();
+  socialRenderLayerList();
+  socialSyncObjectControls();
+  socialSyncLayerControls();
+  socialDrawPreview();
+}
+
+function socialUpdateObject(key, value) {
+  const o = socialSelectedObject();
+  if (!o) return;
+  if (key === 'fill') o.fill = !!value;
+  else if (key === 'color') o.color = value || '#F97316';
+  else if (key === 'strokeWidth') o.strokeWidth = socialClamp(value, 1, 60);
+  else if (key === 'wPct') o.wPct = socialClamp(value, 4, 110) / 100;
+  else if (key === 'hPct') o.hPct = socialClamp(value, 0, 110) / 100;
+  else if (key === 'rotation') o.rotation = socialClamp(value, -180, 180);
+  else if (key === 'opacity') o.opacity = socialClamp(value, 10, 100);
+  socialRenderObjectList();
+  socialSyncObjectControls();
+  socialDrawPreview();
+}
+
+function socialDeleteObject() {
+  const o = socialSelectedObject();
+  if (!o || !_socialEd) return;
+  _socialEd.objects.splice(_socialEd.selectedObject, 1);
+  if (_socialEd.objects.length) {
+    _socialEd.selectedObject = Math.min(_socialEd.selectedObject, _socialEd.objects.length - 1);
+  } else {
+    _socialEd.selectedObject = -1;
+    _socialEd.active = 'text';
+  }
+  socialRenderObjectList();
+  socialRenderLayerList();
+  socialSyncObjectControls();
+  socialSyncLayerControls();
+  socialDrawPreview();
+}
+
+function socialSyncObjectControls() {
+  const box = document.getElementById('social-object-controls');
+  const o = socialSelectedObject();
+  if (box) box.classList.toggle('hidden', !o);
+  if (!o) return;
+  const setVal = function(id, v) { const el = document.getElementById(id); if (el) el.value = v; };
+  const setText = function(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setVal('social-object-color', o.color || '#F97316');
+  setVal('social-object-stroke', Math.round(Number(o.strokeWidth) || 8));
+  setVal('social-object-w', Math.round((Number(o.wPct) || 0.26) * 100));
+  setVal('social-object-h', Math.round((Number(o.hPct) || 0) * 100));
+  setVal('social-object-rotation', Math.round(Number(o.rotation) || 0));
+  setVal('social-object-opacity', Math.round(Number(o.opacity) || 100));
+  const fill = document.getElementById('social-object-fill');
+  if (fill) fill.checked = !!o.fill;
+  setText('social-object-w-val', Math.round((Number(o.wPct) || 0.26) * 100) + '%');
+  setText('social-object-h-val', Math.round((Number(o.hPct) || 0) * 100) + '%');
+  setText('social-object-rot-val', Math.round(Number(o.rotation) || 0) + '°');
+  setText('social-object-opacity-val', Math.round(Number(o.opacity) || 100) + '%');
 }
 
 function socialAddLayer() {
   if (!_socialEd) return;
   const n = _socialEd.layers.length + 1;
-  _socialEd.layers.push({
+  _socialEd.layers.push(socialNormalizeLayer({
     id: 'custom-' + Date.now(),
     text: 'Teks baru ' + n,
     xPct: 0.1,
@@ -437,10 +948,15 @@ function socialAddLayer() {
     weight: 600,
     align: 'left',
     maxWidthPct: 0.8,
-  });
+  }));
   _socialEd.selected = _socialEd.layers.length - 1;
+  _socialEd.active = 'text';
+  _socialEd.selectedObject = -1;
+  _socialEd.photoSelected = false;
   socialRenderLayerList();
+  socialRenderObjectList();
   socialSyncLayerControls();
+  socialSyncObjectControls();
   socialDrawPreview();
 }
 
@@ -469,6 +985,27 @@ function socialUpdateLayer(key, value) {
     l.maxWidthPct = socialClamp(parseInt(value, 10) / 100, 0.2, 1);
     const wv = document.getElementById('social-layer-width-val');
     if (wv) wv.textContent = Math.round(l.maxWidthPct * 100) + '%';
+  }
+  else if (key === 'shadow') l.shadow = !!value;
+  else if (key === 'shadowColor') l.shadowColor = value || '#000000';
+  else if (key === 'shadowBlur') l.shadowBlur = socialClamp(value, 0, 60);
+  else if (key === 'shadowOffsetY') l.shadowOffsetY = socialClamp(value, -40, 40);
+  else if (key === 'stroke') l.stroke = !!value;
+  else if (key === 'strokeColor') l.strokeColor = value || '#000000';
+  else if (key === 'strokeWidth') l.strokeWidth = socialClamp(value, 0, 20);
+  else if (key === 'opacity') {
+    l.opacity = socialClamp(value, 10, 100);
+    const ov = document.getElementById('social-layer-opacity-val');
+    if (ov) ov.textContent = Math.round(l.opacity) + '%';
+  }
+  else if (key === 'lineHeight') {
+    l.lineHeight = socialClamp(value, 80, 200);
+    const lv = document.getElementById('social-layer-lineheight-val');
+    if (lv) lv.textContent = Math.round(l.lineHeight) + '%';
+  }
+  if (key === 'text' && l === socialTitleLayer()) {
+    const t = document.getElementById('social-title-input');
+    if (t && t.value !== l.text) t.value = l.text;
   }
   socialRenderLayerList();
   socialDrawPreview();
@@ -537,17 +1074,26 @@ function socialUpdateImageUI() {
 async function socialPickImage(kind, input) {
   const file = input && input.files && input.files[0];
   if (!file) return;
+  socialSetProgress(kind, 4, 'Menyiapkan...');
+  await socialNextFrame();
   try {
-    showToast('Mengompres gambar...', 'info');
-    const dataUrl = await socialCompressFile(file, kind === 'background' ? 1920 : 1600);
+    const dataUrl = await socialCompressFile(file, kind === 'background' ? 1920 : 1600, function(pct, text) {
+      socialSetProgress(kind, pct, text);
+    });
+    socialSetProgress(kind, 92, 'Memuat pratinjau...');
+    await socialNextFrame();
     const img = await socialLoadImage(dataUrl);
     if (!_socialEd) return;
     if (kind === 'background') _socialEd.bgImage = { url: '', dataUrl: dataUrl, img: img };
     else _socialEd.photo = { url: '', dataUrl: dataUrl, img: img };
+    socialSetProgress(kind, 100, 'Selesai');
     socialUpdateImageUI();
     socialDrawPreview();
     showToast('Gambar siap dipakai', 'success');
+    setTimeout(function() { socialHideProgress(kind); }, 900);
   } catch (e) {
+    socialSetProgress(kind, 100, 'Gagal');
+    setTimeout(function() { socialHideProgress(kind); }, 1500);
     showAlert(e.message || 'Gagal memproses gambar', 'error');
   } finally {
     if (input) input.value = '';
@@ -592,45 +1138,70 @@ async function socialPreloadImages() {
   await Promise.all(jobs);
 }
 
-function socialCompressFile(file, maxDim) {
-  return new Promise(function(resolve, reject) {
-    const isImage = file && (/^image\/(png|jpe?g|webp)$/.test(file.type || '') || /\.(png|jpe?g|webp)$/i.test(file.name || ''));
-    if (!isImage) {
-      reject(new Error('File harus berupa gambar PNG, JPG, atau WEBP.'));
-      return;
-    }
-    if (file.size > 20 * 1024 * 1024) {
-      reject(new Error('Ukuran file maksimal 20 MB.'));
-      return;
-    }
+async function socialCompressFile(file, maxDim, onProgress) {
+  const isImage = file && (/^image\/(png|jpe?g|webp)$/.test(file.type || '') || /\.(png|jpe?g|webp)$/i.test(file.name || ''));
+  if (!isImage) throw new Error('File harus berupa gambar PNG, JPG, atau WEBP.');
+  if (file.size > 20 * 1024 * 1024) throw new Error('Ukuran file maksimal 20 MB.');
+
+  // PNG/WEBP dipertahankan sebagai PNG agar latar transparan tidak menjadi putih.
+  const keepAlpha = /^image\/(png|webp)$/i.test(file.type || '') || /\.(png|webp)$/i.test(file.name || '');
+
+  const dataUrl = await new Promise(function(resolve, reject) {
     const reader = new FileReader();
-    reader.onload = function() {
-      const img = new Image();
-      img.onload = function() {
-        try { resolve(socialImageToDataUrl(img, maxDim, SOCIAL_JPEG_QUALITY)); }
-        catch (e) { reject(e); }
-      };
-      img.onerror = function() { reject(new Error('Gagal membaca gambar.')); };
-      img.src = reader.result;
+    reader.onprogress = function(e) {
+      if (!onProgress || !e.lengthComputable || !e.total) return;
+      const pct = 6 + Math.round((e.loaded / e.total) * 58);
+      onProgress(pct, 'Membaca file... ' + Math.round(e.loaded / 1024) + ' KB');
     };
+    reader.onload = function() { resolve(reader.result); };
     reader.onerror = function() { reject(new Error('Gagal membaca file.')); };
     reader.readAsDataURL(file);
   });
+
+  if (onProgress) onProgress(70, 'Mengompres gambar...');
+  await socialNextFrame();
+
+  const img = await new Promise(function(resolve, reject) {
+    const im = new Image();
+    im.onload = function() { resolve(im); };
+    im.onerror = function() { reject(new Error('Gagal membaca gambar.')); };
+    im.src = dataUrl;
+  });
+
+  if (onProgress) onProgress(86, 'Menyiapkan gambar...');
+  await socialNextFrame();
+
+  const out = socialImageToDataUrl(img, maxDim, SOCIAL_JPEG_QUALITY, keepAlpha);
+  if (onProgress) onProgress(94, 'Menyelesaikan...');
+  return out;
 }
 
-function socialImageToDataUrl(img, maxDim, quality) {
+function socialImageToDataUrl(img, maxDim, quality, keepAlpha) {
   const iw = img.naturalWidth || img.width || 1;
   const ih = img.naturalHeight || img.height || 1;
-  const scale = Math.min(1, (maxDim || 1600) / Math.max(iw, ih));
-  const w = Math.max(1, Math.round(iw * scale));
-  const h = Math.max(1, Math.round(ih * scale));
-  const cv = document.createElement('canvas');
-  cv.width = w; cv.height = h;
-  const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, w, h);
-  ctx.drawImage(img, 0, 0, w, h);
-  return cv.toDataURL('image/jpeg', quality || SOCIAL_JPEG_QUALITY);
+  let scale = Math.min(1, (maxDim || 1600) / Math.max(iw, ih));
+  let out = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const w = Math.max(1, Math.round(iw * scale));
+    const h = Math.max(1, Math.round(ih * scale));
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, w, h);
+    if (!keepAlpha) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.drawImage(img, 0, 0, w, h);
+    out = keepAlpha
+      ? cv.toDataURL('image/png')
+      : cv.toDataURL('image/jpeg', quality || SOCIAL_JPEG_QUALITY);
+    // Batasi base64 PNG agar total payload (post + background + foto) tetap
+    // di bawah limit JSON server 10 MB.
+    if (!keepAlpha || out.length <= 3 * 1024 * 1024) break;
+    scale *= 0.75;
+  }
+  return out;
 }
 
 // ── Kanvas ─────────────────────────────────────────────────────────────────
@@ -689,8 +1260,13 @@ function socialDrawCanvas(cv, showSelection, isPreview) {
   ctx.fillStyle = '#F97316';
   ctx.fillRect(0, 0, W, Math.max(6, Math.round(W * 0.007)));
 
-  // Foto menu (frame tetap, teks yang bisa digeser)
+  // Foto menu (bisa digeser & diatur ukurannya)
   socialDrawPhoto(ctx, W, H, isPreview);
+
+  // Objek bentuk (kotak, panah, dll) di atas foto, di bawah teks
+  (_socialEd.objects || []).forEach(function(o) {
+    socialDrawObject(ctx, o, W, H);
+  });
 
   // Teks
   _socialEd.layers.forEach(function(l) {
@@ -698,35 +1274,36 @@ function socialDrawCanvas(cv, showSelection, isPreview) {
   });
 
   if (showSelection) {
-    const l = socialSelectedLayer();
-    if (l && l._bbox) {
-      const b = l._bbox;
-      ctx.save();
-      ctx.strokeStyle = '#34D399';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([10, 8]);
-      ctx.strokeRect(b.x - 10, b.y - 10, b.w + 20, b.h + 20);
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#34D399';
-      ctx.font = '600 18px system-ui, sans-serif';
-      ctx.fillText('Geser teks', b.x - 10, Math.max(24, b.y - 20));
-      ctx.restore();
+    if (_socialEd.active === 'text') {
+      const l = socialSelectedLayer();
+      if (l && l._bbox) socialDrawSelectionBox(ctx, l._bbox, 'Geser teks');
+    } else if (_socialEd.active === 'object') {
+      const o = socialSelectedObject();
+      if (o && o._bbox) socialDrawSelectionBox(ctx, o._bbox, 'Geser objek', o._hitPad || 12);
+    } else if (_socialEd.active === 'photo') {
+      const r = socialPhotoRect(W, H);
+      socialDrawSelectionBox(ctx, { x: r.x, y: r.y, w: r.w, h: r.h }, 'Geser foto');
     }
   }
 }
 
 function socialDrawPhoto(ctx, W, H, isPreview) {
   const r = socialPhotoRect(W, H);
-  const photo = _socialEd.photo && _socialEd.photo.img;
+  const photoObj = _socialEd.photo;
+  const photo = photoObj && photoObj.img;
+  const hasAlpha = !!photo && socialSourceHasAlpha(socialImageSrc(photoObj));
   if (photo) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.28)';
-    ctx.shadowBlur = 24;
-    ctx.shadowOffsetY = 10;
-    socialRoundRect(ctx, r.x, r.y, r.w, r.h, r.radius);
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fill();
-    ctx.restore();
+    // Jangan beri alas putih untuk PNG transparan — biarkan latar kanvas terlihat.
+    if (!hasAlpha) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.28)';
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 10;
+      socialRoundRect(ctx, r.x, r.y, r.w, r.h, r.radius);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+      ctx.restore();
+    }
     socialDrawImageCover(ctx, photo, r.x, r.y, r.w, r.h, r.radius);
     ctx.save();
     socialRoundRect(ctx, r.x, r.y, r.w, r.h, r.radius);
@@ -734,6 +1311,7 @@ function socialDrawPhoto(ctx, W, H, isPreview) {
     ctx.lineWidth = 3;
     ctx.stroke();
     ctx.restore();
+    if (isPreview) socialDrawCenterGuide(ctx, r);
   } else if (isPreview) {
     ctx.save();
     ctx.setLineDash([14, 10]);
@@ -752,12 +1330,114 @@ function socialDrawPhoto(ctx, W, H, isPreview) {
   }
 }
 
+// Panduan tengah: hanya tampil di preview, tidak ikut ke gambar final.
+function socialDrawCenterGuide(ctx, r) {
+  const cx = r.x + r.w / 2;
+  const cy = r.y + r.h / 2;
+  const arm = Math.max(18, Math.min(r.w, r.h) * 0.11);
+  ctx.save();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = 5;
+  ctx.setLineDash([10, 8]);
+  ctx.beginPath();
+  ctx.moveTo(cx - arm, cy); ctx.lineTo(cx + arm, cy);
+  ctx.moveTo(cx, cy - arm); ctx.lineTo(cx, cy + arm);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(cx, cy, Math.max(9, arm * 0.45), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function socialDrawSelectionBox(ctx, b, label, pad) {
+  if (!b) return;
+  const p = pad == null ? 10 : pad;
+  ctx.save();
+  ctx.strokeStyle = '#34D399';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([10, 8]);
+  ctx.strokeRect(b.x - p, b.y - p, Math.max(1, b.w) + p * 2, Math.max(1, b.h) + p * 2);
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#34D399';
+  ctx.font = '600 18px system-ui, sans-serif';
+  ctx.fillText(label, b.x - p, Math.max(24, b.y - p - 10));
+  ctx.restore();
+}
+
+function socialDrawObject(ctx, o, W, H) {
+  if (!o) return;
+  const x = W * Number(o.xPct || 0);
+  const y = H * Number(o.yPct || 0);
+  const w = W * Number(o.wPct || 0);
+  const h = H * Number(o.hPct || 0);
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  const sw = socialClamp(o.strokeWidth == null ? 8 : o.strokeWidth, 1, 60);
+  const type = o.type || 'rect';
+  ctx.save();
+  ctx.globalAlpha = socialClamp(o.opacity == null ? 100 : o.opacity, 0, 100) / 100;
+  ctx.translate(cx, cy);
+  ctx.rotate((Number(o.rotation) || 0) * Math.PI / 180);
+  ctx.translate(-cx, -cy);
+  ctx.strokeStyle = o.color || '#F97316';
+  ctx.fillStyle = o.color || '#F97316';
+  ctx.lineWidth = sw;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (type === 'ellipse') {
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, Math.max(1, Math.abs(w) / 2), Math.max(1, Math.abs(h) / 2), 0, 0, Math.PI * 2);
+    if (o.fill) ctx.fill();
+    ctx.stroke();
+  } else if (type === 'line') {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.stroke();
+  } else if (type === 'arrow') {
+    const ex = x + w;
+    const ey = y + h;
+    const ang = Math.atan2(h, w);
+    const len = Math.hypot(w, h);
+    const head = Math.min(Math.max(16, sw * 2.4), Math.max(14, len * 0.35));
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(ex - Math.cos(ang) * head * 0.7, ey - Math.sin(ang) * head * 0.7);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - Math.cos(ang - 0.45) * head, ey - Math.sin(ang - 0.45) * head);
+    ctx.lineTo(ex - Math.cos(ang + 0.45) * head, ey - Math.sin(ang + 0.45) * head);
+    ctx.closePath();
+    ctx.fill();
+  } else if (type === 'triangle') {
+    ctx.beginPath();
+    ctx.moveTo(cx, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    if (o.fill) ctx.fill();
+    ctx.stroke();
+  } else {
+    socialRoundRect(ctx, x, y, Math.max(1, Math.abs(w)), Math.max(1, Math.abs(h)), Math.min(Math.abs(w), Math.abs(h)) * 0.08);
+    if (o.fill) ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+  o._bbox = { x: Math.min(x, x + w), y: Math.min(y, y + h), w: Math.abs(w), h: Math.abs(h) };
+  o._hitPad = (type === 'line' || type === 'arrow') ? Math.max(24, sw + 14) : 12;
+}
+
 function socialPhotoRect(W, H) {
+  const pr = socialNormalizePhotoRect(_socialEd && _socialEd.photoRect);
   return {
-    x: W * 0.07,
-    y: H * 0.27,
-    w: W * 0.86,
-    h: H * 0.36,
+    x: W * pr.xPct,
+    y: H * pr.yPct,
+    w: W * pr.wPct,
+    h: H * pr.hPct,
     radius: Math.round(W * 0.026),
   };
 }
@@ -767,10 +1447,11 @@ function socialDrawLayer(ctx, l, W, H) {
   const size = socialClamp(l.size, 10, 200);
   const weight = Number(l.weight) || 600;
   const maxW = W * socialClamp(l.maxWidthPct || 0.86, 0.2, 1);
+  const lineHPct = socialClamp(l.lineHeight == null ? 118 : l.lineHeight, 80, 200) / 100;
   ctx.save();
   ctx.font = weight + ' ' + size + 'px system-ui, -apple-system, "Segoe UI", sans-serif';
   const lines = socialWrapText(ctx, l.text, maxW);
-  const lineH = Math.round(size * 1.18);
+  const lineH = Math.round(size * lineHPct);
   const anchorX = W * socialClamp(l.xPct, -0.2, 1.2);
   const y = H * socialClamp(l.yPct, -0.2, 1.2);
   let textW = 0;
@@ -781,12 +1462,36 @@ function socialDrawLayer(ctx, l, W, H) {
   else if (l.align === 'right') left = anchorX + maxW - textW;
   l._bbox = { x: left, y: y, w: Math.max(textW, 12), h: Math.max(lines.length * lineH, size) };
 
-  ctx.fillStyle = l.color || '#FFFFFF';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(0,0,0,0.32)';
-  ctx.shadowBlur = 10;
-  ctx.shadowOffsetY = 3;
+  ctx.globalAlpha = socialClamp(l.opacity == null ? 100 : l.opacity, 0, 100) / 100;
+
+  // Garis tepi (outline) digambar lebih dulu agar tidak menutupi isi teks.
+  if (l.stroke && Number(l.strokeWidth) > 0) {
+    ctx.strokeStyle = l.strokeColor || '#000000';
+    ctx.lineWidth = socialClamp(l.strokeWidth, 0, 20);
+    ctx.lineJoin = 'round';
+    ctx.miterLimit = 2;
+    ctx.shadowColor = 'transparent';
+    lines.forEach(function(line, i) {
+      ctx.strokeText(line, left, y + i * lineH);
+    });
+  }
+
+  // Bayangan dapat diatur per layer.
+  if (l.shadow) {
+    ctx.shadowColor = l.shadowColor || 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = socialClamp(l.shadowBlur == null ? 10 : l.shadowBlur, 0, 60);
+    ctx.shadowOffsetY = socialClamp(l.shadowOffsetY == null ? 3 : l.shadowOffsetY, -40, 40);
+    ctx.shadowOffsetX = 0;
+  } else {
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+  }
+
+  ctx.fillStyle = l.color || '#FFFFFF';
   lines.forEach(function(line, i) {
     ctx.fillText(line, left, y + i * lineH);
   });
@@ -849,6 +1554,7 @@ function socialBindCanvas() {
   const cv = document.getElementById('social-preview');
   if (!cv) return;
   cv.style.cursor = 'grab';
+  cv.style.touchAction = 'none';
   let drag = null;
 
   function toCanvas(e) {
@@ -859,25 +1565,65 @@ function socialBindCanvas() {
     };
   }
 
-  cv.addEventListener('pointerdown', function(e) {
-    if (!_socialEd) return;
-    const p = toCanvas(e);
-    let found = -1;
+  function findLayer(p) {
+    if (!_socialEd || !_socialEd.layers) return -1;
     for (let i = _socialEd.layers.length - 1; i >= 0; i--) {
       const b = _socialEd.layers[i]._bbox;
       if (b && p.x >= b.x - 12 && p.x <= b.x + b.w + 12 && p.y >= b.y - 12 && p.y <= b.y + b.h + 12) {
-        found = i;
-        break;
+        return i;
       }
     }
-    if (found < 0) return;
-    _socialEd.selected = found;
-    const l = _socialEd.layers[found];
-    drag = { idx: found, x: p.x, y: p.y, xPct: Number(l.xPct) || 0, yPct: Number(l.yPct) || 0 };
+    return -1;
+  }
+
+  function findObject(p) {
+    if (!_socialEd || !_socialEd.objects) return -1;
+    for (let i = _socialEd.objects.length - 1; i >= 0; i--) {
+      const o = _socialEd.objects[i];
+      const b = o._bbox;
+      if (!b) continue;
+      const pad = o._hitPad || 12;
+      if (p.x >= b.x - pad && p.x <= b.x + b.w + pad && p.y >= b.y - pad && p.y <= b.y + b.h + pad) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  cv.addEventListener('pointerdown', function(e) {
+    if (!_socialEd) return;
+    const p = toCanvas(e);
+    const li = findLayer(p);
+    const oi = li < 0 ? findObject(p) : -1;
+    if (li >= 0) {
+      const l = _socialEd.layers[li];
+      _socialEd.selected = li;
+      _socialEd.active = 'text';
+      _socialEd.selectedObject = -1;
+      _socialEd.photoSelected = false;
+      drag = { type: 'layer', idx: li, x: p.x, y: p.y, xPct: Number(l.xPct) || 0, yPct: Number(l.yPct) || 0 };
+    } else if (oi >= 0) {
+      const o = _socialEd.objects[oi];
+      _socialEd.active = 'object';
+      _socialEd.selectedObject = oi;
+      _socialEd.photoSelected = false;
+      drag = { type: 'object', idx: oi, x: p.x, y: p.y, xPct: Number(o.xPct) || 0, yPct: Number(o.yPct) || 0 };
+    } else {
+      const r = socialPhotoRect(cv.width, cv.height);
+      if (!(p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h)) return;
+      const pr = socialNormalizePhotoRect(_socialEd.photoRect);
+      _socialEd.active = 'photo';
+      _socialEd.photoSelected = true;
+      _socialEd.selectedObject = -1;
+      drag = { type: 'photo', x: p.x, y: p.y, xPct: pr.xPct, yPct: pr.yPct };
+    }
     try { cv.setPointerCapture(e.pointerId); } catch (err) {}
     cv.style.cursor = 'grabbing';
     socialRenderLayerList();
+    socialRenderObjectList();
     socialSyncLayerControls();
+    socialSyncObjectControls();
+    socialSyncPhotoControls();
     socialDrawPreview();
     e.preventDefault();
   });
@@ -885,10 +1631,25 @@ function socialBindCanvas() {
   cv.addEventListener('pointermove', function(e) {
     if (!drag || !_socialEd) return;
     const p = toCanvas(e);
-    const l = _socialEd.layers[drag.idx];
-    if (!l) return;
-    l.xPct = Math.max(-0.2, Math.min(1.2, drag.xPct + (p.x - drag.x) / cv.width));
-    l.yPct = Math.max(-0.2, Math.min(1.2, drag.yPct + (p.y - drag.y) / cv.height));
+    const dx = (p.x - drag.x) / cv.width;
+    const dy = (p.y - drag.y) / cv.height;
+    if (drag.type === 'layer') {
+      const l = _socialEd.layers[drag.idx];
+      if (!l) return;
+      l.xPct = Math.max(-0.2, Math.min(1.2, drag.xPct + dx));
+      l.yPct = Math.max(-0.2, Math.min(1.2, drag.yPct + dy));
+    } else if (drag.type === 'object') {
+      const o = _socialEd.objects && _socialEd.objects[drag.idx];
+      if (!o) return;
+      o.xPct = Math.max(-0.5, Math.min(1.2, drag.xPct + dx));
+      o.yPct = Math.max(-0.5, Math.min(1.2, drag.yPct + dy));
+    } else if (drag.type === 'photo') {
+      const r = socialNormalizePhotoRect(_socialEd.photoRect);
+      r.xPct = socialClamp(drag.xPct + dx, -0.5, 1.2);
+      r.yPct = socialClamp(drag.yPct + dy, -0.5, 1.2);
+      _socialEd.photoRect = socialNormalizePhotoRect(r);
+      socialSyncPhotoControls();
+    }
     socialDrawPreview();
     e.preventDefault();
   });
@@ -934,7 +1695,9 @@ async function socialBuildPayload(imageDataUrl) {
   // Foto menu lama (mis. /uploads/menu/...) disalin ke folder social agar
   // penghapusan postingan tidak menghapus foto master menu.
   if (!photoBase64 && st.photo && st.photo.url && st.photo.img && !String(st.photo.url).startsWith('/uploads/social/')) {
-    photoBase64 = socialImageToDataUrl(st.photo.img, 1600, SOCIAL_JPEG_QUALITY);
+    photoBase64 = socialImageToDataUrl(
+      st.photo.img, 1600, SOCIAL_JPEG_QUALITY, socialSourceHasAlpha(socialImageSrc(st.photo))
+    );
   }
   return {
     menu_id: (st.menu && st.menu.menu_id) || null,
@@ -962,8 +1725,19 @@ async function socialBuildPayload(imageDataUrl) {
         return {
           id: l.id, text: l.text, xPct: l.xPct, yPct: l.yPct, size: l.size,
           color: l.color, weight: l.weight, align: l.align, maxWidthPct: l.maxWidthPct,
+          shadow: l.shadow !== false, shadowColor: l.shadowColor, shadowBlur: l.shadowBlur,
+          shadowOffsetY: l.shadowOffsetY, stroke: !!l.stroke, strokeColor: l.strokeColor,
+          strokeWidth: l.strokeWidth, opacity: l.opacity, lineHeight: l.lineHeight,
         };
       }),
+      objects: (st.objects || []).map(function(o) {
+        return {
+          id: o.id, type: o.type, xPct: o.xPct, yPct: o.yPct, wPct: o.wPct, hPct: o.hPct,
+          color: o.color, fill: !!o.fill, strokeWidth: o.strokeWidth,
+          rotation: o.rotation, opacity: o.opacity,
+        };
+      }),
+      photoRect: socialNormalizePhotoRect(st.photoRect),
     },
     image_base64: imageDataUrl,
     background_base64: st.bgImage && st.bgImage.dataUrl ? st.bgImage.dataUrl : null,
@@ -980,14 +1754,19 @@ async function socialSave() {
   _socialEd.saving = true;
   if (btn) { btn.disabled = true; btn.classList.add('opacity-60'); }
   if (status) status.textContent = 'Membuat gambar...';
+  socialSetSaveProgress(0, 'Membuat gambar...');
   try {
     const blob = await socialRenderBlob();
     if (status) status.textContent = 'Menyimpan...';
     const dataUrl = await socialBlobToDataUrl(blob);
     const payload = await socialBuildPayload(dataUrl);
+    socialSetSaveProgress(0, 'Mengunggah gambar...');
+    const onUpload = function(pct) {
+      socialSetSaveProgress(pct, pct >= 100 ? 'Memproses di server...' : 'Mengunggah... ' + pct + '%');
+    };
     const res = _socialEd.postId
-      ? await api.put('/social-posts/' + _socialEd.postId, payload)
-      : await api.post('/social-posts', payload);
+      ? await socialSendJson('PUT', '/social-posts/' + _socialEd.postId, payload, onUpload)
+      : await socialSendJson('POST', '/social-posts', payload, onUpload);
     _socialEd.postId = res.id;
     _socialEd.imageUrl = res.image_url;
     _socialEd.bgImage = res.background_url
@@ -998,9 +1777,13 @@ async function socialSave() {
       : null;
     socialUpdateImageUI();
     socialLoadHistory();
+    socialSetSaveProgress(100, 'Tersimpan');
+    setTimeout(socialHideSaveProgress, 1200);
     if (status) status.textContent = 'Tersimpan · ' + Math.round(blob.size / 1024) + ' KB';
     showToast('Postingan tersimpan (' + Math.round(blob.size / 1024) + ' KB)', 'success');
   } catch (e) {
+    socialSetSaveProgress(100, 'Gagal menyimpan');
+    setTimeout(socialHideSaveProgress, 1800);
     if (status) status.textContent = 'Gagal menyimpan';
     showAlert(e.message || 'Gagal menyimpan postingan', 'error');
   } finally {
@@ -1149,8 +1932,13 @@ async function socialLoadPost(id) {
     st.format = SOCIAL_FORMATS[row.format] ? row.format : 'portrait';
     st.bgColor = /^#[0-9a-fA-F]{6}$/.test(draft.bgColor || '') ? draft.bgColor.toUpperCase() : st.bgColor;
     st.bgOverlay = socialClamp(draft.bgOverlay == null ? st.bgOverlay : draft.bgOverlay, 0, 80);
-    st.layers = Array.isArray(draft.layers) && draft.layers.length ? draft.layers : st.layers;
+    st.layers = Array.isArray(draft.layers) && draft.layers.length ? draft.layers.map(socialNormalizeLayer) : st.layers;
+    st.objects = Array.isArray(draft.objects) ? draft.objects.map(socialNormalizeObject) : [];
+    st.photoRect = socialNormalizePhotoRect(draft.photoRect);
     st.selected = 0;
+    st.selectedObject = -1;
+    st.photoSelected = false;
+    st.active = 'text';
     st.caption = row.caption != null ? row.caption : st.caption;
     st.hashtags = row.hashtags != null ? row.hashtags : st.hashtags;
     st.bgImage = row.background_url ? { url: row.background_url, dataUrl: null, img: null } : null;
