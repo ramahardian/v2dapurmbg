@@ -277,7 +277,6 @@ async function gvLoadStatus() {
         ? '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span><span>Terkonfigurasi & siap dipakai</span>'
         : '<span class="inline-block w-2 h-2 rounded-full bg-red-500"></span><span>API key belum diset</span>';
     }
-    document.getElementById('gv-key-warning')?.classList.toggle('hidden', !!s.configured);
     gvUpdateRunState();
   } catch (err) {
     const apiStatus = document.getElementById('gv-api-status');
@@ -299,13 +298,6 @@ function renderGroqVision() {
       <span id="gv-model-badge" class="text-xs" style="opacity:.6">Model: memuat…</span>
       <span class="text-xs" style="opacity:.45">·</span>
       <span class="text-xs" style="opacity:.55">Ekstraksi teks & data dari foto/scan</span>
-    </div>
-
-    <div id="gv-key-warning" class="hidden mb-5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-      <div class="font-semibold mb-0.5">GROQ_API_KEY belum diset</div>
-      <div>Tambahkan <code class="mono text-[12px]">GROQ_API_KEY=...</code> di file <code class="mono text-[12px]">.env</code>, lalu restart server. Dapatkan API key gratis di
-        <a href="https://console.groq.com/keys" target="_blank" rel="noopener" class="underline font-medium">console.groq.com/keys</a>.
-      </div>
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
