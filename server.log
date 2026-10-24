@@ -1,2 +1,2 @@
 🚀 Server — http://localhost:3000
-[DB_ERROR] UPDATE users SET last_activity = NOW() WHERE id = ? Unknown column 'last_activity' in 'field list'
+[DB_ERROR] INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value) Table 'mbg_kitchen.app_settings' doesn't exist

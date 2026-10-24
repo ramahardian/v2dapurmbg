@@ -278,11 +278,44 @@ async function gvLoadStatus() {
         ? '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span><span>Terkonfigurasi & siap dipakai</span>'
         : '<span></span>';
     }
+    // Panel pengaturan key (khusus admin): tunjukkan sumber key aktif
+    const keySource = document.getElementById('gv-key-source');
+    if (keySource) {
+      keySource.textContent = s.source === 'db' ? '• sumber: database'
+        : s.source === 'env' ? '• sumber: .env'
+        : '• belum ada key tersimpan';
+    }
+    const keyClear = document.getElementById('gv-key-clear');
+    if (keyClear) keyClear.classList.toggle('hidden', s.source !== 'db');
     gvUpdateRunState();
   } catch (err) {
     const apiStatus = document.getElementById('gv-api-status');
     if (apiStatus) apiStatus.textContent = 'Status tidak diketahui';
   }
+}
+
+// Simpan API key Groq ke database (admin) — langsung aktif tanpa restart.
+async function gvSaveKey() {
+  const input = document.getElementById('gv-key-input');
+  const key = ((input && input.value) || '').trim();
+  if (!key) return showAlert('Isi API key Groq dulu (diawali gsk_).', 'warning');
+  try {
+    await api.put('/vision/key', { api_key: key });
+    if (input) input.value = '';
+    showToast('API key tersimpan di database', 'success');
+    gvLoadStatus();
+  } catch (err) {
+    showAlert(err.message || 'Gagal menyimpan API key.', 'error');
+  }
+}
+
+// Hapus key dari database — kembali memakai GROQ_API_KEY dari .env (jika ada).
+function gvClearKey() {
+  if (!confirm('Hapus API key dari database? Aplikasi akan kembali memakai GROQ_API_KEY dari .env (jika ada).')) return;
+  api.del('/vision/key').then(() => {
+    showToast('Key dihapus dari database', 'success');
+    gvLoadStatus();
+  }).catch((err) => showAlert(err.message || 'Gagal menghapus API key.', 'error'));
 }
 
 function renderGroqVision() {
@@ -300,6 +333,26 @@ function renderGroqVision() {
       <span class="text-xs" style="opacity:.45">·</span>
       <span class="text-xs" style="opacity:.55">Ekstraksi teks & data dari foto/scan</span>
     </div>
+
+    ${currentUser?.role === 'admin' ? `
+    <div class="mb-5 bg-white rounded-2xl border border-stone-200 p-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-semibold text-stone-700">⚙️ API Key Groq</span>
+        <span class="text-[11px]" style="opacity:.5">khusus admin</span>
+        <span id="gv-key-source" class="text-[11px]" style="opacity:.5"></span>
+        <button id="gv-key-clear" type="button"
+          class="hidden ml-auto px-2.5 py-1 rounded-md border border-stone-300 text-[11px] text-stone-500 hover:bg-stone-100 transition-colors">Hapus key dari DB</button>
+      </div>
+      <div class="flex gap-2 mt-2.5">
+        <input id="gv-key-input" type="password" autocomplete="off" spellcheck="false"
+          placeholder="gsk_..."
+          class="flex-1 h-9 px-3 rounded-lg border border-stone-300 text-sm mono" />
+        <button id="gv-key-save" type="button"
+          class="h-9 px-4 rounded-lg text-white text-xs font-semibold"
+          style="background:#1e40af">Simpan</button>
+      </div>
+      <p class="text-[11px] mt-1.5" style="opacity:.5">Tersimpan di database dan langsung dipakai — tanpa edit .env, tanpa restart server.</p>
+    </div>` : ''}
 
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
       <!-- ═══ Panel Upload ═══ -->
@@ -473,6 +526,13 @@ function renderGroqVision() {
   }
 
   document.getElementById('gv-result')?.addEventListener('input', gvUpdateMeta);
+
+  // Panel API key (khusus admin)
+  document.getElementById('gv-key-save')?.addEventListener('click', gvSaveKey);
+  document.getElementById('gv-key-clear')?.addEventListener('click', gvClearKey);
+  document.getElementById('gv-key-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); gvSaveKey(); }
+  });
 
   // Tempel gambar dari clipboard (Ctrl+V). Listener global cukup sekali;
   // handler otomatis berhenti bila halaman ini tidak sedang terbuka.

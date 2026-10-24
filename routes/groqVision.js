@@ -124,6 +124,29 @@ function invalidateKeyCache() {
   keyCache = { value: null, expires: 0 };
 }
 
+const SETTINGS_TABLE_DDL = `CREATE TABLE IF NOT EXISTS app_settings (
+  setting_key VARCHAR(64) NOT NULL PRIMARY KEY,
+  setting_value TEXT,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB`;
+
+// Tulis pengaturan; kalau tabel app_settings belum ada (server belum jalankan
+// migrate.js), buat dulu otomatis lalu coba lagi — sekali saja.
+async function upsertSetting(settingKey, settingValue) {
+  const sql = 'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ' +
+    'ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)';
+  try {
+    await db.query(sql, [settingKey, settingValue]);
+  } catch (e) {
+    if (e && (e.errno === 1146 || /doesn't exist/i.test(e.message || ''))) {
+      await db.query(SETTINGS_TABLE_DDL);
+      await db.query(sql, [settingKey, settingValue]);
+      return;
+    }
+    throw e;
+  }
+}
+
 // Validasi & normalisasi data URL gambar -> { mime, base64, bytes }
 function parseImageDataUrl(image) {
   if (typeof image !== 'string' || !image.trim()) {
@@ -183,7 +206,7 @@ router.post('/extract', visionLimiter, async (req, res) => {
   const key = await apiKey();
   if (!key) {
     return res.status(503).json({
-      error: 'GROQ_API_KEY belum diset. Simpan API key Groq lewat halaman admin (atau di .env) lalu coba lagi.',
+      error: 'GROQ_API_KEY belum diset. Masukkan API key Groq pada bagian "API Key Groq" di halaman Ekstrak Gambar (khusus admin), atau set di .env lalu restart server.',
     });
   }
 
@@ -294,11 +317,7 @@ router.put('/key', requireRole('admin'), async (req, res) => {
     return res.status(400).json({ error: 'API key terlalu panjang (maks 255 karakter).' });
   }
   try {
-    await db.query(
-      'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ' +
-      'ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
-      [KEY_SETTING, key]
-    );
+    await upsertSetting(KEY_SETTING, key);
     invalidateKeyCache();
     res.json({ ok: true, source: 'db', configured: true });
   } catch (e) {
@@ -310,7 +329,12 @@ router.put('/key', requireRole('admin'), async (req, res) => {
 // DELETE /vision/key -> hapus key dari database (kembali pakai .env)
 router.delete('/key', requireRole('admin'), async (req, res) => {
   try {
-    await db.query('DELETE FROM app_settings WHERE setting_key = ?', [KEY_SETTING]);
+    try {
+      await db.query('DELETE FROM app_settings WHERE setting_key = ?', [KEY_SETTING]);
+    } catch (e) {
+      // Tabel belum ada = memang tidak ada key tersimpan — bukan kegagalan
+      if (!(e && (e.errno === 1146 || /doesn't exist/i.test(e.message || '')))) throw e;
+    }
     invalidateKeyCache();
     const envKey = (process.env.GROQ_API_KEY || '').trim();
     res.json({ ok: true, source: envKey ? 'env' : null, configured: !!envKey });
