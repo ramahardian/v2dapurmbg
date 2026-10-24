@@ -102,6 +102,14 @@ async function gvSelectFile(file) {
     const prepared = await gvPrepareImage(file);
     if (!document.getElementById('gv-dropzone')) return; // pengguna sudah pindah halaman
 
+    // Tolak gambar yang jelas tidak layak ekstrak (terlalu kecil / resolusi
+    // tak terbaca) sebelum membuang kuota ekstraksi.
+    if (prepared.width < 100 || prepared.height < 100) {
+      showAlert('Gambar ditolak — resolusi terlalu kecil (' + prepared.width + '×' + prepared.height + ' px, minimal 100×100). Foto ulang dokumen menu/resep dengan lebih jelas.', 'warning');
+      gvClearImage();
+      return;
+    }
+
     _gvState.dataUrl = prepared.dataUrl;
     _gvState.name = file.name || 'tempel-gambar.png';
     _gvState.bytes = Math.round(prepared.dataUrl.length * 0.75);
@@ -222,6 +230,7 @@ async function gvRun() {
     gvShowResult(res);
     showToast('Ekstraksi selesai', 'success');
   } catch (err) {
+    // Pesan penolakan dari server (bukan dokumen menu standar) tampil apa adanya
     showAlert(err.message || 'Gagal mengekstrak gambar.', 'error');
   } finally {
     gvSetLoading(false);

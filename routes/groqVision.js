@@ -72,8 +72,11 @@ const MODES = {
     json: true,
     prompt: [
       'Baca dokumen menu, resep, atau daftar bahan pada gambar ini.',
+      'Gambar hanya boleh diekstrak bila merupakan DOKUMEN STANDAR: tulisan terbaca (cetak, ketik, atau tulisan tangan rapi) yang berisi nama menu/resep dan/atau daftar bahan beserta jumlah satuan.',
+      'Bila bukan dokumen standar — misalnya foto orang, pemandangan, hewan, makanan jadi tanpa resep, screenshot chat, poster, iklan, nota belanja non-resep, kode QR, atau gambar blur/gelap/tidak terbaca — JANGAN mengarang data.',
       'Balas HANYA JSON valid tanpa penjelasan dan tanpa markdown fence.',
-      'Format: {"nama_menu":"","kategori":"","porsi":0,"bahan":[{"nama":"","jumlah":0,"satuan":""}],"catatan":""}.',
+      'Gambar DITOLAK → balas persis: {"valid":false,"alasan":"alasan singkat dalam bahasa Indonesia"}.',
+      'Gambar valid → balas: {"valid":true,"nama_menu":"","kategori":"","porsi":0,"bahan":[{"nama":"","jumlah":0,"satuan":""}],"catatan":""}.',
       'Tulis nama bahan apa adanya. Jika jumlah/satuan tidak terlihat, isi null.',
       'Jangan menambah bahan atau angka yang tidak ada di gambar.',
     ].join(' '),
@@ -307,6 +310,35 @@ router.post('/extract', visionLimiter, async (req, res) => {
     let data = null;
     const textForParse = selected.json ? stripCodeFence(text) : text;
     try { data = JSON.parse(textForParse); } catch { /* bukan JSON valid */ }
+
+    // ── Gerbang penolakan gambar ────────────────────────────────────────
+    // Model menandai sendiri gambar yang bukan dokumen menu standar
+    // (foto non-dokumen, blur, tidak terbaca) dengan {"valid":false,...}.
+    // Hasil yang tidak lolos struktur juga ditolak agar tidak ada data
+    // karangan yang masuk ke Data Menu.
+    if (selected.json) {
+      if (!data || typeof data !== 'object') {
+        return res.status(422).json({
+          error: 'Gambar ditolak — hasil ekstraksi bukan data JSON yang valid. Pastikan gambar adalah foto dokumen menu/resep yang jelas.',
+        });
+      }
+      const validFlag = data.valid;
+      if (validFlag === false || validFlag === 'false' || validFlag === 0) {
+        const alasan = String(data.alasan || '').trim();
+        return res.status(422).json({
+          error: 'Gambar ditolak — bukan dokumen menu/resep yang standar' + (alasan ? ': ' + alasan + '. ' : '. ') + 'Foto dokumen menu atau resep yang berisi nama bahan dan jumlahnya.',
+        });
+      }
+      if (mode === 'menu') {
+        const adaBahan = Array.isArray(data.bahan) && data.bahan.some((b) => b && String(b.nama || '').trim());
+        const adaNama = String(data.nama_menu || '').trim();
+        if (!adaNama && !adaBahan) {
+          return res.status(422).json({
+            error: 'Gambar ditolak — tidak ada nama menu atau daftar bahan yang terbaca. Gunakan foto dokumen menu/resep yang lebih jelas dan bercahaya merata.',
+          });
+        }
+      }
+    }
 
     res.json({
       text: selected.json ? textForParse : text,
