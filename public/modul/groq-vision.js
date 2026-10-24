@@ -167,6 +167,9 @@ function gvShowResult(res) {
   document.getElementById('gv-actions')?.classList.remove('hidden');
   document.getElementById('gv-json-badge')?.classList.toggle('hidden', !isJson);
   document.getElementById('gv-format')?.classList.toggle('hidden', !(isJson || /^\s*[{[]/.test(text)));
+  // Tombol "Masukkan ke Data Menu" hanya untuk hasil JSON menu dengan nama terisi
+  const canToMenu = !!(res.data && typeof res.data === 'object' && String(res.data.nama_menu || '').trim());
+  document.getElementById('gv-to-menu')?.classList.toggle('hidden', !canToMenu);
   gvUpdateMeta();
 }
 
@@ -256,7 +259,39 @@ function gvClearResult() {
   document.getElementById('gv-actions')?.classList.add('hidden');
   document.getElementById('gv-json-badge')?.classList.add('hidden');
   document.getElementById('gv-format')?.classList.add('hidden');
+  document.getElementById('gv-to-menu')?.classList.add('hidden');
   gvUpdateMeta();
+}
+
+// Kirim hasil ekstraksi (mode menu) ke Data Menu via POST /menu.
+// Backend mencocokkan bahan by nama & membuat bahan_baku baru bila belum ada,
+// menghitung gizi otomatis, dan menolak nama menu kembar (409).
+async function gvSaveToMenu() {
+  const d = _gvState.last && _gvState.last.data;
+  if (!d || typeof d !== 'object') return showAlert('Hasil ekstraksi bukan data menu JSON.', 'warning');
+  const nama = String(d.nama_menu || '').trim();
+  if (!nama) return showAlert('Nama menu kosong — ekstrak ulang dengan gambar menu yang lebih jelas.', 'warning');
+
+  const bahan = (Array.isArray(d.bahan) ? d.bahan : [])
+    .filter((b) => b && String(b.nama || '').trim())
+    .map((b) => ({
+      nama: String(b.nama).trim(),
+      jumlah: Number(b.jumlah) || 0,
+      satuan: b.satuan ? String(b.satuan) : undefined,
+    }));
+
+  try {
+    await api.post('/menu', {
+      nama,
+      kategori_penerima: d.kategori ? String(d.kategori) : null,
+      deskripsi: d.catatan ? String(d.catatan) : null,
+      jumlah_porsi: Number(d.porsi) || 0,
+      bahan,
+    });
+    showToast('Menu "' + nama + '" tersimpan ke Data Menu' + (bahan.length ? ' · ' + bahan.length + ' bahan' : ''), 'success');
+  } catch (err) {
+    showAlert(err.message || 'Gagal menyimpan menu.', 'error');
+  }
 }
 
 async function gvLoadStatus() {
@@ -431,6 +466,9 @@ function renderGroqVision() {
             Unduh
           </button>
           <button id="gv-format" type="button" class="hidden px-3 py-1.5 rounded-lg text-xs font-medium border border-stone-300 hover:bg-stone-100 transition-colors">Rapikan JSON</button>
+          <button id="gv-to-menu" type="button"
+            class="hidden px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
+            style="background:#166534">⬆ Masukkan ke Data Menu</button>
           <button id="gv-clear" type="button" class="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium text-stone-500 hover:bg-stone-100 transition-colors">Bersihkan</button>
         </div>
       </section>
@@ -493,6 +531,7 @@ function renderGroqVision() {
   document.getElementById('gv-download')?.addEventListener('click', gvDownloadResult);
   document.getElementById('gv-format')?.addEventListener('click', gvFormatJson);
   document.getElementById('gv-clear')?.addEventListener('click', gvClearResult);
+  document.getElementById('gv-to-menu')?.addEventListener('click', gvSaveToMenu);
 
   document.getElementById('gv-result')?.addEventListener('input', gvUpdateMeta);
 

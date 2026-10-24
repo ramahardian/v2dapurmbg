@@ -1,3 +1,4 @@
 🚀 Server — http://localhost:3000
 [groq-vision] Groq error 400 {"error":{"message":"Image must have at least 32 pixels in each dimension","type":"invalid_request_error"}}
 
+[DB_ERROR] SELECT nama, berat_bersih, energi, protein, lemak, karbohidrat, serat FROM sp_referensi_bahan WHERE tenant_id=? Table 'mbg_kitchen.sp_referensi_bahan' doesn't exist
