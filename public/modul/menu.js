@@ -823,24 +823,31 @@ function bufferCalcHtml(v) {
     }
     return satuanTxt(nilai);
   }
-  function teks(label, cls, perPorsi, porsi) {
-    var s = label + ' <b class="' + cls + '">' + fmtNum(perPorsi) + ' ' + sat + '/porsi</b>';
+  // Isi satu baris: "32 g/porsi × 1.436 = 45,95 kg (+1% → 46,41 kg)"
+  function isi(perPorsi, porsi) {
     if (porsi > 0) {
       var kebutuhan = perPorsi * porsi;
       var denganBuffer = kebutuhan * (1 + v.bufferPersen / 100);
-      s += ' × ' + fmtNum(porsi) + ' = <b>' + totalTxt(kebutuhan) + '</b>' +
+      return fmtNum(perPorsi) + ' ' + sat + '/porsi × ' + fmtNum(porsi) + ' = <b>' + totalTxt(kebutuhan) + '</b>' +
         ' <span class="text-stone-400">(+' + fmtNum(v.bufferPersen) + '% → ' + totalTxt(denganBuffer) + ')</span>';
-    } else {
-      var buffer = perPorsi * v.bufferPersen / 100;
-      s += ' <span class="text-stone-400">(+' + satuanTxt(buffer) + ' → ' + satuanTxt(perPorsi + buffer) + ')</span>';
     }
-    return s;
+    var buffer = perPorsi * v.bufferPersen / 100;
+    return fmtNum(perPorsi) + ' ' + sat + '/porsi' +
+      ' <span class="text-stone-400">(+' + satuanTxt(buffer) + ' → ' + satuanTxt(perPorsi + buffer) +
+      ') · jumlah porsi belum diisi</span>';
   }
-  var bagian = [teks('Besar:', 'text-amber-700', besar, v.porsiBesar)];
-  // Porsi kecil hanya ditampilkan bila jumlah porsi kecil diisi — baris info jadi
-  // ringkas dan tidak menumpuk.
-  if (v.porsiKecil > 0) bagian.push(teks('Kecil:', 'text-emerald-700', kecil, v.porsiKecil));
-  return bagian.join(' <span class="text-stone-300">·</span> ');
+  // Dua baris terpisah — Besar (amber) & Kecil (hijau) selalu tampil, label di
+  // kolom kiri sejajar dan perhitungan pakai mono supaya mudah dibaca.
+  function baris(label, cls, perPorsi, porsi) {
+    return '<div class="flex flex-wrap items-baseline gap-x-2">' +
+      '<span class="shrink-0 w-12 font-semibold ' + cls + '">' + label + '</span>' +
+      '<span class="mono">' + isi(perPorsi, porsi) + '</span>' +
+    '</div>';
+  }
+  return '<div class="space-y-1">' +
+    baris('Besar', 'text-amber-700', besar, v.porsiBesar) +
+    baris('Kecil', 'text-emerald-700', kecil, v.porsiKecil) +
+  '</div>';
 }
 
 function updateBufferCalc(i) {
@@ -910,7 +917,7 @@ function renderBahanList() {
           '</label>' +
           '<span class="text-[10px] text-stone-400">buffer disimpan ke master bahan</span>' +
         '</div>' +
-        '<div id="b-buffer-calc-' + i + '" class="text-[11px] leading-snug text-stone-500 bg-stone-50 border border-stone-100 rounded-md px-2 py-1">' + bufferCalcHtml(v) + '</div>' +
+        '<div id="b-buffer-calc-' + i + '" class="text-[11px] leading-snug text-stone-600 bg-stone-50 border border-stone-100 rounded-md px-2.5 py-1.5">' + bufferCalcHtml(v) + '</div>' +
       '</div>' +
     '</div>';
   }).join('');
