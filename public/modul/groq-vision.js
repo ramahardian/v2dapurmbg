@@ -4,12 +4,9 @@
 // route SPA di inti.js (lihat MODULES di definisi.js).
 // ============================================================
 
-const GV_MODES = {
-  teks: { label: 'Teks / OCR', json: false, placeholder: 'Contoh: hanya ambil bagian daftar hadir saja.' },
-  tabel: { label: 'Tabel → JSON', json: true, placeholder: 'Contoh: kolom tanggal format DD/MM/YYYY, nominal tanpa Rp.' },
-  nota: { label: 'Nota / Invoice', json: true, placeholder: 'Contoh: nama supplier ada di bagian atas kanan.' },
-  menu: { label: 'Menu & Bahan', json: true, placeholder: 'Contoh: jumlah bahan dalam gram.' },
-};
+// Ekstraksi hanya satu mode: Menu & Bahan (pilihan lain dihapus dari UI).
+const GV_MODE = 'menu';
+const GV_PROMPT_PLACEHOLDER = 'Contoh: jumlah bahan dalam gram.';
 
 let _gvState = { dataUrl: '', name: '', bytes: 0, status: null, last: null, busy: false };
 let _gvPasteBound = false;
@@ -88,7 +85,7 @@ function gvSetLoading(on) {
   const label = document.getElementById('gv-run-label');
   const spinner = document.getElementById('gv-run-spinner');
   const btn = document.getElementById('gv-run');
-  if (label) label.textContent = on ? 'Memproses gambar…' : 'Ekstrak dengan Groq Vision';
+  if (label) label.textContent = on ? 'Memproses gambar…' : 'Ekstrak';
   if (spinner) spinner.classList.toggle('hidden', !on);
   if (btn) btn.classList.toggle('opacity-70', !!on);
   gvUpdateRunState();
@@ -177,9 +174,8 @@ async function gvRun() {
   if (_gvState.busy) return;
   if (!_gvState.dataUrl) return showAlert('Pilih gambar terlebih dahulu.', 'warning');
 
-  const modeEl = document.getElementById('gv-mode');
   const promptEl = document.getElementById('gv-prompt');
-  const mode = (modeEl && modeEl.value) || 'teks';
+  const mode = GV_MODE;
   const prompt = (promptEl && promptEl.value.trim()) || '';
 
   gvSetLoading(true);
@@ -322,18 +318,8 @@ function renderGroqVision() {
   _gvState = { dataUrl: '', name: '', bytes: 0, status: null, last: null, busy: false };
 
   const c = document.getElementById('content');
-  const modeOptions = Object.keys(GV_MODES)
-    .map((k) => '<option value="' + k + '">' + gvEsc(GV_MODES[k].label) + '</option>')
-    .join('');
 
   c.innerHTML = `
-    <div class="mb-5 flex flex-wrap items-center gap-2">
-      <span class="badge" style="background:#e0e7ff;color:#3730a3">Groq Vision</span>
-      <span id="gv-model-badge" class="text-xs" style="opacity:.6">Model: memuat…</span>
-      <span class="text-xs" style="opacity:.45">·</span>
-      <span class="text-xs" style="opacity:.55">Ekstraksi teks & data dari foto/scan</span>
-    </div>
-
     ${currentUser?.role === 'admin' ? `
     <div class="mb-5 bg-white rounded-2xl border border-stone-200 p-4">
       <div class="flex flex-wrap items-center gap-2">
@@ -391,16 +377,11 @@ function renderGroqVision() {
         </div>
 
         <div class="mt-4">
-          <label for="gv-mode" class="block text-xs font-semibold mb-1.5 text-stone-600">Jenis ekstraksi</label>
-          <select id="gv-mode" class="w-full h-10 px-3 rounded-lg border border-stone-300 text-sm">${modeOptions}</select>
-        </div>
-
-        <div class="mt-3">
           <label for="gv-prompt" class="block text-xs font-semibold mb-1.5 text-stone-600">
             Instruksi tambahan <span class="font-normal text-stone-400">(opsional)</span>
           </label>
           <textarea id="gv-prompt" rows="3" maxlength="2000"
-            placeholder="Contoh: hanya ambil kolom nama dan jumlah."
+            placeholder="Contoh: jumlah bahan dalam gram."
             class="w-full px-3 py-2 rounded-lg border border-stone-300 text-sm resize-y"></textarea>
         </div>
 
@@ -411,14 +392,13 @@ function renderGroqVision() {
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
           </svg>
-          <span id="gv-run-label">Ekstrak dengan Groq Vision</span>
+          <span id="gv-run-label">Ekstrak</span>
         </button>
 
         <div class="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-stone-400">
           <span id="gv-api-status" class="flex items-center gap-1.5">Memeriksa status API…</span>
           <span>Maks 6 MB</span>
         </div>
-        <p class="text-[11px] text-stone-400 mt-2">Gambar hanya dikirim ke Groq untuk sekali proses dan tidak disimpan di server.</p>
       </section>
 
       <!-- ═══ Panel Hasil ═══ -->
@@ -459,8 +439,6 @@ function renderGroqVision() {
 
   const dropzone = document.getElementById('gv-dropzone');
   const fileInput = document.getElementById('gv-file');
-  const modeEl = document.getElementById('gv-mode');
-  const promptEl = document.getElementById('gv-prompt');
 
   if (fileInput) {
     // Cegah event click dari file input naik ke dropzone (menghindari dialog dobel)
@@ -515,15 +493,6 @@ function renderGroqVision() {
   document.getElementById('gv-download')?.addEventListener('click', gvDownloadResult);
   document.getElementById('gv-format')?.addEventListener('click', gvFormatJson);
   document.getElementById('gv-clear')?.addEventListener('click', gvClearResult);
-
-  if (modeEl) {
-    const syncPlaceholder = () => {
-      if (!promptEl) return;
-      promptEl.placeholder = (GV_MODES[modeEl.value] || GV_MODES.teks).placeholder;
-    };
-    modeEl.addEventListener('change', syncPlaceholder);
-    syncPlaceholder();
-  }
 
   document.getElementById('gv-result')?.addEventListener('input', gvUpdateMeta);
 
