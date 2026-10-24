@@ -2,12 +2,15 @@
 let menuState = { page: 1, limit: 10, search: '', total: 0, totalPages: 1 };
 let menuViewMode = 'list'; // 'list' | 'siklus'
 
-// Satuan tampilan/perhitungan di halaman /menu: bahan kategori Minyak selalu
-// diperlakukan dalam gram (master bahan_baku tetap memakai satuan aslinya,
-// mis. Karton — hanya perhitungan di /menu yang memakai gram).
+// Satuan tampilan/perhitungan di halaman /menu: gramasi & kebutuhan produksi
+// selalu dinyatakan dalam gram — bahan kategori Minyak dan bahan bersatuan
+// kg/kilogram ditampilkan sebagai gram (master bahan_baku tetap memakai satuan
+// aslinya, mis. Karton — hanya perhitungan di /menu yang memakai gram).
 function menuSatuanTampil(b) {
   if (b && String(b.kategori_sp || '').toLowerCase() === 'minyak') return 'g';
-  return (b && b.satuan) || 'g';
+  var s = (b && b.satuan) || 'g';
+  if (isKgSatuan(s)) return 'g';
+  return s;
 }
 
 // Rentang tanggal siklus: "01/08/2026 – 31/08/2026" (kosong jika belum ada)
@@ -785,7 +788,7 @@ function hitungTampilanBahan(b, porsiBesar, porsiKecil) {
   var kecilBuffer = menuRound2(kecilValue * bufferPersen / 100);
   return {
     displaySatuan: displaySatuan, perUnit: perUnit, isUnit: isUnit,
-    besarValue: besarValue, kecilValue: kecilValue, besarPerPorsi: besarValue, kecilPerPorsi: kecilValue, porsiBesar: porsiBesar, porsiKecil: porsiKecil, besarKebutuhan: menuRound2(besarValue * porsiBesar), kecilKebutuhan: menuRound2(kecilValue * porsiKecil),
+    besarValue: besarValue, kecilValue: kecilValue, besarPerPorsi: besarValue, kecilPerPorsi: kecilValue, besarGramPerPorsi: besarGram, kecilGramPerPorsi: kecilGram, porsiBesar: porsiBesar, porsiKecil: porsiKecil, besarKebutuhan: menuRound2(besarValue * porsiBesar), kecilKebutuhan: menuRound2(kecilValue * porsiKecil),
     bufferPersen: bufferPersen,
     besarBuffer: besarBuffer, kecilBuffer: kecilBuffer,
     besarTotal: menuRound2(besarValue + besarBuffer),
@@ -794,24 +797,40 @@ function hitungTampilanBahan(b, porsiBesar, porsiKecil) {
 }
 
 function bufferCalcHtml(v) {
-  var sat = v.displaySatuan || 'g';
   // Kolom jumlah diisi gramasi PER PORSI; baris ini menampilkan jumlah kebutuhan
   // total untuk penerima manfaat (gram/porsi × jumlah porsi) beserta buffer-nya.
-  function satu(label, cls, perPorsi, porsi) {
-    var s = label + ': <b class="' + cls + '">' + fmtNum(perPorsi) + ' ' + sat + '/porsi</b>';
+  // Kebutuhan produksi selalu dinyatakan dalam GRAM bila satuan asli kg/kilogram,
+  // supaya angkanya tidak tampil desimal kecil (0,06 Kg) dan mudah dibaca.
+  var sat = v.displaySatuan || 'g';
+  var besar, kecil;
+  if (isKgSatuan(sat)) {
+    // Pakai nilai gram tersimpan (jumlah_besar/jumlah_kecil) supaya presisi —
+    // nilai kg per porsi bisa 0,06 dan pembulatan 2 desimal akan jadi 0.
+    sat = 'g';
+    besar = menuRound2(v.besarGramPerPorsi);
+    kecil = menuRound2(v.kecilGramPerPorsi);
+  } else {
+    besar = v.besarPerPorsi;
+    kecil = v.kecilPerPorsi;
+  }
+  function teks(label, cls, perPorsi, porsi) {
+    var s = label + ' <b class="' + cls + '">' + fmtNum(perPorsi) + ' ' + sat + '/porsi</b>';
     if (porsi > 0) {
       var kebutuhan = menuRound2(perPorsi * porsi);
       var denganBuffer = menuRound2(kebutuhan * (1 + v.bufferPersen / 100));
-      s += ' × ' + fmtNum(porsi) + ' porsi = <b>' + fmtNum(kebutuhan) + ' ' + sat + '</b> kebutuhan <span class="text-stone-300">(+' + fmtNum(v.bufferPersen) + '% buffer → ' + fmtNum(denganBuffer) + ' ' + sat + ')</span>';
+      s += ' × ' + fmtNum(porsi) + ' = <b>' + fmtNum(kebutuhan) + ' ' + sat + '</b>' +
+        ' <span class="text-stone-400">(+' + fmtNum(v.bufferPersen) + '% → ' + fmtNum(denganBuffer) + ' ' + sat + ')</span>';
     } else {
       var buffer = menuRound2(perPorsi * v.bufferPersen / 100);
-      s += ' <span class="text-stone-300">+' + fmtNum(buffer) + ' ' + sat + ' buffer → ' + fmtNum(menuRound2(perPorsi + buffer)) + ' ' + sat + '</span>';
+      s += ' <span class="text-stone-400">(+' + fmtNum(buffer) + ' → ' + fmtNum(menuRound2(perPorsi + buffer)) + ' ' + sat + ')</span>';
     }
     return s;
   }
-  return satu('Besar', 'text-amber-700', v.besarPerPorsi, v.porsiBesar) +
-    ' <span class="text-stone-300">·</span> ' +
-    satu('Kecil', 'text-emerald-700', v.kecilPerPorsi, v.porsiKecil);
+  var bagian = [teks('Besar:', 'text-amber-700', besar, v.porsiBesar)];
+  // Porsi kecil hanya ditampilkan bila jumlah porsi kecil diisi — baris info jadi
+  // ringkas dan tidak menumpuk.
+  if (v.porsiKecil > 0) bagian.push(teks('Kecil:', 'text-emerald-700', kecil, v.porsiKecil));
+  return bagian.join(' <span class="text-stone-300">·</span> ');
 }
 
 function updateBufferCalc(i) {
@@ -872,14 +891,16 @@ function renderBahanList() {
         '</div>' +
         '<button type="button" onclick="removeBahanRow(' + i + ')" class="order-4 sm:order-5 col-span-2 sm:col-span-1 inline-flex items-center justify-center h-10 w-full text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Hapus bahan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
       '</div>' +
-      '<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 px-1 text-[11px] text-stone-500">' +
-        '<label class="inline-flex items-center gap-1" title="Buffer cadangan untuk bahan ini (0-100%). Nilai disimpan ke master Bahan Baku dan dipakai di semua menu.">' +
-          '<span>Buffer</span>' +
-          '<input id="b-buffer-' + i + '" type="number" min="0" max="100" step="0.1" value="' + v.bufferPersen + '" oninput="updateBuffer(' + i + ', this.value)" onchange="updateBuffer(' + i + ', this.value); this.value = window._menuBahan[' + i + '].buffer_persen" class="w-14 h-7 px-2 rounded-md border border-stone-200 bg-white text-right mono text-[11px] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
-          '<span>%</span>' +
-        '</label>' +
-        '<span id="b-buffer-calc-' + i + '">' + bufferCalcHtml(v) + '</span>' +
-        '<span class="ml-auto text-[10px] text-stone-400">buffer disimpan ke master bahan</span>' +
+      '<div class="mt-1.5 px-1 space-y-1">' +
+        '<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-stone-500">' +
+          '<label class="inline-flex items-center gap-1" title="Buffer cadangan untuk bahan ini (0-100%). Nilai disimpan ke master Bahan Baku dan dipakai di semua menu.">' +
+            '<span>Buffer</span>' +
+            '<input id="b-buffer-' + i + '" type="number" min="0" max="100" step="0.1" value="' + v.bufferPersen + '" oninput="updateBuffer(' + i + ', this.value)" onchange="updateBuffer(' + i + ', this.value); this.value = window._menuBahan[' + i + '].buffer_persen" class="w-14 h-7 px-2 rounded-md border border-stone-200 bg-white text-right mono text-[11px] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
+            '<span>%</span>' +
+          '</label>' +
+          '<span class="text-[10px] text-stone-400">buffer disimpan ke master bahan</span>' +
+        '</div>' +
+        '<div id="b-buffer-calc-' + i + '" class="text-[11px] leading-snug text-stone-500 bg-stone-50 border border-stone-100 rounded-md px-2 py-1">' + bufferCalcHtml(v) + '</div>' +
       '</div>' +
     '</div>';
   }).join('');
