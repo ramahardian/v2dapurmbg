@@ -564,7 +564,6 @@ async function openMenuForm(editing) {
           <span>porsi</span>
         </label>
       </div>
-      <div class="mb-2 text-[11px] leading-relaxed text-stone-400">Isi kolom jumlah dengan gramasi <b>per 1 porsi</b> (mis. beras 60) — jumlah kebutuhan untuk seluruh penerima manfaat langsung tampil di baris info tiap bahan (gramasi × jumlah porsi, +buffer). Buffer per bahan otomatis terisi dari master Bahan Baku dan bisa diubah langsung di tiap baris. Saat menu disimpan, nilai buffer ikut disimpan ke master agar Total Kebutuhan, Perencanaan, dan Siklus memakai angka yang sama.</div>
       <div class="hidden sm:grid grid-cols-12 gap-1.5 mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
         <div class="col-span-4">Bahan</div>
         <div class="col-span-4" title="Gramasi per 1 porsi besar (mis. beras 60 = 60 g per porsi). Jumlah kebutuhan untuk seluruh penerima manfaat dihitung otomatis: gramasi × jumlah porsi besar.">Porsi Besar (per porsi)</div>
