@@ -1,2 +1,3 @@
 🚀 Server — http://localhost:3000
-[DB_ERROR] INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value) Table 'mbg_kitchen.app_settings' doesn't exist
+[groq-vision] Groq error 400 {"error":{"message":"Image must have at least 32 pixels in each dimension","type":"invalid_request_error"}}
+

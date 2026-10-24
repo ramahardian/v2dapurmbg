@@ -222,9 +222,15 @@ router.post('/extract', visionLimiter, async (req, res) => {
     ? selected.prompt + '\n\nInstruksi tambahan dari pengguna (utamakan bila tidak bertentangan):\n' + extra
     : selected.prompt;
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   const startedAt = Date.now();
+
+  // Groq bisa menjawab "over capacity" (503) sesaat pada model preview.
+  // Groq sendiri menyarankan: "try again and back off exponentially" —
+  // jadi kita ulang otomatis maks 3 kali dengan jeda1.5s →4.5s sebelum menyerah.
+  const MAX_ATTEMPTS = 3;
+  const BACKOFF_MS = [1500, 4500];
+  const isCapacityError = (status, body) =>
+    status === 503 || status === 529 || /over capacity/i.test(String(body || ''));
 
   try {
     const payload = {
@@ -250,19 +256,38 @@ router.post('/extract', visionLimiter, async (req, res) => {
     if (reasoningEffort) payload.reasoning_effort = reasoningEffort;
     if (selected.json) payload.response_format = { type: 'json_object' };
 
-    const resp = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + key,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
+    let resp, rawBody;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        resp = await fetch(GROQ_API_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + key,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        rawBody = await resp.text();
+      } finally {
+        clearTimeout(timer);
+      }
+      const capacity = isCapacityError(resp.status, rawBody);
+      if (resp.ok || !capacity || attempt === MAX_ATTEMPTS) break;
+      const delay = BACKOFF_MS[attempt - 1] || BACKOFF_MS[BACKOFF_MS.length - 1];
+      console.warn('[groq-vision] over capacity, percobaan ' + attempt + '/' + MAX_ATTEMPTS + ' — coba lagi dalam ' + delay + 'ms');
+      await new Promise((r) => setTimeout(r, delay));
+    }
 
-    const rawBody = await resp.text();
     if (!resp.ok) {
       console.error('[groq-vision] Groq error', resp.status, rawBody.slice(0, 500));
+      if (isCapacityError(resp.status, rawBody)) {
+        return res.status(503).json({
+          error: 'Model Groq sedang penuh kapasitas (over capacity) — sudah dicoba ulang otomatis beberapa kali. Tunggu beberapa menit lalu coba lagi.',
+        });
+      }
       return res.status(502).json({ error: groqErrorMessage(resp.status, rawBody) });
     }
 
@@ -301,8 +326,6 @@ router.post('/extract', visionLimiter, async (req, res) => {
     }
     console.error('[groq-vision]', err);
     res.status(502).json({ error: 'Gagal menghubungi Groq: ' + (err.message || 'kesalahan jaringan') });
-  } finally {
-    clearTimeout(timer);
   }
 });
 
