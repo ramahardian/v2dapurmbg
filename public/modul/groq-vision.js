@@ -24,10 +24,6 @@ function gvBytes(n) {
   return (b / (1024 * 1024)).toFixed(1).replace('.', ',') + ' MB';
 }
 
-function gvFormattedChars(n) {
-  return Number(n || 0).toLocaleString('id-ID');
-}
-
 // Baca file gambar, perkecil bila perlu (maks sisi 2000px / ±4,5 MB data URL)
 function gvPrepareImage(file) {
   return new Promise((resolve, reject) => {
@@ -140,20 +136,6 @@ function gvClearImage() {
   gvUpdateRunState();
 }
 
-function gvUpdateMeta() {
-  const meta = document.getElementById('gv-result-meta');
-  const ta = document.getElementById('gv-result');
-  if (!meta || !ta) return;
-  const last = _gvState.last;
-  if (!last) { meta.textContent = 'Belum ada hasil.'; return; }
-  const parts = [];
-  if (last.model) parts.push(last.model);
-  if (last.usage && last.usage.total_tokens) parts.push(gvFormattedChars(last.usage.total_tokens) + ' token');
-  if (last.duration_ms) parts.push((last.duration_ms / 1000).toFixed(1).replace('.', ',') + ' dtk');
-  parts.push(gvFormattedChars(ta.value.length) + ' karakter');
-  meta.textContent = parts.join(' · ');
-}
-
 function gvShowResult(res) {
   if (!document.getElementById('gv-result')) return;
   _gvState.last = res;
@@ -170,7 +152,6 @@ function gvShowResult(res) {
   // Pemilih menu tujuan hanya untuk hasil JSON data menu
   document.getElementById('gv-target-row')?.classList.toggle('hidden', !isJson);
   gvUpdateTargetUi();
-  gvUpdateMeta();
 }
 
 // ── Menu tujuan: daftar menu existing untuk pilihan "Simpan ke" ──────────
@@ -294,7 +275,6 @@ function gvFormatJson() {
     const obj = JSON.parse(ta.value);
     ta.value = JSON.stringify(obj, null, 2);
     document.getElementById('gv-json-badge')?.classList.remove('hidden');
-    gvUpdateMeta();
     showToast('JSON dirapikan', 'success');
   } catch {
     showAlert('Teks hasil bukan JSON valid, tidak bisa dirapikan.', 'warning');
@@ -311,7 +291,6 @@ function gvClearResult() {
   document.getElementById('gv-format')?.classList.add('hidden');
   document.getElementById('gv-to-menu')?.classList.add('hidden');
   document.getElementById('gv-target-row')?.classList.add('hidden');
-  gvUpdateMeta();
 }
 
 // Ambil daftar bahan dari hasil ekstrak. Angka jatuh ke kolom jumlah
@@ -575,7 +554,6 @@ function renderGroqVision() {
         <div class="flex items-start justify-between gap-3 mb-3">
           <div class="min-w-0">
             <h2 class="font-bold text-base text-stone-800">Hasil Ekstraksi</h2>
-            <p id="gv-result-meta" class="text-[11px] text-stone-400 mt-0.5">Belum ada hasil.</p>
           </div>
           <span id="gv-json-badge" class="hidden badge shrink-0" style="background:#dcfce7;color:#166534">JSON valid</span>
         </div>
@@ -674,8 +652,6 @@ function renderGroqVision() {
   document.getElementById('gv-clear')?.addEventListener('click', gvClearResult);
   document.getElementById('gv-to-menu')?.addEventListener('click', gvSaveToMenu);
   document.getElementById('gv-target-menu')?.addEventListener('change', gvUpdateTargetUi);
-
-  document.getElementById('gv-result')?.addEventListener('input', gvUpdateMeta);
 
   // Panel API key (khusus admin)
   document.getElementById('gv-key-save')?.addEventListener('click', gvSaveKey);
