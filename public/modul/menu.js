@@ -799,30 +799,40 @@ function hitungTampilanBahan(b, porsiBesar, porsiKecil) {
 function bufferCalcHtml(v) {
   // Kolom jumlah diisi gramasi PER PORSI; baris ini menampilkan jumlah kebutuhan
   // total untuk penerima manfaat (gram/porsi × jumlah porsi) beserta buffer-nya.
-  // Kebutuhan produksi selalu dinyatakan dalam GRAM bila satuan asli kg/kilogram,
-  // supaya angkanya tidak tampil desimal kecil (0,06 Kg) dan mudah dibaca.
+  // HASIL AKHIR kebutuhan selalu dinyatakan dalam KG (bila satuan gram) supaya
+  // langsung bisa dipakai untuk hitungan produksi & belanja.
   var sat = v.displaySatuan || 'g';
-  var besar, kecil;
+  var besar = v.besarPerPorsi, kecil = v.kecilPerPorsi;
   if (isKgSatuan(sat)) {
-    // Pakai nilai gram tersimpan (jumlah_besar/jumlah_kecil) supaya presisi —
-    // nilai kg per porsi bisa 0,06 dan pembulatan 2 desimal akan jadi 0.
     sat = 'g';
     besar = menuRound2(v.besarGramPerPorsi);
     kecil = menuRound2(v.kecilGramPerPorsi);
-  } else {
-    besar = v.besarPerPorsi;
-    kecil = v.kecilPerPorsi;
+  }
+  var isGram = /^(g|gram)$/i.test(String(sat));
+  function satuanTxt(nilai) {
+    var n = fmtNum(menuRound2(nilai));
+    return isGram ? n + ' g' : n + ' ' + sat;
+  }
+  // Hasil akhir: gram → kg (mis. 86.160 g → 86,16 kg); di bawah 1 kg pakai
+  // 3 desimal supaya nilai kecil tidak tampil "0 kg".
+  function totalTxt(nilai) {
+    if (isGram) {
+      var kg = nilai / 1000;
+      var r = kg >= 1 ? Math.round(kg * 100) / 100 : Math.round(kg * 1000) / 1000;
+      return fmtNum(r) + ' kg';
+    }
+    return satuanTxt(nilai);
   }
   function teks(label, cls, perPorsi, porsi) {
     var s = label + ' <b class="' + cls + '">' + fmtNum(perPorsi) + ' ' + sat + '/porsi</b>';
     if (porsi > 0) {
-      var kebutuhan = menuRound2(perPorsi * porsi);
-      var denganBuffer = menuRound2(kebutuhan * (1 + v.bufferPersen / 100));
-      s += ' × ' + fmtNum(porsi) + ' = <b>' + fmtNum(kebutuhan) + ' ' + sat + '</b>' +
-        ' <span class="text-stone-400">(+' + fmtNum(v.bufferPersen) + '% → ' + fmtNum(denganBuffer) + ' ' + sat + ')</span>';
+      var kebutuhan = perPorsi * porsi;
+      var denganBuffer = kebutuhan * (1 + v.bufferPersen / 100);
+      s += ' × ' + fmtNum(porsi) + ' = <b>' + totalTxt(kebutuhan) + '</b>' +
+        ' <span class="text-stone-400">(+' + fmtNum(v.bufferPersen) + '% → ' + totalTxt(denganBuffer) + ')</span>';
     } else {
-      var buffer = menuRound2(perPorsi * v.bufferPersen / 100);
-      s += ' <span class="text-stone-400">(+' + fmtNum(buffer) + ' → ' + fmtNum(menuRound2(perPorsi + buffer)) + ' ' + sat + ')</span>';
+      var buffer = perPorsi * v.bufferPersen / 100;
+      s += ' <span class="text-stone-400">(+' + satuanTxt(buffer) + ' → ' + satuanTxt(perPorsi + buffer) + ')</span>';
     }
     return s;
   }
