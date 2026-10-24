@@ -11,7 +11,7 @@ const {
 function registerCrudRoutes(router) {
   // POST /menu — create menu + bahan
   router.post('/menu', async (req, res) => {
-    const { nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, jumlah_porsi, bahan } = req.body;
+    const { nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, jumlah_porsi, bahan, sync_satuan } = req.body;
 
     if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama menu wajib diisi' });
 
@@ -39,6 +39,7 @@ function registerCrudRoutes(router) {
       // 2. Insert bahan
       let hasBahan = false;
       const bufferUpdates = new Map();
+      const satuanSync = new Map();
       if (Array.isArray(bahan)) {
         for (const b of bahan) {
           const itemBesar = { ...b, jumlah: (b.jumlah_besar != null ? b.jumlah_besar : b.jumlah) };
@@ -54,10 +55,12 @@ function registerCrudRoutes(router) {
             const bp = Math.max(0, Math.min(100, Number(b.buffer_persen) || 0));
             bufferUpdates.set(result.idBahan, bp);
           }
+          if (b.satuan && String(b.satuan).trim()) satuanSync.set(result.idBahan, String(b.satuan).trim());
           hasBahan = true;
         }
       }
       await applyBufferUpdates(conn, bufferUpdates, req.user.tenant_id);
+      await applySatuanSync(conn, satuanSync, req.user.tenant_id, sync_satuan);
 
       // 3. Auto-calculate nutrition
       if (hasBahan) {
@@ -111,6 +114,7 @@ function registerCrudRoutes(router) {
       // 2. Delete & re-insert bahan
       let hasBahan = false;
       const bufferUpdates = new Map();
+      const satuanSync = new Map();
       if (Array.isArray(f.bahan)) {
         await conn.query('DELETE FROM menu_bahan WHERE menu_id=?', [req.params.id]);
 
@@ -128,10 +132,12 @@ function registerCrudRoutes(router) {
             const bp = Math.max(0, Math.min(100, Number(b.buffer_persen) || 0));
             bufferUpdates.set(result.idBahan, bp);
           }
+          if (b.satuan && String(b.satuan).trim()) satuanSync.set(result.idBahan, String(b.satuan).trim());
           hasBahan = true;
         }
       }
       await applyBufferUpdates(conn, bufferUpdates, req.user.tenant_id);
+      await applySatuanSync(conn, satuanSync, req.user.tenant_id, f.sync_satuan);
 
       // 3. Auto-calculate nutrition
       if (hasBahan) {
@@ -239,6 +245,30 @@ async function applyBufferUpdates(conn, updates, tenantId) {
     await conn.query(
       'UPDATE bahan_baku SET buffer_persen=? WHERE id=? AND tenant_id=?',
       [bufferPersen, idBahan, tenantId]
+    );
+  }
+}
+
+/**
+ * Sinkronkan satuan hasil ekstrak gambar ke kolom bahan_baku.satuan.
+ * Hanya aktif bila body menyertakan sync_satuan:true (alur Ekstrak Gambar),
+ * sehingga form /menu biasa tidak pernah menimpa satuan master — satuan di
+ * form tersebut adalah satuan tampil, bukan satuan asli bahan.
+ * Bahan baru otomatis sudah dapat satuan saat dibuat; fungsi ini hanya
+ * memperbarui bahan master yang sudah ada dengan satuan berbeda.
+ */
+async function applySatuanSync(conn, updates, tenantId, enabled) {
+  if (!enabled || !updates.size) return;
+  for (const [idBahan, satuan] of updates) {
+    const [rows] = await conn.query(
+      'SELECT satuan FROM bahan_baku WHERE id=? AND tenant_id=?',
+      [idBahan, tenantId]
+    );
+    if (!rows.length) continue;
+    if (String(rows[0].satuan || '') === satuan) continue;
+    await conn.query(
+      'UPDATE bahan_baku SET satuan=? WHERE id=? AND tenant_id=?',
+      [satuan, idBahan, tenantId]
     );
   }
 }

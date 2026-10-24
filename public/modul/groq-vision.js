@@ -8,7 +8,7 @@
 const GV_MODE = 'menu';
 const GV_PROMPT_PLACEHOLDER = 'Contoh: jumlah bahan dalam gram.';
 
-let _gvState = { dataUrl: '', name: '', bytes: 0, status: null, last: null, busy: false };
+let _gvState = { dataUrl: '', name: '', bytes: 0, status: null, last: null, busy: false, menus: [] };
 let _gvPasteBound = false;
 
 function gvEsc(s) {
@@ -167,10 +167,60 @@ function gvShowResult(res) {
   document.getElementById('gv-actions')?.classList.remove('hidden');
   document.getElementById('gv-json-badge')?.classList.toggle('hidden', !isJson);
   document.getElementById('gv-format')?.classList.toggle('hidden', !(isJson || /^\s*[{[]/.test(text)));
-  // Tombol "Masukkan ke Data Menu" hanya untuk hasil JSON menu dengan nama terisi
-  const canToMenu = !!(res.data && typeof res.data === 'object' && String(res.data.nama_menu || '').trim());
-  document.getElementById('gv-to-menu')?.classList.toggle('hidden', !canToMenu);
+  // Pemilih menu tujuan hanya untuk hasil JSON data menu
+  document.getElementById('gv-target-row')?.classList.toggle('hidden', !isJson);
+  gvUpdateTargetUi();
   gvUpdateMeta();
+}
+
+// ── Menu tujuan: daftar menu existing untuk pilihan "Simpan ke" ──────────
+async function gvLoadMenuList() {
+  try {
+    const res = await api.get('/menu?limit=500');
+    if (!document.getElementById('gv-target-menu')) return; // pengguna sudah pindah halaman
+    _gvState.menus = (res && Array.isArray(res.data)) ? res.data : [];
+  } catch {
+    _gvState.menus = [];
+  }
+  gvRenderTargetOptions();
+}
+
+function gvRenderTargetOptions() {
+  const sel = document.getElementById('gv-target-menu');
+  if (!sel) return;
+  const prev = sel.value;
+  const menus = _gvState.menus || [];
+  sel.innerHTML = '<option value="">Menu baru (dibuat dari hasil ekstrak)</option>' +
+    menus.map((m) => '<option value="' + Number(m.id) + '">' + gvEsc(m.nama) + '</option>').join('');
+  if (prev && menus.some((m) => String(m.id) === prev)) sel.value = prev;
+  gvUpdateTargetUi();
+}
+
+// Tampilan tombol simpan mengikuti menu tujuan yang dipilih.
+// Menu baru butuh nama dari hasil ekstrak; menu existing tidak (namanya dipakai).
+function gvUpdateTargetUi() {
+  const sel = document.getElementById('gv-target-menu');
+  const btn = document.getElementById('gv-to-menu');
+  if (!sel || !btn) return;
+  const target = (_gvState.menus || []).find((m) => String(m.id) === sel.value);
+  const d = _gvState.last && _gvState.last.data;
+  const namaBaru = (d && typeof d === 'object') ? String(d.nama_menu || '').trim() : '';
+
+  if (target) {
+    const nm = String(target.nama || '');
+    btn.textContent = '⬆ Gabung ke "' + (nm.length > 26 ? nm.slice(0, 25) + '…' : nm) + '"';
+    btn.classList.remove('hidden');
+  } else {
+    btn.textContent = '⬆ Masukkan ke Data Menu';
+    btn.classList.toggle('hidden', !namaBaru);
+  }
+
+  const note = document.getElementById('gv-target-note');
+  if (note) {
+    note.textContent = target
+      ? ((target.bahan && target.bahan.length ? target.bahan.length + ' bahan existing · ' : '') + 'hasil ekstrak digabung, nama bahan sama ditimpa')
+      : (namaBaru ? 'akan membuat menu baru' : '');
+  }
 }
 
 async function gvRun() {
@@ -260,35 +310,119 @@ function gvClearResult() {
   document.getElementById('gv-json-badge')?.classList.add('hidden');
   document.getElementById('gv-format')?.classList.add('hidden');
   document.getElementById('gv-to-menu')?.classList.add('hidden');
+  document.getElementById('gv-target-row')?.classList.add('hidden');
   gvUpdateMeta();
 }
 
-// Kirim hasil ekstraksi (mode menu) ke Data Menu via POST /menu.
+// Ambil daftar bahan dari hasil ekstrak. Angka jatuh ke kolom jumlah
+// (jumlah / jumlah_besar / jumlah_kecil) dan satuan ke kolom satuan bahan.
+function gvBahanFromResult(d) {
+  return (Array.isArray(d.bahan) ? d.bahan : [])
+    .filter((b) => b && String(b.nama || '').trim())
+    .map((b) => {
+      const jumlah = Number(b.jumlah) || 0;
+      const ada = (v) => v !== undefined && v !== null && v !== '';
+      return {
+        nama: String(b.nama).trim(),
+        jumlah,
+        jumlah_besar: ada(b.jumlah_besar) ? (Number(b.jumlah_besar) || 0) : jumlah,
+        jumlah_kecil: ada(b.jumlah_kecil) ? (Number(b.jumlah_kecil) || 0) : jumlah,
+        satuan: b.satuan ? String(b.satuan).trim() : undefined,
+        keterangan: b.keterangan ? String(b.keterangan).trim() : undefined,
+      };
+    });
+}
+
+// Gabungkan hasil ekstrak ke menu tujuan yang sudah ada.
+// Bahan bernama sama → nilai ekstrak menimpa baris lama; bahan lain tetap.
+// Header (kategori_penerima, deskripsi, jumlah_porsi) diisi dari ekstrak
+// hanya bila ekstrak punya nilai — kolom gizi/gramasi dikirim apa adanya
+// agar tidak di-reset (backend menghitung ulang otomatis dari bahan).
+async function gvMergeToMenu(d, bahanBaru) {
+  const sel = document.getElementById('gv-target-menu');
+  const targetId = sel ? Number(sel.value) || 0 : 0;
+  const cur = await api.get('/menu/' + targetId);
+
+  const norm = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const isi = (v) => v !== undefined && v !== null && String(v).trim() !== '';
+
+  const merged = (Array.isArray(cur.bahan) ? cur.bahan : []).map((b) => ({ ...b }));
+  for (const b of bahanBaru) {
+    const i = merged.findIndex((x) => norm(x.nama) === norm(b.nama));
+    if (i >= 0) {
+      const old = merged[i];
+      merged[i] = {
+        ...old,
+        nama: old.nama,
+        jumlah: b.jumlah,
+        jumlah_besar: b.jumlah_besar,
+        jumlah_kecil: b.jumlah_kecil,
+        satuan: b.satuan || old.satuan,
+        keterangan: b.keterangan || old.keterangan || '',
+      };
+    } else {
+      merged.push({
+        nama: b.nama,
+        jumlah: b.jumlah,
+        jumlah_besar: b.jumlah_besar,
+        jumlah_kecil: b.jumlah_kecil,
+        satuan: b.satuan,
+        keterangan: b.keterangan || '',
+      });
+    }
+  }
+
+  await api.put('/menu/' + cur.id, {
+    nama: cur.nama,
+    kategori_penerima: isi(d.kategori) ? String(d.kategori) : cur.kategori_penerima,
+    deskripsi: isi(d.catatan) ? String(d.catatan) : cur.deskripsi,
+    jumlah_porsi: Number(d.porsi) > 0 ? Number(d.porsi) : (Number(cur.jumlah_porsi) || 0),
+    gramasi_total: cur.gramasi_total,
+    gramasi_besar: cur.gramasi_besar,
+    gramasi_kecil: cur.gramasi_kecil,
+    kalori: cur.kalori,
+    protein: cur.protein,
+    karbohidrat: cur.karbohidrat,
+    lemak: cur.lemak,
+    serat: cur.serat,
+    bahan: merged,
+    sync_satuan: true,
+  });
+
+  showToast('Hasil ekstrak digabung ke menu "' + cur.nama + '" · ' + bahanBaru.length +
+    ' bahan dari ekstrak · total ' + merged.length + ' bahan', 'success');
+  gvLoadMenuList(); // jumlah bahan di pilihan tujuan ikut ter-update
+}
+
+// Kirim hasil ekstraksi (mode menu) ke Data Menu via POST /menu
+// (menu baru) atau PUT /menu/:id (gabung ke menu yang sudah dipilih).
 // Backend mencocokkan bahan by nama & membuat bahan_baku baru bila belum ada,
-// menghitung gizi otomatis, dan menolak nama menu kembar (409).
+// sync_satuan membuat satuan hasil ekstrak ikut masuk ke kolom
+// bahan_baku.satuan, lalu gizi dihitung otomatis.
 async function gvSaveToMenu() {
   const d = _gvState.last && _gvState.last.data;
   if (!d || typeof d !== 'object') return showAlert('Hasil ekstraksi bukan data menu JSON.', 'warning');
-  const nama = String(d.nama_menu || '').trim();
-  if (!nama) return showAlert('Nama menu kosong — ekstrak ulang dengan gambar menu yang lebih jelas.', 'warning');
 
-  const bahan = (Array.isArray(d.bahan) ? d.bahan : [])
-    .filter((b) => b && String(b.nama || '').trim())
-    .map((b) => ({
-      nama: String(b.nama).trim(),
-      jumlah: Number(b.jumlah) || 0,
-      satuan: b.satuan ? String(b.satuan) : undefined,
-    }));
+  const sel = document.getElementById('gv-target-menu');
+  const punyaTarget = !!(sel && sel.value);
+  const bahan = gvBahanFromResult(d);
 
   try {
+    if (punyaTarget) return await gvMergeToMenu(d, bahan);
+
+    const nama = String(d.nama_menu || '').trim();
+    if (!nama) return showAlert('Nama menu kosong — ekstrak ulang dengan gambar menu yang lebih jelas, atau pilih menu tujuan.', 'warning');
+
     await api.post('/menu', {
       nama,
       kategori_penerima: d.kategori ? String(d.kategori) : null,
       deskripsi: d.catatan ? String(d.catatan) : null,
       jumlah_porsi: Number(d.porsi) || 0,
       bahan,
+      sync_satuan: true,
     });
     showToast('Menu "' + nama + '" tersimpan ke Data Menu' + (bahan.length ? ' · ' + bahan.length + ' bahan' : ''), 'success');
+    gvLoadMenuList(); // menu baru langsung tersedia di pilihan tujuan
   } catch (err) {
     showAlert(err.message || 'Gagal menyimpan menu.', 'error');
   }
@@ -350,7 +484,7 @@ function gvClearKey() {
 }
 
 function renderGroqVision() {
-  _gvState = { dataUrl: '', name: '', bytes: 0, status: null, last: null, busy: false };
+  _gvState = { dataUrl: '', name: '', bytes: 0, status: null, last: null, busy: false, menus: [] };
 
   const c = document.getElementById('content');
 
@@ -456,6 +590,13 @@ function renderGroqVision() {
           class="hidden mono mt-1 w-full flex-1 min-h-[320px] p-3 rounded-xl border border-stone-200 text-[12.5px] leading-relaxed resize-y"
           placeholder="Hasil ekstraksi…"></textarea>
 
+        <div id="gv-target-row" class="hidden mt-3 flex flex-wrap items-center gap-2">
+          <label for="gv-target-menu" class="text-xs font-semibold text-stone-600">Simpan ke menu</label>
+          <select id="gv-target-menu"
+            class="h-9 max-w-[240px] px-2.5 rounded-lg border border-stone-300 text-xs bg-white"></select>
+          <span id="gv-target-note" class="text-[11px] text-stone-400"></span>
+        </div>
+
         <div id="gv-actions" class="hidden mt-3 flex flex-wrap items-center gap-2">
           <button id="gv-copy" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-stone-300 hover:bg-stone-100 transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -532,6 +673,7 @@ function renderGroqVision() {
   document.getElementById('gv-format')?.addEventListener('click', gvFormatJson);
   document.getElementById('gv-clear')?.addEventListener('click', gvClearResult);
   document.getElementById('gv-to-menu')?.addEventListener('click', gvSaveToMenu);
+  document.getElementById('gv-target-menu')?.addEventListener('change', gvUpdateTargetUi);
 
   document.getElementById('gv-result')?.addEventListener('input', gvUpdateMeta);
 
@@ -563,5 +705,7 @@ function renderGroqVision() {
     });
   }
 
+  gvRenderTargetOptions(); // opsi "Menu baru" dulu, daftar menu menyusul
   gvLoadStatus();
+  gvLoadMenuList();
 }
