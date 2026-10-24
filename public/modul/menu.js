@@ -552,7 +552,7 @@ async function openMenuForm(editing) {
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-2 text-xs text-stone-500">
-        <span>Tampilkan total untuk</span>
+        <span>Hitung kebutuhan untuk</span>
         <label class="inline-flex items-center gap-1.5">
           <span class="font-semibold text-amber-700">Porsi Besar</span>
           <input type="number" id="m-porsi-besar" value="0" min="0" step="1" onchange="onPorsiChange()" placeholder="0" class="w-20 h-8 px-2 rounded-lg border border-amber-200 bg-amber-50/60 text-sm text-center mono focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" />
@@ -564,11 +564,11 @@ async function openMenuForm(editing) {
           <span>porsi</span>
         </label>
       </div>
-      <div class="mb-2 text-[11px] leading-relaxed text-stone-400">Buffer per bahan otomatis terisi dari master Bahan Baku dan bisa diubah langsung di tiap baris. Saat menu disimpan, nilai buffer ikut disimpan ke master agar Total Kebutuhan, Perencanaan, dan Siklus memakai angka yang sama.</div>
+      <div class="mb-2 text-[11px] leading-relaxed text-stone-400">Isi kolom jumlah dengan gramasi <b>per 1 porsi</b> (mis. beras 60) — jumlah kebutuhan untuk seluruh penerima manfaat langsung tampil di baris info tiap bahan (gramasi × jumlah porsi, +buffer). Buffer per bahan otomatis terisi dari master Bahan Baku dan bisa diubah langsung di tiap baris. Saat menu disimpan, nilai buffer ikut disimpan ke master agar Total Kebutuhan, Perencanaan, dan Siklus memakai angka yang sama.</div>
       <div class="hidden sm:grid grid-cols-12 gap-1.5 mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
         <div class="col-span-4">Bahan</div>
-        <div class="col-span-4" title="Jumlah bahan untuk Porsi Besar. Bila jumlah porsi besar 0, kolom menampilkan gram per porsi.">Porsi Besar</div>
-        <div class="col-span-3" title="Jumlah bahan untuk Porsi Kecil (input manual). Bila jumlah porsi kecil 0, kolom menampilkan gram per porsi.">Porsi Kecil</div>
+        <div class="col-span-4" title="Gramasi per 1 porsi besar (mis. beras 60 = 60 g per porsi). Jumlah kebutuhan untuk seluruh penerima manfaat dihitung otomatis: gramasi × jumlah porsi besar.">Porsi Besar (per porsi)</div>
+        <div class="col-span-3" title="Gramasi per 1 porsi kecil (input manual). Jumlah kebutuhan dihitung otomatis: gramasi × jumlah porsi kecil.">Porsi Kecil (per porsi)</div>
         <div class="col-span-1"></div>
       </div>
       <div id="bahan-list" class="space-y-2"></div>
@@ -580,7 +580,7 @@ async function openMenuForm(editing) {
   if (badgeEl) badgeEl.remove();
   window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, jumlah_besar: (b.jumlah_besar != null ? b.jumlah_besar : b.jumlah), jumlah_kecil: (b.jumlah_kecil != null ? b.jumlah_kecil : (b.jumlah_besar != null ? b.jumlah_besar : b.jumlah)), satuan: menuSatuanTampil(b), kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, buffer_persen: (b.buffer_persen != null ? Number(b.buffer_persen) : 10), keterangan: b.keterangan || '' }));
   // Biarkan nilai tersimpan dari DB — user bisa klik "↺ Reset ke SP" jika ingin reset
-  // Porsi Besar & Porsi Kecil = jumlah porsi untuk konversi tampilan total tiap kolom bahan.
+  // Porsi Besar & Porsi Kecil = jumlah porsi untuk hitung jumlah kebutuhan tiap kolom bahan.
   // Porsi Besar juga disimpan sebagai menu.jumlah_porsi (kompatibilitas perilaku lama).
   var savedPorsi = Number(m.jumlah_porsi) || 0;
   window._menuPorsi = savedPorsi;
@@ -719,14 +719,14 @@ function updateBahan(i, k, v) {
     var isKecil = (k === 'jumlah_kecil');
     // Porsi Besar & Porsi Kecil punya jumlah porsi sendiri; 'jumlah' (kompatibilitas
     // laporan) memakai Porsi Besar.
-    var porsi = (isKecil ? (Number(window._menuPorsiKecil) || 1) : (Number(window._menuPorsi) || 1));
+
     var satuan = menuSatuanTampil(b);
     var perUnit = bahanSatuanInfo(b).perUnit || 1;
     // Input mendukung pecahan ("1/5 kg", "0,2") → parse ke angka dulu; jika tidak valid, kembalikan tampilan
     var parsedVal = parseJumlahInput(v);
     if (isNaN(parsedVal)) { renderBahanList(); return; }
-    // Input menampilkan total saat porsi>0; konversi balik ke gram per porsi untuk disimpan
-    var valPerPorsi = parsedVal / porsi;
+    // Input sudah berupa gramasi per porsi → langsung disimpan sebagai gram per porsi
+    var valPerPorsi = parsedVal;
     var newJumlah;
     if (perUnit > 0 && isSatuanUnit(satuan)) {
       newJumlah = valPerPorsi * perUnit;
@@ -778,14 +778,15 @@ function hitungTampilanBahan(b, porsiBesar, porsiKecil) {
   var kecilGram = (b.jumlah_kecil != null ? Number(b.jumlah_kecil) : besarGram) || 0;
   var besarPerPorsi = isUnit ? besarGram / perUnit : besarGram;
   var kecilPerPorsi = isUnit ? kecilGram / perUnit : kecilGram;
-  var besarValue = menuRound2(porsiBesar > 0 ? besarPerPorsi * porsiBesar : besarPerPorsi);
-  var kecilValue = menuRound2(porsiKecil > 0 ? kecilPerPorsi * porsiKecil : kecilPerPorsi);
+  // Input selalu menampilkan gramasi PER PORSI — total kebutuhan dihitung terpisah.
+  var besarValue = menuRound2(besarPerPorsi);
+  var kecilValue = menuRound2(kecilPerPorsi);
   var bufferPersen = Math.max(0, Math.min(100, Number(b.buffer_persen) || 0));
   var besarBuffer = menuRound2(besarValue * bufferPersen / 100);
   var kecilBuffer = menuRound2(kecilValue * bufferPersen / 100);
   return {
     displaySatuan: displaySatuan, perUnit: perUnit, isUnit: isUnit,
-    besarValue: besarValue, kecilValue: kecilValue,
+    besarValue: besarValue, kecilValue: kecilValue, besarPerPorsi: besarValue, kecilPerPorsi: kecilValue, porsiBesar: porsiBesar, porsiKecil: porsiKecil, besarKebutuhan: menuRound2(besarValue * porsiBesar), kecilKebutuhan: menuRound2(kecilValue * porsiKecil),
     bufferPersen: bufferPersen,
     besarBuffer: besarBuffer, kecilBuffer: kecilBuffer,
     besarTotal: menuRound2(besarValue + besarBuffer),
@@ -795,8 +796,23 @@ function hitungTampilanBahan(b, porsiBesar, porsiKecil) {
 
 function bufferCalcHtml(v) {
   var sat = v.displaySatuan || 'g';
-  return 'Besar: <b class="text-amber-700">+' + fmtNum(v.besarBuffer) + ' ' + sat + '</b> → ' + fmtNum(v.besarTotal) + ' ' + sat +
-    ' <span class="text-stone-300">·</span> Kecil: <b class="text-emerald-700">+' + fmtNum(v.kecilBuffer) + ' ' + sat + '</b> → ' + fmtNum(v.kecilTotal) + ' ' + sat;
+  // Kolom jumlah diisi gramasi PER PORSI; baris ini menampilkan jumlah kebutuhan
+  // total untuk penerima manfaat (gram/porsi × jumlah porsi) beserta buffer-nya.
+  function satu(label, cls, perPorsi, porsi) {
+    var s = label + ': <b class="' + cls + '">' + fmtNum(perPorsi) + ' ' + sat + '/porsi</b>';
+    if (porsi > 0) {
+      var kebutuhan = menuRound2(perPorsi * porsi);
+      var denganBuffer = menuRound2(kebutuhan * (1 + v.bufferPersen / 100));
+      s += ' × ' + fmtNum(porsi) + ' porsi = <b>' + fmtNum(kebutuhan) + ' ' + sat + '</b> kebutuhan <span class="text-stone-300">(+' + fmtNum(v.bufferPersen) + '% buffer → ' + fmtNum(denganBuffer) + ' ' + sat + ')</span>';
+    } else {
+      var buffer = menuRound2(perPorsi * v.bufferPersen / 100);
+      s += ' <span class="text-stone-300">+' + fmtNum(buffer) + ' ' + sat + ' buffer → ' + fmtNum(menuRound2(perPorsi + buffer)) + ' ' + sat + '</span>';
+    }
+    return s;
+  }
+  return satu('Besar', 'text-amber-700', v.besarPerPorsi, v.porsiBesar) +
+    ' <span class="text-stone-300">·</span> ' +
+    satu('Kecil', 'text-emerald-700', v.kecilPerPorsi, v.porsiKecil);
 }
 
 function updateBufferCalc(i) {
@@ -839,8 +855,8 @@ function renderBahanList() {
     var displaySatuan = v.displaySatuan;
     var besarValue = v.besarValue;
     var kecilValue = v.kecilValue;
-    var besarTitle = porsiBesar > 0 ? 'Total untuk ' + porsiBesar + ' porsi besar (' + displaySatuan + ')' : 'Jumlah per porsi besar (' + displaySatuan + ')';
-    var kecilTitle = porsiKecil > 0 ? 'Total untuk ' + porsiKecil + ' porsi kecil (' + displaySatuan + ')' : 'Jumlah per porsi kecil (' + displaySatuan + ')';
+    var besarTitle = 'Gramasi per 1 porsi besar (' + displaySatuan + ')' + (porsiBesar > 0 ? ' — kebutuhan total ' + fmtNum(v.besarKebutuhan) + ' ' + displaySatuan + ' untuk ' + porsiBesar + ' porsi besar' : '');
+    var kecilTitle = 'Gramasi per 1 porsi kecil (' + displaySatuan + ')' + (porsiKecil > 0 ? ' — kebutuhan total ' + fmtNum(v.kecilKebutuhan) + ' ' + displaySatuan + ' untuk ' + porsiKecil + ' porsi kecil' : '');
     return '<div class="mb-1.5">' +
       '<div class="grid grid-cols-12 gap-1.5 items-center">' +
         '<div class="order-1 col-span-12 sm:col-span-4 relative">' +
