@@ -111,6 +111,10 @@ function registerActionRoutes(router) {
       try { items = JSON.parse(po.item); } catch { items = []; }
       if (!items.length) return res.status(400).json({ error: 'PO tidak memiliki item' });
 
+      // Rujukan dokumen: pakai nomor invoice koperasi bila sudah terbit,
+      // selain itu pakai nomor PO lokal (untuk PO baru berupa "TMP-<id>").
+      const refDok = po.no_invoice_koperasi || po.no_po || String(id);
+
       const conn = await db.getConnection();
       try {
         await conn.beginTransaction();
@@ -149,7 +153,7 @@ function registerActionRoutes(router) {
 
           await conn.query(
             'INSERT INTO stok_masuk (tenant_id, tanggal, bahan_baku_id, jumlah, sumber, catatan) VALUES (?, CURDATE(), ?, ?, ?, ?)',
-            [t, bahanBakuId, qtyGram, 'PO: ' + (po.no_po || ''), 'Penerimaan dari PO #' + id]
+            [t, bahanBakuId, qtyGram, 'PO: ' + refDok, 'Penerimaan dari PO #' + id]
           );
 
           const harga = Number(item.harga || item.harga_satuan || 0);
@@ -167,7 +171,7 @@ function registerActionRoutes(router) {
         await conn.query('UPDATE purchase_order SET status=? WHERE id=? AND tenant_id=?', ['Diterima', id, t]);
 
         // Insert ke penerimaan_barang
-        const noDokumen = 'PB-' + (po.no_po || id);
+        const noDokumen = 'PB-' + refDok;
         await conn.query(
           'INSERT INTO penerimaan_barang (tenant_id, no_dokumen, tanggal_terima, supplier_id, supplier_nama, ref_po, item, total_nilai, status_qc, catatan) VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, ?, ?)',
           [t, noDokumen, po.supplier_id || null, po.supplier_nama || '', po.no_po || '', po.item, po.total_nilai || 0, 'Lolos', 'Penerimaan otomatis dari PO']

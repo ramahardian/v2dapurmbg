@@ -24,12 +24,17 @@ const TABLES = {
 /**
  * Field yang wajib diisi (NOT NULL di database).
  * Digunakan agar input kosong tidak lolos ke query INSERT.
+ *
+ * Catatan: purchase_order TIDAK mewajibkan no_po — nomor PO tidak lagi
+ * digenerate saat dibuat, melainkan terbit setelah koperasi menyetujui
+ * (nomor invoice koperasi). Selama menunggu, sistem mengisi referensi
+ * sementara "TMP-<id>" (lihat dynamic-routes.js bagian CREATE).
  */
 const REQUIRED_FIELDS = {
   penerima_manfaat: ['nama_kelompok'],
   bahan_baku: ['nama', 'satuan'],
   supplier: ['nama'],
-  purchase_order: ['no_po', 'tanggal'],
+  purchase_order: ['tanggal'],
   penerimaan_barang: ['no_dokumen', 'tanggal_terima'],
   produksi: ['tanggal_produksi'],
   distribusi: ['tanggal_distribusi'],
@@ -61,7 +66,7 @@ const SEARCHABLE_FIELDS = {
   penerima_manfaat: ['nama_kelompok', 'lokasi', 'kategori_penerima', 'provinsi', 'kota', 'kecamatan', 'nama_kontak', 'email', 'status_kepemilikan'],
   bahan_baku: ['nama', 'kode', 'kategori'],
   supplier: ['nama', 'kategori_supply', 'kontak_person'],
-  purchase_order: ['no_po', 'supplier_nama', 'status'],
+  purchase_order: ['no_po', 'no_po_koperasi', 'no_invoice_koperasi', 'supplier_nama', 'status'],
   penerimaan_barang: ['no_dokumen', 'supplier_nama', 'status_qc'],
   produksi: ['menu_nama', 'kategori_penerima', 'status'],
   distribusi: ['titik_distribusi', 'kategori_penerima', 'status', 'kurir', 'pm_nama', 'pm_alamat'],

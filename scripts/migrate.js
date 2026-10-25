@@ -331,6 +331,17 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi no_po_koperasi)'); }
 
+  // Status PO baru: 'Menunggu Koperasi' (PO sudah dikirim, menunggu koperasi
+  // menyetujui & menerbitkan nomor invoice). Menambah nilai ENUM tidak
+  // memengaruhi data lama.
+  try {
+    const [stCol] = await q("SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_order' AND COLUMN_NAME = 'status'");
+    if (stCol.length && !String(stCol[0].COLUMN_TYPE || '').includes('Menunggu Koperasi')) {
+      await q("ALTER TABLE purchase_order MODIFY COLUMN status ENUM('Draft','Menunggu Koperasi','Disetujui','Dikirim','Diterima','Dibayar') DEFAULT 'Draft'");
+      log('✓ Migrasi purchase_order: status + Menunggu Koperasi');
+    }
+  } catch (e) { log('  (skip migrasi status PO): ' + e.message); }
+
   // SP columns di bahan_baku
   try {
     const [spCols] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bahan_baku' AND COLUMN_NAME = 'kategori_sp'");

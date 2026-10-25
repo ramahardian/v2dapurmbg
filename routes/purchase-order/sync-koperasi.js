@@ -1,6 +1,12 @@
 /**
  * SYNC KOPERASI — Purchase Order
  *
+ * Alur nomor dokumen PO:
+ *   1. PO dibuat TANPA nomor (hanya referensi sementara "TMP-<id>").
+ *   2. PO dikirim ke koperasi      → status 'Menunggu Koperasi'
+ *   3. Koperasi menyetujui & menerbitkan nomor invoice (mis. INV/BUN/DST/2026/10/097)
+ *      → nomor ditarik lewat sync → status 'Disetujui'
+ *
  * Nomor PO / Invoice untuk pembelian dari koperasi TIDAK digenerate di sistem,
  * melainkan diambil dari sistem koperasi lalu disimpan di kolom:
  *   - no_po_koperasi       (kode pesanan dari koperasi)
@@ -34,6 +40,19 @@ function getStr(obj, keys) {
   return null;
 }
 
+// Naikkan status PO mengikuti progres di koperasi:
+//   Draft                → Menunggu Koperasi  (PO sudah dikirim ke koperasi)
+//   Draft / Menunggu Koperasi → Disetujui     (koperasi menerbitkan nomor invoice)
+// Status lanjutan (Dikirim / Diterima / Dibayar) tidak pernah ditarik mundur,
+// sehingga sinkronisasi berulang tetap aman (idempoten).
+function statusPascaKoperasi(statusSekarang, adaInvoice) {
+  const s = statusSekarang || 'Draft';
+  if (['Dikirim', 'Diterima', 'Dibayar'].includes(s)) return s;
+  if (adaInvoice) return 'Disetujui';
+  if (s === 'Draft') return 'Menunggu Koperasi';
+  return s;
+}
+
 // Normalisasi respons API menjadi array record (tahan berbagai bentuk respons)
 function normalizeRecords(data) {
   if (Array.isArray(data)) return data;
@@ -51,7 +70,7 @@ function registerSyncKoperasiRoutes(router) {
       const t = req.user.tenant_id;
       if (!id) return res.status(400).json({ error: 'ID PO tidak valid' });
 
-      const [[po]] = await db.query('SELECT id, no_po FROM purchase_order WHERE id=? AND tenant_id=?', [id, t]);
+      const [[po]] = await db.query('SELECT id, no_po, status FROM purchase_order WHERE id=? AND tenant_id=?', [id, t]);
       if (!po) return res.status(404).json({ error: 'PO tidak ditemukan' });
 
       const noPoKoperasi = (req.body && String(req.body.no_po_koperasi || '').trim()) || null;
@@ -60,12 +79,13 @@ function registerSyncKoperasiRoutes(router) {
         return res.status(400).json({ error: 'Isi minimal salah satu: no_po_koperasi atau no_invoice_koperasi' });
       }
 
+      const statusBaru = statusPascaKoperasi(po.status, !!noInvoiceKoperasi);
       await db.query(
-        'UPDATE purchase_order SET no_po_koperasi=COALESCE(?, no_po_koperasi), no_invoice_koperasi=COALESCE(?, no_invoice_koperasi) WHERE id=? AND tenant_id=?',
-        [noPoKoperasi, noInvoiceKoperasi, id, t]
+        'UPDATE purchase_order SET no_po_koperasi=COALESCE(?, no_po_koperasi), no_invoice_koperasi=COALESCE(?, no_invoice_koperasi), status=? WHERE id=? AND tenant_id=?',
+        [noPoKoperasi, noInvoiceKoperasi, statusBaru, id, t]
       );
 
-      res.json({ ok: true, id, no_po: po.no_po, no_po_koperasi: noPoKoperasi, no_invoice_koperasi: noInvoiceKoperasi });
+      res.json({ ok: true, id, no_po: po.no_po, no_po_koperasi: noPoKoperasi, no_invoice_koperasi: noInvoiceKoperasi, status: statusBaru });
     } catch (e) {
       console.error('Simpan kode koperasi error:', e);
       res.status(500).json({ error: 'Gagal simpan nomor koperasi: ' + e.message });
@@ -103,34 +123,37 @@ function registerSyncKoperasiRoutes(router) {
 
         // Match PO lokal via no_po_koperasi
         let [[po]] = await db.query(
-          'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_po_koperasi=?',
+          'SELECT id, no_po, status FROM purchase_order WHERE tenant_id=? AND no_po_koperasi=?',
           [t, noPoKoperasi]
         );
 
         // Fallback match via no_invoice_koperasi
         if (!po && noInvoiceKoperasi) {
           [[po]] = await db.query(
-            'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_invoice_koperasi=?',
+            'SELECT id, no_po, status FROM purchase_order WHERE tenant_id=? AND no_invoice_koperasi=?',
             [t, noInvoiceKoperasi]
           );
         }
 
-        // Fallback match via no_po lokal (nomor PO dapur yang tersimpan di koperasi)
+        // Fallback match via no_po lokal (nomor PO dapur yang tersimpan di koperasi).
+        // Untuk PO baru ini berupa referensi sementara "TMP-<id>".
         if (!po && noPoLokal) {
           [[po]] = await db.query(
-            'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_po=?',
+            'SELECT id, no_po, status FROM purchase_order WHERE tenant_id=? AND no_po=?',
             [t, noPoLokal]
           );
         }
 
         if (!po) continue;
 
+        // Nomor invoice terbit = koperasi sudah menyetujui → status naik
+        const statusBaru = statusPascaKoperasi(po.status, !!noInvoiceKoperasi);
         await db.query(
-          'UPDATE purchase_order SET no_po_koperasi=COALESCE(?, no_po_koperasi), no_invoice_koperasi=COALESCE(?, no_invoice_koperasi) WHERE id=? AND tenant_id=?',
-          [noPoKoperasi, noInvoiceKoperasi, po.id, t]
+          'UPDATE purchase_order SET no_po_koperasi=COALESCE(?, no_po_koperasi), no_invoice_koperasi=COALESCE(?, no_invoice_koperasi), status=? WHERE id=? AND tenant_id=?',
+          [noPoKoperasi, noInvoiceKoperasi, statusBaru, po.id, t]
         );
 
-        updated.push({ id: po.id, no_po: po.no_po, no_po_koperasi: noPoKoperasi, no_invoice_koperasi: noInvoiceKoperasi });
+        updated.push({ id: po.id, no_po: po.no_po, status: statusBaru, no_po_koperasi: noPoKoperasi, no_invoice_koperasi: noInvoiceKoperasi });
       }
 
       res.json({
@@ -298,23 +321,25 @@ function registerRiwayatKoperasiRoutes(router) {
 
         // Match PO lokal via no_invoice_koperasi
         let [[po]] = await db.query(
-          'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_invoice_koperasi=?',
+          'SELECT id, no_po, status FROM purchase_order WHERE tenant_id=? AND no_invoice_koperasi=?',
           [t, noInvoice]
         );
         // Fallback match via no_po lokal (nomor PO dapur yang tersimpan di koperasi)
         if (!po && noPo) {
           [[po]] = await db.query(
-            'SELECT id, no_po FROM purchase_order WHERE tenant_id=? AND no_po=?',
+            'SELECT id, no_po, status FROM purchase_order WHERE tenant_id=? AND no_po=?',
             [t, noPo]
           );
         }
         if (!po) continue;
 
+        // Nomor invoice koperasi terbit → PO dianggap disetujui koperasi
+        const statusBaru = statusPascaKoperasi(po.status, !!noInvoice);
         await db.query(
-          'UPDATE purchase_order SET no_invoice_koperasi=COALESCE(?, no_invoice_koperasi), no_po_koperasi=COALESCE(?, no_po_koperasi) WHERE id=? AND tenant_id=?',
-          [noInvoice, rec.kode_pesanan || null, po.id, t]
+          'UPDATE purchase_order SET no_invoice_koperasi=COALESCE(?, no_invoice_koperasi), no_po_koperasi=COALESCE(?, no_po_koperasi), status=? WHERE id=? AND tenant_id=?',
+          [noInvoice, rec.kode_pesanan || null, statusBaru, po.id, t]
         );
-        updated.push({ id: po.id, no_po: po.no_po, no_invoice_koperasi: noInvoice });
+        updated.push({ id: po.id, no_po: po.no_po, status: statusBaru, no_invoice_koperasi: noInvoice });
       }
 
       res.json({
@@ -398,12 +423,15 @@ function registerRiwayatKoperasiRoutes(router) {
         const catatan = ((rec.keterangan ? rec.keterangan + '\n' : '') +
           '[Impor dari riwayat koperasi: ' + (noInvoice || kodePesanan) + ']').trim();
         const noPoLokal = String(ident).slice(0, 50);
+        // Dokumen dari riwayat koperasi: kalau sudah ada nomor invoice berarti
+        // koperasi sudah menerbitkan/menyetujui → langsung status Disetujui.
+        const statusImpor = noInvoice ? 'Disetujui' : 'Draft';
 
         const [ins] = await db.query(
           `INSERT INTO purchase_order
              (tenant_id, no_po, no_po_koperasi, no_invoice_koperasi, tanggal,
               supplier_nama, item, total_nilai, status, unit_dapur, catatan)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             t,
             noPoLokal,
@@ -413,6 +441,7 @@ function registerRiwayatKoperasiRoutes(router) {
             rec.nama_perusahaan || 'KOPERASI',
             JSON.stringify(items),
             totalNilai,
+            statusImpor,
             rec.penerima || null,
             catatan,
           ]

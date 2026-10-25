@@ -4,6 +4,13 @@ let _bahanBakuList = [];
 let _prList = [];
 let _poList = [];
 
+// Nomor PR ditulis dengan dua gaya di sistem ('PR-...' dan 'PR/...').
+// Keduanya harus dikenali sebagai PR agar tidak masuk daftar PO.
+function isPrNo(no) { return /^PR[-/]/.test(String(no || '')); }
+
+// PO yang nomornya masih referensi sementara (belum disetujui koperasi)
+function isTmpNo(no) { return /^TMP-/i.test(String(no || '')); }
+
 async function renderPembelian() {
   await renderPembelianPage('pr');
 }
@@ -27,8 +34,8 @@ async function refreshPoList() {
   try {
     const data = await api.get('/purchase_order');
     const all = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
-    _prList = all.filter(r => (r.no_po || '').startsWith('PR-'));
-    _poList = all.filter(r => !(r.no_po || '').startsWith('PR-'));
+    _prList = all.filter(r => isPrNo(r.no_po));
+    _poList = all.filter(r => !isPrNo(r.no_po));
   } catch (e) {
     // keep existing lists
   }
@@ -52,8 +59,8 @@ async function renderPembelianPage(tab) {
     allRows = [];
   }
 
-  _prList = allRows.filter(r => (r.no_po || '').startsWith('PR-'));
-  _poList = allRows.filter(r => !(r.no_po || '').startsWith('PR-'));
+  _prList = allRows.filter(r => isPrNo(r.no_po));
+  _poList = allRows.filter(r => !isPrNo(r.no_po));
 
   if (tab === 'pr') {
     renderPrView();
@@ -277,8 +284,8 @@ async function generatePr() {
     // Refresh PR list
     const data = await api.get('/purchase_order');
     const allRows = Array.isArray(data) ? data : (data.data || []);
-    _prList = allRows.filter(r => (r.no_po || '').startsWith('PR-'));
-    _poList = allRows.filter(r => !(r.no_po || '').startsWith('PR-'));
+    _prList = allRows.filter(r => isPrNo(r.no_po));
+    _poList = allRows.filter(r => !isPrNo(r.no_po));
   } catch (e) {
     preview.innerHTML = `<div class="text-red-700 bg-red-50 p-3 rounded text-sm">Gagal: ${e.message || 'Terjadi kesalahan'}</div>`;
     saveBtn.disabled = false;
@@ -415,6 +422,8 @@ async function renderPoView() {
     const q = this.value.toLowerCase();
     const filtered = _poList.filter(r =>
       (r.no_po || '').toLowerCase().includes(q) ||
+      (r.no_invoice_koperasi || '').toLowerCase().includes(q) ||
+      (r.no_po_koperasi || '').toLowerCase().includes(q) ||
       (r.supplier_nama || '').toLowerCase().includes(q) ||
       (r.status || '').toLowerCase().includes(q)
     );
@@ -439,10 +448,18 @@ function renderPoTable(rows) {
       ${rows.map(r => {
         let items = [];
         try { items = JSON.parse(r.item); } catch {}
-        const statusColors = { 'Draft': 'bg-stone-100 text-stone-700', 'Disetujui': 'bg-blue-100 text-blue-700', 'Dikirim': 'bg-amber-100 text-amber-700', 'Diterima': 'bg-emerald-100 text-emerald-700', 'Dibayar': 'bg-green-100 text-green-700' };
+        const statusColors = { 'Draft': 'bg-stone-100 text-stone-700', 'Menunggu Koperasi': 'bg-purple-100 text-purple-700', 'Disetujui': 'bg-blue-100 text-blue-700', 'Dikirim': 'bg-amber-100 text-amber-700', 'Diterima': 'bg-emerald-100 text-emerald-700', 'Dibayar': 'bg-green-100 text-green-700' };
+        // Nomor utama = nomor invoice koperasi bila sudah terbit; kalau belum,
+        // tampilkan nomor PO lokal (untuk PO baru: referensi sementara TMP-<id>)
+        const noInv = r.no_invoice_koperasi || '';
+        const noDok = noInv || r.no_po || '-';
+        const pending = !noInv && isTmpNo(r.no_po);
+        const subs = [];
+        if (noInv && r.no_po) subs.push('PO: ' + r.no_po);
+        if (r.no_po_koperasi) subs.push('Pesanan: ' + r.no_po_koperasi);
         return `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-          <td class="px-4 py-3 text-xs font-semibold text-stone-700">${r.no_po || '-'}
-            ${(r.no_po_koperasi || r.no_invoice_koperasi) ? `<div class="text-[10px] font-normal text-emerald-600 mt-0.5">Koperasi: ${r.no_po_koperasi || '-'}${r.no_invoice_koperasi ? ' / Inv: ' + r.no_invoice_koperasi : ''}</div>` : ''}
+          <td class="px-4 py-3 text-xs font-semibold text-stone-700">${escHtml(noDok)}${pending ? ' <span class="text-[10px] font-normal font-medium text-amber-600">menunggu koperasi</span>' : ''}
+            ${subs.length ? `<div class="text-[10px] font-normal text-emerald-600 mt-0.5">${escHtml(subs.join(' · '))}</div>` : ''}
           </td>
           <td class="px-4 py-3 text-xs text-stone-600">${fmtDate(r.tanggal)}</td>
           <td class="px-4 py-3 text-xs text-stone-600">${r.supplier_nama || '-'}</td>
@@ -526,6 +543,12 @@ async function terimaPo(poId) {
 }
 
 async function kirimKeKoperasi(po) {
+  // PO yang sudah punya nomor invoice berarti sudah diproses koperasi —
+  // kirim ulang harus dikonfirmasi supaya pesanan tidak dobel di koperasi.
+  if (po.no_invoice_koperasi) {
+    if (!await showConfirm('PO ini sudah punya nomor invoice koperasi (' + po.no_invoice_koperasi + '). Kirim ulang ke koperasi?', 'Kirim ulang', 'Batal')) return;
+  }
+
   const setting = await muatKoperasiSetting();
   let id_unit_dapur = setting.id_unit_dapur;
   if (!id_unit_dapur) {
@@ -538,11 +561,16 @@ async function kirimKeKoperasi(po) {
   try { items = JSON.parse(po.item); } catch { items = []; }
   if (!items.length) { showAlert('PO tidak memiliki item', 'warning'); return; }
 
+  // Field no_po wajib di API koperasi. Untuk PO yang belum disetujui, yang
+  // dikirim adalah referensi sementara "TMP-<id>" — dipakai koperasi untuk
+  // mencocokkan pesanan ini dengan PO lokal saat mengembalikan nomor invoice.
+  const refPo = po.no_po || ('TMP-' + po.id);
+
   const payload = {
     id_unit_dapur: Number(id_unit_dapur),
     nama_dapur: setting.nama_dapur || po.unit_dapur || '',
     supplier_name: po.supplier_nama || '',
-    no_po: po.no_po || '',
+    no_po: refPo,
     tanggal_pesanan: po.tanggal,
     items: items.map(i => {
       const m = (i.kode || '').match(/EXT[-\s]?(\d+)/i);
@@ -555,7 +583,7 @@ async function kirimKeKoperasi(po) {
         price: Number(i.harga || i.subtotal || 0),
       };
     }),
-    notes: 'PO: ' + po.no_po + (po.catatan ? ' — ' + po.catatan : ''),
+    notes: 'PO: ' + refPo + (po.catatan ? ' — ' + po.catatan : ''),
   };
 
   console.log('JSON dikirim ke koperasi:', JSON.stringify(payload, null, 2));
@@ -569,9 +597,14 @@ async function kirimKeKoperasi(po) {
     if (result.success) {
       const kodePesanan = result.data?.kode_pesanan || '';
       showToast('PO berhasil dikirim ke koperasi. Kode: ' + (kodePesanan || '-'), 'success');
-      if (kodePesanan && po.id) {
+      if (po.id) {
         try {
-          await api.post('/purchase_order/' + po.id + '/kode-koperasi', { no_po_koperasi: kodePesanan });
+          if (kodePesanan) {
+            // Endpoint ini juga menaikkan status Draft → 'Menunggu Koperasi'
+            await api.post('/purchase_order/' + po.id + '/kode-koperasi', { no_po_koperasi: kodePesanan });
+          } else if (!po.status || po.status === 'Draft') {
+            await api.put('/purchase_order/' + po.id, { status: 'Menunggu Koperasi' });
+          }
           renderPembelianPage('po');
         } catch (e) {
           console.warn('Gagal simpan kode pesanan koperasi:', e);
@@ -601,7 +634,7 @@ async function bukaWaNotifikasiKoperasi(po, items, kodePesanan) {
   const daftar = items.map((i, idx) => (idx + 1) + '. ' + (i.nama || '-') + ' — ' + Number(i.qty || 0) + ' ' + (i.satuan || '')).join('\n');
   const msg = 'Halo Petugas Koperasi,\n\n' +
     'Ada PO bahan baku baru dari ' + namaDapur + ':\n\n' +
-    'No PO: ' + (po.no_po || '-') + '\n' +
+    'No PO: ' + (po.no_po || '-') + (isTmpNo(po.no_po) ? ' (referensi sementara)' : '') + '\n' +
     'Tanggal: ' + (po.tanggal || '-') + '\n' +
     'Kode Pesanan: ' + kodePesanan + '\n\n' +
     'Item:\n' + daftar + '\n\n' +
@@ -665,7 +698,8 @@ async function openPembelianForm(editing, prItems, prRef) {
 
   const now = new Date();
   const tgl = now.toISOString().slice(0, 10);
-  const nomor = 'PO-' + tgl.replace(/-/g, '') + '-' + Date.now().toString().slice(-4);
+  // Nomor PO TIDAK digenerate di sini — nomor (invoice) baru terbit setelah
+  // koperasi menyetujui PO. Saat disimpan sistem memberi referensi sementara.
 
   let items = [];
   if (editing && editing.item) {
@@ -689,8 +723,9 @@ async function openPembelianForm(editing, prItems, prRef) {
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nomor PO <span class="text-red-500">*</span></label>
-          <input id="po-no_po" value="${editing ? editing.no_po : nomor}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nomor PO ${editing ? '' : '<span class="text-amber-500 normal-case font-normal">(terbit dari koperasi)</span>'}</label>
+          <input id="po-no_po" value="${editing ? (editing.no_po || '') : ''}" placeholder="Belum ada — nomor terbit setelah koperasi menyetujui" ${editing ? '' : 'readonly'} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 bg-stone-50 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+          <div class="text-[10px] text-stone-400 mt-1">${editing ? 'Kosongkan untuk mempertahankan nomor saat ini — bisa diisi manual bila nomor koperasi diketahui.' : 'Saat disimpan sistem membuat referensi sementara (TMP-…); nomor invoice koperasi muncul setelah PO disetujui.'}</div>
         </div>
         <div>
           <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal <span class="text-red-500">*</span></label>
@@ -721,7 +756,7 @@ async function openPembelianForm(editing, prItems, prRef) {
       <div>
         <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Status</label>
         <select id="po-status" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-          <option>Draft</option><option ${editing && editing.status === 'Disetujui' ? 'selected' : ''}>Disetujui</option>
+          <option>Draft</option><option ${editing && editing.status === 'Menunggu Koperasi' ? 'selected' : ''}>Menunggu Koperasi</option><option ${editing && editing.status === 'Disetujui' ? 'selected' : ''}>Disetujui</option>
           <option ${editing && editing.status === 'Dikirim' ? 'selected' : ''}>Dikirim</option>
           <option ${editing && editing.status === 'Diterima' ? 'selected' : ''}>Diterima</option>
           <option ${editing && editing.status === 'Dibayar' ? 'selected' : ''}>Dibayar</option>
@@ -802,7 +837,8 @@ function updatePoTotal() {
 function savePembelian() {
   const no_po = document.getElementById('po-no_po').value.trim();
   const tanggal = document.getElementById('po-tanggal').value;
-  if (!no_po || !tanggal) { showAlert('Nomor PO dan Tanggal wajib diisi', 'warning'); return; }
+  // Nomor PO tidak wajib: untuk PO baru nomor terbit setelah koperasi menyetujui
+  if (!tanggal) { showAlert('Tanggal wajib diisi', 'warning'); return; }
   if (!_poItems.length) { showAlert('Minimal satu item harus ditambahkan', 'warning'); return; }
 
   const total = _poItems.reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
@@ -990,8 +1026,6 @@ async function generatePOFromSiklus() {
       if (!selected.length) { showAlert('Pilih minimal satu menu', 'warning'); return; }
 
       const tgl = new Date().toISOString().slice(0, 10);
-      const baseNomor = 'PO-' + tgl.replace(/-/g, '') + '-' + Date.now().toString().slice(-4);
-      const multi = selected.length > 1;
       const btn = document.getElementById('confirm-create-po');
       btn.disabled = true;
       btn.textContent = '⏳ Membuat ' + selected.length + ' PO...';
@@ -1001,7 +1035,6 @@ async function generatePOFromSiklus() {
       try {
         for (let i = 0; i < selected.length; i++) {
           const m = selected[i];
-          const nomor = multi ? baseNomor + '-' + (i + 1) : baseNomor;
           const items = m.items.map(it => ({
             bahan_baku_id: it.bahan_baku_id,
             id_koperasi: it.id_koperasi,
@@ -1013,8 +1046,10 @@ async function generatePOFromSiklus() {
             subtotal: it.estimated_subtotal,
           }));
           try {
+            // Tanpa no_po — sistem memberi referensi sementara, nomor PO
+            // baru terbit setelah disetujui koperasi.
             await api.post('/purchase_order', {
-              no_po: nomor, tanggal: tgl,
+              tanggal: tgl,
               supplier_id: supplierId, supplier_nama: supplierNama,
               unit_dapur: unitDapur,
               item: JSON.stringify(items), total_nilai: m.subtotal,

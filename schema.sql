@@ -184,7 +184,10 @@ CREATE TABLE IF NOT EXISTS purchase_order (
   supplier_nama VARCHAR(200),
   item TEXT,
   total_nilai DECIMAL(15,2) DEFAULT 0,
-  status ENUM('Draft','Disetujui','Dikirim','Diterima','Dibayar') DEFAULT 'Draft',
+  -- Draft = PO baru (belum ada nomor, referensi sementara TMP-<id>)
+  -- Menunggu Koperasi = sudah dikirim ke koperasi, menunggu persetujuan
+  -- Disetujui = koperasi menerbitkan nomor invoice (no_invoice_koperasi)
+  status ENUM('Draft','Menunggu Koperasi','Disetujui','Dikirim','Diterima','Dibayar') DEFAULT 'Draft',
   unit_dapur VARCHAR(100),
   catatan TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

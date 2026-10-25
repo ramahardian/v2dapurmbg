@@ -82,12 +82,14 @@ function registerDynamicRoutes(router) {
         }
       }
 
-      // Filter: untuk purchase_order, bedakan PR vs PO via prefix no_po
+      // Filter: untuk purchase_order, bedakan PR vs PO via prefix no_po.
+      // Nomor PR ditulis dengan dua gaya di kode ('PR-...' dan 'PR/...'),
+      // keduanya diakui sebagai PR agar tidak jatuh ke daftar PO.
       if ((table === 'purchase_order' || table === 'penerimaan_barang') && req.query.tipe) {
         if (req.query.tipe === 'po') {
-          whereClause += ` AND no_po NOT LIKE 'PR-%'`;
+          whereClause += ` AND no_po NOT LIKE 'PR-%' AND no_po NOT LIKE 'PR/%'`;
         } else if (req.query.tipe === 'pr') {
-          whereClause += ` AND no_po LIKE 'PR-%'`;
+          whereClause += ` AND (no_po LIKE 'PR-%' OR no_po LIKE 'PR/%')`;
         }
       }
 
@@ -173,6 +175,16 @@ function registerDynamicRoutes(router) {
             }
           }
 
+          // Purchase Order: nomor TIDAK digenerate di sini.
+          // Karena kolom no_po NOT NULL, isi dulu referensi sementara yang unik,
+          // lalu setelah insertId diketahui diganti menjadi "TMP-<id>".
+          // Nomor dokumen (invoice) baru terbit setelah koperasi menyetujui PO.
+          let tmpPoRef = null;
+          if (table === 'purchase_order' && !req.body.no_po) {
+            tmpPoRef = 'TMP-' + Date.now().toString(36).toUpperCase() + Math.floor(Math.random() * 1000);
+            req.body.no_po = tmpPoRef;
+          }
+
           const { sql, vals } = buildInsert(TABLES, table, req.body, req.user.tenant_id);
           const [r] = await conn.query(sql, vals);
 
@@ -183,6 +195,13 @@ function registerDynamicRoutes(router) {
             const no = 'SJ/' + thn + '/' + bln + '/' + String(r.insertId).padStart(4, '0');
             await conn.query('UPDATE distribusi SET no_surat_jalan=? WHERE id=?', [no, r.insertId]);
             req.body.no_surat_jalan = no;
+          }
+
+          // PO: ganti referensi sementara menjadi "TMP-<id>" (id sudah final)
+          if (tmpPoRef) {
+            const noTmp = 'TMP-' + r.insertId;
+            await conn.query('UPDATE purchase_order SET no_po=? WHERE id=? AND no_po=?', [noTmp, r.insertId, tmpPoRef]);
+            req.body.no_po = noTmp;
           }
 
           const [rows] = await conn.query(`SELECT * FROM ${table} WHERE id=? AND tenant_id=?`, [r.insertId, req.user.tenant_id]);
