@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
-const { sign, requireAuth, logUserActivity, invalidateUserCache } = require('../middleware/auth');
+const { sign, requireAuth, requireRole, logUserActivity, invalidateUserCache } = require('../middleware/auth');
 
 function saveBase64Foto(base64Data) {
   if (!base64Data || !base64Data.startsWith('data:image')) return null;
@@ -13,7 +13,22 @@ function saveBase64Foto(base64Data) {
 
 const router = express.Router();
 
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Terlalu banyak percobaan login. Coba lagi 15 menit.' } });
+// Store-nya dibuat eksplisit (bukan bawaan) supaya hitungan limit login bisa
+// dilepas lewat endpoint /api/auth/reset-login-limit tanpa harus restart server.
+const loginStore = new rateLimit.MemoryStore();
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Terlalu banyak percobaan login. Coba lagi 15 menit.' },
+  store: loginStore,
+});
+
+// Limit login dihitung per alamat IP (keyGenerator bawaan = request.ip), jadi
+// kunci yang di-reset harus memakai request.ip juga.
+const isLoopbackIp = (ip) => {
+  const i = String(ip || '');
+  return i === '127.0.0.1' || i === '::1' || i === '::ffff:127.0.0.1';
+};
 
 router.post('/login', loginLimiter, async (req, res) => {
   try {
@@ -151,6 +166,49 @@ router.post('/login-phone', loginLimiter, async (req, res) => {
     res.status(500).json({ error: 'Gagal login: ' + e.message });
   }
 });
+
+// ─── RESET LIMIT LOGIN ──────────────────────────────
+// Melepas pesan "Terlalu banyak percobaan login. Coba lagi 15 menit."
+// Bisa dipanggil lewat URL (GET) maupun POST:
+//   /api/auth/reset-login-limit              → reset IP pengirim
+//   /api/auth/reset-login-limit?ip=1.2.3.4   → reset IP tertentu (admin)
+//   /api/auth/reset-login-limit?all=1        → reset semua IP (admin)
+// Otorisasi: request dari loopback server diizinkan tanpa login — saat IP
+// terkunci admin justru belum bisa login. Dari luar loopback wajib session admin
+// (mis. session lama yang masih berlaku 8 jam), karena reset tanpa batas akan
+// menghapus perlindungan brute-force.
+const resetLoginGuard = (req, res, next) => {
+  if (isLoopbackIp(req.ip)) return next();
+  requireAuth(req, res, () => requireRole('admin')(req, res, next));
+};
+
+async function resetLoginLimit(req, res) {
+  try {
+    const wantAll = String(req.query.all || '') === '1';
+    const target = String(req.query.ip || '').trim() || req.ip;
+
+    if (wantAll) {
+      await loginStore.resetAll();
+      return res.json({ ok: true, scope: 'semua IP', pesan: 'Semua percobaan login dihitung ulang dari nol' });
+    }
+
+    await loginLimiter.resetKey(target);
+    const info = await loginLimiter.getKey(target);
+    res.json({
+      ok: true,
+      ip: target,
+      hitungan_sekarang: info ? info.totalHits : 0,
+      kuota_sisa: Math.max(0, 10 - (info ? info.totalHits : 0)),
+      pesan: `Limit login untuk ${target} sudah direset`,
+    });
+  } catch (e) {
+    console.error('Reset login limit error:', e);
+    res.status(500).json({ error: 'Gagal reset limit login: ' + e.message });
+  }
+}
+
+router.get('/reset-login-limit', resetLoginGuard, resetLoginLimit);
+router.post('/reset-login-limit', resetLoginGuard, resetLoginLimit);
 
 router.post('/logout', (req, res) => {
   res.clearCookie('access_token');
