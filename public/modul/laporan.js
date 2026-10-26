@@ -2125,14 +2125,22 @@ function exportXlsxLaporan(name) {
 }
 
 function exportRabHarianXlsx() {
-  const tanggal = (document.getElementById('rh-tanggal') || {}).value || (document.getElementById('rab-rh-tanggal') || {}).value;
-  const tanggalSampai = (document.getElementById('rh-tanggal-sampai') || {}).value || (document.getElementById('rab-rh-tanggal-sampai') || {}).value || '';
-  const siklusId = (document.getElementById('rh-filter-siklus') || {}).value || (document.getElementById('rab-filter-siklus') || {}).value || '';
-  if (!lapState.rh_tanggal && !lapState.rab_rh_tanggal) {
+  // Tanggal efektif = nilai input yang sedang tampil (sudah terisi saat tab
+  // dirender, tanpa perlu onchange), fallback ke lapState. Guard lama hanya
+  // mengecek lapState sehingga export selalu ditolak walau tanggal terpilih.
+  const tanggal = (document.getElementById('rh-tanggal') || {}).value
+    || (document.getElementById('rab-rh-tanggal') || {}).value
+    || lapState.rh_tanggal || lapState.rab_rh_tanggal || '';
+  const tanggalSampai = (document.getElementById('rh-tanggal-sampai') || {}).value
+    || (document.getElementById('rab-rh-tanggal-sampai') || {}).value
+    || lapState.rh_tanggal_sampai || lapState.rab_rh_tanggal_sampai || '';
+  const siklusId = (document.getElementById('rh-filter-siklus') || {}).value
+    || (document.getElementById('rab-filter-siklus') || {}).value
+    || lapState.rh_siklus_id || '';
+  if (!tanggal) {
     showAlert('Pilih tanggal RAB Harian terlebih dahulu sebelum export', 'warning');
     return;
   }
-  if (!tanggal) { showAlert('Pilih tanggal terlebih dahulu', 'warning'); return; }
   if (tanggalSampai && tanggalSampai < tanggal) {
     showAlert('Tanggal akhir tidak boleh lebih awal dari tanggal mulai', 'warning');
     return;
