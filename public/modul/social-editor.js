@@ -1994,6 +1994,12 @@ async function socialSave() {
       ? { url: res.photo_url, dataUrl: null, img: _socialEd.photo && _socialEd.photo.img }
       : null;
     socialUpdateImageUI();
+    // Save menu to sessionStorage for persistence across reloads
+    if (_socialEd.menu && _socialEd.menu.menu_nama) {
+      try {
+        sessionStorage.setItem('social_editor_menu', JSON.stringify(_socialEd.menu));
+      } catch (e) {}
+    }
     socialLoadHistory();
     socialSetSaveProgress(100, 'Tersimpan');
     setTimeout(socialHideSaveProgress, 1200);
