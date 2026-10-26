@@ -1220,13 +1220,23 @@ async function socialPreloadImages() {
   if (_socialEd.bgImage && socialImageSrc(_socialEd.bgImage)) {
     const obj = _socialEd.bgImage;
     jobs.push(socialLoadImage(socialImageSrc(obj)).then(function(img) {
-      if (img && _socialEd && _socialEd.bgImage === obj) { obj.img = img; socialDrawPreview(); }
+      if (img && _socialEd && _socialEd.bgImage === obj) { obj.img = img; }
+      // Always redraw preview so background state is applied even if image fails to load
+      if (_socialEd) socialDrawPreview();
+    }).catch(function(e) {
+      // Gambar gagal dimuat, tetap redraw preview agar UI tidak hancur
+      if (_socialEd) socialDrawPreview();
     }));
   }
   if (_socialEd.photo && socialImageSrc(_socialEd.photo)) {
     const obj = _socialEd.photo;
     jobs.push(socialLoadImage(socialImageSrc(obj)).then(function(img) {
-      if (img && _socialEd && _socialEd.photo === obj) { obj.img = img; socialDrawPreview(); }
+      if (img && _socialEd && _socialEd.photo === obj) { obj.img = img; }
+      // Always redraw preview so photo state is applied even if image fails to load
+      if (_socialEd) socialDrawPreview();
+    }).catch(function(e) {
+      // Gambar gagal dimuat, tetap redraw preview agar UI tidak hancur
+      if (_socialEd) socialDrawPreview();
     }));
   }
   await Promise.all(jobs);
