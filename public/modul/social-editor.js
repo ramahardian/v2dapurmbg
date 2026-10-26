@@ -1214,12 +1214,32 @@ function socialLoadImage(src) {
   return _socialImgCache[src];
 }
 
+// Muat gambar dengan fallback: jika src adalah dataURL, gunakan langsung.
+// Jika gagal dimuat dari URL, cek apakah sudah ada dataUrl di obj yang bisa digunakan.
+function socialLoadImageWithFallback(src, obj) {
+  if (!src) return Promise.resolve(null);
+  // Jika sudah ada dataUrl di obj, gunakan langsung (sebelum coba load dari URL)
+  if (obj && obj.dataUrl) return Promise.resolve({ dataUrl: obj.dataUrl, img: obj.img });
+  if (_socialImgCache[src]) return _socialImgCache[src];
+  _socialImgCache[src] = new Promise(function(resolve) {
+    const img = new Image();
+    img.onload = function() { resolve(img); };
+    img.onerror = function() {
+      // Gambar gagal dimuat dari URL, coba gunakan dataUrl dari obj jika ada
+      if (obj && obj.dataUrl) resolve({ dataUrl: obj.dataUrl, img: obj.img });
+      else resolve(null);
+    };
+    img.src = src;
+  });
+  return _socialImgCache[src];
+}
+
 async function socialPreloadImages() {
   if (!_socialEd) return;
   const jobs = [];
   if (_socialEd.bgImage && socialImageSrc(_socialEd.bgImage)) {
     const obj = _socialEd.bgImage;
-    jobs.push(socialLoadImage(socialImageSrc(obj)).then(function(img) {
+    jobs.push(socialLoadImageWithFallback(socialImageSrc(obj), obj).then(function(img) {
       if (img && _socialEd && _socialEd.bgImage === obj) { obj.img = img; }
       // Always redraw preview so background state is applied even if image fails to load
       if (_socialEd) socialDrawPreview();
@@ -1230,7 +1250,7 @@ async function socialPreloadImages() {
   }
   if (_socialEd.photo && socialImageSrc(_socialEd.photo)) {
     const obj = _socialEd.photo;
-    jobs.push(socialLoadImage(socialImageSrc(obj)).then(function(img) {
+    jobs.push(socialLoadImageWithFallback(socialImageSrc(obj), obj).then(function(img) {
       if (img && _socialEd && _socialEd.photo === obj) { obj.img = img; }
       // Always redraw preview so photo state is applied even if image fails to load
       if (_socialEd) socialDrawPreview();
@@ -1998,10 +2018,10 @@ async function socialSave() {
     _socialEd.postId = res.id;
     _socialEd.imageUrl = res.image_url;
     _socialEd.bgImage = res.background_url
-      ? { url: res.background_url, dataUrl: null, img: _socialEd.bgImage && _socialEd.bgImage.img }
+      ? { url: res.background_url, dataUrl: _socialEd.bgImage ? _socialEd.bgImage.dataUrl : dataUrl, img: _socialEd.bgImage && _socialEd.bgImage.img }
       : null;
     _socialEd.photo = res.photo_url
-      ? { url: res.photo_url, dataUrl: null, img: _socialEd.photo && _socialEd.photo.img }
+      ? { url: res.photo_url, dataUrl: _socialEd.photo ? _socialEd.photo.dataUrl : dataUrl, img: _socialEd.photo && _socialEd.photo.img }
       : null;
     socialUpdateImageUI();
     // Save menu to sessionStorage for persistence across reloads
@@ -2175,8 +2195,8 @@ async function socialLoadPost(id) {
     st.active = 'text';
     st.caption = row.caption != null ? row.caption : st.caption;
     st.hashtags = row.hashtags != null ? row.hashtags : st.hashtags;
-    st.bgImage = row.background_url ? { url: row.background_url, dataUrl: null, img: null } : null;
-    st.photo = row.photo_url ? { url: row.photo_url, dataUrl: null, img: null } : (menu.foto ? { url: menu.foto, dataUrl: null, img: null } : null);
+    st.bgImage = row.background_url ? { url: row.background_url, dataUrl: draft.bgImage || null, img: null } : null;
+    st.photo = row.photo_url ? { url: row.photo_url, dataUrl: draft.photo || null, img: null } : (menu.foto ? { url: menu.foto, dataUrl: draft.photo || null, img: null } : null);
     st.notice = 'Memuat postingan tersimpan #' + row.id + '. Simpan lagi untuk memperbarui.';
     _socialEd = st;
     socialRenderEditor();
