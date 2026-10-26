@@ -32,34 +32,42 @@ async function renderBackup() {
   if (!c) return;
   backupRestoreFile = null;
   c.innerHTML = `
-  <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-    <div></div>
-    <div class="flex gap-2">
-      <button onclick="loadBackupList()" class="h-11 px-4 bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 rounded-xl text-sm font-medium shadow-sm transition-all flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-        Muat Ulang
-      </button>
-      <button onclick="createBackupNow()" id="btn-backup-now" class="h-11 px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Backup Sekarang
-      </button>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+  <!-- Tile aksi backup -->
+  <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-5 shadow-sm flex flex-col">
+    <div class="flex items-center gap-2 mb-2">
+      <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      <h2 class="font-bold text-sm text-emerald-900">Backup Database</h2>
     </div>
+    <p class="text-xs text-emerald-800/70 leading-relaxed mb-4">Simpan seluruh database (struktur + data) sebagai file .sql di folder <code class="bg-emerald-100 px-1 rounded">backups/</code> pada server.</p>
+    <button onclick="createBackupNow()" id="btn-backup-now" class="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Backup Sekarang
+    </button>
+    <p class="text-[10px] text-emerald-700/60 mt-3 text-center">Khusus role admin · file bisa diunduh kapan saja</p>
   </div>
 
   <!-- Riwayat backup -->
-  <div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden mb-4">
+  <div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden lg:col-span-2">
     <div class="px-5 py-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
       <div>
         <h2 class="font-bold text-sm text-stone-800">Riwayat Backup</h2>
         <p class="text-xs text-stone-500">File .sql tersimpan di folder <code class="bg-stone-100 px-1 rounded">backups/</code> pada server</p>
       </div>
-      <span id="backup-total" class="text-xs text-stone-500"></span>
+      <div class="flex items-center gap-2">
+        <span id="backup-total" class="text-xs text-stone-500"></span>
+        <button onclick="loadBackupList()" class="h-8 px-3 bg-white border border-stone-200 hover:bg-stone-50 text-stone-600 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5" title="Muat ulang daftar">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+          Muat Ulang
+        </button>
+      </div>
     </div>
     <div id="backup-list"></div>
   </div>
 
   <!-- Restore -->
-  <div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
+  <div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden lg:col-span-3">
     <div class="px-5 py-4 border-b border-stone-100">
       <h2 class="font-bold text-sm text-stone-800">Restore Database dari File .sql</h2>
       <p class="text-xs text-stone-500">Unggah file hasil backup (atau dump MySQL lain) untuk mengembalikan isi database. File diverifikasi dulu sebelum bisa direstore.</p>
@@ -89,6 +97,7 @@ async function renderBackup() {
 
       <pre id="restore-log" class="hidden bg-stone-900 text-green-400 p-4 rounded-xl text-xs font-mono leading-relaxed overflow-auto max-h-80 whitespace-pre-wrap"></pre>
     </div>
+  </div>
   </div>`;
 
   await loadBackupList();

@@ -1,12 +1,12 @@
-<div class="flex flex-wrap items-center gap-3 mb-5">
-  <div class="relative flex-1 min-w-[200px]">
-    <input type="text" id="bahan-search" placeholder="Cari bahan..." autocomplete="off"
-      class="w-full h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-    <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-    </svg>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-5">
+  <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 px-4 py-3 shadow-sm flex items-center justify-between lg:col-span-2">
+    <div>
+      <div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">Total Bahan Baku</div>
+      <div class="text-xl font-bold text-blue-800" id="bb-stat-total">–</div>
+    </div>
+    <svg class="w-8 h-8 text-blue-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>
   </div>
-  <div class="flex flex-wrap gap-2">
+  <div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 flex flex-wrap items-center gap-2">
     <button id="add-btn" class="h-11 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Tambah
@@ -14,6 +14,13 @@
     <button onclick="toggleSumberFilter()" id="filter-koperasi-btn" class="h-11 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-sm font-medium shadow-sm transition-all">Koperasi</button>
     <button onclick="exportBahanBakuXlsx()" class="h-11 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-sm font-medium shadow-sm transition-all">Export XLSX</button>
   </div>
+</div>
+<div class="relative mb-5">
+  <input type="text" id="bahan-search" placeholder="Cari bahan..." autocomplete="off"
+    class="w-full h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+  <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+  </svg>
 </div>
 <div id="table-wrap" class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden"></div>
 <div id="bahan-pagination" class="flex items-center justify-between mt-4"></div>

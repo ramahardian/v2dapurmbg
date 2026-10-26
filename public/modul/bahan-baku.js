@@ -109,6 +109,9 @@ async function loadBahanBaku() {
   const pagination = res.pagination || { total: data.length, totalPages: 1, page: 1 };
   bahanBakuState = { ...bahanBakuState, total: pagination.total, totalPages: pagination.totalPages, page: pagination.page };
 
+  const bbStatTotal = document.getElementById('bb-stat-total');
+  if (bbStatTotal) bbStatTotal.textContent = Number(pagination.total || 0).toLocaleString('id-ID');
+
   renderBahanBakuTable(data);
   renderBahanPagination();
 }
