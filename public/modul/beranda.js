@@ -774,7 +774,8 @@ async function renderDashboardKeuangan() {
       { label: 'Biaya Bulan Ini', value: fmtIDR(d.biaya_bulan_ini), gradient: 'from-orange-50 to-orange-100/60', border: 'border-orange-200/60', icon: 'arrow-down', iconColor: 'text-orange-500', textColor: 'text-orange-800', extra: `${growthBadge(d.biaya_growth)} <span class="text-[10px] text-stone-400">vs bulan lalu</span>` },
       { label: `${labaLabel} Bulan Ini`, value: fmtIDR(Math.abs(d.laba_rugi)), gradient: d.laba_rugi >= 0 ? 'from-emerald-50 to-emerald-100/60' : 'from-red-50 to-red-100/60', border: d.laba_rugi >= 0 ? 'border-emerald-200/60' : 'border-red-200/60', icon: 'dollar', iconColor: labaClass, textColor: labaClass, extra: `<span class="text-[10px] text-stone-500">Margin: ${d.margin}%</span>` },
     ];
-    let html = `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">`;
+    // Layout bento: semua kartu (stat, alert, tabel) jadi anak satu grid.
+    let html = `<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6 auto-rows-min">`;
     statCards.forEach(c => {
       const iconSvg = {
         'circle': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
@@ -788,16 +789,15 @@ async function renderDashboardKeuangan() {
           <span class="text-[10px] font-semibold uppercase tracking-wider ${c.textColor}">${c.label}</span>
           <svg class="w-4 h-4 ${c.iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">${iconSvg}</svg>
         </div>
-        <div class="mono text-xl sm:text-2xl font-bold ${c.textColor}">${c.value}</div>
+        <div class="mono text-lg sm:text-2xl font-bold break-words ${c.textColor}">${c.value}</div>
         ${c.extra ? `<div class="mt-1">${c.extra}</div>` : ''}
       </div>`;
     });
-    html += `</div>`;
 
     // Low stock alert
     if (d.stok_menipis > 0) {
       html += `
-      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-center gap-3 shadow-sm">
+      <div class="col-span-2 xl:col-span-4"><div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
         <div class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
           <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
         </div>
@@ -806,13 +806,13 @@ async function renderDashboardKeuangan() {
           <span class="text-amber-700">dengan stok menipis. </span>
           <a href="/gudang" data-key="gudang" class="font-medium text-amber-800 underline hover:no-underline">Cek Gudang →</a>
         </div>
-      </div>`;
+      </div></div>`;
     }
 
     // Recent transactions table
     const transaksi = d.transaksi_terbaru || [];
     html += `
-    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+    <div class="col-span-2 xl:col-span-4"><div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
       <div class="px-4 sm:px-5 py-3 sm:py-4 border-b border-stone-200 flex items-center justify-between">
         <h3 class="font-bold text-sm text-stone-800">Transaksi Terbaru</h3>
         <span class="text-[10px] font-medium text-stone-500">${d.bulan}/${d.tahun}</span>
@@ -854,7 +854,7 @@ async function renderDashboardKeuangan() {
           </tbody>
         </table>
       </div>
-    </div>`;
+    </div></div></div>`;
 
     c.innerHTML = html;
   } catch (err) {

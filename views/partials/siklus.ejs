@@ -1,5 +1,6 @@
-<!-- Hero Banner -->
-<div class="bg-gradient-to-br from-[#1e40af] to-[#3b82f6] rounded-2xl p-6 lg:p-8 mb-6 text-white shadow-lg">
+<!-- Hero + Stats + Filter dalam satu grid bento -->
+<div class="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-6 auto-rows-min">
+<div class="sm:col-span-3 xl:col-span-6 bg-gradient-to-br from-[#1e40af] to-[#3b82f6] rounded-2xl p-6 lg:p-8 text-white shadow-lg">
   <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
     <div>
       <div class="flex items-center gap-2 mb-2">
@@ -18,7 +19,7 @@
 </div>
 
 <!-- Quick Stats -->
-<div id="siklus-stats" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 hidden">
+<div id="siklus-stats" class="sm:col-span-3 xl:col-span-4 grid grid-cols-1 sm:grid-cols-3 gap-3 hidden">
   <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm">
     <div class="flex items-center justify-between mb-1">
       <span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Total Siklus</span>
@@ -46,7 +47,7 @@
 </div>
 
 <!-- Search & Filter Bar -->
-<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">
+<div class="sm:col-span-3 xl:col-span-2 bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3">
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div class="relative flex-1 min-w-[200px] max-w-xs">
       <svg class="absolute left-3 top-2.5 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -70,7 +71,7 @@
       </button>
     </div>
   </div>
-</div>
+</div></div>
 
 <!-- Siklus Grid -->
 <div id="siklus-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>

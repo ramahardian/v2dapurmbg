@@ -12,25 +12,29 @@
 
 <!-- ===== TAB BULANAN ===== -->
 <div id="pay-bulanan">
-  <div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-      <div class="flex items-center gap-2">
-        <svg class="w-4 h-4 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
-        <select id="pay-filter-karyawan" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
-          <option value="">Semua Karyawan</option>
-        </select>
-        <input id="pay-filter-periode" type="date" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
-        <select id="pay-filter-status" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
-          <option value="">Semua Status</option>
-          <option>Draft</option><option>Disetujui</option><option>Dibayar</option>
-        </select>
+  <div class="grid grid-cols-1 xl:grid-cols-4 gap-3 mb-4">
+    <div class="xl:col-span-3 bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 flex items-center">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 w-full">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+          <select id="pay-filter-karyawan" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+            <option value="">Semua Karyawan</option>
+          </select>
+          <input id="pay-filter-periode" type="date" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
+          <select id="pay-filter-status" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+            <option value="">Semua Status</option>
+            <option>Draft</option><option>Disetujui</option><option>Dibayar</option>
+          </select>
+        </div>
       </div>
-      <div class="flex gap-1.5">
-        <button onclick="loadPayroll()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm flex items-center gap-1.5">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Filter
+    </div>
+    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 flex items-center">
+      <div class="flex items-center gap-2 w-full">
+        <button onclick="loadPayroll()" class="flex-1 min-w-0 h-9 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-medium transition-colors shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Filter
         </button>
-        <button onclick="openPayrollForm()" class="border border-stone-300 text-stone-700 hover:bg-stone-50 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>+ Tambah
+        <button onclick="openPayrollForm()" class="flex-1 min-w-0 h-9 px-2 border border-stone-300 text-stone-700 hover:bg-stone-50 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>+ Tambah
         </button>
       </div>
     </div>
@@ -61,10 +65,11 @@
 
 <!-- ===== TAB MINGGUAN ===== -->
 <div id="pay-mingguan" class="hidden">
-  <div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4">
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-      <div class="flex items-center gap-2">
-        <svg class="w-4 h-4 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+  <div class="grid grid-cols-1 xl:grid-cols-4 gap-3 mb-4">
+    <div class="xl:col-span-3 bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 flex items-center">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 w-full">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <select id="pm-filter-bulan" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
           <% const BLN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']; %>
           <% BLN.forEach((n,i) => { %>
@@ -79,8 +84,13 @@
           <option value="4">Minggu 4 (22-28)</option>
           <option value="5">Minggu 5 (29-akhir)</option>
         </select>
-        <button onclick="loadPayrollMingguan()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm flex items-center gap-1.5">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Tampilkan
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 flex items-center">
+      <div class="flex items-center gap-2 w-full">
+        <button onclick="loadPayrollMingguan()" class="flex-1 min-w-0 h-9 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-medium transition-colors shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Tampilkan
         </button>
       </div>
     </div>

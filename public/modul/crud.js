@@ -6,32 +6,36 @@ async function renderCrud(cfg) {
   _crudCfg = cfg;
   _crudState = { page: 1, limit: 25, search: '', total: 0, totalPages: 1 };
   const c = document.getElementById('content');
-  c.innerHTML = `<div id="crud-stats" class="${cfg.stats ? '' : 'hidden'}">
-    <div id="crud-stats-content" class="flex flex-wrap gap-3 mb-4"></div>
-  </div>
-  <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-    <div class="flex items-center gap-2">
-      <button id="add-btn" class="h-11 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  // Layout bento: satu grid tile (statistik / cari / aksi) alih-alih toolbar
+  // stacked, meniru pola halaman Bahan Baku.
+  const statsTile = `<div id="crud-stats" class="${cfg.stats ? 'md:col-span-2' : 'hidden'}">
+    <div id="crud-stats-content" class="grid grid-cols-2 xl:grid-cols-3 gap-3 h-full"></div>
+  </div>`;
+  const searchTile = `<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 ${cfg.stats ? 'md:col-span-4' : 'md:col-span-2'} flex items-center">
+    <div class="relative w-full">
+      <input id="crud-search" placeholder="Cari..." class="w-full h-10 pl-10 pr-4 rounded-xl border border-stone-200 bg-stone-50/60 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+      <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    </div>
+  </div>`;
+  const actionTile = `<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center">
+    <div class="flex flex-wrap items-center gap-2 w-full">
+      <button id="add-btn" class="h-10 px-4 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-[13px] font-semibold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Tambah
       </button>
-      <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden h-10 px-4 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl items-center gap-1.5 shadow-sm transition-all">
+      <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden h-10 px-4 text-[13px] font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl items-center gap-1.5 shadow-sm transition-all whitespace-nowrap">
         Hapus Terpilih <span id="crud-selected-count" class="font-bold">0</span>
       </button>
-      ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-400 hover:text-stone-600 hover:bg-stone-50 shadow-sm transition-all" title="Info halaman ini">
+      ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-400 hover:text-stone-600 hover:bg-stone-50 shadow-sm transition-all shrink-0" title="Info halaman ini">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       </button>` : ''}
+      ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="h-10 px-3.5 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${cfg.sync.label}</button>` : ''}
+      ${cfg.extraButtons ? cfg.extraButtons.filter(b => !b.adminOnly || currentUser?.role === 'admin').map(b => `<button onclick="${b.onclick}" class="h-10 px-3.5 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${b.label}</button>`).join('') : ''}
+      <button onclick="exportXlsx()" class="h-10 px-3.5 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap ml-auto">Export XLSX</button>
     </div>
-    <div class="flex items-center gap-2">
-      <div class="relative">
-        <input id="crud-search" placeholder="Cari..." class="w-56 h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-      </div>
-      ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="h-11 px-4 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-xl text-sm font-medium shadow-sm transition-all">${cfg.sync.label}</button>` : ''}
-      ${cfg.extraButtons ? cfg.extraButtons.filter(b => !b.adminOnly || currentUser?.role === 'admin').map(b => `<button onclick="${b.onclick}" class="h-11 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-sm font-medium shadow-sm transition-all">${b.label}</button>`).join('') : ''}
-      <button onclick="exportXlsx()" class="h-11 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-sm font-medium shadow-sm transition-all">Export XLSX</button>
-    </div>
-  </div>
+  </div>`;
+  const headerTiles = cfg.stats ? statsTile + actionTile + searchTile : searchTile + actionTile;
+  c.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">${headerTiles}</div>
   ${cfg.filters && cfg.filters.length ? `<div id="crud-filters" class="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-xl border border-stone-200 bg-stone-50/60">
     ${cfg.filters.map(f => {
       const opts = f.type === 'select' ? `<option value="">Semua</option>${f.opts.map(o => `<option value="${o}">${o}</option>`).join('')}` : '';
@@ -259,13 +263,13 @@ async function renderCrudStats(cfg) {
     if (!contentEl) return;
     var cards = '';
     var fmt = cfg.stats.format === 'num' ? fmtNum(totalVal) : totalVal;
-    cards += '<div class="flex-1 min-w-[140px] bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">' + cfg.stats.label + '</div><div class="text-xl font-bold text-blue-800">' + fmt + '</div></div>';
+    cards += '<div class="col-span-2 flex-1 min-w-[140px] bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">' + cfg.stats.label + '</div><div class="text-xl font-bold text-blue-800 break-words">' + fmt + '</div></div>';
     if (cfg.stats.extra) {
       cfg.stats.extra.forEach(function(x) {
         var c = x.color || 'blue';
         // Gunakan nilai total dari backend (prefixed total_) agar akurat untuk seluruh data
         var val = statsRes['total_' + x.field] != null ? Number(statsRes['total_' + x.field]) : 0;
-        cards += '<div class="flex-1 min-w-[140px] bg-gradient-to-br from-' + c + '-50 to-' + c + '-100/60 rounded-2xl border border-' + c + '-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-' + c + '-700 mb-0.5">' + x.label + '</div><div class="text-xl font-bold text-' + c + '-800">' + fmtNum(val) + '</div></div>';
+        cards += '<div class="flex-1 min-w-[140px] bg-gradient-to-br from-' + c + '-50 to-' + c + '-100/60 rounded-2xl border border-' + c + '-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-' + c + '-700 mb-0.5">' + x.label + '</div><div class="text-xl font-bold text-' + c + '-800 break-words">' + fmtNum(val) + '</div></div>';
       });
     }
     contentEl.innerHTML = cards;
