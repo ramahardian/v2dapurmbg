@@ -2695,8 +2695,6 @@ function renderReportPage(tab) {
 }
 function renderLapRab() { renderReportPage('rab'); }
 function renderLapRabBulanan() { renderReportPage('rab-bulanan'); }
-function renderLapPersediaan() { renderReportPage('persediaan'); }
-function renderLapDistribusi() { renderReportPage('distribusi'); }
 function renderLapKeuangan() { renderReportPage('keuangan'); }
 function renderLapPengeluaranBulanan() { renderReportPage('pengeluaran-bulanan'); }
 function renderLapPenggunaanAnggaran() {
