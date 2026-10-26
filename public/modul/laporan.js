@@ -153,8 +153,8 @@ const tabColors = {
         '</div></div>';
 
       // Stat Cards (bento: kartu utama lebar 2 kolom)
-      var statCards = '<div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4">' +
-        '<div class="lg:col-span-2 bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm">' +
+      var statCards = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">' +
+        '<div class="col-span-2 bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm">' +
           '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Anggaran</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg></div>' +
           '<div class="text-lg font-bold text-emerald-800">' + fmtIDR(r.grand_total) + '</div>' +
           '<div class="text-[10px] text-emerald-600/70">Sama dengan Budget (tabel budget)</div>' +
@@ -707,8 +707,8 @@ const tabColors = {
       var serapanKas = s.total_budget > 0 ? (s.total_realisasi_kas / s.total_budget * 100) : 0;
 
       // Stat cards
-      var statCards = '<div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4">' +
-        '<div class="lg:col-span-2 bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm">' +
+      var statCards = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">' +
+        '<div class="col-span-2 bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm">' +
           '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Periode</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg></div>' +
           '<div class="text-lg font-bold text-emerald-800">' + fmtNum(s.total_periode) + '</div>' +
           '<div class="text-[10px] text-emerald-600/70">Total bulan</div>' +
@@ -1052,8 +1052,8 @@ const tabColors = {
           '</select>' +
         '</div></div>';
 
-      var statCards = '<div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4">' +
-        '<div class="lg:col-span-2 bg-gradient-to-br from-rose-50 to-rose-100/60 rounded-2xl border border-rose-200/60 p-4 shadow-sm">' +
+      var statCards = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">' +
+        '<div class="col-span-2 bg-gradient-to-br from-rose-50 to-rose-100/60 rounded-2xl border border-rose-200/60 p-4 shadow-sm">' +
           '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-rose-700">Siklus</span><svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div>' +
           '<div class="text-lg font-bold text-rose-800">' + fmtNum(ringkasan.totalSiklus) + '</div>' +
           '<div class="text-[10px] text-rose-600/70">Total siklus</div>' +
@@ -1104,8 +1104,8 @@ const tabColors = {
       window._lapData = { tab, rows, headers: ['No PO','Tanggal','Supplier','Item','Total','Status'], fields: ['no_po','tanggal','supplier_nama','item_nama','total_nilai','status'],
         fmt: rows.map(d => [d.no_po, fmtDate(d.tanggal), d.supplier_nama||'-', fmtItem(d), fmtIDR(d.total_nilai), d.status]) };
       window['_export_pembelian'] = { data: rows.map(d => ({ ...d, item_nama: fmtItem(d) })), fields: ['no_po','tanggal','supplier_nama','item_nama','total_nilai','status'] };
-      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
-        <div class="lg:col-span-2 bg-gradient-to-br from-indigo-50 to-indigo-100/60 rounded-2xl border border-indigo-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-indigo-700">Total PO</span><svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><div class="text-lg font-bold text-indigo-800">${fmtNum(r.stats.total_po)}</div><div class="text-[10px] text-indigo-600/70">Total purchase order</div></div>
+      window._lapStatCards = `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+        <div class="col-span-2 bg-gradient-to-br from-indigo-50 to-indigo-100/60 rounded-2xl border border-indigo-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-indigo-700">Total PO</span><svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><div class="text-lg font-bold text-indigo-800">${fmtNum(r.stats.total_po)}</div><div class="text-[10px] text-indigo-600/70">Total purchase order</div></div>
         <div class="bg-gradient-to-br from-stone-50 to-stone-100/60 rounded-2xl border border-stone-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-stone-700">Draft</span><svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="text-lg font-bold text-stone-800">${fmtNum(r.stats.draft)}</div><div class="text-[10px] text-stone-600/70">Menunggu approval</div></div>
         <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Disetujui</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><div class="text-lg font-bold text-blue-800">${fmtNum(r.stats.disetujui)}</div><div class="text-[10px] text-blue-600/70">Telah disetujui</div></div>
         <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Diterima</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><div class="text-lg font-bold text-emerald-800">${fmtNum(r.stats.diterima)}</div><div class="text-[10px] text-emerald-600/70">Barang diterima</div></div>
@@ -1147,8 +1147,8 @@ const tabColors = {
       window._lapData = { tab, rows, headers: ['Tanggal','Menu','Kategori','Porsi','Status'], fields: ['tanggal_produksi','menu_nama','kategori_penerima','jumlah_porsi','status'],
         fmt: rows.map(d => [fmtDate(d.tanggal_produksi), d.menu_nama, d.kategori_penerima||'-', fmtNum(d.jumlah_porsi), d.status]) };
       window['_export_produksi'] = { data: rows, fields: ['tanggal_produksi','menu_nama','kategori_penerima','jumlah_porsi','status'] };
-      window._lapStatCards = `<div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
-        <div class="lg:col-span-2 bg-gradient-to-br from-lime-50 to-lime-100/60 rounded-2xl border border-lime-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-lime-700">Produksi</span><svg class="w-4 h-4 text-lime-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div><div class="text-lg font-bold text-lime-800">${fmtNum(r.stats.total)}</div><div class="text-[10px] text-lime-600/70">Total produksi</div></div>
+      window._lapStatCards = `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+        <div class="col-span-2 bg-gradient-to-br from-lime-50 to-lime-100/60 rounded-2xl border border-lime-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-lime-700">Produksi</span><svg class="w-4 h-4 text-lime-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div><div class="text-lg font-bold text-lime-800">${fmtNum(r.stats.total)}</div><div class="text-[10px] text-lime-600/70">Total produksi</div></div>
         <div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Porsi</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="text-lg font-bold text-blue-800">${fmtNum(r.stats.total_porsi)}</div><div class="text-[10px] text-blue-600/70">Total porsi diproduksi</div></div>
         <div class="bg-gradient-to-br from-sky-50 to-sky-100/60 rounded-2xl border border-sky-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-sky-700">Rata/Hari</span><svg class="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg></div><div class="text-lg font-bold text-sky-800">${r.stats.total > 0 ? fmtNum(Math.round(r.stats.total_porsi / r.stats.total)) : 0}</div><div class="text-[10px] text-sky-600/70">Porsi per produksi</div></div>
         <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-4 shadow-sm"><div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Diproduksi</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><div class="text-lg font-bold text-emerald-800">${fmtNum(r.stats.diproduksi)}</div><div class="text-[10px] text-emerald-600/70">Sedang diproses</div></div>
@@ -1580,8 +1580,8 @@ const tabColors = {
         '<button onclick="showLap(\'rab-pembelian\')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-[11px] font-medium">Refresh</button>' +
         '</div></div>';
 
-      var statCards = '<div class="grid grid-cols-2 lg:grid-cols-6 gap-2 sm:gap-3 mb-4">' +
-        statCard('Total Budget', fmtIdr(r.total_budget), 'RAB periode ini', 'bg-emerald-50', 'lg:col-span-2') +
+      var statCards = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-4">' +
+        statCard('Total Budget', fmtIdr(r.total_budget), 'RAB periode ini', 'bg-emerald-50', 'col-span-2') +
         statCard('Total PO', fmtIdr(r.grand_total_po), r.suppliers ? r.suppliers.length + ' supplier' : '0 supplier', 'bg-blue-50') +
         statCard('Total Bayar', fmtIdr(r.total_bayar || 0), r.sisa_bayar ? 'Sisa: ' + fmtIdr(r.sisa_bayar) : '', r.total_bayar > 0 ? 'bg-teal-50' : 'bg-stone-50') +
         statCard('Serapan', r.serapan_persen.toFixed(1) + '%', 'dari total budget', 'bg-violet-50') +

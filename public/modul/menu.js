@@ -168,7 +168,7 @@ function renderMenuBySiklusHtml(data) {
   </div>`;
 
   // Stats cards (bento: tile utama lebar + 3 tile kecil)
-  const statsHtml = `<div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-6">
+  const statsHtml = `<div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
     <div class="col-span-2 bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 px-5 py-4 shadow-sm flex items-center justify-between"><div><div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">Total Menu</div><div class="text-3xl font-bold text-blue-800">${totalMenu}</div></div><svg class="w-8 h-8 text-blue-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></div>
     <div class="bg-gradient-to-br from-sky-50 to-sky-100/60 rounded-2xl border border-sky-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-sky-700 mb-0.5">Digunakan di Siklus</div><div class="text-xl font-bold text-sky-800">${usedInSiklus}</div></div>
     <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 mb-0.5">Standalone</div><div class="text-xl font-bold text-emerald-800">${standalone.length}</div></div>

@@ -32,7 +32,7 @@ async function renderBackup() {
   if (!c) return;
   backupRestoreFile = null;
   c.innerHTML = `
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
 
   <!-- Tile aksi backup -->
   <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-5 shadow-sm flex flex-col">
@@ -67,7 +67,7 @@ async function renderBackup() {
   </div>
 
   <!-- Restore -->
-  <div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden lg:col-span-3">
+  <div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden md:col-span-2 lg:col-span-3">
     <div class="px-5 py-4 border-b border-stone-100">
       <h2 class="font-bold text-sm text-stone-800">Restore Database dari File .sql</h2>
       <p class="text-xs text-stone-500">Unggah file hasil backup (atau dump MySQL lain) untuk mengembalikan isi database. File diverifikasi dulu sebelum bisa direstore.</p>
