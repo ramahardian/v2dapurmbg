@@ -18,20 +18,20 @@ async function renderCrud(cfg) {
     </div>
   </div>`;
   const actionTile = `<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center">
-    <div class="flex flex-wrap items-center gap-2 w-full">
-      <button id="add-btn" class="h-10 px-4 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-[13px] font-semibold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap">
+    <div class="flex flex-wrap items-center gap-4 w-full">
+      <button id="add-btn" class="h-10 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-[13px] font-semibold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Tambah
       </button>
-      <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden h-10 px-4 text-[13px] font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl items-center gap-1.5 shadow-sm transition-all whitespace-nowrap">
+      <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden h-10 px-5 text-[13px] font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl items-center gap-2 shadow-sm transition-all whitespace-nowrap">
         Hapus Terpilih <span id="crud-selected-count" class="font-bold">0</span>
       </button>
       ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-400 hover:text-stone-600 hover:bg-stone-50 shadow-sm transition-all shrink-0" title="Info halaman ini">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       </button>` : ''}
-      ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="h-10 px-3.5 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${cfg.sync.label}</button>` : ''}
-      ${cfg.extraButtons ? cfg.extraButtons.filter(b => !b.adminOnly || currentUser?.role === 'admin').map(b => `<button onclick="${b.onclick}" class="h-10 px-3.5 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${b.label}</button>`).join('') : ''}
-      <button onclick="exportXlsx()" class="h-10 px-3.5 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap ml-auto">Export XLSX</button>
+      ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="h-10 px-4 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${cfg.sync.label}</button>` : ''}
+      ${cfg.extraButtons ? cfg.extraButtons.filter(b => !b.adminOnly || currentUser?.role === 'admin').map(b => `<button onclick="${b.onclick}" class="h-10 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${b.label}</button>`).join('') : ''}
+      <button onclick="exportXlsx()" class="h-10 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap ml-auto">Export XLSX</button>
     </div>
   </div>`;
   const headerTiles = cfg.stats ? statsTile + actionTile + searchTile : searchTile + actionTile;
