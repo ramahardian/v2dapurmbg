@@ -1,7 +1,7 @@
 // Navigation groups for sidebar
 const NAV_GROUPS = [
   { items: ['dashboard'] },
-  { label: 'Operasional', items: ['penerima-manfaat', 'bahan-baku', 'gudang', 'produksi', 'distribusi'] },
+  { label: 'Operasional', items: ['penerima-manfaat', 'bahan-baku'] },
   { label: 'Pembelian', items: ['supplier', 'pembelian', 'penerimaan'] },
   { label: 'Akuntansi', items: ['budgeting', 'kas-bank', 'laporan'] },
   { label: 'SDM', items: ['karyawan', 'absensi', 'ijin-cuti', 'payroll'] },
@@ -14,9 +14,6 @@ const MODULES = {
   'penerima-manfaat': { title: 'Penerima Manfaat', sub: 'Master data kelompok penerima MBG', icon: '', crud: {} },
   'bahan-baku': { title: 'Bahan Baku', sub: 'Master bahan baku & harga satuan', icon: '', crud: {} },
   menu: { title: 'Menu & Gizi', sub: 'Resep, gramasi & kandungan gizi', icon: '', render: renderMenu },
-  gudang: { title: 'Gudang & Persediaan', sub: 'Stok, barang masuk, & barang keluar', icon: '', render: renderGudang },
-  produksi: { title: 'Produksi Dapur', sub: 'Catatan produksi harian', icon: '', crud: {} },
-  distribusi: { title: 'Distribusi', sub: 'Pengiriman porsi ke titik penerima', icon: '', crud: {} },
   supplier: { title: 'Supplier', sub: 'Daftar pemasok bahan baku', icon: '', crud: {} },
   pembelian: { title: 'Pembelian — PR & PO', sub: 'Purchase Request -> Purchase Order -> Invoice', icon: '', crud: {} },
   penerimaan: { title: 'Penerimaan Barang', sub: 'Barang masuk dari supplier', icon: '', crud: {} },
