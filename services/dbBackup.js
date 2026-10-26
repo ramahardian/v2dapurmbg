@@ -198,6 +198,124 @@ function validateDumpSql(sql) {
   return { ok: true };
 }
 
+// ── Verifikasi isi dump SEBELUM restore ──────────────────────────
+// Parse kasar file .sql: tabel apa saja yang disentuh + jenis statement-nya,
+// lalu cocokkan dengan tabel yang ada di database saat ini.
+function parseDumpTables(sql) {
+  const s = String(sql || '');
+  const map = new Map();
+  const re = /\b(DROP\s+TABLE|CREATE\s+TABLE|INSERT\s+INTO)\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?([`"]?[\w$]+[`"]?)/gi;
+  let m;
+  while ((m = re.exec(s))) {
+    const kind = m[1].toUpperCase().replace(/\s+/g, ' ');
+    const name = m[2].replace(/[`"]/g, '');
+    if (!name) continue;
+    let e = map.get(name);
+    if (!e) { e = { name, drop: false, create: false, insert: 0 }; map.set(name, e); }
+    if (kind === 'DROP TABLE') e.drop = true;
+    else if (kind === 'CREATE TABLE') e.create = true;
+    else e.insert += 1;
+  }
+  return Array.from(map.values());
+}
+
+// Hitung kemunculan jenis statement (untuk ringkasan & peringatan).
+// Statement non-dump (UPDATE/DELETE/ALTER/...) hanya dihitung bila benar-benar
+// jadi AWAL statement (setelah ';') — supaya 'ON UPDATE current_timestamp'
+// pada definisi kolom tidak dianggap UPDATE sungguhan.
+function countStatementKinds(sql) {
+  const s = String(sql || '');
+  const count = (re) => (s.match(re) || []).length;
+  const statements = s.split(';').map(x => x.trim().toUpperCase());
+  const starts = (kw) => statements.filter(st => st.startsWith(kw)).length;
+  return {
+    'CREATE TABLE': count(/\bCREATE\s+TABLE\b/gi),
+    'DROP TABLE': count(/\bDROP\s+TABLE\b/gi),
+    'INSERT INTO': count(/\bINSERT\s+INTO\b/gi),
+    'CREATE DATABASE': count(/\bCREATE\s+DATABASE\b/gi),
+    'UPDATE': starts('UPDATE '),
+    'DELETE FROM': starts('DELETE FROM'),
+    'ALTER TABLE': starts('ALTER TABLE'),
+    'TRUNCATE TABLE': starts('TRUNCATE '),
+    'DROP DATABASE': starts('DROP DATABASE'),
+    'GRANT': starts('GRANT '),
+    'CREATE USER': starts('CREATE USER'),
+    'SET PASSWORD': starts('SET PASSWORD'),
+  };
+}
+
+// Cek keberadaan tabel di database (information_schema) + perkiraan jumlah baris.
+async function lookupTablesInDb(names) {
+  const found = new Map();
+  if (!names.length) return found;
+  const dbName = process.env.DB_NAME || 'mbg_kitchen';
+  const conn = await openDumpConnection();
+  try {
+    const placeholders = names.map(() => '?').join(',');
+    const [rows] = await conn.query(
+      'SELECT table_name AS tbl, table_rows AS approx FROM information_schema.tables WHERE table_schema = ? AND table_name IN (' + placeholders + ')',
+      [dbName, ...names]
+    );
+    for (const r of rows) {
+      found.set(String(r.tbl).toLowerCase(), { exists: true, rows: r.approx == null ? null : Number(r.approx) });
+    }
+  } finally {
+    await conn.end().catch(() => {});
+  }
+  return found;
+}
+
+// Verifikasi lengkap: validasi + daftar tabel + status di DB + ringkasan.
+async function verifyDumpSql(sql) {
+  const s = String(sql || '');
+  const byteLen = Buffer.byteLength(s, 'utf8');
+  const counts = countStatementKinds(s);
+  const validation = validateDumpSql(s);
+  const tables = parseDumpTables(s);
+  const inDb = await lookupTablesInDb(tables.map(t => t.name));
+
+  const list = tables.map(t => {
+    const db = inDb.get(t.name.toLowerCase());
+    const exists = !!(db && db.exists);
+    let action = 'BARU';
+    if (t.drop && t.create) action = exists ? 'GANTI (drop + create ulang)' : 'BARU (drop diabaikan)';
+    else if (t.create) action = exists ? 'GANTI (create if not exists)' : 'BARU';
+    else if (t.insert) action = exists ? 'TAMBAH DATA (insert)' : 'INSERT ke tabel yang belum ada';
+    return {
+      name: t.name,
+      exists,
+      current_rows: exists ? (db.rows == null ? null : db.rows) : null,
+      has_drop: t.drop,
+      has_create: t.create,
+      insert_stmts: t.insert,
+      action,
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name));
+
+  const warnings = [];
+  if (counts['UPDATE'] || counts['DELETE FROM'] || counts['ALTER TABLE'] || counts['TRUNCATE TABLE']) {
+    warnings.push('File berisi statement UPDATE/DELETE/ALTER/TRUNCATE di luar pola dump biasa — pastikan isinya memang diinginkan.');
+  }
+  if (!tables.length) {
+    warnings.push('Tidak ditemukan statement CREATE TABLE / INSERT INTO — file mungkin bukan dump database.');
+  }
+
+  return {
+    ok: validation.ok,
+    error: validation.ok ? null : validation.error,
+    size: byteLen,
+    counts,
+    tables: list,
+    summary: {
+      total_tables: list.length,
+      existing: list.filter(t => t.exists).length,
+      new_tables: list.filter(t => !t.exists).length,
+      insert_stmts: counts['INSERT INTO'] || 0,
+    },
+    warnings,
+  };
+}
+
 // Jalankan isi dump (.sql) ke database via satu koneksi dengan
 // multipleStatements:true. Hanya dipanggil setelah validateDumpSql().
 async function restoreSqlDump(sql) {
@@ -229,6 +347,7 @@ module.exports = {
   getBackupPath,
   deleteBackupFile,
   validateDumpSql,
+  verifyDumpSql,
   restoreSqlDump,
 };
 

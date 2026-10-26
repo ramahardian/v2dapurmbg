@@ -35,15 +35,6 @@ const MODULES = {
     ], cols: ['nama','kategori_supply','kontak_person','telepon'] }
   },
   pembelian: { title: 'Pembelian — PR & PO', sub: 'Purchase Request → Purchase Order → Invoice', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>', render: renderPembelian },
-  penerimaan: { title: 'Penerimaan Barang', sub: 'Barang masuk dari supplier', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
-    crud: { endpoint: '/penerimaan_barang', fields: [
-      { k: 'no_dokumen', l: 'No Dokumen', req: true }, { k: 'tanggal_terima', l: 'Tanggal Terima', type: 'date', req: true },
-      { k: 'supplier_id', l: 'Supplier', type: 'select-api', source: '/supplier', valueField: 'id', labelField: 'nama', req: true }, { k: 'ref_po', l: 'Ref PO' },
-      { k: 'item', l: 'Detail Barang', type: 'textarea' },
-      { k: 'total_nilai', l: 'Total Nilai (IDR)', type: 'number', fmt: 'idr' },
-      { k: 'status_qc', l: 'Status QC', type: 'select', opts: ['Lolos','Retur Sebagian','Ditolak'] },
-    ], cols: ['no_dokumen','tanggal_terima','supplier_nama','ref_po','total_nilai','status_qc'] }
-  },
   budgeting: { title: 'Budgeting', sub: 'Anggaran per periode & kategori', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
     crud: { endpoint: '/budget', formHelp: 'Untuk biaya <strong>non-PM</strong> (gas, listrik, transport): kosongkan Jml Penerima & Harga Porsi (isi 0), lalu isi Biaya Operasional saja. Kategori bisa "Operasional Dapur".', fields: [
       { k: 'periode', l: 'Periode', req: true, info: 'Bulan & tahun anggaran, contoh: 2026-07' },
@@ -140,7 +131,7 @@ const MODULES = {
 const NAV_GROUPS = [
   { items: ['dashboard', 'dashboard-keuangan'] },
   { label: 'Operasional', items: ['penerima-manfaat', 'bahan-baku'] },
-  { label: 'Pembelian', items: ['supplier', 'pembelian', 'penerimaan'] },
+  { label: 'Pembelian', items: ['supplier', 'pembelian'] },
   { label: 'Akuntansi', items: ['budgeting', 'kas-bank', 'bp-operasional', 'daftar-akun', { label: 'Laporan', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>', children: ['laporan-rab', 'laporan-rab-bulanan', 'laporan-persediaan', 'laporan-distribusi', 'laporan-keuangan', 'laporan-pengeluaran-bulanan', 'laporan-penggunaan-anggaran', 'laporan-bp-kas', 'laporan-siklus', 'laporan-pembelian', 'laporan-penerimaan', 'laporan-mutasi', 'laporan-produksi', 'laporan-payroll', 'laporan-payroll-mingguan', 'laporan-laba-rugi', 'laporan-arus-kas', 'laporan-jurnal-umum', 'laporan-buku-besar', 'laporan-neraca'] }, 'panduan-keuangan'] },
   { label: 'SDM', items: ['karyawan', 'absensi', 'ijin-cuti', 'hari-libur', 'payroll', 'shift', 'divisi', 'panduan-sdm'] },
   { label: 'Ahli Gizi', items: ['menu', 'editor-postingan', 'siklus', 'perencanaan', 'total-kebutuhan', 'standar-sp', 'sp-referensi', 'perhitungan-bdd', 'bdd-kalkulator', 'panduan-ahli-gizi'] },

@@ -8,26 +8,20 @@ function renderPanduanKeuangan() {
       link: { label: 'Buka Pembelian', action: "navigate('pembelian')" }
     },
     {
-      icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><path d="M12 6v12"/></svg>',
-      title: '2. Penerimaan Barang',
-      desc: 'Saat barang tiba, buat Penerimaan Barang. Catat no dokumen supplier, tanggal terima, dan status QC (Lolos/Retur/Ditolak). Data ini menjadi bukti serah terima.',
-      link: { label: 'Buka Penerimaan', action: "navigate('penerimaan')" }
-    },
-    {
       icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
-      title: '3. Pembayaran PO → Auto-Jurnal',
+      title: '2. Pembayaran PO → Auto-Jurnal',
       desc: 'Ubah status PO menjadi "Dibayar". Sistem OTOMATIS membuat jurnal di Kas & Bank: tipe "keluar", kategori "Pembayaran Supplier", akun "Dana Bahan Baku" (kode 2000). Realisasi budget ikut ter-update otomatis.',
       link: { label: 'Buka Kas & Bank', action: "navigate('kas-bank')" }
     },
     {
       icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
-      title: '4. Budgeting & Realisasi',
+      title: '3. Budgeting & Realisasi',
       desc: 'Atur anggaran per periode di modul Budgeting. Saat PO dibayar, realisasi otomatis terhitung dari total kas keluar, dibagi proporsional ke setiap entry budget sesuai total_budget masing-masing.',
       link: { label: 'Buka Budgeting', action: "navigate('budgeting')" }
     },
     {
       icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
-      title: '5. Laporan Keuangan',
+      title: '4. Laporan Keuangan',
       desc: 'Semua transaksi otomatis masuk ke laporan: Laba/Rugi, Pengeluaran Bulanan, Penggunaan Anggaran, RAB Bulanan, Buku Pembantu, dan Laporan Keuangan. Cukup buka tab laporan — data selalu terbaru.',
       link: { label: 'Buka Laporan', action: 'renderLaporan' }
     },

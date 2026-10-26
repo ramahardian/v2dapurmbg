@@ -538,6 +538,25 @@ router.delete('/system/backup/file', requireRole('admin'), async (req, res) => {
   }
 });
 
+// POST /system/backup/verify — verifikasi isi file .sql SEBELUM restore:
+// daftar tabel yang disentuh, apakah tabel sudah ada di DB, jumlah statement,
+// serta hasil validasi. Body: teks mentah file .sql (sama seperti restore).
+router.post(
+  '/system/backup/verify',
+  requireRole('admin'),
+  express.text({ type: 'text/plain', limit: '64mb' }),
+  async (req, res) => {
+    try {
+      const { verifyDumpSql } = require('../services/dbBackup');
+      const sql = typeof req.body === 'string' ? req.body : '';
+      const report = await verifyDumpSql(sql);
+      res.json({ ok: true, report });
+    } catch (err) {
+      res.status(500).json({ error: 'Gagal memverifikasi file: ' + err.message });
+    }
+  }
+);
+
 // POST /system/backup/restore — restore database dari file .sql hasil upload.
 // Body: teks mentah file .sql (Content-Type: text/plain, maks 64 MB).
 // Selalu membuat backup keamanan (pre-restore-*.sql) sebelum eksekusi.

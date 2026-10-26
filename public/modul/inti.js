@@ -118,7 +118,6 @@ function navItemVisible(key, userRole) {
   if (key === 'karyawan' || key === 'absensi' || key === 'payroll' || key === 'shift' || key === 'divisi' || key === 'ijin-cuti' || key === 'hari-libur' || key === 'panduan-sdm') return isAdminOrKeuangan;
   if (key === 'supplier') return isAdminOrKeuanganOrGudang;
   if (key === 'pembelian') return isAdminOrKeuanganOrGudang;
-  if (key === 'penerimaan') return isAdminOrKeuanganOrGudang;
   if (key === 'panduan-keuangan') return isAdminOrKeuangan;
   if (key === 'produksi' || key === 'distribusi') return isAdminOrProduksi;
   if (key === 'kelola-user' || key === 'backup') return userRole === 'admin';
@@ -359,9 +358,6 @@ function route() {
     return showAccessDenied();
   }
   if (key === 'pembelian' && !isAdminOrKeuanganOrGudang) {
-    return showAccessDenied();
-  }
-  if (key === 'penerimaan' && !isAdminOrKeuanganOrGudang) {
     return showAccessDenied();
   }
   if ((key === 'produksi' || key === 'distribusi') && !isAdminOrProduksi) {

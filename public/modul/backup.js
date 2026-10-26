@@ -5,6 +5,7 @@
 // Backend: /api/system/backup/* (routes/system.js + services/dbBackup.js).
 
 let backupRestoreFile = null;
+let backupRestoreVerify = null; // { key: 'nama:ukuran', report } — hasil verifikasi terakhir
 const RESTORE_MAX_BYTES = 64 * 1024 * 1024; // sama dengan limit express.text
 
 function fmtBytes(n) {
@@ -61,7 +62,7 @@ async function renderBackup() {
   <div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
     <div class="px-5 py-4 border-b border-stone-100">
       <h2 class="font-bold text-sm text-stone-800">Restore Database dari File .sql</h2>
-      <p class="text-xs text-stone-500">Unggah file hasil backup (atau dump MySQL lain) untuk mengembalikan isi database.</p>
+      <p class="text-xs text-stone-500">Unggah file hasil backup (atau dump MySQL lain) untuk mengembalikan isi database. File diverifikasi dulu sebelum bisa direstore.</p>
     </div>
     <div class="p-5 space-y-4">
       <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 leading-relaxed">
@@ -78,6 +79,8 @@ async function renderBackup() {
       </div>
 
       <div id="restore-file-info" class="hidden items-center gap-2 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs text-stone-600"></div>
+
+      <div id="restore-verify" class="hidden rounded-xl border border-stone-200 bg-stone-50/60 p-4"></div>
 
       <button id="btn-restore" onclick="runRestore()" disabled
               class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl font-semibold transition shadow-md">
@@ -168,9 +171,12 @@ function onRestoreFileSelected(input) {
   const info = document.getElementById('restore-file-info');
   const btn = document.getElementById('btn-restore');
   const log = document.getElementById('restore-log');
+  const vbox = document.getElementById('restore-verify');
   const f = input.files && input.files[0];
   backupRestoreFile = f || null;
+  backupRestoreVerify = null;
   if (log) { log.classList.add('hidden'); log.textContent = ''; }
+  if (vbox) { vbox.classList.add('hidden'); vbox.innerHTML = ''; }
   if (!f || !info || !btn) return;
 
   const isSql = /\.sql$/i.test(f.name);
@@ -189,17 +195,134 @@ function onRestoreFileSelected(input) {
     : '<span>✕ ' + escHtml(f.name) + ' (' + fmtBytes(f.size) + ')' + reason + '</span>';
   info.classList.remove('hidden');
   info.classList.add('flex');
-  btn.disabled = !valid;
+
+  // File valid → jalankan verifikasi; tombol restore baru aktif setelah lolos.
+  btn.disabled = true;
+  if (valid) verifyRestoreFile();
+}
+
+// Verifikasi isi file .sql di server: tabel yang disentuh, apakah tabel sudah
+// ada di database, jumlah statement, dan hasil validasi — sebelum restore.
+async function verifyRestoreFile() {
+  const f = backupRestoreFile;
+  const box = document.getElementById('restore-verify');
+  const btn = document.getElementById('btn-restore');
+  if (!f || !box) return;
+
+  box.classList.remove('hidden');
+  box.innerHTML = '<div class="flex items-center gap-2 text-xs text-stone-500">' +
+    '<svg class="animate-spin h-4 w-4 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm0 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>' +
+    'Memverifikasi isi file...</div>';
+  if (btn) btn.disabled = true;
+
+  const key = f.name + ':' + f.size;
+  try {
+    const sql = await f.text();
+    const r = await fetch('/api/system/backup/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      body: sql,
+      credentials: 'include',
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()));
+    const data = await r.json();
+    const rep = data.report;
+    if (!rep) throw new Error('Respons verifikasi tidak valid');
+    backupRestoreVerify = { key, report: rep };
+    box.innerHTML = restoreVerifyHtml(rep);
+    if (btn) btn.disabled = !rep.ok;
+  } catch (err) {
+    backupRestoreVerify = null;
+    box.innerHTML = '<div class="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">' +
+      '<b>Verifikasi gagal — restore dinonaktifkan.</b><br>' + escHtml(err.message) + '</div>';
+    if (btn) btn.disabled = true;
+  }
+}
+
+function restoreChip(label, color) {
+  const colors = {
+    stone: 'bg-stone-100 text-stone-600',
+    emerald: 'bg-emerald-100 text-emerald-700',
+    sky: 'bg-sky-100 text-sky-700',
+    violet: 'bg-violet-100 text-violet-700',
+    amber: 'bg-amber-100 text-amber-700',
+  };
+  return '<span class="inline-block px-2 py-0.5 rounded-lg font-semibold ' + (colors[color] || colors.stone) + '">' + label + '</span>';
+}
+
+function restoreVerifyHtml(rep) {
+  if (!rep.ok) {
+    return '<div class="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">' +
+      '<b>✕ File tidak lolos verifikasi — restore dinonaktifkan.</b><br>' + escHtml(rep.error || '') + '</div>';
+  }
+
+  const s = rep.summary || {};
+  let h = '<div class="flex flex-wrap items-center justify-between gap-2 mb-3">';
+  h += '<div class="text-xs font-semibold text-emerald-700">✓ File lolos verifikasi — siap direstore</div>';
+  h += '<button type="button" onclick="verifyRestoreFile()" class="text-[11px] px-2.5 py-1 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition">Verifikasi ulang</button>';
+  h += '</div>';
+
+  h += '<div class="flex flex-wrap gap-1.5 mb-3 text-[11px]">';
+  h += '<span class="inline-block px-2 py-0.5 rounded-lg font-semibold bg-stone-100 text-stone-600">' + fmtNum(s.total_tables || 0) + ' tabel di file</span>';
+  h += '<span class="inline-block px-2 py-0.5 rounded-lg font-semibold bg-emerald-100 text-emerald-700">' + fmtNum(s.existing || 0) + ' sudah ada di DB</span>';
+  h += '<span class="inline-block px-2 py-0.5 rounded-lg font-semibold bg-sky-100 text-sky-700">' + fmtNum(s.new_tables || 0) + ' tabel baru</span>';
+  h += '<span class="inline-block px-2 py-0.5 rounded-lg font-semibold bg-violet-100 text-violet-700">' + fmtNum(s.insert_stmts || 0) + ' statement INSERT</span>';
+  h += '</div>';
+
+  const tables = Array.isArray(rep.tables) ? rep.tables : [];
+  if (tables.length) {
+    h += '<div class="overflow-auto max-h-60 border border-stone-200 rounded-lg bg-white">';
+    h += '<table class="w-full"><thead><tr class="border-b border-stone-100">';
+    h += '<th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">Tabel</th>';
+    h += '<th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">Di Database</th>';
+    h += '<th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">Isi File</th>';
+    h += '</tr></thead><tbody>';
+    for (const t of tables) {
+      const dbCell = t.exists
+        ? '<span class="inline-block px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-emerald-100 text-emerald-700">Ada' +
+          (t.current_rows == null ? '' : ' ≈ ' + fmtNum(t.current_rows) + ' baris') + '</span>'
+        : '<span class="inline-block px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-stone-100 text-stone-500">Belum ada</span>';
+      const fileBits = [];
+      if (t.has_drop) fileBits.push('DROP');
+      if (t.has_create) fileBits.push('CREATE');
+      if (t.insert_stmts) fileBits.push(fmtNum(t.insert_stmts) + '× INSERT');
+      const fileCell = t.action.indexOf('BARU') === 0
+        ? '<span class="inline-block px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-sky-100 text-sky-700">' + escHtml(t.action) + '</span>'
+        : '<span class="inline-block px-2 py-0.5 rounded-lg text-[10px] font-semibold ' +
+            (t.action.indexOf('GANTI') === 0 ? 'bg-amber-100 text-amber-700' : 'bg-violet-100 text-violet-700') + '">' + escHtml(t.action) + '</span>';
+      h += '<tr class="border-b border-stone-50">';
+      h += '<td class="px-3 py-2 text-xs font-medium text-stone-700 break-all">' + escHtml(t.name) + '</td>';
+      h += '<td class="px-3 py-2 whitespace-nowrap">' + dbCell + '</td>';
+      h += '<td class="px-3 py-2">' + fileCell + ' <span class="text-[10px] text-stone-400">(' + fileBits.join(', ') + ')</span></td>';
+      h += '</tr>';
+    }
+    h += '</tbody></table></div>';
+  }
+
+  if (rep.warnings && rep.warnings.length) {
+    h += '<ul class="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1">';
+    for (const w of rep.warnings) h += '<li>⚠ ' + escHtml(w) + '</li>';
+    h += '</ul>';
+  }
+  return h;
 }
 
 async function runRestore() {
   const f = backupRestoreFile;
   if (!f) return;
+  const verified = backupRestoreVerify && backupRestoreVerify.key === (f.name + ':' + f.size)
+    ? backupRestoreVerify.report : null;
+  if (!verified || !verified.ok) {
+    showAlert('File belum lolos verifikasi — jalankan verifikasi dulu.', 'warning');
+    return;
+  }
+  const sum = verified.summary || {};
   const ok = confirm(
     'RESTORE DATABASE SEKARANG?\n\n' +
-    'File : ' + f.name + ' (' + fmtBytes(f.size) + ')\n' +
-    'Isi database saat ini akan DIGANTI dengan isi file ini.\n' +
-    'Backup keamanan otomatis dibuat sebelum restore.\n\n' +
+    'File   : ' + f.name + ' (' + fmtBytes(f.size) + ')\n' +
+    'Isi    : ' + (sum.total_tables || 0) + ' tabel (' + (sum.existing || 0) + ' sudah ada di DB, ' + (sum.new_tables || 0) + ' baru), ' + (sum.insert_stmts || 0) + ' INSERT\n' +
+    'Efek   : tabel yang ada akan DIGANTI / ditimpa sesuai isi file\n' +
+    'Backup : backup keamanan dibuat otomatis sebelum restore\n\n' +
     'Lanjutkan?'
   );
   if (!ok) return;
