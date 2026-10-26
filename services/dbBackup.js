@@ -10,10 +10,15 @@
  * (termasuk CREATE DATABASE + USE supaya mudah diimpor).
  */
 
+const fs = require('fs');
+const path = require('path');
 const mysql = require('mysql2');
 const mysqlPromise = require('mysql2/promise');
 
 const escape = mysql.escape;
+
+// Folder penyimpanan file backup (.sql) di root project
+const BACKUP_DIR = path.join(__dirname, '..', 'backups');
 
 // Hindari statement INSERT terlalu raksasa: 200 baris per statement
 const INSERT_BATCH = 200;
@@ -119,5 +124,111 @@ async function generateSqlDump() {
   return out.join('\n');
 }
 
-module.exports = { generateSqlDump };
+// ── Helper file backup ─────────────────────────────────────────────
+function ensureBackupDir() {
+  fs.mkdirSync(BACKUP_DIR, { recursive: true });
+  return BACKUP_DIR;
+}
+
+// Validasi nama file: hanya nama file .sql sederhana (tolak traversal path).
+function safeFileName(name) {
+  const n = String(name || '').trim();
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*\.sql$/.test(n)) return null;
+  if (n.includes('..')) return null;
+  return n;
+}
+
+// Buat file backup baru dari dump DB saat ini → simpan ke backups/.
+// prefix contoh: 'mbg-backup' atau 'pre-restore'.
+async function createBackupFile(prefix) {
+  const sql = await generateSqlDump();
+  ensureBackupDir();
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const name = (prefix || 'mbg-backup') + '-' + stamp + '.sql';
+  const fp = path.join(BACKUP_DIR, name);
+  await fs.promises.writeFile(fp, sql, 'utf8');
+  const st = await fs.promises.stat(fp);
+  return { name, size: st.size, created_at: st.mtime.toISOString() };
+}
+
+// Daftar file backup (terbaru di atas).
+function listBackupFiles() {
+  ensureBackupDir();
+  return fs.readdirSync(BACKUP_DIR)
+    .filter(f => f.endsWith('.sql'))
+    .map(f => {
+      const st = fs.statSync(path.join(BACKUP_DIR, f));
+      return { name: f, size: st.size, created_at: st.mtime.toISOString() };
+    })
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+}
+
+// Path absolut file backup — null bila nama tidak valid.
+function getBackupPath(name) {
+  const safe = safeFileName(name);
+  if (!safe) return null;
+  return path.join(BACKUP_DIR, safe);
+}
+
+async function deleteBackupFile(name) {
+  const fp = getBackupPath(name);
+  if (!fp) throw new Error('Nama file tidak valid');
+  await fs.promises.unlink(fp);
+}
+
+// Validasi isi file .sql sebelum dijalankan (tolak statement destruktif
+// di luar scope restore, mis. DROP DATABASE / GRANT).
+function validateDumpSql(sql) {
+  const s = String(sql || '');
+  if (!s.trim()) return { ok: false, error: 'File kosong.' };
+  if (!/CREATE\s+TABLE|INSERT\s+INTO|CREATE\s+DATABASE/i.test(s)) {
+    return { ok: false, error: 'File bukan dump database MySQL (tidak ditemukan CREATE TABLE / INSERT INTO).' };
+  }
+  const blocked = [
+    [/\bDROP\s+DATABASE\b/i, 'DROP DATABASE'],
+    [/\bALTER\s+DATABASE\b/i, 'ALTER DATABASE'],
+    [/\bCREATE\s+USER\b/i, 'CREATE USER'],
+    [/\bDROP\s+USER\b/i, 'DROP USER'],
+    [/\bGRANT\s+/i, 'GRANT'],
+    [/\bSET\s+PASSWORD\b/i, 'SET PASSWORD'],
+  ];
+  for (const [re, label] of blocked) {
+    if (re.test(s)) return { ok: false, error: 'File berisi statement terlarang: ' + label + '.' };
+  }
+  return { ok: true };
+}
+
+// Jalankan isi dump (.sql) ke database via satu koneksi dengan
+// multipleStatements:true. Hanya dipanggil setelah validateDumpSql().
+async function restoreSqlDump(sql) {
+  const conn = await mysqlPromise.createConnection({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    decimalNumbers: false,
+    supportBigNumbers: true,
+    bigNumberStrings: true,
+    multipleStatements: true,
+  });
+  try {
+    const [result] = await conn.query(sql);
+    return Array.isArray(result) ? result.length : 1;
+  } finally {
+    await conn.end().catch(() => {});
+  }
+}
+
+module.exports = {
+  generateSqlDump,
+  BACKUP_DIR,
+  safeFileName,
+  createBackupFile,
+  listBackupFiles,
+  getBackupPath,
+  deleteBackupFile,
+  validateDumpSql,
+  restoreSqlDump,
+};
 

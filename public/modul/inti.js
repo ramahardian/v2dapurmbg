@@ -121,7 +121,7 @@ function navItemVisible(key, userRole) {
   if (key === 'penerimaan') return isAdminOrKeuanganOrGudang;
   if (key === 'panduan-keuangan') return isAdminOrKeuangan;
   if (key === 'produksi' || key === 'distribusi') return isAdminOrProduksi;
-  if (key === 'kelola-user') return userRole === 'admin';
+  if (key === 'kelola-user' || key === 'backup') return userRole === 'admin';
   if (key === 'template-poster') return userRole === 'admin' || userRole === 'ahli_gizi';
   return true;
 }
@@ -367,7 +367,7 @@ function route() {
   if ((key === 'produksi' || key === 'distribusi') && !isAdminOrProduksi) {
     return showAccessDenied();
   }
-  if (key === 'kelola-user' && userRole !== 'admin') {
+  if ((key === 'kelola-user' || key === 'backup') && userRole !== 'admin') {
     return showAccessDenied();
   }
   if (key === 'template-poster' && userRole !== 'admin' && userRole !== 'ahli_gizi') {

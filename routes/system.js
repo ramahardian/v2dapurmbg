@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const db = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { runMigration } = require('../scripts/migrate');
@@ -481,6 +482,131 @@ router.get('/system/backup-page', requireRole('admin'), (req, res) => {
 </body>
 </html>`);
 });
+
+// ============================================================
+// FITUR BACKUP & RESTORE (halaman SPA /backup)
+// File .sql disimpan di folder /backups (lihat services/dbBackup.js).
+// ============================================================
+
+// Satu restore boleh berjalan pada satu waktu
+let backupRestoreBusy = false;
+
+// GET /system/backup/list — daftar file backup (.sql) di folder backups/
+router.get('/system/backup/list', requireRole('admin'), (req, res) => {
+  try {
+    const { listBackupFiles } = require('../services/dbBackup');
+    res.json({ ok: true, files: listBackupFiles() });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal membaca daftar backup: ' + err.message });
+  }
+});
+
+// POST /system/backup/create — buat backup sekarang, simpan ke folder backups/
+router.post('/system/backup/create', requireRole('admin'), async (req, res) => {
+  try {
+    const { createBackupFile } = require('../services/dbBackup');
+    const file = await createBackupFile('mbg-backup');
+    res.json({ ok: true, file });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal membuat backup: ' + err.message });
+  }
+});
+
+// GET /system/backup/file?name= — unduh file backup dari folder backups/
+router.get('/system/backup/file', requireRole('admin'), (req, res) => {
+  try {
+    const { getBackupPath } = require('../services/dbBackup');
+    const fp = getBackupPath(req.query.name);
+    if (!fp) return res.status(400).json({ error: 'Nama file tidak valid' });
+    if (!fs.existsSync(fp)) return res.status(404).json({ error: 'File tidak ditemukan' });
+    res.download(fp);
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal mengunduh file: ' + err.message });
+  }
+});
+
+// DELETE /system/backup/file?name= — hapus file backup
+router.delete('/system/backup/file', requireRole('admin'), async (req, res) => {
+  try {
+    const { deleteBackupFile } = require('../services/dbBackup');
+    await deleteBackupFile(req.query.name);
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.message === 'Nama file tidak valid') return res.status(400).json({ error: err.message });
+    if (err.code === 'ENOENT') return res.status(404).json({ error: 'File tidak ditemukan' });
+    res.status(500).json({ error: 'Gagal menghapus file: ' + err.message });
+  }
+});
+
+// POST /system/backup/restore — restore database dari file .sql hasil upload.
+// Body: teks mentah file .sql (Content-Type: text/plain, maks 64 MB).
+// Selalu membuat backup keamanan (pre-restore-*.sql) sebelum eksekusi.
+router.post(
+  '/system/backup/restore',
+  requireRole('admin'),
+  express.text({ type: 'text/plain', limit: '64mb' }),
+  async (req, res) => {
+    res.writeHead(200, {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Transfer-Encoding': 'chunked',
+    });
+    const log = (msg) => { try { res.write(msg + '\n'); } catch (e) { /* client putus */ } };
+
+    log('══════════════════════════════════════════════');
+    log('  RESTORE DATABASE DARI FILE .SQL');
+    log('  Tenant : id ' + req.user.tenant_id + ' (' + (req.user.nama || req.user.email || '') + ')');
+    log('  Waktu  : ' + new Date().toLocaleString('id-ID'));
+    log('══════════════════════════════════════════════\n');
+
+    if (backupRestoreBusy) {
+      log('✗ Sudah ada proses restore yang berjalan — coba lagi setelah selesai.');
+      return res.end();
+    }
+    backupRestoreBusy = true;
+
+    try {
+      const { createBackupFile, validateDumpSql, restoreSqlDump } = require('../services/dbBackup');
+
+      const sql = typeof req.body === 'string' ? req.body : '';
+      const byteLen = Buffer.byteLength(sql, 'utf8');
+      const fmtSize = (b) => (b < 1024 ? b + ' B' : (b / 1024).toFixed(1) + ' KB');
+      log('1) VALIDASI FILE');
+      log('   Ukuran : ' + fmtSize(byteLen));
+      const check = validateDumpSql(sql);
+      if (!check.ok) {
+        log('   ✗ ' + check.error);
+        log('\nRestore dibatalkan — tidak ada perubahan data.');
+        return res.end();
+      }
+      log('   ✓ File terdeteksi dump database MySQL');
+      log('');
+
+      log('2) BACKUP KEAMANAN (sebelum restore)');
+      const pre = await createBackupFile('pre-restore');
+      log('   ✓ ' + pre.name + ' (' + fmtSize(pre.size) + ')');
+      log('   File ini bisa dipakai untuk mengembalikan kondisi saat ini.');
+      log('');
+
+      log('3) MENJALANKAN FILE RESTORE');
+      log('   (seluruh isi database akan diganti dengan isi file)');
+      const t0 = Date.now();
+      const stmts = await restoreSqlDump(sql);
+      const dtk = ((Date.now() - t0) / 1000).toFixed(1);
+      log('   ✓ ' + stmts + ' statement berhasil dijalankan (' + dtk + ' dtk)');
+      log('');
+      log('──────────────────────────────────────────────');
+      log('✓ RESTORE SELESAI — refresh halaman untuk melihat data terbaru.');
+      log('──────────────────────────────────────────────');
+    } catch (err) {
+      log('');
+      log('✗ Gagal: ' + err.message);
+      log('  Backup keamanan (bila berhasil dibuat) tetap tersimpan di folder backups/.');
+    } finally {
+      backupRestoreBusy = false;
+      res.end();
+    }
+  }
+);
 
 // ============================================================
 // POST /system/sync-produksi — terapkan perbaikan data master langsung dari URL

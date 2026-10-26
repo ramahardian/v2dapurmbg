@@ -32,6 +32,7 @@ const FILES = [
   'ijin-cuti.js',
   'hari-libur.js',
   'groq-vision.js',
+  'backup.js',
   'definisi.js',
   'idle-timeout.js',
   'ticker.js',
