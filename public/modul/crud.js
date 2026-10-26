@@ -34,18 +34,9 @@ async function renderCrud(cfg) {
       <button onclick="exportXlsx()" class="h-10 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap ml-auto">Export XLSX</button>
     </div>
   </div>`;
-  let headerHtml = '';
-  if (cfg.stats) {
-    // Hanya stats yang masuk ke bento grid
-    headerHtml = `<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">${statsTile}</div>
-      <div class="flex flex-wrap items-center gap-4 mb-4">${actionTile.replace('md:col-span-2', '')}${searchTile.replace('md:col-span-4', '')}</div>`;
-  } else {
-    // Tanpa stats: action & search sejajar di luar bento
-    headerHtml = `<div class="flex flex-wrap items-center gap-4 mb-4">${actionTile.replace('md:col-span-2', '')}${searchTile.replace('md:col-span-2', '')}</div>`;
-  }
-  const crudFilters = cfg.filters && cfg.filters.length ? `<div id="crud-filters" class="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-xl border border-stone-200 bg-stone-50/60">` : '';
-  c.innerHTML = `${headerHtml}
-  ${crudFilters}
+  const headerTiles = cfg.stats ? statsTile + actionTile + searchTile : searchTile + actionTile;
+  c.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">${headerTiles}</div>
+  ${cfg.filters && cfg.filters.length ? `<div id="crud-filters" class="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-xl border border-stone-200 bg-stone-50/60">` : ''}
   <div id="table-wrap" class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden"></div>
   <div id="crud-pagination" class="flex items-center justify-between mt-3"></div>`;
   window._crudInfoCfg = cfg;
