@@ -996,6 +996,11 @@ CREATE TABLE menu_bahan (
         html += '<b>' + r.nama_kelompok + '</b> (' + r.kategori_penerima + ') → keep id ' + keep + ', hapus ' + result.affectedRows + ' baris</div>';
       }
       html += '<div style="margin-top:1rem;padding:1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:0.5rem;font-weight:600">✅ Total ' + deleted + ' baris duplikat dihapus</div>';
+      // Sinkron jumlah_porsi siklus karena total penerima_manfaat berkurang
+      try {
+        const { syncJumlahPorsiDariPm } = require('./routes/siklus/helpers');
+        await syncJumlahPorsiDariPm(req.user.tenant_id);
+      } catch (e) { console.error('Sinkron porsi setelah hapus duplikat PM gagal:', e.message); }
       html += '<a href="/" style="display:inline-block;margin-top:1.5rem;padding:0.5rem 1.5rem;background:#3b82f6;color:white;text-decoration:none;border-radius:0.5rem">Kembali</a></div>';
       res.send(html);
     } catch (e) {

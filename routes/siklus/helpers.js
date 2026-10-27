@@ -259,18 +259,54 @@ async function loadMenuBahanByName(itemsBySiklus, tenantId) {
   return { menuIdByName, menuBahanByNameMap };
 }
 
-async function autoHitungPorsi(tenantId, kategori_penerima, jumlah_porsi) {
+// Jumlah porsi dari data Penerima Manfaat (paket_besar + paket_kecil) untuk
+// kategori target siklus — sumber kebenaran hitungan porsi perencanaan.
+async function hitungPorsiDariPm(tenantId, kategori_penerima) {
   const jenjangList = parseKategoriPenerima(kategori_penerima);
   const allDbVals = expandJenjangToDbValues(jenjangList);
-  const porsiFromPm = allDbVals.length ? await (async () => {
-    const ph = allDbVals.map(() => '?').join(',');
-    const [[{ total }]] = await db.query(
-      `SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})`,
-      [tenantId, ...allDbVals]
-    );
-    return Number(total) || 0;
-  })() : 0;
+  if (!allDbVals.length) return 0;
+  const ph = allDbVals.map(() => '?').join(',');
+  const [[{ total }]] = await db.query(
+    `SELECT COALESCE(SUM(paket_besar + paket_kecil),0) AS total FROM penerima_manfaat WHERE tenant_id=? AND kategori_penerima IN (${ph})`,
+    [tenantId, ...allDbVals]
+  );
+  return Number(total) || 0;
+}
+
+async function autoHitungPorsi(tenantId, kategori_penerima, jumlah_porsi) {
+  const porsiFromPm = await hitungPorsiDariPm(tenantId, kategori_penerima);
   return (jumlah_porsi || 0) || porsiFromPm;
+}
+
+/**
+ * Sinkronkan jumlah_porsi seluruh siklus non-Arsip dengan data Penerima
+ * Manfaat terkini. Dipanggil setiap kali penerima_manfaat ditambah/diubah/
+ * dihapus, supaya angka Porsi Besar & Porsi Kecil di /perencanaan (dan
+ * kebutuhan kg yang diturunkan darinya) selalu sama dengan data master,
+ * bukan snapshot jumlah_porsi yang sudah basi.
+ *
+ * Item siklus yang jumlah_porsinya masih sama dengan nilai lama ikut
+ * disesuaikan; nilai yang berbeda dianggap disengaja dan tidak diubah.
+ * @returns {Promise<Array<{id:number, dari:number, ke:number}>>} daftar siklus yang berubah
+ */
+async function syncJumlahPorsiDariPm(tenantId) {
+  const [siklusList] = await db.query(
+    `SELECT id, jumlah_porsi, kategori_penerima FROM siklus_menu
+     WHERE tenant_id=? AND IFNULL(status,'') != 'Arsip'`,
+    [tenantId]
+  );
+  const changed = [];
+  for (const s of siklusList) {
+    // Siklus tanpa target kategori tidak bisa dihitung → biarkan apa adanya
+    if (!parseKategoriPenerima(s.kategori_penerima).length) continue;
+    const target = await hitungPorsiDariPm(tenantId, s.kategori_penerima);
+    const lama = Number(s.jumlah_porsi) || 0;
+    if (!target || target === lama) continue;
+    await db.query('UPDATE siklus_menu SET jumlah_porsi=? WHERE id=? AND tenant_id=?', [target, s.id, tenantId]);
+    await db.query('UPDATE siklus_menu_item SET jumlah_porsi=? WHERE siklus_id=? AND jumlah_porsi=?', [target, s.id, lama]);
+    changed.push({ id: s.id, dari: lama, ke: target });
+  }
+  return changed;
 }
 
 async function hitungEstimasiGiziManual(items, gridBahan) {
@@ -527,6 +563,8 @@ module.exports = {
   batchLoadMenuBahan,
   loadMenuBahanByName,
   autoHitungPorsi,
+  hitungPorsiDariPm,
+  syncJumlahPorsiDariPm,
   hitungEstimasiGiziManual,
   buildGridNamaFromData,
   rebuildMenuNama,

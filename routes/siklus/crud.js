@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../../db');
-const { parseKategoriPenerima, expandJenjangToDbValues, autoHitungPorsi, computeTanggalSelesai, autoArchiveSiklus } = require('./helpers');
+const { parseKategoriPenerima, expandJenjangToDbValues, autoHitungPorsi, hitungPorsiDariPm, computeTanggalSelesai, autoArchiveSiklus } = require('./helpers');
 
 const router = express.Router();
 
@@ -273,7 +273,18 @@ router.put('/siklus/:id', async (req, res) => {
   }
   if (!finalTotalHari) finalTotalHari = 30;
 
-  const finalPorsi = await autoHitungPorsi(req.user.tenant_id, kategori_penerima, jumlah_porsi);
+  // Target kategori berubah → jumlah_porsi lama sudah tidak relevan,
+  // hitung ulang dari Penerima Manfaat supaya /perencanaan ikut sinkron.
+  const [[siklusSebelum]] = await db.query(
+    'SELECT kategori_penerima FROM siklus_menu WHERE id=? AND tenant_id=?',
+    [id, req.user.tenant_id]
+  );
+  const kategoriBerubah = !!siklusSebelum && (siklusSebelum.kategori_penerima || null) !== (kategori_penerima || null);
+  let finalPorsi = await autoHitungPorsi(req.user.tenant_id, kategori_penerima, jumlah_porsi);
+  if (kategoriBerubah) {
+    const dariPm = await hitungPorsiDariPm(req.user.tenant_id, kategori_penerima);
+    if (dariPm > 0) finalPorsi = dariPm;
+  }
   const finalTanggalSelesai = computeTanggalSelesai(tanggal_mulai, tanggal_selesai, finalTotalHari);
 
   const errAktif = await validasiStatusAktif(status, finalTanggalSelesai);
@@ -295,7 +306,7 @@ router.put('/siklus/:id', async (req, res) => {
         await conn.query(
           `INSERT INTO siklus_menu_item (siklus_id, hari_ke, hari_nama, menu_id, menu_nama, jumlah_porsi, kalori, protein, karbohidrat, lemak, serat, foto)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [id, it.hari_ke, it.hari_nama, it.menu_id || null, it.menu_nama || null, it.jumlah_porsi || finalPorsi || 0,
+          [id, it.hari_ke, it.hari_nama, it.menu_id || null, it.menu_nama || null, kategoriBerubah ? finalPorsi : (it.jumlah_porsi || finalPorsi || 0),
            it.kalori || 0, it.protein || 0, it.karbohidrat || 0, it.lemak || 0, it.serat || 0, it.foto || null]
         );
       }

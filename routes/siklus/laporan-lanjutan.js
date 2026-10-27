@@ -25,22 +25,34 @@ function buildScaledPmBySiklus(siklusList, activeJenjang, pmByDisplay, pmByDispl
     if (target > 0 && liveTotal > 0 && target !== liveTotal) {
       const factor = target / liveTotal;
       pm = {};
-      if (pmByDisplayBesar && pmByDisplayKecil) { besar = {}; kecil = {}; }
-      for (const j of activeJenjang) {
+      const adaSplit = !!(pmByDisplayBesar && pmByDisplayKecil);
+      if (adaSplit) { besar = {}; kecil = {}; }
+      // Jenjang terakhir menyerap selisih pembulatan sehingga total tepat target,
+      // dan tiap jenjang dijaga tetap memenuhi besar + kecil = total porsi
+      // (dulunya koreksi selisih hanya menambah pm, sehingga jumlah besar+kecil
+      // bisa tidak sama dengan total porsi yang ditampilkan).
+      const jenjangTerisi = activeJenjang.filter(j => Number(pmByDisplay[j]) || 0);
+      let sisa = target;
+      for (let i = 0; i < jenjangTerisi.length; i++) {
+        const j = jenjangTerisi[i];
         const v = Number(pmByDisplay[j]) || 0;
-        if (!v) continue;
-        const sv = Math.round(v * factor);
+        const b0 = (pmByDisplayBesar && Number(pmByDisplayBesar[j])) || 0;
+        const k0 = (pmByDisplayKecil && Number(pmByDisplayKecil[j])) || 0;
+        const terakhir = i === jenjangTerisi.length - 1;
+        let sv = terakhir ? sisa : Math.round(v * factor);
+        if (sv < 0) sv = 0;
+        sisa -= sv;
         pm[j] = sv;
-        if (pmByDisplayBesar && pmByDisplayKecil && besar && kecil) {
-          const bf = sv / v;
-          besar[j] = Math.round((Number(pmByDisplayBesar[j]) || 0) * bf);
-          kecil[j] = Math.round((Number(pmByDisplayKecil[j]) || 0) * bf);
+        if (adaSplit) {
+          let bb = Math.round(b0 * factor);
+          let kk = Math.round(k0 * factor);
+          const sel = sv - (bb + kk);
+          if (sel !== 0) { if (b0 >= k0) bb += sel; else kk += sel; }
+          if (bb < 0) { kk += bb; bb = 0; }
+          if (kk < 0) { bb += kk; kk = 0; }
+          besar[j] = bb;
+          kecil[j] = kk;
         }
-      }
-      // Koreksi selisih pembulatan pada jenjang pertama agar total pas
-      const diff = target - Object.values(pm).reduce((a, b) => a + b, 0);
-      for (const j of activeJenjang) {
-        if (pm[j] !== undefined) { pm[j] += diff; break; }
       }
     }
     scaled[s.id] = { pm, besar, kecil };

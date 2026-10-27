@@ -11,12 +11,26 @@ const { buildInsert, buildUpdate } = require('./helpers');
 const { autoStokMasukFromPenerimaan, autoStokKeluarFromProduksi } = require('./auto-stok');
 const { recalculateRealisasi } = require('./auto-jurnal');
 const { KATEGORI_SP } = require('../../services/spBddCalculator');
+const { syncJumlahPorsiDariPm } = require('../siklus/helpers');
 
 /**
  * Mendaftarkan seluruh rute dinamis dan endpoint tambahan ke dalam router.
  * @param {express.Router} router - Instance Express Router
  */
 function registerDynamicRoutes(router) {
+  // Penerima Manfaat adalah sumber kebenaran jumlah porsi besar/kecil.
+  // Setiap penambahan/perubahan/penghapusan harus ikut menyesuaikan
+  // jumlah_porsi siklus, agar angka di /perencanaan tidak pernah basi.
+  async function sinkronPorsiDariPm(tenantId, aksi) {
+    try {
+      const changed = await syncJumlahPorsiDariPm(tenantId);
+      if (changed.length) {
+        console.log('[sinkron-porsi] ' + aksi + ': ' + changed.map(c => 'siklus #' + c.id + ' ' + c.dari + '→' + c.ke).join(', '));
+      }
+    } catch (e) {
+      console.error('[sinkron-porsi] gagal (' + aksi + '):', e.message);
+    }
+  }
   // ─── DYNAMIC ROUTE GENERATOR ──────────────────────
   // Loop setiap tabel untuk membuat 4 endpoint standar (GET, POST, PUT, DELETE)
   for (const table of Object.keys(TABLES)) {
@@ -205,6 +219,8 @@ function registerDynamicRoutes(router) {
           if (table === 'produksi' && (req.body.status === 'Diproduksi' || req.body.status === 'Selesai') && rows.length) {
             autoStokKeluarFromProduksi(rows[0], req.user.tenant_id).catch(e => console.error('Auto stok keluar gagal (CREATE):', e));
           }
+          // 🔁 SINKRON PORSI: penerima manfaat bertambah → jumlah_porsi siklus ikut menyesuaikan
+          if (table === 'penerima_manfaat') await sinkronPorsiDariPm(req.user.tenant_id, 'tambah penerima');
 
           res.json(rows[0]);
         } catch (innerErr) {
@@ -273,6 +289,9 @@ function registerDynamicRoutes(router) {
           }
         }
 
+        // 🔁 SINKRON PORSI: penerima manfaat berubah → jumlah_porsi siklus ikut menyesuaikan
+        if (table === 'penerima_manfaat') await sinkronPorsiDariPm(req.user.tenant_id, 'ubah penerima');
+
         res.json(rows[0]);
       } catch (e) {
         console.error(e);
@@ -283,6 +302,8 @@ function registerDynamicRoutes(router) {
     // 4. DELETE (DELETE /nama_tabel/:id)
     router.delete(`/${table}/:id`, roleMiddleware, async (req, res) => {
       await db.query(`DELETE FROM ${table} WHERE id=? AND tenant_id=?`, [req.params.id, req.user.tenant_id]);
+      // 🔁 SINKRON PORSI: penerima manfaat berkurang → jumlah_porsi siklus ikut menyesuaikan
+      if (table === 'penerima_manfaat') await sinkronPorsiDariPm(req.user.tenant_id, 'hapus penerima');
       res.json({ ok: true });
     });
 
@@ -293,6 +314,8 @@ function registerDynamicRoutes(router) {
         if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'IDs wajib diisi' });
         const placeholders = ids.map(() => '?').join(',');
         await db.query(`DELETE FROM ${table} WHERE id IN (${placeholders}) AND tenant_id=?`, [...ids, req.user.tenant_id]);
+        // 🔁 SINKRON PORSI: penerima manfaat berkurang → jumlah_porsi siklus ikut menyesuaikan
+        if (table === 'penerima_manfaat') await sinkronPorsiDariPm(req.user.tenant_id, 'hapus penerima (bulk)');
         res.json({ ok: true, deleted: ids.length });
       } catch (e) {
         console.error(e);

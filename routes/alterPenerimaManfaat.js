@@ -195,6 +195,13 @@ router.get('/import-penerima-manfaat', requireRole('admin'), async (req, res) =>
       }
     }
 
+    // Sinkronkan jumlah_porsi siklus dengan total PM terbaru (baru/ubah/hapus
+    // penerima_manfaat harus ikut terlihat di /perencanaan).
+    try {
+      const { syncJumlahPorsiDariPm } = require('./siklus/helpers');
+      await syncJumlahPorsiDariPm(req.user.tenant_id);
+    } catch (e) { console.error('Sinkron porsi setelah import PM gagal:', e.message); }
+
     res.send(`
       <div style="font-family:sans-serif;padding:2rem;text-align:center">
         <h2 style="color:#16a34a">✅ Data Penerima Manfaat Berhasil Diterapkan</h2>
