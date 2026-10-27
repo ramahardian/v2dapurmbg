@@ -15,7 +15,7 @@ const MODULES = {
   'bahan-baku': { title: 'Bahan Baku', sub: 'Master bahan baku & harga satuan', icon: '', crud: {} },
   menu: { title: 'Menu & Gizi', sub: 'Resep, gramasi & kandungan gizi', icon: '', render: renderMenu },
   supplier: { title: 'Supplier', sub: 'Daftar pemasok bahan baku', icon: '', crud: {} },
-  pembelian: { title: 'Pembelian — PR & PO', sub: 'Purchase Request -> Purchase Order -> Invoice', icon: '', crud: {} },
+  pembelian: { title: 'Pembelian', sub: 'Purchase Order -> Invoice -> Pembayaran', icon: '', crud: {} },
   penerimaan: { title: 'Penerimaan Barang', sub: 'Barang masuk dari supplier', icon: '', crud: {} },
   budgeting: { title: 'Budgeting', sub: 'Anggaran per periode & kategori', icon: '', crud: {} },
   'kas-bank': { title: 'Kas & Bank', sub: 'Penerimaan dana, pembayaran supplier & biaya operasional', icon: '', crud: {} },

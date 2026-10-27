@@ -37,19 +37,19 @@ function renderPanduanAhliGizi() {
     {
       icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="13" width="3" height="4"/><rect x="13" y="11" width="3" height="6"/></svg>',
       title: '6. Perencanaan Kebutuhan Pangan',
-      desc: 'Rekap final kebutuhan bahan per hari lintas semua jenjang. Dua tampilan: <strong>Per Hari</strong> (tabel per jenjang + buffer 10%) dan <strong>Rekap per Jenjang</strong> (akumulasi seluruh hari). Dilengkapi tombol <strong class="text-emerald-700">Buat Draft PR</strong> untuk langsung generate Purchase Request.',
+      desc: 'Rekap final kebutuhan bahan per hari lintas semua jenjang. Dua tampilan: <strong>Per Hari</strong> (tabel per jenjang + buffer 10%) dan <strong>Rekap per Jenjang</strong> (akumulasi seluruh hari). Rekap ini menjadi dasar pembuatan PO di menu <strong>Pembelian</strong>.',
       link: { label: 'Buka Perencanaan', action: "navigate('perencanaan')" }
     },
     {
       icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
       title: '7. Total Kebutuhan Pangan',
-      desc: 'Ringkasan per hari yang lebih sederhana — dua hari ditampilkan <strong>berdampingan</strong>. Menampilkan nama menu, bahan, dan jumlah pembelian (kg/pcs/btl). Juga memiliki tombol <strong class="text-emerald-700">Buat Draft PR</strong> untuk akses cepat.',
+      desc: 'Ringkasan per hari yang lebih sederhana — dua hari ditampilkan <strong>berdampingan</strong>. Menampilkan nama menu, bahan, dan jumlah pembelian (kg/pcs/btl).',
       link: { label: 'Buka Total Kebutuhan', action: "navigate('total-kebutuhan')" }
     },
     {
       icon: '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>',
-      title: '8. Buat Draft Purchase Request (PR)',
-      desc: 'Dari halaman <strong>Perencanaan</strong> atau <strong>Total Kebutuhan</strong>, klik tombol <strong class="text-emerald-700">Buat Draft PR</strong>. Pilih siklus Aktif → sistem otomatis: hitung kebutuhan + buffer 10%, buat <span class="px-1.5 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800 font-bold">Draft</span> PR dengan detail bahan dan estimasi subtotal. Siap ditinjau Keuangan di menu <strong>Pembelian → Purchase Order</strong>.',
+      title: '8. Buat Purchase Order (PO)',
+      desc: 'Buka menu <strong>Pembelian</strong> lalu klik <strong>Tambah PO</strong> atau <strong>Buat dari Siklus</strong>. Pilih supplier, masukkan item bahan + qty (harga otomatis dari master Bahan Baku), simpan dengan status <span class="px-1.5 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800 font-bold">Draft</span>, lalu <strong>Kirim ke Koperasi</strong> untuk menerbitkan nomor invoice.',
       link: { label: 'Buka Perencanaan', action: "navigate('perencanaan')" }
     },
   ];
@@ -103,7 +103,6 @@ function renderPanduanAhliGizi() {
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Siklus Menu 14 Hari</div>
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Perhitungan BDD + Kebutuhan (kg)</div>
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Perencanaan Kebutuhan Pangan</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Buat Draft PR</div>
           <div class="mt-2 pt-2 border-t border-emerald-100 text-emerald-600 text-xs">Tanpa input harga</div>
         </div>
       </div>
@@ -116,7 +115,7 @@ function renderPanduanAhliGizi() {
         </div>
         <div class="p-4 space-y-2">
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Atur harga_satuan di Bahan Baku</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Terima Draft PR dari Ahli Gizi</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Buat PO dari kebutuhan hasil perencanaan</div>
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Buat PO</div>
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Penerimaan Barang + QC</div>
           <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Auto-Stok Masuk + <strong class="text-green-700">Auto-Jurnal</strong></div>
@@ -221,11 +220,11 @@ function renderPanduanAhliGizi() {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="flex items-start gap-2">
           <span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-700 shrink-0 mt-0.5">GIZI</span>
-          <span class="text-stone-600"><strong>Ahli Gizi:</strong> input data gizi, BDD, menu, siklus, hitung kebutuhan (kg), buat Draft PR — <strong class="text-amber-700">tanpa harga</strong></span>
+          <span class="text-stone-600"><strong>Ahli Gizi:</strong> input data gizi, BDD, menu, siklus, hitung kebutuhan (kg) — <strong class="text-amber-700">tanpa harga</strong></span>
         </div>
         <div class="flex items-start gap-2">
           <span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-700 shrink-0 mt-0.5">DANA</span>
-          <span class="text-stone-600"><strong>Keuangan:</strong> atur harga bahan, terima PR, proses jadi PO, QC Penerimaan, pembayaran, laporan keuangan</span>
+          <span class="text-stone-600"><strong>Keuangan:</strong> atur harga bahan, buat & proses PO, QC Penerimaan, pembayaran, laporan keuangan</span>
         </div>
         <div class="flex items-start gap-2">
           <span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-700 shrink-0 mt-0.5">STOK</span>

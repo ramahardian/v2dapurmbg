@@ -18,7 +18,7 @@ Sistem **SaaS multi-tenant** untuk operasional dapur & akuntansi program **Makan
 
 ### Pembelian
 - **Supplier** — master pemasok
-- **PR/PO** — Purchase Request → Purchase Order → Invoice
+- **PO** — Purchase Order → Invoice → Pembayaran
 - **Penerimaan Barang** — dengan QC
 
 ### Akuntansi & Keuangan

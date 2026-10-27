@@ -160,7 +160,7 @@ Rekap final kebutuhan bahan **per hari lintas semua jenjang**. Data ini yang aka
 - **+10% Buffer** — kebutuhan + cadangan 10%
 - **Rincian** — pembulatan untuk pembelian (kg/pcs)
 
-> **Buat Draft PR:** Klik tombol **Buat Draft PR** (warna hijau) untuk langsung membuat Purchase Request dari siklus aktif. Pilih siklus → sistem otomatis generate PR.
+> **Catatan:** Halaman ini adalah bahan serah-terima ke Bagian Keuangan — rekap kebutuhan inilah yang dipakai untuk membuat **Purchase Order** di menu **Pembelian**.
 
 ---
 
@@ -170,36 +170,29 @@ Halaman: **Total Kebutuhan** (`/total-kebutuhan`)
 
 Ringkasan per hari yang lebih sederhana — menampilkan bahan dan jumlah pembelian (kg/pcs/btl). Dua hari ditampilkan **berdampingan** untuk memudahkan belanja.
 
-Juga memiliki tombol **Buat Draft PR** yang sama seperti di Perencanaan.
+---
+
+## 9. Serah-Terima ke Bagian Keuangan
+
+Alur PR sudah tidak dipakai — pembelian langsung memakai **Purchase Order (PO)**:
+
+1. Ahli Gizi menyelesaikan **Perencanaan** & **Total Kebutuhan** (kebutuhan + buffer 10%)
+2. Data kebutuhan diserahkan ke Bagian Keuangan (cetak/laporan dari halaman tersebut)
+3. Keuangan membuat PO di menu **Pembelian** (manual atau **Buat dari Siklus**)
+4. PO dikirim ke Koperasi → nomor invoice terbit → barang diterima → dibayar
+
+> **Catatan:** Ahli Gizi tidak mengisi harga dan tidak membuat PO — harga diambil otomatis dari master Bahan Baku oleh Bagian Keuangan.
 
 ---
 
-## 9. Membuat Draft Purchase Request (PR)
+## 10. Alur Pembelian (Bagian Keuangan)
 
-Tersedia dari halaman **Perencanaan** atau **Total Kebutuhan**:
-
-1. Klik tombol **Buat Draft PR** (warna hijau di filter bar)
-2. Sistem menampilkan daftar siklus Aktif
-3. Masukkan nomor siklus yang ingin dibuatkan PR (pisah koma)
-4. Sistem otomatis:
-   - Menghitung total kebutuhan bahan dari semua siklus terpilih
-   - Menambahkan buffer 10%
-   - Membuat entri **Purchase Order** dengan status **Draft** dan nomor PR
-   - Menyimpan detail bahan, qty, dan estimasi subtotal
-5. PR siap ditinjau oleh bagian Keuangan di menu **Pembelian → Purchase Order**
-
-> **Catatan:** Ahli Gizi membuat PR berdasarkan kebutuhan bahan (tanpa harga). Harga akan diisi otomatis dari master Bahan Baku saat PR dibuat.
-
----
-
-## 10. Alur Setelah PR (Bagian Keuangan)
-
-Setelah PR dibuat, alur dilanjutkan oleh bagian Keuangan:
+Setelah kebutuhan diserahkan, alur dilanjutkan oleh bagian Keuangan:
 
 | Langkah | Dilakukan Oleh | Keterangan |
 |---------|----------------|------------|
 | Atur Harga Bahan | Keuangan | Input `harga_satuan` di master Bahan Baku (manual atau sync API koperasi) |
-| Tinjau & Proses PR → PO | Keuangan | Ubah status Draft → Diteruskan → Dipesan |
+| Buat PO | Keuangan | Buat Purchase Order dari kebutuhan hasil perencanaan (status Draft → Menunggu Koperasi → Disetujui) |
 | Penerimaan Barang + QC | Gudang | Barang datang, QC Lolos → auto stok masuk + auto jurnal |
 | Pembayaran PO | Keuangan | Status Dibayar → auto jurnal (Debit Biaya, Kredit Kas) |
 | Laporan Biaya Produksi | Keuangan | Lihat estimasi biaya per siklus di menu Laporan → Biaya Produksi |

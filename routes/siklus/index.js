@@ -40,6 +40,6 @@ router.use(require('./debug'));          // GET /siklus/recipe-names, /siklus/ce
 router.use(require('./templates'));      // POST/GET/DELETE /siklus/templates* + /siklus/:id/terapkan-template (SEBELUM crud agar /siklus/templates tidak tertangkap /siklus/:id)
 router.use(require('./bahan-grid'));     // GET/POST /siklus/:id/bahan-grid, /bahan/by-sp
 router.use(require('./crud'));           // GET/POST/PUT/DELETE /siklus, /siklus/:id (parameterized AFTER specific)
-router.use(require('./aksi'));           // POST /siklus/generate-produksi, /hitung-budget, /buat-pr
+router.use(require('./aksi'));           // POST /siklus/generate-produksi, /hitung-budget
 
 module.exports = router;

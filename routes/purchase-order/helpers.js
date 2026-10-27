@@ -1,7 +1,7 @@
 /**
  * HELPERS — Purchase Order
  * Shared constants, utility functions, and data loaders
- * yang digunakan bersama oleh generate dan create-pr endpoints.
+ * yang digunakan bersama oleh generate endpoint.
  */
 const db = require('../../db');
 

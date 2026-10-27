@@ -1398,7 +1398,7 @@ function showMenuInfo() {
       '</div>' +
       '<div class="flex gap-3 items-start">' +
         '<span class="shrink-0 w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>' +
-        '<div><span class="font-semibold text-stone-700">Buat Pesanan</span><br>Dari Total Kebutuhan, klik <strong>Buat Draft PR</strong> untuk membuat Purchase Request ke pemasok.</div>' +
+        '<div><span class="font-semibold text-stone-700">Buat Pesanan</span><br>Dari Total Kebutuhan, buat PO di menu <strong>Pembelian</strong> untuk memesan ke pemasok.</div>' +
       '</div>' +
     '</div>' +
     '<div class="mt-4 pt-3 border-t border-stone-100 text-xs text-stone-400 text-center">' +

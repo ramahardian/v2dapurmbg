@@ -82,17 +82,6 @@ function registerDynamicRoutes(router) {
         }
       }
 
-      // Filter: untuk purchase_order, bedakan PR vs PO via prefix no_po.
-      // Nomor PR ditulis dengan dua gaya di kode ('PR-...' dan 'PR/...'),
-      // keduanya diakui sebagai PR agar tidak jatuh ke daftar PO.
-      if ((table === 'purchase_order' || table === 'penerimaan_barang') && req.query.tipe) {
-        if (req.query.tipe === 'po') {
-          whereClause += ` AND no_po NOT LIKE 'PR-%' AND no_po NOT LIKE 'PR/%'`;
-        } else if (req.query.tipe === 'pr') {
-          whereClause += ` AND (no_po LIKE 'PR-%' OR no_po LIKE 'PR/%')`;
-        }
-      }
-
       // Search: filter berdasarkan kolom yang sudah ditentukan
       if (search && searchable.length) {
         const prefix = table === 'distribusi' ? 'd.' : '';
@@ -240,6 +229,17 @@ function registerDynamicRoutes(router) {
           const [[cur]] = await db.query('SELECT harga_satuan FROM bahan_baku WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
           if (cur && Number(cur.harga_satuan) !== Number(req.body.harga_satuan)) {
             req.body.harga_sebelumnya = cur.harga_satuan;
+          }
+        }
+
+        // PO status "Diterima" HANYA boleh lewat POST /purchase_order/:id/terima
+        // (menambah stok, mencatat stok_masuk, dan membuat Penerimaan Barang).
+        // Lewat form edit, transisi ke "Diterima" ditolak — nilai yang sama
+        // (PO memang sudah Diterima) tetap diperbolehkan agar bisa diedit/dibayar.
+        if (table === 'purchase_order' && req.body.status === 'Diterima') {
+          const [[poNow]] = await db.query('SELECT status FROM purchase_order WHERE id=? AND tenant_id=?', [req.params.id, req.user.tenant_id]);
+          if (poNow && poNow.status !== 'Diterima') {
+            return res.status(400).json({ error: 'Status "Diterima" hanya bisa diubah lewat tombol Terima Barang (POST /purchase_order/:id/terima) agar stok ikut terupdate.' });
           }
         }
         // Panggil helper untuk merakit klausa SET pada query UPDATE

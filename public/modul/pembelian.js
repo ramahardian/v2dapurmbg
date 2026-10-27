@@ -1,381 +1,42 @@
 let _poEditing = null;
 let _poItems = [];
 let _bahanBakuList = [];
-let _prList = [];
 let _poList = [];
-
-// Nomor PR ditulis dengan dua gaya di sistem ('PR-...' dan 'PR/...').
-// Keduanya harus dikenali sebagai PR agar tidak masuk daftar PO.
-function isPrNo(no) { return /^PR[-/]/.test(String(no || '')); }
 
 // PO yang nomornya masih referensi sementara (belum disetujui koperasi)
 function isTmpNo(no) { return /^TMP-/i.test(String(no || '')); }
 
+// Status yang boleh dipilih lewat form edit PO.
+// "Diterima" sengaja TIDAK ada di sini: status itu hanya bisa diatur lewat
+// tombol ✓ Terima Barang (POST /purchase_order/:id/terima) yang menambah stok,
+// mencatat stok_masuk, dan membuat Penerimaan Barang.
+const STATUS_PO = ['Draft', 'Menunggu Koperasi', 'Disetujui', 'Dikirim', 'Dibayar'];
+
+// Ambil SELURUH baris PO. Endpoint generic membatasi LIMIT 500 bila tanpa
+// page/limit, jadi daftar ini ditarik per halaman sampai habis (ORDER BY id DESC
+// sehingga halaman demi halaman tidak menduplikasi/melompati baris).
+async function muatSemuaPo() {
+  const limit = 500;
+  const semua = [];
+  for (let page = 1; page <= 100; page++) {
+    const res = await api.get('/purchase_order?page=' + page + '&limit=' + limit);
+    const rows = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+    semua.push(...rows);
+    const total = res.pagination ? Number(res.pagination.total) : 0;
+    if (rows.length < limit || !total || semua.length >= total) break;
+  }
+  return semua;
+}
+
 async function renderPembelian() {
-  await renderPembelianPage('pr');
+  await renderPembelianPage();
 }
 
-function switchPrPoTab(tab) {
-  ['pr','po'].forEach(t => {
-    const el = document.getElementById('tab-'+t);
-    if (!el) return;
-    if (t === tab) {
-      el.className = 'px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-blue-600 shadow-sm';
-    } else {
-      el.className = 'px-4 py-2 rounded-lg text-sm font-medium transition-all text-stone-600 hover:text-stone-800';
-    }
-  });
-  refreshPoList();
-  if (tab === 'pr') renderPrView();
-  else renderPoView();
-}
-
-async function refreshPoList() {
-  try {
-    const data = await api.get('/purchase_order');
-    const all = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
-    _prList = all.filter(r => isPrNo(r.no_po));
-    _poList = all.filter(r => !isPrNo(r.no_po));
-  } catch (e) {
-    // keep existing lists
-  }
-}
-
-async function renderPembelianPage(tab) {
-  const activeTab = tab || 'pr';
+// Halaman Pembelian sekarang hanya berisi daftar Purchase Order (tanpa tab PR).
+async function renderPembelianPage() {
   const content = document.getElementById('content');
-  content.innerHTML = `<div class="flex gap-1 bg-stone-100 rounded-xl p-1 w-full sm:w-fit mb-5">
-      <button onclick="switchPrPoTab('pr')" id="tab-pr" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap${activeTab === 'pr' ? ' bg-white text-blue-600 shadow-sm' : ' text-stone-600 hover:text-stone-800'}">PR — Purchase Request</button>
-      <button onclick="switchPrPoTab('po')" id="tab-po" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap${activeTab === 'po' ? ' bg-white text-blue-600 shadow-sm' : ' text-stone-600 hover:text-stone-800'}">PO — Purchase Order</button>
-    </div>
-    <div id="pr-po-content"></div>`;
-
-  // Fetch all purchase_order records
-  let allRows = [];
-  try {
-    const data = await api.get('/purchase_order');
-    allRows = Array.isArray(data) ? data : (data.data || []);
-  } catch (e) {
-    allRows = [];
-  }
-
-  _prList = allRows.filter(r => isPrNo(r.no_po));
-  _poList = allRows.filter(r => !isPrNo(r.no_po));
-
-  if (tab === 'pr') {
-    renderPrView();
-  } else {
-    renderPoView();
-  }
-}
-
-// ==================== PR VIEW ====================
-
-function renderPrView() {
-  const wrap = document.getElementById('pr-po-content');
-  wrap.innerHTML = `
-    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h2 class="text-base font-bold text-stone-800">Daftar Purchase Request</h2>
-      <button onclick="openBuatPrForm()" class="h-10 px-5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-[13px] font-semibold shadow-sm transition-all flex items-center justify-center gap-2 whitespace-nowrap">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Buat PR
-      </button>
-    </div>
-    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden" id="pr-table-wrap">
-      ${_prList.length === 0 ? '<div class="py-16 text-center text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><div class="text-sm">Belum ada PR</div><div class="text-xs text-stone-400 mt-1">Klik "+ Buat PR" untuk membuat Purchase Request baru.</div></div>' : `
-      <div class="overflow-x-auto"><table class="w-full">
-        <thead><tr class="border-b border-stone-100">
-          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">No PR</th>
-          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Periode</th>
-          <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Item</th>
-          <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Total Estimasi</th>
-          <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Status</th>
-          <th class="text-center px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th>
-        </tr></thead>
-        <tbody>
-          ${_prList.map(pr => {
-            let items = [];
-            try { items = JSON.parse(pr.item); } catch {}
-            const itemCount = items.length;
-            const periode = (pr.tanggal || '').slice(0, 7);
-            const statusText = (pr.catatan || '').includes('[DITOLAK]') ? 'Ditolak' : pr.status === 'Disetujui' ? 'Disetujui' : 'Menunggu';
-            const statusColors = { 'Ditolak': 'bg-red-100 text-red-700', 'Disetujui': 'bg-emerald-100 text-emerald-700', 'Menunggu': 'bg-amber-100 text-amber-700' };
-            return `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-              <td class="px-4 py-3 text-xs font-semibold text-stone-700">${pr.no_po}</td>
-              <td class="px-4 py-3 text-xs text-stone-600">${periode}</td>
-              <td class="px-4 py-3 text-xs text-right text-stone-600">${itemCount} bahan</td>
-              <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(pr.total_nilai || 0)}</td>
-              <td class="px-4 py-3 text-xs"><span class="inline-block px-2.5 py-0.5 text-[10px] font-semibold rounded-lg ${statusColors[statusText]}">${statusText}</span></td>
-              <td class="px-4 py-3 text-center whitespace-nowrap text-xs">
-                <button onclick="viewPrItems(${pr.id})" class="text-blue-600 hover:text-blue-800 font-medium mr-2">Detail</button>
-                ${pr.status === 'Disetujui' ? `<button onclick="buatPoDariPr(${pr.id})" class="text-emerald-600 hover:text-emerald-800 font-medium">Buat PO</button>` : ''}
-                ${(currentUser?.role === 'admin' || currentUser?.role === 'keuangan') && pr.status === 'Draft' ? `
-                  <button onclick="approvePr(${pr.id})" class="text-green-600 hover:text-green-800 font-medium mr-1">Setujui</button>
-                  <button onclick="rejectPr(${pr.id})" class="text-red-600 hover:text-red-800 font-medium">Tolak</button>
-                ` : ''}
-                ${pr.status !== 'Disetujui' ? `<button onclick="deletePr(${pr.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all ml-1" title="Hapus">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>` : ''}
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table></div>`}
-    </div>`;
-}
-
-async function openBuatPrForm() {
-  let siklusList;
-  try {
-    siklusList = await api.get('/siklus');
-  } catch (e) {
-    showAlert('Gagal memuat siklus');
-    return;
-  }
-  const now = new Date();
-  const defaultPeriode = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-
-  var activeSiklus = (siklusList || []).filter(s => s.status === 'Aktif');
-  var maxHari = Math.max(...activeSiklus.map(s => Number(s.total_hari) || 7), 7);
-
-  document.getElementById('modal-title').textContent = 'Buat Purchase Request';
-  document.getElementById('modal-body').innerHTML = `
-    <div class="space-y-4">
-      <div>
-        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Periode <span class="text-red-500">*</span></label>
-        <input id="pr-periode" type="month" value="${defaultPeriode}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-      </div>
-      <div>
-        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Pilih Siklus</label>
-        <div class="mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-stone-200 p-2">
-          ${activeSiklus.length ? '<div class="space-y-1">' + activeSiklus.map((s, i) => `
-            <label class="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-2 rounded-lg">
-              <input type="checkbox" class="pr-siklus-check cb-modern" value="${s.id}" data-hari="${Number(s.total_hari) || 7}" checked>
-              <span class="text-sm text-stone-700">${s.nama} — ${s.kategori_penerima || '-'} (${s.jumlah_porsi || 0} porsi, ${Number(s.total_hari) || 7} hari)</span>
-            </label>
-          `).join('') + '</div>' : '<div class="flex items-center gap-2 p-4 text-amber-700 bg-amber-50 rounded-lg"><svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-medium">Belum ada siklus Aktif</div><div class="text-[10px] mt-0.5">Buat siklus menu terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu, lalu aktifkan.</div></div></div>'}
-        </div>
-        <p class="text-[10px] text-stone-400 mt-1">${activeSiklus.length ? 'Kosongkan pilihan untuk menggunakan semua siklus Aktif' : ''}</p>
-      </div>
-      <div class="flex gap-3">
-        <div class="flex-1">
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Hari Mulai</label>
-          <input id="pr-hari-mulai" type="number" min="1" value="1" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-        </div>
-        <div class="flex-1">
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Hari Selesai</label>
-          <input id="pr-hari-selesai" type="number" min="1" value="${maxHari}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-        </div>
-      </div>
-      <p class="text-xs text-stone-400" id="pr-hari-info">Rentang hari 1 — ${maxHari}</p>
-      <div id="pr-preview" class="text-sm text-stone-500">Klik "Generate PR" untuk menghitung kebutuhan bahan...</div>
-    </div>`;
-
-  // Update hari selesai saat checkbox siklus berubah
-  document.querySelectorAll('.pr-siklus-check').forEach(function(cb) {
-    cb.addEventListener('change', function() {
-      var checked = document.querySelectorAll('.pr-siklus-check:checked');
-      var maxHari = Math.max(1, ...Array.from(checked).map(function(c) { return Number(c.dataset.hari || 7); }));
-      var selesaiEl = document.getElementById('pr-hari-selesai');
-      if (selesaiEl) selesaiEl.max = maxHari;
-      if (Number(selesaiEl.value) > maxHari) selesaiEl.value = maxHari;
-      var infoEl = document.getElementById('pr-hari-info');
-      if (infoEl) infoEl.textContent = 'Rentang hari 1 — ' + maxHari;
-    });
-  });
-
-  function updateHariInfo() {
-    var mulai = document.getElementById('pr-hari-mulai');
-    var selesai = document.getElementById('pr-hari-selesai');
-    var info = document.getElementById('pr-hari-info');
-    if (info && mulai && selesai) {
-      info.textContent = 'Range dipilih: hari ' + mulai.value + ' — ' + selesai.value;
-    }
-  }
-  document.getElementById('pr-hari-mulai').addEventListener('input', function() {
-    var selesai = document.getElementById('pr-hari-selesai');
-    if (this.value && selesai.value && Number(this.value) > Number(selesai.value)) {
-      selesai.value = this.value;
-    }
-    updateHariInfo();
-  });
-  document.getElementById('pr-hari-selesai').addEventListener('input', function() {
-    var mulai = document.getElementById('pr-hari-mulai');
-    if (this.value && mulai.value && Number(this.value) < Number(mulai.value)) {
-      mulai.value = this.value;
-    }
-    updateHariInfo();
-  });
-  updateHariInfo();
-
-  const saveBtn = document.getElementById('modal-save');
-  saveBtn.textContent = 'Generate PR';
-  saveBtn.style.display = 'inline-block';
-  saveBtn.onclick = generatePr;
-  document.getElementById('modal').classList.remove('hidden');
-  document.getElementById('modal').classList.add('flex');
-}
-
-async function generatePr() {
-  const periode = document.getElementById('pr-periode').value;
-  if (!periode) { showAlert('Pilih periode terlebih dahulu'); return; }
-
-  const saveBtn = document.getElementById('modal-save');
-  saveBtn.disabled = true;
-  saveBtn.textContent = '⏳ Menghitung...';
-
-  const preview = document.getElementById('pr-preview');
-  preview.innerHTML = '<div class="text-center py-4 text-stone-500">⏳ Menghitung kebutuhan bahan dengan SP/BDD...</div>';
-
-  try {
-    const checked = document.querySelectorAll('.pr-siklus-check:checked');
-    const ids = Array.from(checked).map(cb => parseInt(cb.value));
-    const body = { periode };
-    if (ids.length) body.siklus_ids = ids;
-    body.hari_mulai = parseInt(document.getElementById('pr-hari-mulai').value) || 1;
-    body.hari_selesai = parseInt(document.getElementById('pr-hari-selesai').value) || 999;
-
-    const result = await api.post('/siklus/buat-pr', body);
-
-    if (!result.items || !result.items.length) {
-      preview.innerHTML = '<div class="text-amber-700 bg-amber-50 p-3 rounded text-sm">Tidak ada bahan. Siklus dipilih belum memiliki menu.</div>';
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Generate PR';
-      return;
-    }
-
-    const budgetHtml = result.budget_warning ? `<div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 mb-3">
-      <div class="flex items-center gap-2 font-semibold mb-1"><svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>Peringatan Budget</div>
-      <div>${result.budget_warning.message}</div>
-      <div class="text-[10px] mt-1 text-amber-700">Total Budget: ${fmtIDR(result.budget_warning.total_budget)} | Realisasi: ${fmtIDR(result.budget_warning.total_realisasi)} | Sisa: ${fmtIDR(result.budget_warning.sisa_budget)} | Estimasi PR: ${fmtIDR(result.budget_warning.estimated_total)} | Defisit: ${fmtIDR(result.budget_warning.defisit)}</div>
-    </div>` : '';
-
-    preview.innerHTML = `
-      <div class="rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-        <div class="bg-gradient-to-r from-emerald-50 to-emerald-100/60 px-4 py-3 text-sm font-semibold text-emerald-800">${result.message}</div>
-        ${result.total_hari ? '<div class="px-4 py-2 text-[10px] text-stone-500 bg-stone-50 border-t border-stone-100">Hari produksi: ' + result.hari_mulai + ' — ' + result.hari_selesai + ' (total ' + result.total_hari + ' hari)</div>' : ''}
-        ${budgetHtml}
-        <div class="overflow-x-auto"><table class="w-full">
-          <thead><tr class="border-b border-stone-100">
-            <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Bahan</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kebutuhan</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">+Buffer 10%</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Harga</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Subtotal</th>
-          </tr></thead>
-          <tbody>
-            ${result.items.map(i => `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-              <td class="px-4 py-3 text-xs text-stone-700">${i.nama}</td>
-              <td class="px-4 py-3 text-xs text-right mono text-stone-700">${i.total_qty} ${i.satuan}</td>
-              <td class="px-4 py-3 text-xs text-right mono text-stone-700">${i.buffer_10} ${i.satuan}</td>
-              <td class="px-4 py-3 text-xs text-right mono text-stone-600">${fmtIDR(i.harga_satuan)}</td>
-              <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(i.subtotal)}</td>
-            </tr>`).join('')}
-          </tbody>
-          <tfoot><tr class="bg-gradient-to-r from-stone-50 to-stone-100/60 border-t border-stone-200">
-            <td colspan="4" class="px-4 py-3 text-xs text-right font-bold text-stone-700">Total Estimasi</td>
-            <td class="px-4 py-3 text-xs text-right font-bold mono text-stone-800">${fmtIDR(result.total_estimated)}</td></tr>
-          </tfoot>
-        </table></div>
-      </div>
-      <div class="mt-2 text-xs text-stone-500">PR <strong>${result.no_pr}</strong> telah tersimpan. Gunakan tombol "Buat PO" di daftar PR untuk membuat Purchase Order.</div>`;
-
-    saveBtn.style.display = 'none';
-    // Refresh PR list
-    const data = await api.get('/purchase_order');
-    const allRows = Array.isArray(data) ? data : (data.data || []);
-    _prList = allRows.filter(r => isPrNo(r.no_po));
-    _poList = allRows.filter(r => !isPrNo(r.no_po));
-  } catch (e) {
-    preview.innerHTML = `<div class="text-red-700 bg-red-50 p-3 rounded text-sm">Gagal: ${e.message || 'Terjadi kesalahan'}</div>`;
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'Generate PR';
-  }
-}
-
-async function viewPrItems(prId) {
-  const pr = _prList.find(r => r.id === prId);
-  if (!pr) return;
-  let items = [];
-  try { items = JSON.parse(pr.item); } catch {}
-
-  document.getElementById('modal-title').textContent = 'Detail PR: ' + pr.no_po;
-  document.getElementById('modal-body').innerHTML = `
-    <div class="space-y-3">
-      <div class="flex items-center gap-3 text-xs text-stone-500 bg-stone-50 rounded-xl px-4 py-2.5">
-        <span><span class="font-semibold text-stone-700">Periode:</span> ${(pr.tanggal || '').slice(0, 7)}</span>
-        <span class="text-stone-200">|</span>
-        <span><span class="font-semibold text-stone-700">Status:</span> ${pr.status}</span>
-        <span class="text-stone-200">|</span>
-        <span><span class="font-semibold text-stone-700">Total:</span> <span class="mono">${fmtIDR(pr.total_nilai || 0)}</span></span>
-      </div>
-      <div class="rounded-2xl border border-stone-200 overflow-hidden">
-        <div class="overflow-x-auto"><table class="w-full">
-          <thead><tr class="border-b border-stone-100">
-            <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Bahan</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Qty (dgn buffer)</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Satuan</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Harga</th>
-            <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Subtotal</th>
-          </tr></thead>
-          <tbody>
-            ${items.map(i => `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-              <td class="px-4 py-3 text-xs text-stone-700">${i.nama || '-'}</td>
-              <td class="px-4 py-3 text-xs text-right mono text-stone-700">${Number(i.qty || 0).toFixed(2)}</td>
-              <td class="px-4 py-3 text-xs text-right text-stone-500">${i.satuan || '-'}</td>
-              <td class="px-4 py-3 text-xs text-right mono text-stone-600">${fmtIDR(Number(i.harga || 0))}</td>
-              <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(Number(i.subtotal || 0))}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table></div>
-      </div>
-      ${pr.catatan ? `<div class="text-[10px] text-stone-400 bg-stone-50 rounded-xl px-4 py-2">${pr.catatan}</div>` : ''}
-    </div>`;
-
-  document.getElementById('modal-save').textContent = 'Tutup';
-  document.getElementById('modal-save').style.display = 'inline-block';
-  document.getElementById('modal-save').onclick = closeModal;
-  document.getElementById('modal').classList.remove('hidden');
-  document.getElementById('modal').classList.add('flex');
-}
-
-async function approvePr(prId) {
-  if (!await showConfirm('Setujui PR ini?')) return;
-  try {
-    await api.put('/purchase_order/' + prId, { status: 'Disetujui' });
-    showToast('PR disetujui');
-    switchPrPoTab('pr');
-  } catch (e) {
-    showAlert('Gagal: ' + (e.message || 'Error'), 'error');
-  }
-}
-
-async function rejectPr(prId) {
-  const reason = prompt('Alasan penolakan:');
-  if (!reason) return;
-  const pr = _prList.find(r => r.id === prId);
-  const currentCatatan = pr?.catatan || '';
-  const newCatatan = (currentCatatan + '\n[DITOLAK: ' + reason + ']').trim();
-  if (!await showConfirm('Tolak PR ini? Alasan: ' + reason)) return;
-  try {
-    await api.put('/purchase_order/' + prId, { catatan: newCatatan });
-    showToast('PR ditolak');
-    switchPrPoTab('pr');
-  } catch (e) {
-    showAlert('Gagal: ' + (e.message || 'Error'), 'error');
-  }
-}
-
-async function buatPoDariPr(prId) {
-  const pr = _prList.find(r => r.id === prId);
-  if (!pr) return;
-  let items = [];
-  try { items = JSON.parse(pr.item); } catch {}
-
-  if (!items.length) { showAlert('PR ini tidak memiliki item'); return; }
-
-  // Pre-fill PO form with PR items
-  await openPembelianForm(null, items, pr.no_po);
+  content.innerHTML = '<div id="pr-po-content"></div>';
+  await renderPoView();
 }
 
 // ==================== PO VIEW ====================
@@ -383,8 +44,7 @@ async function buatPoDariPr(prId) {
 async function renderPoView() {
   let allData = [];
   try {
-    const res = await api.get('/purchase_order?tipe=po');
-    allData = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+    allData = await muatSemuaPo();
   } catch (e) {
     allData = [];
   }
@@ -496,7 +156,7 @@ async function syncDariKoperasi() {
     const result = await api.post('/purchase_order/sync-koperasi', {});
     const msg = result.message || (result.updated + ' PO diupdate');
     showToast('✅ ' + msg, result.updated > 0 ? 'success' : 'info');
-    renderPembelianPage('po');
+    renderPembelianPage();
   } catch (e) {
     showAlert('Gagal sinkronisasi: ' + (e.message || 'Error'), 'error');
   }
@@ -507,18 +167,7 @@ async function deletePo(id) {
   try {
     await api.del('/purchase_order/' + id);
     showToast('PO berhasil dihapus');
-    renderPembelianPage('po');
-  } catch (e) {
-    showAlert('Gagal: ' + (e.message || 'Error'), 'error');
-  }
-}
-
-async function deletePr(id) {
-  if (!await showConfirm('Hapus PR ini?')) return;
-  try {
-    await api.del('/purchase_order/' + id);
-    showToast('PR berhasil dihapus');
-    switchPrPoTab('pr');
+    renderPembelianPage();
   } catch (e) {
     showAlert('Gagal: ' + (e.message || 'Error'), 'error');
   }
@@ -540,7 +189,7 @@ async function terimaPo(poId) {
     
     showToast('✅ ' + sukses + ' bahan diterima' + (gagal ? ', ' + gagal + ' gagal' : ''), sukses > gagal ? 'success' : 'warning');
     if (info) showAlert('Bahan yang gagal:<br>' + info, 'warning');
-    renderPembelianPage('po');
+    renderPembelianPage();
   } catch (e) {
     showAlert('Gagal: ' + (e.message || 'Error'), 'error');
   }
@@ -609,7 +258,7 @@ async function kirimKeKoperasi(po) {
           } else if (!po.status || po.status === 'Draft') {
             await api.put('/purchase_order/' + po.id, { status: 'Menunggu Koperasi' });
           }
-          renderPembelianPage('po');
+          renderPembelianPage();
         } catch (e) {
           console.warn('Gagal simpan kode pesanan koperasi:', e);
         }
@@ -683,7 +332,7 @@ function normalizeWaNumber(num) {
   return n;
 }
 
-async function openPembelianForm(editing, prItems, prRef) {
+async function openPembelianForm(editing) {
   _poEditing = editing;
   try {
     const data = await api.get('/bahan_baku');
@@ -708,20 +357,9 @@ async function openPembelianForm(editing, prItems, prRef) {
   let items = [];
   if (editing && editing.item) {
     try { items = JSON.parse(editing.item); } catch { items = []; }
-  } else if (prItems && prItems.length) {
-    // Pre-fill from PR items
-    items = prItems.map(i => ({
-      bahan_baku_id: i.bahan_baku_id,
-      qty: i.qty || i.buffer_10 || 0,
-      satuan: i.satuan,
-      subtotal: i.subtotal || i.estimated_subtotal || 0,
-    }));
   }
 
-  const _prRefGlobal = prRef;
-  window._prRef = prRef || null;
-
-  document.getElementById('modal-title').textContent = editing ? 'Edit Purchase Order' : prItems ? 'Buat PO dari PR (' + (prRef || '') + ')' : 'Tambah Purchase Order';
+  document.getElementById('modal-title').textContent = editing ? 'Edit Purchase Order' : 'Tambah Purchase Order';
 
   document.getElementById('modal-body').innerHTML = `
     <div class="space-y-4">
@@ -760,11 +398,15 @@ async function openPembelianForm(editing, prItems, prRef) {
       <div>
         <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Status</label>
         <select id="po-status" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-          <option>Draft</option><option ${editing && editing.status === 'Menunggu Koperasi' ? 'selected' : ''}>Menunggu Koperasi</option><option ${editing && editing.status === 'Disetujui' ? 'selected' : ''}>Disetujui</option>
-          <option ${editing && editing.status === 'Dikirim' ? 'selected' : ''}>Dikirim</option>
-          <option ${editing && editing.status === 'Diterima' ? 'selected' : ''}>Diterima</option>
-          <option ${editing && editing.status === 'Dibayar' ? 'selected' : ''}>Dibayar</option>
+          ${(() => {
+            const statusSekarang = editing ? (editing.status || 'Draft') : 'Draft';
+            // PO yang sudah Diterima tetap menampilkan statusnya (terkunci, tidak bisa
+            // dipilih ulang), tapi tetap bisa diteruskan ke Dibayar.
+            const opsi = statusSekarang === 'Diterima' ? ['Diterima', ...STATUS_PO] : STATUS_PO;
+            return opsi.map(s => `<option ${s === statusSekarang ? 'selected' : ''}${s === 'Diterima' ? ' disabled' : ''}>${s}</option>`).join('');
+          })()}
         </select>
+        <div class="text-[10px] text-stone-400 mt-1">Status <strong>Diterima</strong> tidak bisa dipilih di form — pakai tombol ✓ Terima Barang pada daftar PO agar stok bahan & Penerimaan Barang ikut tercatat.</div>
       </div>
       <div>
         <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Catatan</label>
@@ -870,7 +512,7 @@ function savePembelian() {
     })),
     total_nilai: total,
     status: document.getElementById('po-status').value,
-    catatan: (document.getElementById('po-catatan').value.trim() + (window._prRef ? '\n[Dibuat dari: ' + window._prRef + ']' : '')).trim(),
+    catatan: document.getElementById('po-catatan').value.trim(),
   };
 
   const isEdit = !!_poEditing;
@@ -1367,7 +1009,7 @@ async function imporRiwayatKoperasi() {
     const msg = result.message || (result.imported + ' dokumen disimpan');
     showToast('✅ ' + msg, result.imported > 0 ? 'success' : 'info');
     closeModal();
-    renderPembelianPage('po');
+    renderPembelianPage();
   } catch (e) {
     showAlert('Gagal simpan: ' + (e.message || 'Error'), 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Simpan ke List Pembelian'; }
@@ -1387,7 +1029,7 @@ async function syncRiwayatKoperasi() {
     const msg = result.message || (result.updated + ' PO diupdate');
     showToast('✅ ' + msg + (result.total != null ? ' (dari ' + result.total + ' dokumen riwayat)' : ''), result.updated > 0 ? 'success' : 'info');
     closeModal();
-    renderPembelianPage('po');
+    renderPembelianPage();
   } catch (e) {
     showAlert('Gagal sinkron: ' + (e.message || 'Error'), 'error');
   }

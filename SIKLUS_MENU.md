@@ -2,7 +2,7 @@
 
 ## Ringkasan
 
-Siklus Menu adalah jadwal menu harian untuk suatu periode (misal 30 hari) yang ditargetkan ke jenjang penerima manfaat tertentu. Dari siklus, sistem menghitung kebutuhan bahan (SP), menghasilkan produksi harian, menghitung budget, dan membuat Purchase Request (PR).
+Siklus Menu adalah jadwal menu harian untuk suatu periode (misal 30 hari) yang ditargetkan ke jenjang penerima manfaat tertentu. Dari siklus, sistem menghitung kebutuhan bahan (SP), menghasilkan produksi harian, menghitung budget, dan menjadi dasar pembuatan Purchase Order (PO).
 
 ---
 
@@ -48,7 +48,7 @@ siklus_menu (1) ─────── (N) siklus_menu_item ───────
 | Status | Arti |
 |---|---|
 | `Draft` | Masih diedit, belum dipakai |
-| `Aktif` | Siklus berjalan, dipakai untuk hitung budget & PR |
+| `Aktif` | Siklus berjalan, dipakai untuk hitung budget & perencanaan pembelian |
 | `Arsip` | Selesai, tidak dipakai lagi |
 
 ---
@@ -105,7 +105,7 @@ Klik siklus → `loadSiklusDetail(id)` → menampilkan:
 - Header: nama, jenjang, status, tanggal
 - Tabel item per hari: menu, porsi, kalori, protein, karbohidrat, lemak, serat
 - Badge kategori SP per hari
-- Tombol aksi: Edit, Produksi Harian, Hitung SP, Hitung Budget, Buat PR
+- Tombol aksi: Edit, Produksi Harian, Hitung SP, Hitung Budget
 
 ### 3d. Laporan Siklus
 
@@ -163,21 +163,12 @@ budget = hari_kerja × jumlah_porsi × harga_per_porsi
 
 Lihat `BUDGETING.md` untuk detail lebih lanjut.
 
-### 3h. Buat Purchase Request (PR)
+### 3h. Pembelian (PO)
 
-```
-`buatPRSiklus()` → POST /siklus/buat-pr
-```
+Alur PR sudah tidak dipakai — pembelian dilakukan langsung dari modul **Pembelian**:
 
-Proses (`routes/siklus/aksi.js:214`):
-1. Ambil semua siklus aktif
-2. Hitung hari kerja dalam bulan
-3. Agregasi kebutuhan bahan dari:
-   - Menu-linked: `menu_bahan × porsi × hari`
-   - Grid-based: `berat_1_sp × porsi × hari`
-4. Terapkan BDD dan `buffer_persen`
-5. Hitung subtotal: `(kebutuhan_kg / 1000) × harga_satuan`
-6. Simpan sebagai PR di `purchase_order` (no_po: `PR/{periode}/{timestamp}`, status: `Draft`)
+- `POST /purchase_order` — buat PO manual (selama nomor belum terbit sistem memberi referensi sementara `TMP-<id>`, nomor invoice baru terbit dari koperasi)
+- `POST /purchase_order/generate-from-siklus` — buat draft PO per menu dari siklus (tab PO → **Buat dari Siklus**)
 
 ### 3i. Standar SP
 
@@ -271,7 +262,6 @@ Semua endpoint di `routes/siklus/` dan `routes/sp.js` — require role `admin` a
 | `POST` | `/siklus/generate-produksi-batch` | Generate produksi rentang tanggal |
 | `POST` | `/siklus/hitung-budget` | Hitung budget 1 siklus |
 | `POST` | `/siklus/hitung-budget-semua` | Hitung budget semua siklus aktif |
-| `POST` | `/siklus/buat-pr` | Buat Purchase Request |
 
 ### Laporan (`routes/siklus/laporan.js`)
 
@@ -318,7 +308,7 @@ Semua endpoint di `routes/siklus/` dan `routes/sp.js` — require role `admin` a
 | `public/modul/siklus.js` | Frontend: render, form, grid picker, laporan, aksi |
 | `routes/siklus/crud.js` | Backend CRUD siklus + item |
 | `routes/siklus/bahan-grid.js` | Backend grid bahan |
-| `routes/siklus/aksi.js` | Backend: produksi, budget, PR |
+| `routes/siklus/aksi.js` | Backend: produksi & budget |
 | `routes/siklus/laporan.js` | Backend laporan & produksi harian |
 | `routes/siklus/laporan-lanjutan.js` | Backend perencanaan & override |
 | `routes/siklus/helpers.js` | Helper: KAT_ORDER, hitung gizi, batch load |

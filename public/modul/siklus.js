@@ -1260,18 +1260,15 @@ function generateProduksiBatch(siklusId) {
   openProduksiModal(siklusId, 'range');
 }
 
-// Dialog "Hitung Budget / Buat PR" modern — input periode YYYY-MM (gantikan prompt()).
+// Dialog "Hitung Budget" modern — input periode YYYY-MM (gantikan prompt()).
 function openBudgetModal(siklusId, mode) {
   var existing = document.getElementById('budget-modal');
   if (existing) existing.remove();
 
   var defPeriode = new Date().toISOString().slice(0, 7);
   var isSemua = mode === 'semua';
-  var isPR = mode === 'pr';
 
-  var header = isPR
-    ? { title: 'Buat Purchase Request', sub: siklusId ? 'PR dari semua siklus Aktif' : 'PR dari semua siklus Aktif', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><polyline points="9 14 11 16 15 12"/></svg>', grad: 'from-violet-600 to-violet-500', label: 'Buat PR' }
-    : isSemua
+  var header = isSemua
       ? { title: 'Hitung Budget Semua Siklus', sub: 'Hitung kebutuhan bahan semua siklus Aktif', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><polyline points="14 7 21 7 21 14"/></svg>', grad: 'from-blue-600 to-blue-500', label: 'Hitung Budget' }
       : { title: 'Hitung Budget Siklus', sub: 'Rincian kebutuhan bahan untuk siklus ini', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', grad: 'from-blue-600 to-blue-500', label: 'Hitung Budget' };
 
@@ -1295,7 +1292,7 @@ function openBudgetModal(siklusId, mode) {
       '</div>' +
       '<div class="px-5 py-4 border-t border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/60 flex items-center justify-end gap-2">' +
         '<button onclick="closeBudgetModal()" class="h-11 px-4 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">Batal</button>' +
-        '<button id="bd-submit" onclick="bdSubmit(' + (siklusId || 'null') + ', \'' + mode + '\')" class="h-11 px-5 rounded-xl text-sm font-semibold text-white shadow-sm transition-colors inline-flex items-center gap-2 ' + (isPR ? 'bg-violet-600 hover:bg-violet-700' : 'bg-blue-600 hover:bg-blue-700') + '">' +
+        '<button id="bd-submit" onclick="bdSubmit(' + (siklusId || 'null') + ', \'' + mode + '\')" class="h-11 px-5 rounded-xl text-sm font-semibold text-white shadow-sm transition-colors inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700">' +
           header.icon + header.label +
         '</button>' +
       '</div>' +
@@ -1370,9 +1367,7 @@ async function bdSubmit(siklusId, mode) {
   }
   try {
     var r;
-    if (mode === 'pr') {
-      r = await api.post('/siklus/buat-pr', { periode: periode });
-    } else if (mode === 'semua') {
+    if (mode === 'semua') {
       r = await api.post('/siklus/hitung-budget-semua', { periode: periode });
     } else {
       r = await api.post('/siklus/hitung-budget', { siklus_id: siklusId, periode: periode });
@@ -1383,7 +1378,7 @@ async function bdSubmit(siklusId, mode) {
     showAlert('❌ ' + (e.message || 'Gagal'), 'error');
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><polyline points="14 7 21 7 21 14"/></svg>' + (mode === 'pr' ? 'Buat PR' : 'Hitung Budget');
+      btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><polyline points="14 7 21 7 21 14"/></svg>Hitung Budget';
     }
   }
 }
@@ -1394,10 +1389,6 @@ async function hitungBudgetSiklus(siklusId) {
 
 async function hitungBudgetSemuaSiklus() {
   openBudgetModal(null, 'semua');
-}
-
-async function buatPRSiklus() {
-  openBudgetModal(null, 'pr');
 }
 
 // ===== Budget Harian — isi ANGGARAN BELANJA HARIAN (Rp/hari) langsung dari Siklus =====
