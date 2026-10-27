@@ -1311,6 +1311,19 @@ CREATE TABLE menu_bahan (
       } catch (e) {
         console.error('Migrasi menu_bahan porsi (besar/kecil):', e.message);
       }
+      // Idempotent: kolom jumlah porsi besar & porsi kecil di menu — diisi dari
+      // form Edit Menu /menu dan dipakai baris perhitungan kebutuhan.
+      try {
+        const [mcols] = await db.query(
+          "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='menu' AND COLUMN_NAME IN ('jumlah_porsi','jumlah_porsi_kecil')"
+        );
+        const adaMenu = new Set(mcols.map(c => c.COLUMN_NAME));
+        if (!adaMenu.has('jumlah_porsi')) await db.query('ALTER TABLE menu ADD COLUMN jumlah_porsi INT DEFAULT 0 AFTER serat');
+        if (!adaMenu.has('jumlah_porsi_kecil')) await db.query('ALTER TABLE menu ADD COLUMN jumlah_porsi_kecil INT DEFAULT 0 AFTER jumlah_porsi');
+        if (!adaMenu.has('jumlah_porsi_kecil')) console.log('Migrasi: kolom menu.jumlah_porsi_kecil ditambahkan');
+      } catch (e) {
+        console.error('Migrasi menu porsi (besar/kecil):', e.message);
+      }
       try {
         await db.query(`CREATE TABLE IF NOT EXISTS tenant_poster_template (
           tenant_id INT NOT NULL PRIMARY KEY,

@@ -920,11 +920,19 @@ router.post('/system/koreksi-rosmery', requireRole('admin'), async (req, res) =>
     log('3) GRAMASI MENU TERDAMPAK');
     for (const mn of menus) {
       const [[g]] = await conn.query(
-        'SELECT COALESCE(SUM(jumlah),0) s FROM menu_bahan WHERE menu_id=?', [mn.id]
+        `SELECT COALESCE(SUM(jumlah),0) s,
+                COALESCE(SUM(COALESCE(jumlah_besar, jumlah)),0) sb,
+                COALESCE(SUM(COALESCE(jumlah_kecil, COALESCE(jumlah_besar, jumlah))),0) sk
+         FROM menu_bahan WHERE menu_id=?`, [mn.id]
       );
       const gramasi = Math.round(Number(g.s) * 100) / 100;
-      await conn.query('UPDATE menu SET gramasi_total=? WHERE id=? AND tenant_id=?', [gramasi, mn.id, t]);
-      log('   Menu id ' + mn.id + ': gramasi_total → ' + gramasi + ' g');
+      const gramasiBesar = Math.round(Number(g.sb) * 100) / 100;
+      const gramasiKecil = Math.round(Number(g.sk) * 100) / 100;
+      await conn.query(
+        'UPDATE menu SET gramasi_total=?, gramasi_besar=?, gramasi_kecil=? WHERE id=? AND tenant_id=?',
+        [gramasi, gramasiBesar, gramasiKecil, mn.id, t]
+      );
+      log('   Menu id ' + mn.id + ': gramasi_total → ' + gramasi + ' g (besar ' + gramasiBesar + ' g, kecil ' + gramasiKecil + ' g)');
     }
     log('');
 
@@ -1290,11 +1298,19 @@ router.post('/system/koreksi-wijen', requireRole('admin'), async (req, res) => {
     log('3) GRAMASI MENU TERDAMPAK (' + affectedMenus.size + ')');
     for (const menuId of affectedMenus) {
       const [[g]] = await conn.query(
-        'SELECT COALESCE(SUM(jumlah),0) s FROM menu_bahan WHERE menu_id=?', [menuId]
+        `SELECT COALESCE(SUM(jumlah),0) s,
+                COALESCE(SUM(COALESCE(jumlah_besar, jumlah)),0) sb,
+                COALESCE(SUM(COALESCE(jumlah_kecil, COALESCE(jumlah_besar, jumlah))),0) sk
+         FROM menu_bahan WHERE menu_id=?`, [menuId]
       );
       const gramasi = Math.round(Number(g.s) * 100) / 100;
-      await conn.query('UPDATE menu SET gramasi_total=? WHERE id=? AND tenant_id=?', [gramasi, menuId, t]);
-      log('   Menu id ' + menuId + ': gramasi_total → ' + gramasi + ' g');
+      const gramasiBesar = Math.round(Number(g.sb) * 100) / 100;
+      const gramasiKecil = Math.round(Number(g.sk) * 100) / 100;
+      await conn.query(
+        'UPDATE menu SET gramasi_total=?, gramasi_besar=?, gramasi_kecil=? WHERE id=? AND tenant_id=?',
+        [gramasi, gramasiBesar, gramasiKecil, menuId, t]
+      );
+      log('   Menu id ' + menuId + ': gramasi_total → ' + gramasi + ' g (besar ' + gramasiBesar + ' g, kecil ' + gramasiKecil + ' g)');
     }
     log('');
 
@@ -1666,7 +1682,7 @@ router.post('/system/koreksi-menu-bahan-bersih', requireRole('admin'), async (re
   try {
     await conn.beginTransaction();
 
-    const { loadSpRefMap, calculateNutrition } = require('./menu/helpers');
+    const { loadSpRefMap, calculateNutrition, calculateGramasi } = require('./menu/helpers');
     const spRefMap = await loadSpRefMap(t);
 
     // Referensi SP (berat bersih + kotor) utk bahan yang berat_1_sp master kosong
@@ -1747,7 +1763,7 @@ router.post('/system/koreksi-menu-bahan-bersih', requireRole('admin'), async (re
       if (affectedMenus.size) {
         const ph = [...affectedMenus].map(() => '?').join(',');
         const [bahanRows] = await conn.query(
-          `SELECT mb.menu_id, mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
+          `SELECT mb.menu_id, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
            FROM menu_bahan mb JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
            WHERE mb.menu_id IN (${ph})`,
           [...affectedMenus]
@@ -1759,9 +1775,11 @@ router.post('/system/koreksi-menu-bahan-bersih', requireRole('admin'), async (re
         }
         for (const mid of affectedMenus) {
           const nut = calculateNutrition(byMenu[mid] || [], spRefMap);
+          const gram = calculateGramasi(byMenu[mid] || []);
           await conn.query(
-            'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?',
-            [nut.gramasi, nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, mid, t]
+            'UPDATE menu SET gramasi_total=?, gramasi_besar=?, gramasi_kecil=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?',
+            [nut.gramasi, gram.gramasi_besar, gram.gramasi_kecil,
+             nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, mid, t]
           );
           log('   ↻ Nutrisi menu ' + mid + ' dihitung ulang (gramasi ' + nut.gramasi + ' g)');
         }

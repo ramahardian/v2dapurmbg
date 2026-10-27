@@ -5,13 +5,13 @@
 const db = require('../../db');
 const {
   loadSpData, loadSpRefMap, loadBbNamaMap,
-  processBahanItem, calculateNutrition, syncSiklusBahan,
+  processBahanItem, calculateNutrition, calculateGramasi, syncSiklusBahan,
 } = require('./helpers');
 
 function registerCrudRoutes(router) {
   // POST /menu — create menu + bahan
   router.post('/menu', async (req, res) => {
-    const { nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, jumlah_porsi, bahan, sync_satuan } = req.body;
+    const { nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, jumlah_porsi, jumlah_porsi_kecil, bahan, sync_satuan } = req.body;
 
     if (!nama || !nama.trim()) return res.status(400).json({ error: 'Nama menu wajib diisi' });
 
@@ -29,15 +29,15 @@ function registerCrudRoutes(router) {
 
       // 1. Insert header menu
       const [r] = await conn.query(
-        `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, jumlah_porsi)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, jumlah_porsi, jumlah_porsi_kecil)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [req.user.tenant_id, nama, kategori_penerima || null, deskripsi || null,
          gramasi_total || 0, gramasi_besar || 0, gramasi_kecil || 0,
-         kalori || 0, protein || 0, karbohidrat || 0, lemak || 0, serat || 0, jumlah_porsi || 0]
+         kalori || 0, protein || 0, karbohidrat || 0, lemak || 0, serat || 0, jumlah_porsi || 0,
+         jumlah_porsi_kecil || 0]
       );
 
       // 2. Insert bahan
-      let hasBahan = false;
       const bufferUpdates = new Map();
       const satuanSync = new Map();
       if (Array.isArray(bahan)) {
@@ -56,14 +56,14 @@ function registerCrudRoutes(router) {
             bufferUpdates.set(result.idBahan, bp);
           }
           if (b.satuan && String(b.satuan).trim()) satuanSync.set(result.idBahan, String(b.satuan).trim());
-          hasBahan = true;
         }
       }
       await applyBufferUpdates(conn, bufferUpdates, req.user.tenant_id);
       await applySatuanSync(conn, satuanSync, req.user.tenant_id, sync_satuan);
 
-      // 3. Auto-calculate nutrition
-      if (hasBahan) {
+      // 3. Auto-calculate nutrition (gramasi ikut jumlah bahan tersimpan —
+      //    dipanggil walau tidak ada bahan tersimpan agar gramasi ikut 0)
+      if (Array.isArray(bahan)) {
         await updateMenuNutrition(conn, r.insertId, req.user.tenant_id, spRefMap);
       }
 
@@ -103,16 +103,16 @@ function registerCrudRoutes(router) {
 
       // 1. Update header
       await conn.query(
-        `UPDATE menu SET nama=?, kategori_penerima=?, deskripsi=?, gramasi_total=?, gramasi_besar=?, gramasi_kecil=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=?, jumlah_porsi=?
+        `UPDATE menu SET nama=?, kategori_penerima=?, deskripsi=?, gramasi_total=?, gramasi_besar=?, gramasi_kecil=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=?, jumlah_porsi=?, jumlah_porsi_kecil=?
          WHERE id=? AND tenant_id=?`,
         [f.nama, f.kategori_penerima || null, f.deskripsi || null,
          f.gramasi_total || 0, f.gramasi_besar || 0, f.gramasi_kecil || 0,
          f.kalori || 0, f.protein || 0, f.karbohidrat || 0, f.lemak || 0, f.serat || 0, f.jumlah_porsi || 0,
+         f.jumlah_porsi_kecil || 0,
          req.params.id, req.user.tenant_id]
       );
 
       // 2. Delete & re-insert bahan
-      let hasBahan = false;
       const bufferUpdates = new Map();
       const satuanSync = new Map();
       if (Array.isArray(f.bahan)) {
@@ -133,14 +133,14 @@ function registerCrudRoutes(router) {
             bufferUpdates.set(result.idBahan, bp);
           }
           if (b.satuan && String(b.satuan).trim()) satuanSync.set(result.idBahan, String(b.satuan).trim());
-          hasBahan = true;
         }
       }
       await applyBufferUpdates(conn, bufferUpdates, req.user.tenant_id);
       await applySatuanSync(conn, satuanSync, req.user.tenant_id, f.sync_satuan);
 
-      // 3. Auto-calculate nutrition
-      if (hasBahan) {
+      // 3. Auto-calculate nutrition (gramasi ikut jumlah bahan tersimpan —
+      //    dipanggil walau semua bahan gagal tersimpan agar gramasi ikut 0)
+      if (Array.isArray(f.bahan)) {
         await updateMenuNutrition(conn, req.params.id, req.user.tenant_id, spRefMap);
       }
 
@@ -179,7 +179,7 @@ function registerCrudRoutes(router) {
       const spRefMap = await loadSpRefMap(tenantId);
 
       const [menuBahanJoin] = await db.query(
-        `SELECT DISTINCT mb.menu_id, mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
+        `SELECT DISTINCT mb.menu_id, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
          FROM menu_bahan mb
          JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
          WHERE mb.menu_id IN (SELECT id FROM menu WHERE tenant_id=?)`,
@@ -196,9 +196,11 @@ function registerCrudRoutes(router) {
       for (const menu of menus) {
         const bahan = bahanByMenu[menu.id] || [];
         const nut = calculateNutrition(bahan, spRefMap);
+        const gram = calculateGramasi(bahan);
         await db.query(
-          `UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?`,
-          [nut.gramasi, nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, menu.id, tenantId]
+          `UPDATE menu SET gramasi_total=?, gramasi_besar=?, gramasi_kecil=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?`,
+          [nut.gramasi, gram.gramasi_besar, gram.gramasi_kecil,
+           nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, menu.id, tenantId]
         );
         recalculated++;
       }
@@ -211,23 +213,41 @@ function registerCrudRoutes(router) {
 }
 
 /**
- * Hitung dan update nutrisi menu dari bahan-bahannya
+ * Hitung dan update nutrisi menu dari bahan-bahannya.
+ * gramasi_total / gramasi_besar / gramasi_kecil SELALU ikut dihitung ulang dari
+ * baris menu_bahan (bahan = sumber kebenaran); nilai gizi hanya ditimpa bila
+ * ada minimal satu nutrisi > 0 agar data hasil ekstrak gambar tidak hilang.
  */
 async function updateMenuNutrition(conn, menuId, tenantId, spRefMap) {
   try {
     const [menuBahanRows] = await conn.query(
-      `SELECT mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
+      `SELECT mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
        FROM menu_bahan mb JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
        WHERE mb.menu_id=?`,
       [menuId]
     );
-    if (!menuBahanRows.length) return;
+
+    // Tidak ada bahan tersimpan → gramasi ikut 0 (nutrisi dibiarkan apa adanya)
+    if (!menuBahanRows.length) {
+      await conn.query(
+        'UPDATE menu SET gramasi_total=0, gramasi_besar=0, gramasi_kecil=0 WHERE id=? AND tenant_id=?',
+        [menuId, tenantId]
+      );
+      return;
+    }
 
     const nut = calculateNutrition(menuBahanRows, spRefMap);
+    const gram = calculateGramasi(menuBahanRows);
     if (nut.kalori > 0 || nut.protein > 0 || nut.karbohidrat > 0 || nut.lemak > 0 || nut.serat > 0) {
       await conn.query(
-        'UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?',
-        [nut.gramasi, nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, menuId, tenantId]
+        'UPDATE menu SET gramasi_total=?, gramasi_besar=?, gramasi_kecil=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=? WHERE id=? AND tenant_id=?',
+        [nut.gramasi, gram.gramasi_besar, gram.gramasi_kecil,
+         nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, menuId, tenantId]
+      );
+    } else {
+      await conn.query(
+        'UPDATE menu SET gramasi_total=?, gramasi_besar=?, gramasi_kecil=? WHERE id=? AND tenant_id=?',
+        [nut.gramasi, gram.gramasi_besar, gram.gramasi_kecil, menuId, tenantId]
       );
     }
   } catch (e) {

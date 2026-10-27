@@ -156,8 +156,13 @@ async function processBahanItem(b, conn, tenantId, spMap, jumlahPorsi, spRefMap,
 }
 
 /**
- * Hitung nilai gizi dari bahan-bahan menu
+ * Hitung nilai gizi dari bahan-bahan menu.
+ * Pembulatan 2 desimal — kolom DECIMAL(10,2) dan Σ bahan (DECIMAL 15,3)
+ * selisihnya < 0,01 sehingga tampilan "Tersimpan vs Terhitung" di halaman
+ * /menu tidak memunculkan peringatan palsu.
  */
+function r2(v) { return Math.round((Number(v) || 0) * 100) / 100; }
+
 function calculateNutrition(menuBahanRows, spRefMap) {
   let gramasi = 0, kalori = 0, protein = 0, karbohidrat = 0, lemak = 0, serat = 0;
   for (const b of menuBahanRows) {
@@ -171,13 +176,31 @@ function calculateNutrition(menuBahanRows, spRefMap) {
     serat += jml / 100 * (Number(ref.serat || b.serat) || 0);
   }
   return {
-    gramasi: Math.round(gramasi * 10) / 10,
-    kalori: Math.round(kalori * 10) / 10,
-    protein: Math.round(protein * 10) / 10,
-    karbohidrat: Math.round(karbohidrat * 10) / 10,
-    lemak: Math.round(lemak * 10) / 10,
-    serat: Math.round(serat * 10) / 10,
+    gramasi: r2(gramasi),
+    kalori: r2(kalori),
+    protein: r2(protein),
+    karbohidrat: r2(karbohidrat),
+    lemak: r2(lemak),
+    serat: r2(serat),
   };
+}
+
+/**
+ * Hitung gramasi per porsi untuk Porsi Besar & Porsi Kecil dari baris
+ * menu_bahan (jumlah_besar / jumlah_kecil; fallback ke jumlah bila NULL —
+ * baris lama belum pernah diisi kolomnya).
+ * Sumber kebenaran selalu baris menu_bahan, bukan angka kiriman client.
+ */
+function calculateGramasi(menuBahanRows) {
+  let besar = 0, kecil = 0;
+  for (const b of menuBahanRows) {
+    const jml = Number(b.jumlah) || 0;
+    const jmlBesar = b.jumlah_besar != null ? Number(b.jumlah_besar) || 0 : jml;
+    const jmlKecil = b.jumlah_kecil != null ? Number(b.jumlah_kecil) || 0 : jmlBesar;
+    besar += jmlBesar;
+    kecil += jmlKecil;
+  }
+  return { gramasi_besar: r2(besar), gramasi_kecil: r2(kecil) };
 }
 
 /**
@@ -211,5 +234,6 @@ module.exports = {
   loadBbNamaMap,
   processBahanItem,
   calculateNutrition,
+  calculateGramasi,
   syncSiklusBahan,
 };

@@ -22,7 +22,7 @@
  */
 
 const db = require('../db');
-const { loadSpRefMap, calculateNutrition } = require('../routes/menu/helpers');
+const { loadSpRefMap, calculateNutrition, calculateGramasi } = require('../routes/menu/helpers');
 const { JENJANG_DB_MAP } = require('../routes/siklus/helpers');
 require('dotenv').config();
 
@@ -181,7 +181,7 @@ async function runKoreksiMenuBahan(tenantId) {
     // Recalculate nutrisi
     const spRefMap = await loadSpRefMap(t.id);
     const [menuBahanJoin] = await db.query(
-      `SELECT DISTINCT mb.menu_id, mb.jumlah, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
+      `SELECT DISTINCT mb.menu_id, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, bb.nama, bb.kalori, bb.protein, bb.karbohidrat, bb.lemak, bb.serat
        FROM menu_bahan mb
        JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
        WHERE mb.menu_id IN (SELECT id FROM menu WHERE tenant_id=?)`,
@@ -197,10 +197,12 @@ async function runKoreksiMenuBahan(tenantId) {
     for (const menu of menus) {
       const bahan = bahanByMenu[menu.id] || [];
       const nut = calculateNutrition(bahan, spRefMap);
+      const gram = calculateGramasi(bahan);
       await db.query(
-        `UPDATE menu SET gramasi_total=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=?
+        `UPDATE menu SET gramasi_total=?, gramasi_besar=?, gramasi_kecil=?, kalori=?, protein=?, karbohidrat=?, lemak=?, serat=?
          WHERE id=? AND tenant_id=?`,
-        [nut.gramasi, nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, menu.id, t.id]
+        [nut.gramasi, gram.gramasi_besar, gram.gramasi_kecil,
+         nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, menu.id, t.id]
       );
     }
     log(`  ${menus.length} menu nutrisi diperbarui`);

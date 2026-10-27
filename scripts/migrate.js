@@ -722,12 +722,18 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi buffer_persen)'); }
 
-  // jumlah_porsi di menu
+  // jumlah_porsi (porsi besar) & jumlah_porsi_kecil (porsi kecil) di menu —
+  // keduanya diisi dari form Edit Menu /menu dan dipakai baris perhitungan kebutuhan.
   try {
     const [jpCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'menu' AND COLUMN_NAME = 'jumlah_porsi'");
     if (!jpCol.length) {
       await q("ALTER TABLE menu ADD COLUMN jumlah_porsi INT DEFAULT 0 AFTER serat");
       log('✓ Migrasi menu: tambah kolom jumlah_porsi');
+    }
+    const [jpkCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'menu' AND COLUMN_NAME = 'jumlah_porsi_kecil'");
+    if (!jpkCol.length) {
+      await q("ALTER TABLE menu ADD COLUMN jumlah_porsi_kecil INT DEFAULT 0 AFTER jumlah_porsi");
+      log('✓ Migrasi menu: tambah kolom jumlah_porsi_kecil');
     }
   } catch (e) { log('  (skip migrasi jumlah_porsi menu)'); }
 

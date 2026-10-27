@@ -625,7 +625,7 @@ router.post('/siklus/:id/jadikan-resep', async (req, res) => {
     const [r] = await conn.query(
       `INSERT INTO menu (tenant_id, nama, kategori_penerima, deskripsi, gramasi_total, gramasi_besar, gramasi_kecil, kalori, protein, karbohidrat, lemak, serat, jumlah_porsi, foto)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [req.user.tenant_id, nama, kategoriPenerima, deskripsi, nut.gramasi, 0, 0,
+      [req.user.tenant_id, nama, kategoriPenerima, deskripsi, nut.gramasi, nut.gramasi, nut.gramasi,
        nut.kalori, nut.protein, nut.karbohidrat, nut.lemak, nut.serat, jumlahPorsi, item.foto || null]
     );
 

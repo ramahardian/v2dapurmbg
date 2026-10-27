@@ -393,7 +393,7 @@ function renderGramasiCell(gramasiTotal, bahan) {
   var rounded = Math.round(displayGramasi * 10) / 10;
   var title = '';
   if (calculated > 0 && Math.abs(calculated - Number(gramasiTotal)) > 0.01) {
-    title = ' title="Tersimpan: ' + Number(gramasiTotal) + 'g, Terhitung: ' + Math.round(calculated * 10) / 10 + 'g" class="cursor-help"';
+    title = ' title="Tersimpan: ' + Math.round(Number(gramasiTotal) * 100) / 100 + 'g, Terhitung: ' + Math.round(calculated * 100) / 100 + 'g" class="cursor-help"';
   }
   return '<span' + title + '>' + rounded + 'g</span>';
 }
@@ -585,11 +585,12 @@ async function openMenuForm(editing) {
   // Porsi Besar & Porsi Kecil = jumlah porsi untuk hitung jumlah kebutuhan tiap kolom bahan.
   // Porsi Besar juga disimpan sebagai menu.jumlah_porsi (kompatibilitas perilaku lama).
   var savedPorsi = Number(m.jumlah_porsi) || 0;
+  var savedPorsiKecil = Number(m.jumlah_porsi_kecil) || 0;
   window._menuPorsi = savedPorsi;
   window._menuPorsiBesar = savedPorsi;
-  window._menuPorsiKecil = 0;
+  window._menuPorsiKecil = savedPorsiKecil;
   document.getElementById('m-porsi-besar').value = savedPorsi;
-  document.getElementById('m-porsi-kecil').value = 0;
+  document.getElementById('m-porsi-kecil').value = savedPorsiKecil;
   renderBahanList();
   hitungNutrisi();
   
@@ -627,20 +628,27 @@ async function openMenuForm(editing) {
     try {
       if (!validateForm([{ id: 'm-nama', label: 'Nama Menu' }])) return;
       if (checkDuplicateName()) return showAlert('Nama menu sudah ada. Ganti nama terlebih dahulu.', 'warning');
+      // Baris bahan valid = yang benar-benar ikut dikirim & disimpan server.
+      // Gramasi dihitung dari baris yang sama agar nilai popup = nilai tersimpan.
+      const bahanValid = (window._menuBahan || []).filter(function(b) { return b.bahan_baku_id || b.nama; });
+      const sumGramasi = function(getter) {
+        return Math.round(bahanValid.reduce(function(s, b) { return s + (Number(getter(b)) || 0); }, 0) * 100) / 100;
+      };
       const payload = {
         nama: document.getElementById('m-nama').value,
         kategori_penerima: window._menuKategoriPenerima || (editing ? editing.kategori_penerima : null),
         deskripsi: document.getElementById('m-deskripsi').value,
-        gramasi_total: Math.round((window._menuBahan || []).reduce(function(s,b){ return s + (Number(b.jumlah)||0); }, 0) * 100) / 100,
-        gramasi_besar: Math.round((window._menuBahan || []).reduce(function(s,b){ return s + (Number(b.jumlah_besar != null ? b.jumlah_besar : b.jumlah)||0); }, 0) * 100) / 100,
-        gramasi_kecil: Math.round((window._menuBahan || []).reduce(function(s,b){ return s + (Number(b.jumlah_kecil != null ? b.jumlah_kecil : b.jumlah)||0); }, 0) * 100) / 100,
+        gramasi_total: sumGramasi(function(b) { return b.jumlah; }),
+        gramasi_besar: sumGramasi(function(b) { return b.jumlah_besar != null ? b.jumlah_besar : b.jumlah; }),
+        gramasi_kecil: sumGramasi(function(b) { return b.jumlah_kecil != null ? b.jumlah_kecil : (b.jumlah_besar != null ? b.jumlah_besar : b.jumlah); }),
         kalori: +document.getElementById('m-kalori').value || 0,
         protein: +document.getElementById('m-protein').value || 0,
         karbohidrat: +document.getElementById('m-karbohidrat').value || 0,
         lemak: +document.getElementById('m-lemak').value || 0,
         serat: +document.getElementById('m-serat').value || 0,
         jumlah_porsi: Number(document.getElementById('m-porsi-besar').value) || 0,
-        bahan: window._menuBahan.filter(function(b) { return b.bahan_baku_id || b.nama; }),
+        jumlah_porsi_kecil: Number(document.getElementById('m-porsi-kecil').value) || 0,
+        bahan: bahanValid,
       };
       if (editing) await api.put('/menu/' + editing.id, payload);
       else await api.post('/menu', payload);
