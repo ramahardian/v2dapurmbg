@@ -19,7 +19,7 @@ async function renderDashboard() {
 }
 
 /**
- * dashMenuRender + dashMenuNav — Navigasi prev/next "Menu Aktif Hari Ini".
+ * dashMenuRender + dashMenuNav — Navigasi prev/next "Menu Hari Ini".
  * Data semua hari disuntik sebagai JSON di <script type="application/json" id="dash-menu-data">.
  */
 function escDashMenu(s) {

@@ -405,7 +405,7 @@ async function renderEditorPostingan() {
   } catch (e) { menu = null; }
   if (!menu || !menu.menu_nama) {
     menu = socialSampleMenu();
-    notice = 'Mode contoh. Buka halaman ini dari Dashboard → Menu Aktif Hari Ini agar data menu asli otomatis terisi.';
+    notice = 'Mode contoh. Buka halaman ini dari Dashboard → Menu Hari Ini agar data menu asli otomatis terisi.';
   }
 
   _socialEd = socialNewState(menu);
