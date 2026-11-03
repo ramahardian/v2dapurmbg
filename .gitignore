@@ -11,6 +11,10 @@ out/
 
 # Build
 dist/
+# public/dist berisi file runtime yang di-require server.js — jangan ikut ter-ignore
+!public/dist/
+public/dist/*
+!public/dist/cache-buster.js
 build/
 
 # Database backups (berisi seluruh data — jangan di-commit)
