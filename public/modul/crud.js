@@ -8,16 +8,18 @@ async function renderCrud(cfg) {
   const c = document.getElementById('content');
   // Layout bento: satu grid tile (statistik / cari / aksi) alih-alih toolbar
   // stacked, meniru pola halaman Bahan Baku.
-  const statsTile = `<div id="crud-stats" class="${cfg.stats ? 'md:col-span-2' : 'hidden'}">
+  const actionsOutside = !!cfg.actionsOutsideGrid;
+  const actionTileHasContent = !!(cfg.helpContent || cfg.sync || cfg.extraButtons);
+  const statsTile = `<div id="crud-stats" class="${cfg.stats ? (actionsOutside && !actionTileHasContent ? 'md:col-span-4' : 'md:col-span-2') : 'hidden'}">
     <div id="crud-stats-content" class="grid grid-cols-2 xl:grid-cols-3 gap-3 h-full"></div>
   </div>`;
   // Tombol Tambah + Export dipakai di dua tempat: di search tile (halaman tanpa
   // statistik) atau di action tile (saat kartu statistik tampil), supaya tombol
   // tetap ada walau blok stats ditampilkan.
   const addExportBtns = '<div class="flex items-center gap-2"><button id="add-btn" class="h-10 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-[13px] font-semibold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap"><svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah</button><button onclick="exportXlsx()" class="h-10 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">Export XLSX</button></div>';
-  const searchTile = `<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 ${cfg.stats ? 'md:col-span-4' : 'md:col-span-2'} flex items-center gap-2"><div class="relative w-full"><input id="crud-search" placeholder="Cari..." class="w-full h-10 pl-10 pr-4 rounded-xl border border-stone-200 bg-stone-50/60 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"><svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div>${cfg.stats ? '' : addExportBtns}</div>`;
+  const searchTile = `<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 ${cfg.stats ? 'md:col-span-4' : 'md:col-span-2'} flex items-center gap-2"><div class="relative w-full"><input id="crud-search" placeholder="Cari..." class="w-full h-10 pl-10 pr-4 rounded-xl border border-stone-200 bg-stone-50/60 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"><svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div>${(cfg.stats || actionsOutside) ? '' : addExportBtns}</div>`;
   const actionTile = `<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center"><div class="flex flex-wrap items-center gap-4 w-full">
-      ${cfg.stats ? addExportBtns : ''}
+      ${(cfg.stats && !actionsOutside) ? addExportBtns : ''}
       ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-400 hover:text-stone-600 hover:bg-stone-50 shadow-sm transition-all shrink-0" title="Info halaman ini">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       </button>` : ''}
@@ -28,8 +30,20 @@ async function renderCrud(cfg) {
       </button>
     </div>
   </div>`;
-  const headerTiles = cfg.stats ? statsTile + actionTile + searchTile : searchTile + actionTile;
-  c.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">${headerTiles}</div>
+  const headerTiles = actionsOutside
+    ? (cfg.stats ? statsTile + (actionTileHasContent ? actionTile : '') : '')
+    : (cfg.stats ? statsTile + actionTile + searchTile : searchTile + actionTile);
+  // Toolbar khusus actionsOutsideGrid: kolom cari + tombol aksi berdiri sendiri
+  // di luar kotak bento, tepat di atas tabel.
+  const actionsRow = actionsOutside ? `<div class="mb-4 flex flex-wrap items-center gap-2">
+      <div class="relative flex-1 min-w-[200px]">
+        <input id="crud-search" placeholder="Cari..." class="w-full h-10 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </div>
+      ${addExportBtns}
+    </div>` : '';
+  const bentoGrid = headerTiles ? `<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">${headerTiles}</div>` : '';
+  c.innerHTML = `${actionsRow}${bentoGrid}
   ${cfg.filters && cfg.filters.length ? `<div id="crud-filters" class="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-xl border border-stone-200 bg-stone-50/60">` : ''}
   <div id="table-wrap" class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden"></div>
   <div id="crud-pagination" class="flex items-center justify-between mt-3"></div>`;
