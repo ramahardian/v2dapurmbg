@@ -29,6 +29,7 @@ if (cluster.isMaster && WORKERS > 1) {
   const cookieParser = require('cookie-parser');
   const jwt = require('jsonwebtoken');
   const { requireAuth, requireRole, trackActivity } = require('./middleware/auth');
+const { getDistVer, getLogoVer } = require('./public/dist/cache-buster');
   const authRoutes = require('./routes/auth');
   const apiRoutes = require('./routes/api');
   const db = require('./db');
@@ -214,69 +215,7 @@ if (cluster.isMaster && WORKERS > 1) {
   function hashBundle() {
     return require('crypto').createHash('md5').update(require('fs').readFileSync(DIST_BUNDLE_PATH)).digest('hex').slice(0, 8);
   }
-  function getDistVer() {
-    const fs = require('fs');
-    // 1) Sumber utama: manifest `app.min.js.hash` yang ditulis scripts/build.js.
-    //    Berbasis konten (bukan mtime) — setiap build baru dengan isi berbeda
-    //    langsung menghasilkan versi baru, bahkan saat deploy preserve timestamp
-    //    (rsync -t / tar / git) atau server tidak direstart.
-    //    Signature cache = (mtime manifest, mtime bundle, size bundle); ketiganya
-    //    direkam bareng setiap recompute agar tidak saling menimpa dengan data basi.
-    try {
-      const hmtime = fs.statSync(DIST_VER_PATH).mtimeMs;
-      const bst = fs.statSync(DIST_BUNDLE_PATH);
-      const bundleChanged = distVerCache.bundleMtime !== null
-        && (distVerCache.bundleMtime !== bst.mtimeMs || distVerCache.bundleSize !== bst.size);
-      const manifestChanged = distVerCache.hashMtime !== hmtime;
-      if (distVerCache.ver === null || bundleChanged || manifestChanged) {
-        distVerCache.hashMtime = hmtime;
-        distVerCache.bundleMtime = bst.mtimeMs;
-        distVerCache.bundleSize = bst.size;
-        if (bundleChanged) {
-          // Bundle diganti (build baru / deploy parsial tanpa update manifest)
-          // → kebenaran ada di konten bundle itu sendiri.
-          distVerCache.ver = hashBundle();
-        } else {
-          // Hanya manifest yang berubah → pakai hash-nya, dengan guard korup/kosong.
-          const v = fs.readFileSync(DIST_VER_PATH, 'utf8').trim();
-          distVerCache.ver = /^[0-9a-f]{8}$/.test(v) ? v : hashBundle();
-        }
-      }
-      return distVerCache.ver;
-    } catch {}
-    // 2) Fallback tanpa manifest: hash konten bundle; re-hash hanya saat
-    //    mtime ATAU size berubah (menangkap deploy yang preserve mtime
-    //    tetapi mengubah ukuran file).
-    try {
-      const st = fs.statSync(DIST_BUNDLE_PATH);
-      if (distVerCache.ver === null || distVerCache.bundleMtime !== st.mtimeMs || distVerCache.bundleSize !== st.size) {
-        distVerCache.bundleMtime = st.mtimeMs;
-        distVerCache.bundleSize = st.size;
-        distVerCache.ver = hashBundle();
-      }
-      return distVerCache.ver;
-    } catch {}
-    return distVerCache.ver || Date.now();
-  }
-  // Cache-buster logo: hash konten public/asset/logo.png (berbasis mtime+size,
-  // re-hash hanya saat file berubah). Dipakai sebagai `?v=` pada src logo agar
-  // browser yang meng-cache immutable tetap mendapat logo terbaru.
-  const LOGO_PATH = path.join(__dirname, 'public', 'asset', 'logo.png');
   let logoVerCache = { mtime: null, size: null, ver: null };
-  function getLogoVer() {
-    const fs = require('fs');
-    try {
-      const st = fs.statSync(LOGO_PATH);
-      if (logoVerCache.ver === null || logoVerCache.mtime !== st.mtimeMs || logoVerCache.size !== st.size) {
-        logoVerCache.mtime = st.mtimeMs;
-        logoVerCache.size = st.size;
-        logoVerCache.ver = require('crypto').createHash('md5').update(fs.readFileSync(LOGO_PATH)).digest('hex').slice(0, 8);
-      }
-      return logoVerCache.ver;
-    } catch {
-      return logoVerCache.ver || Date.now();
-    }
-  }
   // Halaman HTML selalu di-revalidate (Cache-Control: no-cache) agar `?v=` terbaru
   // langsung dimuat browser tanpa hard refresh; file bundle-nya sendiri tetap
   // disajikan immutable 7 hari (aman karena URL ber-version).
