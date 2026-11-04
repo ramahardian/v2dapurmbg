@@ -215,7 +215,10 @@ async function syncSiklusBahan(conn, siklusSource, bahan, tenantId) {
     );
     for (const b of bahan) {
       const idBahan = Number(b.bahan_baku_id) || 0;
-      if (idBahan) {
+      // Baris bertanda hanya_tampil (hasil Ekstrak Gambar) juga tidak boleh
+      // disalin ke grid siklus: grid ini dibaca /perencanaan tanpa filter.
+      const hanyaTampil = Number(b.hanya_tampil) === 1 || b.hanya_tampil === true;
+      if (idBahan && !hanyaTampil) {
         await conn.query(
           'INSERT INTO siklus_menu_item_bahan (siklus_id, hari_ke, kategori_sp, bahan_baku_id) VALUES (?,?,?,?)',
           [siklusSource.siklus_id, siklusSource.hari_ke, b.kategori_sp || null, idBahan]
