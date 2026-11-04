@@ -39,7 +39,7 @@ function registerQueryRoutes(router) {
       const bahanMap = {};
       if (menuIds.length > 0) {
         const [bahanRows] = await db.query(
-          `SELECT mb.menu_id, mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, COALESCE(bb.buffer_persen, 0) AS buffer_persen, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan
+          `SELECT mb.menu_id, mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, COALESCE(bb.buffer_persen, 0) AS buffer_persen, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan, mb.hanya_tampil
            FROM menu_bahan mb
            LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
            WHERE mb.menu_id IN (${menuIds.map(() => '?').join(',')})`,
@@ -55,6 +55,7 @@ function registerQueryRoutes(router) {
             jumlah_besar: row.jumlah_besar != null ? row.jumlah_besar : row.jumlah,
             jumlah_kecil: row.jumlah_kecil != null ? row.jumlah_kecil : (row.jumlah_besar != null ? row.jumlah_besar : row.jumlah),
             keterangan: row.keterangan || '',
+            hanya_tampil: Number(row.hanya_tampil) || 0,
           });
         });
       }
@@ -110,7 +111,7 @@ function registerQueryRoutes(router) {
   router.get('/menu/:id(\\d+)', async (req, res) => {
     const [menus] = await db.query(
       `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.jumlah_porsi, m.jumlah_porsi_kecil,
-              mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, COALESCE(bb.buffer_persen, 0) AS buffer_persen, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan
+              mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, COALESCE(bb.buffer_persen, 0) AS buffer_persen, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan, mb.hanya_tampil
        FROM menu m
        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
@@ -138,6 +139,7 @@ function registerQueryRoutes(router) {
           jumlah_besar: row.jumlah_besar != null ? row.jumlah_besar : row.jumlah,
           jumlah_kecil: row.jumlah_kecil != null ? row.jumlah_kecil : (row.jumlah_besar != null ? row.jumlah_besar : row.jumlah),
           keterangan: row.keterangan || '',
+          hanya_tampil: Number(row.hanya_tampil) || 0,
         });
       }
     });
@@ -151,7 +153,7 @@ function registerQueryRoutes(router) {
     const ph = ids.map(() => '?').join(',');
     const [rows] = await db.query(
       `SELECT m.id, m.nama, m.kategori_penerima, m.deskripsi, m.gramasi_total, m.gramasi_besar, m.gramasi_kecil, m.kalori, m.protein, m.karbohidrat, m.lemak, m.serat, m.jumlah_porsi, m.jumlah_porsi_kecil,
-              mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, COALESCE(bb.buffer_persen, 0) AS buffer_persen, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan
+              mb.bahan_baku_id, bb.nama as bahan_nama, bb.satuan, bb.kategori_sp, bb.berat_1_sp, bb.persen_bdd, bb.berat_per_satuan, COALESCE(bb.buffer_persen, 0) AS buffer_persen, mb.jumlah, mb.jumlah_besar, mb.jumlah_kecil, mb.keterangan, mb.hanya_tampil
        FROM menu m
        LEFT JOIN menu_bahan mb ON mb.menu_id = m.id
        LEFT JOIN bahan_baku bb ON bb.id = mb.bahan_baku_id
@@ -180,6 +182,7 @@ function registerQueryRoutes(router) {
           jumlah_besar: row.jumlah_besar != null ? row.jumlah_besar : row.jumlah,
           jumlah_kecil: row.jumlah_kecil != null ? row.jumlah_kecil : (row.jumlah_besar != null ? row.jumlah_besar : row.jumlah),
           keterangan: row.keterangan || '',
+          hanya_tampil: Number(row.hanya_tampil) || 0,
         });
       }
     }

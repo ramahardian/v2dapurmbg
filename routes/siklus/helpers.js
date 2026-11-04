@@ -222,11 +222,14 @@ function lookupMenuIdByName(menuIdByName, it) {
   return key ? (menuIdByName[key] || null) : null;
 }
 
-async function batchLoadMenuBahan(menuIds) {
+// opsi.abaikanHanyaTampil = true → lewati baris bahan bertanda hanya tampil di
+// Data Menu (hasil Ekstrak Gambar) agar tidak ikut dihitung di /perencanaan.
+async function batchLoadMenuBahan(menuIds, opsi) {
   if (!menuIds.length) return {};
+  const abaikanHanyaTampil = !!(opsi && opsi.abaikanHanyaTampil);
   const ph = menuIds.map(() => '?').join(',');
   const [rows] = await db.query(
-    `SELECT mb.menu_id, mb.jumlah, mb.bahan_baku_id, mb.keterangan,
+    `SELECT mb.menu_id, mb.jumlah, mb.bahan_baku_id, mb.keterangan, mb.hanya_tampil,
             b.nama, b.satuan, b.kategori_sp, b.persen_bdd, b.berat_1_sp,
             b.kalori, b.protein, b.karbohidrat, b.lemak, b.serat, b.berat_per_satuan, b.kode, b.harga_satuan,
             b.buffer_persen,
@@ -234,7 +237,7 @@ async function batchLoadMenuBahan(menuIds) {
      FROM menu_bahan mb
      JOIN bahan_baku b ON b.id = mb.bahan_baku_id
      JOIN menu m ON m.id = mb.menu_id
-     WHERE mb.menu_id IN (${ph})`,
+     WHERE mb.menu_id IN (${ph})${abaikanHanyaTampil ? ' AND COALESCE(mb.hanya_tampil,0)=0' : ''}`,
     menuIds
   );
   const map = {};
@@ -246,7 +249,7 @@ async function batchLoadMenuBahan(menuIds) {
 }
 
 // Load live recipe for siklus items that have menu_nama but no menu_id (match by name)
-async function loadMenuBahanByName(itemsBySiklus, tenantId) {
+async function loadMenuBahanByName(itemsBySiklus, tenantId, opsi) {
   const unmatchedNames = [];
   for (const arr of Object.values(itemsBySiklus)) {
     for (const it of arr) {
@@ -255,7 +258,7 @@ async function loadMenuBahanByName(itemsBySiklus, tenantId) {
   }
   const menuIdByName = await batchLoadMenuIdByName(unmatchedNames, tenantId);
   const matchedMenuIds = [...new Set(Object.values(menuIdByName))];
-  const menuBahanByNameMap = await batchLoadMenuBahan(matchedMenuIds);
+  const menuBahanByNameMap = await batchLoadMenuBahan(matchedMenuIds, opsi);
   return { menuIdByName, menuBahanByNameMap };
 }
 

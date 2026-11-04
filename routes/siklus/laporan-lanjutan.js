@@ -152,10 +152,11 @@ router.get('/siklus/laporan/kebutuhan-per-menu', async (req, res) => {
   const siklusIds = siklusList.map(s => s.id);
   const itemsBySiklus = await batchLoadItems(siklusIds);
   const allMenuIds = [...new Set(Object.values(itemsBySiklus).flatMap(arr => arr.filter(it => it.menu_id).map(it => it.menu_id)))];
-  const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
+  // Bahan bertanda hanya_tampil (hasil Ekstrak Gambar) tidak dihitung di perencanaan.
+  const menuBahanMap = await batchLoadMenuBahan(allMenuIds, { abaikanHanyaTampil: true });
   const gridBahanBySiklus = await batchLoadGridBahanBySiklus(siklusIds);
   // Item tanpa menu_id tapi menu_nama cocok dgn menu → ikuti resep menu (live)
-  const { menuIdByName, menuBahanByNameMap } = await loadMenuBahanByName(itemsBySiklus, req.user.tenant_id);
+  const { menuIdByName, menuBahanByNameMap } = await loadMenuBahanByName(itemsBySiklus, req.user.tenant_id, { abaikanHanyaTampil: true });
 
   // Helper: build siklus data — porsi per siklus memakai jumlah_porsi siklus tsb
   function buildSiklusData(jmlPm, jenjangKey) {
@@ -390,10 +391,11 @@ async function buildPerencanaanData({ tenant_id, query }) {
   const siklusIds = siklusList.map(s => s.id);
   const itemsBySiklus = await batchLoadItems(siklusIds);
   const allMenuIds = [...new Set(Object.values(itemsBySiklus).flatMap(arr => arr.filter(it => it.menu_id).map(it => it.menu_id)))];
-  const menuBahanMap = await batchLoadMenuBahan(allMenuIds);
+  // Bahan bertanda hanya_tampil (hasil Ekstrak Gambar) tidak dihitung di perencanaan.
+  const menuBahanMap = await batchLoadMenuBahan(allMenuIds, { abaikanHanyaTampil: true });
   const gridBahanBySiklus = await batchLoadGridBahanBySiklus(siklusIds);
   // Item tanpa menu_id tapi menu_nama cocok dgn menu → ikuti resep menu (live)
-  const { menuIdByName, menuBahanByNameMap } = await loadMenuBahanByName(itemsBySiklus, tenant_id);
+  const { menuIdByName, menuBahanByNameMap } = await loadMenuBahanByName(itemsBySiklus, tenant_id, { abaikanHanyaTampil: true });
 
   // ── Load overrides for perencanaan ──
   let ovIndex = {};

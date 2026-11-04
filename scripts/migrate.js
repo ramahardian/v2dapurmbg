@@ -737,6 +737,16 @@ async function runMigration() {
     }
   } catch (e) { log('  (skip migrasi jumlah_porsi menu)'); }
 
+  // hanya_tampil di menu_bahan — baris bahan hasil Ekstrak Gambar hanya tampil
+  // di Data Menu dan tidak dihitung di tabel /perencanaan.
+  try {
+    const [htCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'menu_bahan' AND COLUMN_NAME = 'hanya_tampil'");
+    if (!htCol.length) {
+      await q("ALTER TABLE menu_bahan ADD COLUMN hanya_tampil TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = hanya tampil di Data Menu, tidak dihitung di /perencanaan' AFTER keterangan");
+      log('✓ Migrasi menu_bahan: tambah kolom hanya_tampil');
+    }
+  } catch (e) { log('  (skip migrasi menu_bahan.hanya_tampil)'); }
+
   // Multi-jenjang di siklus_menu
   try {
     const [kpCol] = await q("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'siklus_menu' AND COLUMN_NAME = 'kategori_penerima' AND DATA_TYPE = 'text'");

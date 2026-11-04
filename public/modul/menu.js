@@ -580,7 +580,7 @@ async function openMenuForm(editing) {
   window._menuKategoriPenerima = null; // reset kategori dari siklus
   var badgeEl = document.getElementById('m-kategori-badge');
   if (badgeEl) badgeEl.remove();
-  window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, jumlah_besar: (b.jumlah_besar != null ? b.jumlah_besar : b.jumlah), jumlah_kecil: (b.jumlah_kecil != null ? b.jumlah_kecil : (b.jumlah_besar != null ? b.jumlah_besar : b.jumlah)), satuan: menuSatuanTampil(b), kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, buffer_persen: (b.buffer_persen != null ? Number(b.buffer_persen) : 10), keterangan: b.keterangan || '' }));
+  window._menuBahan = (m.bahan || []).map(b => ({ bahan_baku_id: b.bahan_baku_id, nama: b.nama || '', jumlah: b.jumlah, jumlah_besar: (b.jumlah_besar != null ? b.jumlah_besar : b.jumlah), jumlah_kecil: (b.jumlah_kecil != null ? b.jumlah_kecil : (b.jumlah_besar != null ? b.jumlah_besar : b.jumlah)), satuan: menuSatuanTampil(b), kategori_sp: b.kategori_sp || '', berat_1_sp: b.berat_1_sp || 0, persen_bdd: b.persen_bdd || 100, berat_per_satuan: b.berat_per_satuan || 0, buffer_persen: (b.buffer_persen != null ? Number(b.buffer_persen) : 10), keterangan: b.keterangan || '', hanya_tampil: b.hanya_tampil ? 1 : 0 }));
   // Biarkan nilai tersimpan dari DB — user bisa klik "↺ Reset ke SP" jika ingin reset
   // Porsi Besar & Porsi Kecil = jumlah porsi untuk hitung jumlah kebutuhan tiap kolom bahan.
   // Porsi Besar juga disimpan sebagai menu.jumlah_porsi (kompatibilitas perilaku lama).

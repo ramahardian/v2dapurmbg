@@ -48,8 +48,9 @@ function registerCrudRoutes(router) {
           const jumlahKecil = (b.jumlah_kecil !== undefined && b.jumlah_kecil !== null) ? (Number(b.jumlah_kecil) || 0) : result.jumlah;
           if (result.jumlah <= 0 && jumlahKecil <= 0) continue;
           await conn.query(
-            'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, jumlah_besar, jumlah_kecil, keterangan) VALUES (?,?,?,?,?,?)',
-            [r.insertId, result.idBahan, result.jumlah, result.jumlah, jumlahKecil, b.keterangan || null]
+            'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, jumlah_besar, jumlah_kecil, keterangan, hanya_tampil) VALUES (?,?,?,?,?,?,?)',
+            [r.insertId, result.idBahan, result.jumlah, result.jumlah, jumlahKecil, b.keterangan || null,
+             b.hanya_tampil ? 1 : 0]
           );
           if (b.buffer_persen !== undefined && b.buffer_persen !== null && b.buffer_persen !== '') {
             const bp = Math.max(0, Math.min(100, Number(b.buffer_persen) || 0));
@@ -116,6 +117,14 @@ function registerCrudRoutes(router) {
       const bufferUpdates = new Map();
       const satuanSync = new Map();
       if (Array.isArray(f.bahan)) {
+        // Simpan penanda hanya_tampil baris lama: hanya ditimpa bila klien
+        // mengirim nilainya secara eksplisit (form /menu tidak perlu tahu kolom ini).
+        const [oldRows] = await conn.query(
+          'SELECT bahan_baku_id, MAX(hanya_tampil) AS hanya_tampil FROM menu_bahan WHERE menu_id=? GROUP BY bahan_baku_id',
+          [req.params.id]
+        );
+        const oldHanyaTampil = new Map(oldRows.map((row) => [Number(row.bahan_baku_id), Number(row.hanya_tampil) || 0]));
+
         await conn.query('DELETE FROM menu_bahan WHERE menu_id=?', [req.params.id]);
 
         for (const b of f.bahan) {
@@ -124,9 +133,11 @@ function registerCrudRoutes(router) {
           if (!result) continue;
           const jumlahKecil = (b.jumlah_kecil !== undefined && b.jumlah_kecil !== null) ? (Number(b.jumlah_kecil) || 0) : result.jumlah;
           if (result.jumlah <= 0 && jumlahKecil <= 0) continue;
+          const flagDikirim = b.hanya_tampil !== undefined && b.hanya_tampil !== null && b.hanya_tampil !== '';
+          const hanyaTampil = flagDikirim ? (b.hanya_tampil ? 1 : 0) : (oldHanyaTampil.get(Number(result.idBahan)) || 0);
           await conn.query(
-            'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, jumlah_besar, jumlah_kecil, keterangan) VALUES (?,?,?,?,?,?)',
-            [req.params.id, result.idBahan, result.jumlah, result.jumlah, jumlahKecil, b.keterangan || null]
+            'INSERT INTO menu_bahan (menu_id, bahan_baku_id, jumlah, jumlah_besar, jumlah_kecil, keterangan, hanya_tampil) VALUES (?,?,?,?,?,?,?)',
+            [req.params.id, result.idBahan, result.jumlah, result.jumlah, jumlahKecil, b.keterangan || null, hanyaTampil]
           );
           if (b.buffer_persen !== undefined && b.buffer_persen !== null && b.buffer_persen !== '') {
             const bp = Math.max(0, Math.min(100, Number(b.buffer_persen) || 0));

@@ -152,6 +152,7 @@ CREATE TABLE IF NOT EXISTS menu_bahan (
   jumlah_besar DECIMAL(15,3) DEFAULT NULL,
   jumlah_kecil DECIMAL(15,3) DEFAULT NULL,
   keterangan VARCHAR(255) DEFAULT '',
+  hanya_tampil TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = hanya tampil di Data Menu, tidak dihitung di /perencanaan',
   FOREIGN KEY (menu_id) REFERENCES menu(id) ON DELETE CASCADE,
   FOREIGN KEY (bahan_baku_id) REFERENCES bahan_baku(id) ON DELETE CASCADE,
   INDEX idx_menu_bahan_menu (menu_id, bahan_baku_id)

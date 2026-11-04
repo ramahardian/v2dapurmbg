@@ -207,8 +207,8 @@ function gvUpdateTargetUi() {
   const note = document.getElementById('gv-target-note');
   if (note) {
     note.textContent = target
-      ? ((target.bahan && target.bahan.length ? target.bahan.length + ' bahan existing · ' : '') + 'hasil ekstrak digabung, nama bahan sama ditimpa')
-      : (namaBaru ? 'akan membuat menu baru' : '');
+      ? ((target.bahan && target.bahan.length ? target.bahan.length + ' bahan existing · ' : '') + 'hasil ekstrak digabung, nama bahan sama ditimpa · hanya tampil di Data Menu, tidak dihitung di Perencanaan')
+      : (namaBaru ? 'akan membuat menu baru · hanya tampil di Data Menu, tidak dihitung di Perencanaan' : '');
   }
 }
 
@@ -304,6 +304,8 @@ function gvClearResult() {
 
 // Ambil daftar bahan dari hasil ekstrak. Angka jatuh ke kolom jumlah
 // (jumlah / jumlah_besar / jumlah_kecil) dan satuan ke kolom satuan bahan.
+// hanya_tampil:1 = bahan hanya tampil di Data Menu, tidak dihitung di
+// /perencanaan (lihat menu_bahan.hanya_tampil).
 function gvBahanFromResult(d) {
   return (Array.isArray(d.bahan) ? d.bahan : [])
     .filter((b) => b && String(b.nama || '').trim())
@@ -317,6 +319,7 @@ function gvBahanFromResult(d) {
         jumlah_kecil: ada(b.jumlah_kecil) ? (Number(b.jumlah_kecil) || 0) : jumlah,
         satuan: b.satuan ? String(b.satuan).trim() : undefined,
         keterangan: b.keterangan ? String(b.keterangan).trim() : undefined,
+        hanya_tampil: 1,
       };
     });
 }
@@ -347,6 +350,7 @@ async function gvMergeToMenu(d, bahanBaru) {
         jumlah_kecil: b.jumlah_kecil,
         satuan: b.satuan || old.satuan,
         keterangan: b.keterangan || old.keterangan || '',
+        hanya_tampil: 1,
       };
     } else {
       merged.push({
@@ -356,6 +360,7 @@ async function gvMergeToMenu(d, bahanBaru) {
         jumlah_kecil: b.jumlah_kecil,
         satuan: b.satuan,
         keterangan: b.keterangan || '',
+        hanya_tampil: 1,
       });
     }
   }

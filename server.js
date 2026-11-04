@@ -1255,6 +1255,17 @@ CREATE TABLE menu_bahan (
       } catch (e) {
         console.error('Migrasi menu_bahan porsi (besar/kecil):', e.message);
       }
+      // Idempotent: kolom menu_bahan.hanya_tampil — bahan hasil Ekstrak Gambar
+      // hanya tampil di Data Menu dan tidak ikut dihitung di /perencanaan.
+      try {
+        const [hc] = await db.query("SHOW COLUMNS FROM menu_bahan LIKE 'hanya_tampil'");
+        if (!hc.length) {
+          await db.query("ALTER TABLE menu_bahan ADD COLUMN hanya_tampil TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = hanya tampil di Data Menu, tidak dihitung di /perencanaan' AFTER keterangan");
+          console.log('Migrasi: kolom menu_bahan.hanya_tampil ditambahkan');
+        }
+      } catch (e) {
+        console.error('Migrasi menu_bahan.hanya_tampil:', e.message);
+      }
       // Idempotent: kolom jumlah porsi besar & porsi kecil di menu — diisi dari
       // form Edit Menu /menu dan dipakai baris perhitungan kebutuhan.
       try {
