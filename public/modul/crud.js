@@ -9,6 +9,7 @@ async function renderCrud(cfg) {
   // Layout bento: satu grid tile (statistik / cari / aksi) alih-alih toolbar
   // stacked, meniru pola halaman Bahan Baku.
   const actionsOutside = !!cfg.actionsOutsideGrid;
+  const corporate = !!cfg.corporate;
   const actionTileHasContent = !!(cfg.helpContent || cfg.sync || cfg.extraButtons);
   const statsTile = `<div id="crud-stats" class="${cfg.stats ? (actionsOutside && !actionTileHasContent ? 'md:col-span-4' : 'md:col-span-2') : 'hidden'}">
     <div id="crud-stats-content" class="grid grid-cols-2 xl:grid-cols-3 gap-3 h-full"></div>
@@ -18,7 +19,7 @@ async function renderCrud(cfg) {
   // tetap ada walau blok stats ditampilkan.
   const addExportBtns = '<div class="flex flex-wrap items-center gap-2"><button id="add-btn" class="inline-flex items-center gap-1.5 h-9 px-4 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-xs font-medium shadow-sm transition-colors whitespace-nowrap"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah</button><button onclick="exportXlsx()" class="inline-flex items-center gap-1.5 h-9 px-4 border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">Export XLSX</button></div>';
   const searchTile = `<div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 ${cfg.stats ? 'md:col-span-4' : 'md:col-span-2'} flex items-center gap-2"><div class="relative w-full"><input id="crud-search" placeholder="Cari..." class="w-full h-9 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all"><svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div>${(cfg.stats || actionsOutside) ? '' : addExportBtns}</div>`;
-  const actionTile = `<div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center"><div class="flex flex-wrap items-center gap-2 w-full">
+  const actionInner = `<div class="flex flex-wrap items-center gap-2 w-full">
       ${(cfg.stats && !actionsOutside) ? addExportBtns : ''}
       ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:bg-slate-50 shadow-sm transition-all shrink-0" title="Info halaman ini">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
@@ -28,14 +29,29 @@ async function renderCrud(cfg) {
       <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden h-9 px-4 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg items-center gap-1.5 transition-colors whitespace-nowrap">
         Hapus Terpilih <span id="crud-selected-count" class="font-bold">0</span>
       </button>
-    </div>
-  </div>`;
-  const headerTiles = actionsOutside
+    </div>`;
+  const actionTile = `<div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center">${actionInner}</div>`;
+  // Layout korporat (mirip dashboard): kartu KPI berdiri sendiri + satu kartu
+  // aksi/pencarian di grid 4 kolom, lalu panel tabel berjudul.
+  const corporateHead = corporate ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
+      ${cfg.stats ? `<div id="crud-stats" class="contents"><div id="crud-stats-content" class="contents"></div></div>` : ''}
+      <div class="dash-card-item relative overflow-hidden bg-white rounded-lg border border-slate-200 p-4 shadow-sm flex flex-col justify-center">
+        <span class="absolute inset-x-0 top-0 h-[3px]" style="background:#c6a664"></span>
+        <div class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-2">Pencarian &amp; Aksi</div>
+        <div class="relative w-full">
+          <input id="crud-search" placeholder="Cari data..." class="w-full h-9 pl-10 pr-3 rounded-md border border-slate-300 bg-white text-sm text-slate-700 focus:ring-2 focus:ring-[#14326b]/15 focus:border-[#14326b] outline-none transition-colors">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+        ${actionsOutside ? `<div class="flex flex-wrap items-center gap-2" style="margin-top:0.75rem">${addExportBtns}</div>` : ''}
+        ${actionInner}
+      </div>
+    </div>` : '';
+  const headerTiles = corporate ? '' : (actionsOutside
     ? (cfg.stats ? statsTile + (actionTileHasContent ? actionTile : '') : '')
-    : (cfg.stats ? statsTile + actionTile + searchTile : searchTile + actionTile);
+    : (cfg.stats ? statsTile + actionTile + searchTile : searchTile + actionTile));
   // Toolbar khusus actionsOutsideGrid: kolom cari + tombol aksi berdiri sendiri
   // di luar kotak bento, tepat di atas tabel.
-  const actionsRow = actionsOutside ? `<div class="mb-4 flex flex-wrap items-center gap-2">
+  const actionsRow = (actionsOutside && !corporate) ? `<div class="mb-4 flex flex-wrap items-center gap-2">
       <div class="relative flex-1 min-w-[200px]">
         <input id="crud-search" placeholder="Cari..." class="w-full h-9 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -43,7 +59,7 @@ async function renderCrud(cfg) {
       ${addExportBtns}
     </div>` : '';
   const bentoGrid = headerTiles ? `<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">${headerTiles}</div>` : '';
-  c.innerHTML = `${actionsRow}${bentoGrid}
+  c.innerHTML = `${corporateHead}${actionsRow}${bentoGrid}
   ${cfg.filters && cfg.filters.length ? `<div id="crud-filters" class="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg border border-slate-200 bg-slate-50/60">` : ''}
   <div id="table-wrap" class="dash-panel bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden"></div>
   <div id="crud-pagination" class="flex items-center justify-between mt-3"></div>`;
@@ -108,9 +124,22 @@ async function reloadCrud(cfg) {
   // Load stats jika dikonfigurasi
   renderCrudStats(cfg);
 
+  // Panel tabel bergaya korporat: judul panel + jumlah baris di atas tabel.
+  const panelHead = cfg.corporate ? `<div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-200 bg-white">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[#14326b]">${cfg.icon || '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>'}</span>
+      <div class="min-w-0">
+        <h3 class="text-sm font-semibold text-slate-900 truncate">${cfg.panelTitle || cfg.title || 'Data'}</h3>
+        <p class="text-[10px] text-slate-500 truncate">${cfg.panelNote || 'Klik angka pada tabel untuk mengubah langsung'}</p>
+      </div>
+    </div>
+    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#eef2f9] border border-[#c9d6ea] text-[#14326b] text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap">
+      <span class="w-1.5 h-1.5 rounded-full bg-[#0f766e]"></span>${rows.length} baris
+    </span>
+  </div>` : '';
   const w = document.getElementById('table-wrap');
   if (!rows.length) {
-    w.innerHTML = '<div class="py-16 text-center text-slate-400"><svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Belum ada data</div><div class="text-xs text-slate-400 mt-1">Klik "Tambah" untuk mulai.</div></div>';
+    w.innerHTML = panelHead + '<div class="py-16 text-center text-slate-400"><svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Belum ada data</div><div class="text-xs text-slate-400 mt-1">Klik "Tambah" untuk mulai.</div></div>';
     document.getElementById('crud-pagination').innerHTML = '';
     return;
   }
@@ -138,7 +167,7 @@ async function reloadCrud(cfg) {
       <button onclick='editRow(${JSON.stringify(cfg).replace(/'/g, "&#39;")}, ${JSON.stringify(r).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#14326b] hover:bg-slate-100 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
     </td></tr>`).join('');
-  w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-slate-100">
+  w.innerHTML = panelHead + `<div class="overflow-x-auto"><table class="w-full"><thead><tr class="${cfg.corporate ? 'border-b border-slate-200 bg-slate-50/70' : 'border-b border-slate-100'}">
     <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 w-10">
       <input type="checkbox" id="crud-select-all" onchange="toggleSelectAllCrud(this)" class="cb-modern">
     </th>
@@ -261,6 +290,36 @@ async function renderCrudStats(cfg) {
     const totalVal = Number(statsRes.total) || 0;
     const contentEl = document.getElementById('crud-stats-content');
     if (!contentEl) return;
+    // Varian korporat: kartu KPI berdiri sendiri (aksen atas + ikon),
+    // mengikuti pola kartu pada dashboard.
+    if (cfg.corporate) {
+      var corpAccents = { blue: '#14326b', navy: '#14326b', emerald: '#0f766e', amber: '#c6a664', gold: '#c6a664', violet: '#64748b', cyan: '#0e7490', red: '#b91c1c', orange: '#c2410c', teal: '#0f766e', pink: '#be185d', sky: '#0369a1', indigo: '#3730a3', lime: '#4d7c0f', rose: '#be123c', green: '#15803d', purple: '#6b21a8', slate: '#64748b' };
+      var corpIconDefault = '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>';
+      var corpCards = [];
+      var delay = 0;
+      var corpCard = function(label, value, hint, color, icon) {
+        var accent = corpAccents[color || 'navy'] || '#64748b';
+        corpCards.push('<div class="dash-card-item relative overflow-hidden bg-white rounded-lg border border-slate-200 p-4 shadow-sm" style="animation-delay:' + delay + 'ms">'
+          + '<span class="absolute inset-x-0 top-0 h-[3px]" style="background:' + accent + '"></span>'
+          + '<div class="flex items-start justify-between gap-3">'
+          + '<div class="min-w-0">'
+          + '<div class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">' + label + '</div>'
+          + '<div class="mono mt-2 text-xl font-semibold break-words text-slate-900">' + value + '</div>'
+          + (hint ? '<div class="text-[10px] text-slate-500 mt-1">' + hint + '</div>' : '')
+          + '</div>'
+          + '<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50" style="color:' + accent + '">'
+          + '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">' + (icon || corpIconDefault) + '</svg>'
+          + '</span></div></div>');
+        delay += 60;
+      };
+      corpCard(cfg.stats.label, cfg.stats.format === 'num' ? fmtNum(totalVal) : String(totalVal), cfg.stats.hint || '', cfg.stats.color || 'navy', cfg.stats.icon);
+      (cfg.stats.extra || []).forEach(function(x) {
+        var val = statsRes['total_' + x.field] != null ? Number(statsRes['total_' + x.field]) : 0;
+        corpCard(x.label, fmtNum(val), x.hint || '', x.color, x.icon);
+      });
+      contentEl.innerHTML = corpCards.join('');
+      return;
+    }
     var cards = '';
     var fmt = cfg.stats.format === 'num' ? fmtNum(totalVal) : totalVal;
     cards += '<div class="col-span-2 flex-1 min-w-[140px] relative overflow-hidden bg-white rounded-lg border border-slate-200 px-4 py-3 shadow-sm"><span class="absolute inset-x-0 top-0 h-[3px]" style="background:#14326b"></span><div class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1">' + cfg.stats.label + '</div><div class="text-xl font-semibold text-slate-900 break-words">' + fmt + '</div></div>';
