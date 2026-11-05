@@ -2695,7 +2695,6 @@ function renderLapBpKas() { renderReportPage('bp-kas'); }
 function renderLapSiklus() { renderReportPage('siklus'); }
 function renderLapPembelian() { renderReportPage('pembelian'); }
 function renderLapPenerimaan() { renderReportPage('penerimaan'); }
-function renderLapMutasi() { renderReportPage('mutasi'); }
 function renderLapProduksi() { renderReportPage('produksi'); }
 function renderLapPayroll() { renderReportPage('payroll'); }
 function renderLapPayrollMingguan() { renderReportPage('payroll-mingguan'); }
