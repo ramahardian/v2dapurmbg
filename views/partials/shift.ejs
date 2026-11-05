@@ -1,12 +1,12 @@
-<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">
-  <div class="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center">
+<div class="grid grid-cols-1 xl:grid-cols-4 gap-3 mb-5">
+  <div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 xl:col-span-4 flex items-center">
     <div class="flex items-center gap-2 w-full">
-      <button id="add-shift-btn" class="flex-1 min-w-0 h-10 px-3 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-[13px] font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <button id="add-shift-btn" class="flex-1 min-w-0 h-9 px-3 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-xs font-medium shadow-sm transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Shift Baru
       </button>
-      <button id="add-jadwal-btn" class="flex-1 min-w-0 h-10 px-3 border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-[13px] font-medium shadow-sm transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <button id="add-jadwal-btn" class="flex-1 min-w-0 h-9 px-3 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Atur Jadwal
       </button>
     </div>
@@ -14,10 +14,12 @@
 </div>
 
 <!-- Tabel Master Shift -->
-<div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden mb-6">
-  <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    <h3 class="text-sm font-bold text-slate-800">Master Shift</h3>
+<div class="dash-panel bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden mb-5">
+  <div class="px-5 py-4 border-b border-slate-200 flex items-center gap-2.5">
+    <span class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[#14326b]">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </span>
+    <h3 class="font-semibold text-slate-900">Master Shift</h3>
   </div>
   <div class="overflow-x-auto">
     <table class="w-full">
@@ -51,10 +53,12 @@
 </div>
 
 <!-- Tabel Jadwal Karyawan -->
-<div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-  <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    <h3 class="text-sm font-bold text-slate-800">Jadwal Karyawan</h3>
+<div class="dash-panel bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+  <div class="px-5 py-4 border-b border-slate-200 flex items-center gap-2.5">
+    <span class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[#0f766e]">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </span>
+    <h3 class="font-semibold text-slate-900">Jadwal Karyawan</h3>
   </div>
   <div id="jadwal-content">
     <div class="text-center py-16 text-slate-400"><svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div class="text-sm">Memuat jadwal...</div></div>

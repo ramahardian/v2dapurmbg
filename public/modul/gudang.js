@@ -39,7 +39,7 @@ async function renderGudang() {
       api.get('/supplier').then(function(list) { _supplierListCache = Array.isArray(list) ? list : (list.data || []); }).catch(function(){});
     }
   } catch (err) {
-    c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat gudang: ${err.message}</div>`;
+    c.innerHTML = `<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat gudang: ${err.message}</div>`;
   }
 }
 
@@ -124,7 +124,7 @@ async function loadGudang() {
 
     renderGudangPagination();
   } catch (e) {
-    wrap.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal: ${e.message}</div>`;
+    wrap.innerHTML = `<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal: ${e.message}</div>`;
   }
 }
 

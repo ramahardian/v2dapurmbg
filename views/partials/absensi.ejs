@@ -1,4 +1,4 @@
-<div class="grid grid-cols-1 xl:grid-cols-4 gap-3 mb-4">
+<div class="grid grid-cols-1 xl:grid-cols-4 gap-3 mb-5">
   <div class="xl:col-span-3 dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-4 py-3 flex items-center">
     <div class="flex flex-wrap items-center gap-x-4 gap-y-2 w-full">
       <div class="flex items-center gap-2">
@@ -27,20 +27,21 @@
     </div>
   </div>
 </div>
-<div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-  <div class="overflow-x-auto">      <table class="w-full text-[11px]">
+<div class="dash-panel bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
       <thead class="bg-slate-50">
         <tr>
-          <th class="text-left px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Tanggal</th>
-          <th class="text-left px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Nama Karyawan</th>
-          <th class="text-left px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Jabatan</th>
-          <th class="text-center px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Status</th>
-          <th class="text-center px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Jam Masuk</th>
-          <th class="text-center px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Jam Keluar</th>
-          <th class="text-center px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Foto Masuk</th>
-          <th class="text-center px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Foto Keluar</th>
-          <th class="text-left px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Keterangan</th>
-          <th class="text-right px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Aksi</th>
+          <th class="text-left px-4 py-3 font-semibold text-slate-500 text-[11px] uppercase tracking-wider border-r border-slate-200">Tanggal</th>
+          <th class="text-left px-4 py-3 font-semibold text-slate-500 text-[11px] uppercase tracking-wider border-r border-slate-200">Nama Karyawan</th>
+          <th class="text-left px-4 py-3 font-semibold text-slate-500 text-[11px] uppercase tracking-wider border-r border-slate-200">Jabatan</th>
+          <th class="text-center px-4 py-3 font-semibold text-slate-500 text-[11px] uppercase tracking-wider border-r border-slate-200">Status</th>
+          <th class="text-center px-4 py-3 font-semibold text-slate-500 text-[11px] uppercase tracking-wider border-r border-slate-200">Jam Masuk</th>
+          <th class="text-center px-4 py-3 font-semibold text-slate-500 text-[11px] uppercase tracking-wider border-r border-slate-200">Jam Keluar</th>
+          <th class="text-center px-4 py-3 font-semibold text-slate-500 text-[11px] uppercase tracking-wider border-r border-slate-200">Foto Masuk</th>
+          <th class="text-center px-4 py-3 font-semibold text-slate-500 text-[11px] uppercase tracking-wider border-r border-slate-200">Foto Keluar</th>
+          <th class="text-left px-4 py-3 font-semibold text-slate-500 text-[11px] uppercase tracking-wider border-r border-slate-200">Keterangan</th>
+          <th class="text-right px-4 py-3 font-semibold text-slate-500 text-[11px] uppercase tracking-wider">Aksi</th>
         </tr>
       </thead>
       <tbody>
@@ -49,9 +50,10 @@
     </table>
   </div>
 </div>
+
 <div id="absensi-pagination" class="flex items-center justify-between mt-3 text-sm text-slate-500 px-1"></div>
 <div id="absensi-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
-  <div class="dash-card-item bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+  <div class="dash-panel bg-white rounded-lg border border-slate-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
     <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex justify-between items-center">
       <h3 id="absensi-modal-title" class="text-sm font-bold text-slate-800">Input Absensi</h3>
       <button onclick="closeModal('absensi-modal')" class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Tutup">

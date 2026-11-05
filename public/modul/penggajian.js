@@ -13,7 +13,7 @@ async function renderPayroll() {    const c = document.getElementById('content')
     loadPayroll();
   } catch (err) {
     console.error('Payroll error:', err);
-    c.innerHTML = '<div class="dash-card-item"><div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat payroll: ' + err.message + '</div></div>';
+    c.innerHTML = '<div class="dash-card-item"><div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat payroll: ' + err.message + '</div></div>';
   }
 }
 
@@ -66,18 +66,18 @@ async function loadKaryawan() {
 }
 function renderKaryawanTable(list) {
   const tb = document.querySelector('#karyawan-modal')?.parentElement?.querySelector('tbody');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="text-center py-16 text-slate-400"><svg class="w-14 h-14 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg><div class="text-sm">Belum ada karyawan</div></td></tr>'; return; }
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="text-center py-12 text-slate-400"><svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg><div class="text-sm">Belum ada karyawan</div></td></tr>'; return; }
   tb.innerHTML = list.map(k => `
-    <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-      <td class="px-4 py-3 text-xs font-medium"><a href="/karyawan?id=${k.id}" onclick="event.preventDefault();navigate('karyawan?id=${k.id}')" class="text-[#14326b] hover:text-[#0f2a5f] font-semibold">${k.nama}</a></td>
-      <td class="px-4 py-3 text-xs text-slate-600">${k.nik || '-'}</td>
-      <td class="px-4 py-3 text-xs text-slate-600">${k.jabatan_nama || k.jabatan || '-'}</td>
-      <td class="px-4 py-3 text-xs text-slate-600">${k.departemen || '-'}</td>
-      <td class="px-4 py-3 text-xs text-right mono text-slate-700 font-medium">${fmtIDR(k.gaji_pokok)}</td>
-      <td class="px-4 py-3 text-xs">${k.status}</td>
-      <td class="px-4 py-3 text-xs text-right whitespace-nowrap">
-        <button onclick="openKaryawanForm(karyawanData.find(x => x.id == ${k.id}))" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#14326b] hover:bg-slate-100 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button onclick="deleteKaryawan(${k.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+    <tr class="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
+      <td class="px-4 py-3 text-sm font-medium"><a href="/karyawan?id=${k.id}" onclick="event.preventDefault();navigate('karyawan?id=${k.id}')" class="text-[#14326b] hover:text-[#0f2a5f] font-semibold">${k.nama}</a></td>
+      <td class="px-4 py-3 text-sm text-slate-500">${k.nik || '-'}</td>
+      <td class="px-4 py-3 text-sm text-slate-500">${k.jabatan_nama || k.jabatan || '-'}</td>
+      <td class="px-4 py-3 text-sm text-slate-500">${k.departemen || '-'}</td>
+      <td class="px-4 py-3 text-sm text-right mono text-slate-700 font-medium">${fmtIDR(k.gaji_pokok)}</td>
+      <td class="px-4 py-3 text-sm">${k.status}</td>
+      <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
+        <button onclick="openKaryawanForm(karyawanData.find(x => x.id == ${k.id}))" class="inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#14326b] hover:bg-slate-100 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button onclick="deleteKaryawan(${k.id})" class="inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
       </td>
     </tr>`).join('');
 }
@@ -103,10 +103,10 @@ async function showKaryawanDetail(id) {
     var saveBtn = document.getElementById('karyawan-save');
     if (saveBtn) saveBtn.onclick = saveKaryawan;
   } catch (e) {
-    c.innerHTML = '<div class="dash-card-item text-center py-12 text-slate-400">' +
-      '<svg class="w-20 h-20 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>' +
-      '<div class="text-lg font-medium">Karyawan tidak ditemukan</div>' +
-      '<button onclick="navigate(\'karyawan\')" class="mt-4 text-sm text-[#14326b] hover:underline">&larr; Kembali ke daftar</button>' +
+    c.innerHTML = '<div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm p-6 text-center">' +
+      '<svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>' +
+      '<div class="text-base font-semibold text-slate-800">Karyawan tidak ditemukan</div>' +
+      '<button onclick="navigate(\'karyawan\')" class="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[#14326b] hover:text-[#0f2a5f] hover:underline">&larr; Kembali ke daftar</button>' +
       '</div>';
   }
 }
@@ -195,8 +195,8 @@ function openKaryawanForm(k) {
   }
   var modal = document.getElementById('karyawan-modal');
   if (modal) {
-    modal.style.display = 'flex';
-    modal.removeAttribute('hidden');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
   }
 }
 async function saveKaryawan() {
@@ -234,8 +234,8 @@ async function saveKaryawan() {
   try {
     if (isEdit) await api.put('/karyawan/' + karyawanId, payload);
     else { const newRow = await api.post('/karyawan', payload); karyawanId = newRow.id; }
-  } catch (e) { showAlert('Gagal: ' + (e.message || ''), 'error'); return; }    document.getElementById('karyawan-modal').classList.add('hidden');
-    document.getElementById('karyawan-modal').classList.remove('flex');
+  } catch (e) { showAlert('Gagal: ' + (e.message || ''), 'error'); return; }    const _mk = document.getElementById('karyawan-modal');
+    if (_mk) { _mk.classList.add('hidden'); _mk.classList.remove('flex'); }
     showToast('Karyawan berhasil ' + (isEdit ? 'diperbarui' : 'disimpan'), 'success');
   if (new URLSearchParams(location.search).get('id')) {
     navigate('karyawan?id=' + karyawanId);
@@ -480,11 +480,8 @@ function openPayrollForm(p) {
   if (sel) {
     sel.innerHTML = (karyawanOptions || []).map(function(k) { return '<option value="' + k.id + '">' + k.nama + ' - ' + (k.jabatan_nama || '-') + '</option>'; }).join('');
   }
-  var modal = document.getElementById('payroll-modal');
-  if (modal) {
-    modal.style.display = 'flex';
-    modal.removeAttribute('hidden');
-  }
+  document.getElementById('payroll-modal').classList.remove('hidden');
+  document.getElementById('payroll-modal').classList.add('flex');
 }
 function savePayroll() {
   const id = document.getElementById('payroll-id').value;
@@ -506,11 +503,8 @@ function savePayroll() {
   } else {
     api.post('/payroll', payload).then(() => loadPayroll());
   }
-  var modal = document.getElementById('payroll-modal');
-  if (modal) {
-    modal.style.display = 'flex';
-    modal.removeAttribute('hidden');
-  }
+  document.getElementById('payroll-modal').classList.add('hidden');
+  document.getElementById('payroll-modal').classList.remove('flex');
 }
 
 // ===== Tab Switch (harus global karena dipanggil dari template via onclick) =====

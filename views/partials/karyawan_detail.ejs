@@ -1,11 +1,11 @@
-<div class="max-w-100 mx-auto">
-  <button onclick="navigate('karyawan')" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 mb-5 transition-colors">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+<div class="max-w-4xl mx-auto">
+  <button onclick="navigate('karyawan')" class="inline-flex items-center gap-1.5 h-9 px-3 mb-5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 shadow-sm transition-colors">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
     Kembali
   </button>
 
   <!-- Profile Card -->
-  <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden mb-5">
+  <div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden mb-5">
     <div class="bg-gradient-to-r from-[#14326b] to-[#0f2a5f] px-6 py-6">
       <div class="flex items-center gap-4">
         <% if (k.photo) { %>
@@ -46,7 +46,7 @@
         <span class="font-medium text-slate-800"><%= k.absensi_30hari || 0 %> kali</span>
       </div>
     </div>
-    <div class="px-6 py-4 border-t border-slate-100 flex gap-2">
+    <div class="px-6 py-4 border-t border-slate-200 flex flex-wrap gap-2">
       <button onclick="openKaryawanForm({id:<%= k.id %>,nama:'<%= k.nama.replace(/'/g,"\\'") %>',nik:'<%= (k.nik||'').replace(/'/g,"\\'") %>',jabatan_id:<%= k.jabatan_id||'null' %>,departemen:'<%= (k.departemen||'').replace(/'/g,"\\'") %>',gaji_pokok:<%= k.gaji_pokok||0 %>,status:'<%= k.status %>',tanggal_masuk:'<%= k.tanggal_masuk||'' %>',email:'<%= (k.email||'').replace(/'/g,"\\'") %>',phone:'<%= (k.phone||'').replace(/'/g,"\\'") %>',address:'<%= (k.address||'').replace(/'/g,"\\'") %>',photo:'<%= (k.photo||'').replace(/'/g,"\\'") %>'})" class="h-9 px-4 text-sm font-medium border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 rounded-lg transition-all inline-flex items-center gap-1.5">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         Edit
@@ -61,7 +61,7 @@
 
 <!-- Modal Edit Karyawan -->
 <div id="karyawan-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
-  <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+  <div class="dash-panel bg-white rounded-lg border border-slate-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
     <div class="px-5 sm:px-6 py-4 border-b border-slate-200 flex justify-between items-center">
       <h3 id="karyawan-modal-title" class="text-base font-bold text-slate-800">Edit Karyawan</h3>
       <button onclick="closeModal('karyawan-modal')" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">

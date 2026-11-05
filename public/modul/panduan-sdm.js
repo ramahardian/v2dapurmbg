@@ -99,9 +99,17 @@ async function renderPanduanSDM() {
 
   c.innerHTML = `
   <div class="space-y-6">
-    <div class="bg-gradient-to-r from-[#0d2657] to-[#14326b] text-white rounded-lg p-6 md:p-8">
-      <h1 class="text-2xl md:text-3xl font-bold">Panduan SDM</h1>
-      <p class="text-slate-300 mt-2">Alur lengkap manajemen SDM: Karyawan → Absensi → Izin/Cuti → Hari Libur → Payroll → Jurnal Otomatis</p>
+    <div class="dash-card-item relative overflow-hidden rounded-lg border border-[#0f2a5f] text-white p-6 md:p-8 shadow-sm"
+         style="background-image: linear-gradient(115deg, rgba(9,26,58,.97) 0%, rgba(20,50,107,.94) 55%, rgba(15,42,95,.92) 100%), url('/bg.jpeg'); background-size: cover; background-position: center;">
+      <div class="absolute inset-0 opacity-[0.07]" style="background-image: linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px); background-size: 44px 44px;"></div>
+      <div class="relative min-w-0">
+        <div class="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+          <span class="h-1.5 w-1.5 rounded-full bg-[#c6a664]"></span>
+          Panduan Internal
+        </div>
+        <h1 class="mt-2 text-xl md:text-2xl font-semibold tracking-tight text-white">Panduan SDM</h1>
+        <p class="mt-1 text-xs text-slate-300/90">Alur lengkap manajemen SDM: Karyawan → Absensi → Izin/Cuti → Hari Libur → Payroll → Jurnal Otomatis</p>
+      </div>
     </div>
 
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

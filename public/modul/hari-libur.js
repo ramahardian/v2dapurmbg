@@ -2,11 +2,10 @@
 async function renderHariLibur() {
   const c = document.getElementById('content');
   c.innerHTML = `
-  <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-    <div></div>
-    <div class="flex gap-2">
-      <button onclick="openHariLiburForm()" class="h-11 px-5 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  <div class="grid grid-cols-1 xl:grid-cols-4 gap-3 mb-5">
+    <div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 xl:col-span-4 flex items-center">
+      <button onclick="openHariLiburForm()" class="inline-flex items-center gap-1.5 h-9 px-4 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-xs font-medium shadow-sm transition-colors whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Tambah Libur
       </button>
     </div>
@@ -37,7 +36,7 @@ async function loadHariLibur(page) {
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10);
 
-    let html = '<div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden"><div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-slate-100">';
+    let html = '<div class="dash-panel bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden"><div class="overflow-x-auto"><table class="w-full"><thead class="bg-slate-50"><tr class="border-b border-slate-200">';
     html += '<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Tanggal</th>';
     html += '<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Nama</th>';
     html += '<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Kategori</th>';
@@ -88,7 +87,7 @@ async function loadHariLibur(page) {
     }
     document.getElementById('hl-pagination').innerHTML = pgHtml;
   } catch (err) {
-    wrap.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat: ' + err.message + '</div>';
+    wrap.innerHTML = '<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat: ' + err.message + '</div>';
   }
 }
 

@@ -1,27 +1,27 @@
-<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">
-  <div class="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center">
+<div class="grid grid-cols-1 xl:grid-cols-4 gap-3 mb-5">
+  <div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 xl:col-span-2 flex items-center">
     <div class="relative w-full">
       <input type="text" id="karyawan-search-input" placeholder="Cari karyawan..." autocomplete="off"
-        class="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-slate-50/60 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
-      <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        class="w-full h-9 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
       </svg>
     </div>
   </div>
-  <div class="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center">
+  <div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 xl:col-span-2 flex items-center">
     <div class="flex items-center gap-2 w-full">
-      <button id="add-karyawan-btn" onclick="openKaryawanForm()" class="flex-1 min-w-0 h-10 px-4 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-[13px] font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <button id="add-karyawan-btn" onclick="openKaryawanForm()" class="flex-1 min-w-0 h-9 px-4 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-xs font-medium shadow-sm transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Tambah
       </button>
     </div>
   </div>
 </div>
-<div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+<div class="dash-panel bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
   <div class="overflow-x-auto">
     <table class="w-full">
-      <thead>
-        <tr class="border-b border-slate-100">
+      <thead class="bg-slate-50">
+        <tr class="border-b border-slate-200">
           <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Nama</th>
           <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">NIK</th>
           <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Jabatan</th>
@@ -41,7 +41,7 @@
 
 <!-- Modal -->
 <div id="karyawan-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
-  <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+  <div class="dash-panel bg-white rounded-lg border border-slate-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
     <div class="px-5 sm:px-6 py-4 border-b border-slate-200 flex justify-between items-center">
       <h3 id="karyawan-modal-title" class="text-base font-bold text-slate-800">Tambah Karyawan</h3>
       <button onclick="closeModal('karyawan-modal')" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">

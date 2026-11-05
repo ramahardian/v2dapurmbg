@@ -63,7 +63,7 @@ async function renderBahanBaku() {
     const r = await fetch('/api/template/bahan-baku', { credentials: 'include' });
     c.innerHTML = await r.text();
   } catch (e) {
-    c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat halaman: ${e.message}</div>`;
+    c.innerHTML = `<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat halaman: ${e.message}</div>`;
     return;
   }
 

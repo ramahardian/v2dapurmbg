@@ -18,7 +18,8 @@ async function renderLaporan() {
   } catch (err) {
     console.error('Laporan error:', err);
     if (err.message.includes('Akses ditolak') || err.message.includes('Forbidden')) return showAccessDenied();
-    c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
+    c.innerHTML = '<div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm p-6 text-center">' +
+      '<div class="text-sm font-semibold text-slate-800">Gagal memuat laporan: ' + err.message + '</div></div>';
   }
 }
 const LAP_TABS = ['siklus', 'persediaan', 'produksi', 'distribusi', 'rab', 'rab-harian', 'rab-bulanan', 'pengeluaran-bulanan', 'penggunaan-anggaran', 'bp-kas', 'payroll', 'payroll-mingguan', 'pembelian', 'penerimaan', 'mutasi', 'laba-rugi', 'arus-kas', 'keuangan', 'rab-pembelian', 'jurnal-umum', 'buku-besar', 'neraca'];
@@ -39,15 +40,17 @@ async function showLap(tab) {
   lapState.tab = tab;
   lapState.page = 1;
   const tabColors = {
-    _default: { active: 'bg-white text-[#14326b] shadow-sm', inactive: 'bg-slate-100 text-slate-600 hover:bg-slate-200' },
+    _default: {
+      active: 'bg-[#14326b] text-white border-[#14326b] shadow-sm',
+      inactive: 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+    },
   };
   getLapTabsForRole().forEach(t => {
     const el = document.getElementById('lt-' + t);
     if (!el) return;
     const c = tabColors[t] || tabColors._default;
-    const base = 'px-3 sm:px-5 py-2 sm:py-2.5 text-[11px] font-medium rounded-t-lg border border-b-0 border-slate-200 -mb-px';
-    const extra = t === tab ? ' relative z-[2]' : '';
-    el.className = base + ' ' + (t === tab ? c.active : c.inactive) + extra;
+    const base = 'px-3 py-1.5 text-[11px] font-medium rounded-md border transition-colors';
+    el.className = base + ' ' + (t === tab ? c.active : c.inactive);
   });
   const exportRabBtn = document.getElementById('export-rab-harian-btn');
   if (exportRabBtn) exportRabBtn.style.display = (tab === 'rab-harian') ? 'inline-flex' : 'none';
@@ -1258,7 +1261,7 @@ async function showLap(tab) {
         window._lapData = null;
       } catch (e) {
         console.error('Payroll mingguan error:', e);
-        window._lapStatCards = pmFilterBar + '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat: ' + escHtml(e.message) + '</div>';
+        window._lapStatCards = pmFilterBar + '<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat: ' + escHtml(e.message) + '</div>';
         window._lapData = null;
       }
       renderLapPage();
@@ -2025,7 +2028,7 @@ async function showLap(tab) {
   } catch (err) {
     console.error('showLap error:', err);
     if (wrap) {
-      wrap.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan: ${err.message}</div>`;
+      wrap.innerHTML = `<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat laporan: ${err.message}</div>`;
     }
   }
 }

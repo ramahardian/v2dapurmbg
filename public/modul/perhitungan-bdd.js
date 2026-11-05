@@ -14,7 +14,7 @@ async function renderPerhitunganBdd() {
     window._pbdPendingSiklusId = null;
     await loadPbdData(pendingId || undefined);
   } catch (err) {
-    c.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat: ' + err.message + '</div>';
+    c.innerHTML = '<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat: ' + err.message + '</div>';
   }
 }
 
@@ -99,7 +99,7 @@ async function loadPbdData(siklusId) {
 
     wrap.innerHTML = html;
   } catch (err) {
-    wrap.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal: ' + err.message + '</div>';
+    wrap.innerHTML = '<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal: ' + err.message + '</div>';
   }
 }
 

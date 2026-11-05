@@ -72,7 +72,7 @@ async function renderAkun() {
       }
     };
   } catch (err) {
-    c.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat: ' + err.message + '</div>';
+    c.innerHTML = '<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat: ' + err.message + '</div>';
   }
 }
 

@@ -25,7 +25,7 @@ async function renderKaryawan() {
     try { await loadKaryawan(); } catch (e) { console.error('Karyawan data error:', e); }
   } catch (err) {
     console.error('Karyawan error:', err);
-    c.innerHTML = '<div class="dash-card-item"><div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat karyawan: ' + err.message + '</div></div>';
+    c.innerHTML = '<div class="dash-card-item"><div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat karyawan: ' + err.message + '</div></div>';
   }
 }
 

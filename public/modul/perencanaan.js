@@ -20,7 +20,7 @@ async function renderPerencanaan() {
     c.innerHTML = await r.text();
     await loadPerencanaanData();
   } catch (err) {
-    c.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat: ' + err.message + '</div>';
+    c.innerHTML = '<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat: ' + err.message + '</div>';
   }
 }
 
@@ -149,7 +149,7 @@ async function loadPerencanaanData(siklusId) {
     // Adjust export button visibility based on data availability
     setTimeout(adjustExportVisibilityForEmptyData, 100);
   } catch (err) {
-    wrap.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal: ' + err.message + '</div>';
+    wrap.innerHTML = '<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal: ' + err.message + '</div>';
   }
 }
 

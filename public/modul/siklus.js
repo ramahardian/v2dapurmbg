@@ -191,7 +191,7 @@ async function renderSiklus() {
     }
   } catch (err) {
     console.error('Siklus error:', err);
-    c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat siklus: ${err.message}</div>`;
+    c.innerHTML = `<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat siklus: ${err.message}</div>`;
   }
 }
 
@@ -689,7 +689,7 @@ async function renderProduksiHarian(id) {
     
   } catch (e) {
     console.error('Produksi harian render error:', e);
-    wrap.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat laporan produksi harian: ' + e.message + '</div>';
+    wrap.innerHTML = '<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat laporan produksi harian: ' + e.message + '</div>';
   }
 }
 
@@ -2323,7 +2323,7 @@ async function renderStandarSp() {
     html += '</div>';
     c.innerHTML = html;
   } catch (e) {
-    c.innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat: ' + e.message + '</div>';
+    c.innerHTML = '<div class="dash-panel bg-white border border-red-200 text-red-700 p-4 rounded-lg shadow-sm">Gagal memuat: ' + e.message + '</div>';
   }
 }
 

@@ -257,21 +257,23 @@ function isiDariBahan() {
 async function renderBddKalkulator() {
   var c = document.getElementById('content');
   c.innerHTML = [
-    '<div class="max-w-100 mx-auto">',
+    '<div class="max-w-3xl mx-auto">',
 
     // Hero
-    '<div class="bg-gradient-to-br from-[#0d2657] to-[#14326b] rounded-lg p-6 lg:p-8 mb-6 text-white shadow-lg">',
-      '<div class="flex items-center gap-3 mb-2">',
-        '<div class="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">',
-          '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>',
+    '<div class="dash-card-item relative overflow-hidden rounded-lg border border-[#0f2a5f] text-white p-6 lg:p-8 mb-6 shadow-sm" style="background-image: linear-gradient(115deg, rgba(9,26,58,.97) 0%, rgba(20,50,107,.94) 55%, rgba(15,42,95,.92) 100%), url(\'/bg.jpeg\'); background-size: cover; background-position: center;">',
+      '<div class="absolute inset-0 opacity-[0.07]" style="background-image: linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px); background-size: 44px 44px;"></div>',
+      '<div class="relative min-w-0">',
+        '<div class="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">',
+          '<span class="h-1.5 w-1.5 rounded-full bg-[#c6a664]"></span>',
+          'Standar Porsi',
         '</div>',
-        '<h2 class="text-xl lg:text-2xl font-bold tracking-tight">Kalkulator BDD</h2>',
+        '<h2 class="mt-2 text-xl lg:text-2xl font-semibold tracking-tight text-white">Kalkulator BDD</h2>',
+        '<p class="mt-1 text-xs text-slate-300/90 max-w-xl">Hitung berat kotor, berat bersih, dan kebutuhan bahan pangan berdasarkan BDD (Bahan Dapat Dimakan) secara real-time.</p>',
       '</div>',
-      '<p class="text-white/80 text-sm max-w-xl">Hitung berat kotor, berat bersih, dan kebutuhan bahan pangan berdasarkan BDD (Bahan Dapat Dimakan) secara real-time.</p>',
     '</div>',
 
     // Panel Utama
-    '<div class="bg-white rounded-lg border border-slate-200 shadow-sm p-5 mb-4">',
+    '<div class="dash-panel bg-white rounded-lg border border-slate-200 shadow-sm p-5 mb-4">',
 
       // Pilih bahan
       '<div class="mb-5">',

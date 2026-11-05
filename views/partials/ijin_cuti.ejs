@@ -1,74 +1,91 @@
 <!-- Summary Cards -->
-<div id="cuti-summary" class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4 auto-rows-min">
-  <div class="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+<div id="cuti-summary" class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-4 auto-rows-min">
+  <div class="dash-card-item relative overflow-hidden bg-white rounded-lg border border-slate-200 p-4 sm:p-5 shadow-sm">
+    <span class="absolute inset-x-0 top-0 h-[3px]" style="background:#14326b"></span>
     <div class="flex items-center justify-between mb-1">
-      <span class="text-[10px] font-semibold uppercase tracking-wider text-[#14326b]">Total</span>
-      <svg class="w-4 h-4 text-[#14326b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Total</span>
+      <span class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[#14326b]">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </span>
     </div>
-    <div id="cuti-stat-total" class="text-lg font-bold text-slate-900">—</div>
-    <div class="text-[10px] text-[#14326b]/70">Total pengajuan</div>
+    <div id="cuti-stat-total" class="mono text-lg sm:text-2xl font-semibold text-slate-900">—</div>
+    <div class="text-[10px] text-slate-500 mt-1">Total pengajuan</div>
   </div>
-  <div class="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+  <div class="dash-card-item relative overflow-hidden bg-white rounded-lg border border-slate-200 p-4 sm:p-5 shadow-sm">
+    <span class="absolute inset-x-0 top-0 h-[3px]" style="background:#b45309"></span>
     <div class="flex items-center justify-between mb-1">
-      <span class="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Menunggu</span>
-      <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <span class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Menunggu</span>
+      <span class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-amber-600">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      </span>
     </div>
-    <div id="cuti-stat-menunggu" class="text-lg font-bold text-amber-800">—</div>
-    <div class="text-[10px] text-amber-600/70">Menunggu persetujuan</div>
+    <div id="cuti-stat-menunggu" class="mono text-lg sm:text-2xl font-semibold text-slate-900">—</div>
+    <div class="text-[10px] text-slate-500 mt-1">Menunggu persetujuan</div>
   </div>
-  <div class="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+  <div class="dash-card-item relative overflow-hidden bg-white rounded-lg border border-slate-200 p-4 sm:p-5 shadow-sm">
+    <span class="absolute inset-x-0 top-0 h-[3px]" style="background:#0f766e"></span>
     <div class="flex items-center justify-between mb-1">
-      <span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Disetujui</span>
-      <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Disetujui</span>
+      <span class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[#0f766e]">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </span>
     </div>
-    <div id="cuti-stat-disetujui" class="text-lg font-bold text-emerald-800">—</div>
-    <div class="text-[10px] text-emerald-600/70">Pengajuan disetujui</div>
+    <div id="cuti-stat-disetujui" class="mono text-lg sm:text-2xl font-semibold text-slate-900">—</div>
+    <div class="text-[10px] text-slate-500 mt-1">Pengajuan disetujui</div>
   </div>
-  <div class="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+  <div class="dash-card-item relative overflow-hidden bg-white rounded-lg border border-slate-200 p-4 sm:p-5 shadow-sm">
+    <span class="absolute inset-x-0 top-0 h-[3px]" style="background:#b91c1c"></span>
     <div class="flex items-center justify-between mb-1">
-      <span class="text-[10px] font-semibold uppercase tracking-wider text-red-700">Ditolak</span>
-      <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Ditolak</span>
+      <span class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-red-600">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </span>
     </div>
-    <div id="cuti-stat-ditolak" class="text-lg font-bold text-red-800">—</div>
-    <div class="text-[10px] text-red-600/70">Pengajuan ditolak</div>
+    <div id="cuti-stat-ditolak" class="mono text-lg sm:text-2xl font-semibold text-slate-900">—</div>
+    <div class="text-[10px] text-slate-500 mt-1">Pengajuan ditolak</div>
   </div>
+</div>
 
-<!-- Filters & Actions (tile selebar di dalam grid bento yang sama) -->
-<div class="col-span-2 xl:col-span-4 bg-white rounded-lg border border-slate-200 shadow-sm px-4 py-3">
-  <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-    <div class="flex items-center gap-2">
-      <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
-      <select id="cuti-filter-karyawan" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]">
-        <option value="">Semua Karyawan</option>
-      </select>
-      <input id="cuti-filter-tanggal-awal" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]" />
-      <span class="text-xs text-slate-400">s.d.</span>
-      <input id="cuti-filter-tanggal-akhir" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]" />
-      <select id="cuti-filter-jenis" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]">
-        <option value="">Semua Jenis</option>
-        <option value="Izin">Izin</option>
-        <option value="Cuti">Cuti</option>
-      </select>
-      <select id="cuti-filter-status" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]">
-        <option value="">Semua Status</option>
-        <option value="Menunggu">Menunggu</option>
-        <option value="Disetujui">Disetujui</option>
-        <option value="Ditolak">Ditolak</option>
-      </select>
+<!-- Filters & Actions -->
+<div class="grid grid-cols-1 xl:grid-cols-4 gap-3 mb-5">
+  <div class="xl:col-span-3 dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-4 py-3">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div class="flex flex-wrap items-center gap-2 min-w-0">
+        <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+        <select id="cuti-filter-karyawan" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]">
+          <option value="">Semua Karyawan</option>
+        </select>
+        <input id="cuti-filter-tanggal-awal" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]" />
+        <span class="text-xs text-slate-400">s.d.</span>
+        <input id="cuti-filter-tanggal-akhir" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]" />
+        <select id="cuti-filter-jenis" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]">
+          <option value="">Semua Jenis</option>
+          <option value="Izin">Izin</option>
+          <option value="Cuti">Cuti</option>
+        </select>
+        <select id="cuti-filter-status" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]">
+          <option value="">Semua Status</option>
+          <option value="Menunggu">Menunggu</option>
+          <option value="Disetujui">Disetujui</option>
+          <option value="Ditolak">Ditolak</option>
+        </select>
+      </div>
     </div>
-    <div class="flex gap-1.5">
-      <button onclick="loadIjinCuti()" class="bg-[#14326b] hover:bg-[#0f2a5f] text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm flex items-center gap-1.5">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Filter
+  </div>
+  <div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 flex items-center">
+    <div class="flex items-center gap-2 w-full">
+      <button onclick="loadIjinCuti()" class="flex-1 min-w-0 h-9 px-2 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-xs font-medium transition-colors shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Filter
       </button>
-      <button onclick="openIjinCutiForm()" class="border border-slate-300 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>+ Tambah
+      <button onclick="openIjinCutiForm()" class="flex-1 min-w-0 h-9 px-2 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>+ Tambah
       </button>
     </div>
   </div>
-</div></div>
+</div>
 
 <!-- Table -->
-<div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+<div class="dash-panel bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
   <div class="overflow-x-auto">
     <table class="w-full text-[11px]">
       <thead class="bg-slate-50">
@@ -95,7 +112,7 @@
 
 <!-- Form Modal -->
 <div id="cuti-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
-  <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+  <div class="dash-panel bg-white rounded-lg border border-slate-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
     <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex justify-between items-center">
       <h3 id="cuti-modal-title" class="text-sm font-bold text-slate-800">Input Ijin/Cuti</h3>
       <button onclick="closeCutiModal()" class="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors">
