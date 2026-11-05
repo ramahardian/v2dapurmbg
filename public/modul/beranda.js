@@ -70,38 +70,38 @@ function dashMenuRender() {
 
   let h = '<div class="space-y-4"><div class="flex flex-col sm:flex-row gap-4">';
   if (m.foto) {
-    h += '<div class="shrink-0 w-full sm:w-32 h-40 sm:h-28 rounded-xl overflow-hidden border border-stone-200 bg-stone-50">';
+    h += '<div class="shrink-0 w-full sm:w-32 h-40 sm:h-28 rounded-md overflow-hidden border border-slate-200 bg-slate-50">';
     h += '<img src="' + escDashMenu(m.foto) + '" alt="Foto menu" class="w-full h-full object-cover">';
     h += '</div>';
   }
   h += '<div class="flex flex-1 flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">';
   h += '<div class="min-w-0">';
   h += '<div class="flex items-center gap-2 flex-wrap mb-1.5">';
-  h += '<span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-md px-2 py-0.5">' + escDashMenu(m.siklus_nama || '') + '</span>';
-  if (jnLabel) h += '<span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">' + escDashMenu(jnLabel) + '</span>';
+  h += '<span class="text-[10px] font-semibold uppercase tracking-wider text-[#14326b] bg-[#eef2f9] border border-[#c9d6ea] rounded px-2 py-0.5">' + escDashMenu(m.siklus_nama || '') + '</span>';
+  if (jnLabel) h += '<span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">' + escDashMenu(jnLabel) + '</span>';
   h += '</div>';
   if (m.menu_nama) {
-    h += '<div class="text-lg font-bold text-stone-800 leading-relaxed text-pretty">' + escDashMenu(m.menu_nama) + '</div>';
+    h += '<div class="text-lg font-semibold text-slate-900 leading-relaxed text-pretty">' + escDashMenu(m.menu_nama) + '</div>';
   } else {
-    h += '<div class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200">';
+    h += '<div class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-amber-50 border border-amber-200">';
     h += '<svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
     h += '<span class="text-sm font-semibold text-amber-700">Menu belum diisi</span>';
-    h += '<a href="/siklus" data-key="siklus" class="text-xs font-bold text-emerald-600 underline hover:no-underline ml-1">Isi sekarang →</a>';
+    h += '<a href="/siklus" data-key="siklus" class="text-xs font-semibold text-[#14326b] underline hover:no-underline ml-1">Isi sekarang →</a>';
     h += '</div>';
   }
   h += '</div>';
   h += '<div class="shrink-0">';
-  h += '<div class="text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-1">Porsi</div>';
-  h += '<div class="mono text-sm font-bold text-stone-700">' + Number(m.porsi_item || 0).toLocaleString('id-ID');
+  h += '<div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Porsi</div>';
+  h += '<div class="mono text-sm font-semibold text-slate-700">' + Number(m.porsi_item || 0).toLocaleString('id-ID');
   if (Number(m.jumlah_porsi) > 0) h += ' / ' + Number(m.jumlah_porsi).toLocaleString('id-ID') + ' porsi';
   h += '</div>';
   h += '</div></div></div>';
   if (Number(m.kalori) > 0) {
-    h += '<div class="grid grid-cols-4 gap-2 border-t border-stone-100 pt-3">';
-    h += '<div class="text-center"><div class="mono text-sm font-bold text-orange-700">' + Number(m.kalori).toLocaleString('id-ID') + '</div><div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Kalori</div></div>';
-    h += '<div class="text-center"><div class="mono text-sm font-bold text-blue-700">' + Number(m.protein || 0).toLocaleString('id-ID') + 'g</div><div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Protein</div></div>';
-    h += '<div class="text-center"><div class="mono text-sm font-bold text-amber-700">' + Number(m.karbohidrat || 0).toLocaleString('id-ID') + 'g</div><div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Karbo</div></div>';
-    h += '<div class="text-center"><div class="mono text-sm font-bold text-rose-700">' + Number(m.lemak || 0).toLocaleString('id-ID') + 'g</div><div class="text-[9px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">Lemak</div></div>';
+    h += '<div class="grid grid-cols-4 gap-2 border-t border-slate-100 pt-3">';
+    h += '<div class="text-center"><div class="mono text-sm font-bold text-orange-700">' + Number(m.kalori).toLocaleString('id-ID') + '</div><div class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">Kalori</div></div>';
+    h += '<div class="text-center"><div class="mono text-sm font-semibold text-[#14326b]">' + Number(m.protein || 0).toLocaleString('id-ID') + 'g</div><div class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">Protein</div></div>';
+    h += '<div class="text-center"><div class="mono text-sm font-bold text-amber-700">' + Number(m.karbohidrat || 0).toLocaleString('id-ID') + 'g</div><div class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">Karbo</div></div>';
+    h += '<div class="text-center"><div class="mono text-sm font-bold text-rose-700">' + Number(m.lemak || 0).toLocaleString('id-ID') + 'g</div><div class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">Lemak</div></div>';
     h += '</div>';
   }
   h += '</div>';
@@ -752,7 +752,7 @@ async function loadOnlineUsers() {
     if (countEl) countEl.textContent = data.count + ' user';
     
     if (!data.users || data.users.length === 0) {
-      if (listEl) listEl.innerHTML = '<div class="text-sm text-stone-400 text-center py-4">Tidak ada user online</div>';
+      if (listEl) listEl.innerHTML = '<div class="text-sm text-slate-400 text-center py-4">Tidak ada user online</div>';
       return;
     }
     
@@ -764,15 +764,15 @@ async function loadOnlineUsers() {
         const roleLabel = { admin: 'Admin', ahli_gizi: 'Ahli Gizi', gudang: 'Gudang', keuangan: 'Keuangan', produksi: 'Produksi' }[u.role] || u.role;
         
         return `
-          <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-stone-50 transition-colors cursor-pointer" onclick="openChatWithUser(${u.id})" title="Buka chat dengan ${u.nama}">
+          <div class="flex items-center gap-3 p-2 rounded-md hover:bg-slate-50 transition-colors cursor-pointer" onclick="openChatWithUser(${u.id})" title="Buka chat dengan ${u.nama}">
             ${userAvatarHTML(u.foto, u.nama, 'w-8 h-8')}
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <span class="font-medium text-stone-800 truncate">${u.nama}</span>
+                <span class="font-medium text-slate-800 truncate">${u.nama}</span>
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Online"></span>
               </div>
-              <div class="text-[10px] text-stone-400 flex items-center gap-2">
-                <span class="px-1.5 py-0.5 rounded bg-stone-100 text-[9px] font-medium">${roleLabel}</span>
+              <div class="text-[10px] text-slate-400 flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded bg-slate-100 text-[9px] font-medium">${roleLabel}</span>
                 <span>${timeAgo}</span>
               </div>
             </div>
@@ -811,9 +811,9 @@ function ohInitials(n) {
 // Avatar: pakai foto user jika ada (data URL), jika tidak pakai inisial nama.
 function userAvatarHTML(foto, nama, sizeClass) {
   if (foto && typeof foto === 'string' && /^data:image\//.test(foto)) {
-    return `<img src="${foto}" alt="" class="${sizeClass} rounded-full object-cover border border-stone-200 shrink-0">`;
+    return `<img src="${foto}" alt="" class="${sizeClass} rounded-full object-cover border border-slate-200 shrink-0">`;
   }
-  return `<div class="${sizeClass} rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style="background: linear-gradient(135deg, #10b981, #059669);">${ohInitials(nama)}</div>`;
+  return `<div class="${sizeClass} rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style="background: linear-gradient(135deg, #1e3a8a, #0f2a5f);">${ohInitials(nama)}</div>`;
 }
 function ohRoleLabel(role) {
   return { admin: 'Admin', ahli_gizi: 'Ahli Gizi', gudang: 'Gudang', keuangan: 'Keuangan', produksi: 'Produksi' }[role] || role || '-';
@@ -916,26 +916,26 @@ function renderOhSummary(d) {
   const users = d.users || [];
   if (!users.length) return '';
   const chips = users.slice(0, 10).map(u => `
-    <div class="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-stone-50 border border-stone-200 whitespace-nowrap">
+    <div class="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-md bg-slate-50 border border-slate-200 whitespace-nowrap">
       ${userAvatarHTML(u.foto, u.nama, 'w-6 h-6')}
       <div class="leading-tight min-w-0">
-        <div class="text-[11px] font-semibold text-stone-700 truncate">${escDashMenu(u.nama || '—')}</div>
-        <div class="text-[9px] text-stone-400">${ohRoleLabel(u.role)} · ${u.logins} login · ${u.last_activity ? ohTime(u.last_activity) : '—'}</div>
+        <div class="text-[11px] font-semibold text-slate-700 truncate">${escDashMenu(u.nama || '—')}</div>
+        <div class="text-[9px] text-slate-400">${ohRoleLabel(u.role)} · ${u.logins} login · ${u.last_activity ? ohTime(u.last_activity) : '—'}</div>
       </div>
     </div>`).join('');
-  const more = users.length > 10 ? `<span class="text-[10px] text-stone-400 self-center whitespace-nowrap">+${users.length - 10} lagi</span>` : '';
+  const more = users.length > 10 ? `<span class="text-[10px] text-slate-400 self-center whitespace-nowrap">+${users.length - 10} lagi</span>` : '';
   return `<div class="flex gap-2 overflow-x-auto pb-0.5">${chips}${more}</div>`;
 }
 
 function renderOhLoading() {
   return `<div class="px-5 py-12 flex flex-col items-center gap-2">
-    <div class="w-6 h-6 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
-    <span class="text-xs text-stone-400">Memuat...</span>
+    <div class="w-6 h-6 rounded-full border-2 border-[#14326b] border-t-transparent animate-spin"></div>
+    <span class="text-xs text-slate-400">Memuat...</span>
   </div>`;
 }
 
 function renderOhEmpty(msg, isError) {
-  return `<div class="px-5 py-12 text-center text-sm ${isError ? 'text-red-500' : 'text-stone-400'}">${msg}</div>`;
+  return `<div class="px-5 py-12 text-center text-sm ${isError ? 'text-red-500' : 'text-slate-400'}">${msg}</div>`;
 }
 
 function renderOhEntries(entries) {
@@ -947,21 +947,21 @@ function renderOhEntries(entries) {
   keys.forEach((k, gi) => {
     const rows = groups[k];
     const lastGroup = gi === keys.length - 1;
-    html += `<div class="sticky top-0 z-10 bg-white/95 backdrop-blur px-5 py-2 flex items-center justify-between border-b border-stone-100">
-      <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400">${ohDateLabel(rows[0].created_at)}</span>
-      <span class="text-[9px] text-stone-300">${rows.length} aktivitas</span>
+    html += `<div class="sticky top-0 z-10 bg-white/95 backdrop-blur px-5 py-2 flex items-center justify-between border-b border-slate-100">
+      <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${ohDateLabel(rows[0].created_at)}</span>
+      <span class="text-[9px] text-slate-300">${rows.length} aktivitas</span>
     </div>`;
     rows.forEach((e, ri) => {
       const isLogin = e.event === 'login';
       const isLast = lastGroup && ri === rows.length - 1;
-      html += `<div class="flex items-center gap-3 px-5 py-2.5 ${isLast ? '' : 'border-b border-stone-50'} hover:bg-stone-50/70 transition-colors">
+      html += `<div class="flex items-center gap-3 px-5 py-2.5 ${isLast ? '' : 'border-b border-slate-50'} hover:bg-slate-50/70 transition-colors">
         ${userAvatarHTML(e.foto, e.nama, 'w-8 h-8')}
         <div class="flex-1 min-w-0 flex items-center gap-2">
-          <span class="font-medium text-stone-800 text-sm truncate">${escDashMenu(e.nama || '—')}</span>
-          <span class="px-1.5 py-0.5 rounded bg-stone-100 text-[9px] font-medium text-stone-500 shrink-0">${ohRoleLabel(e.role)}</span>
+          <span class="font-medium text-slate-800 text-sm truncate">${escDashMenu(e.nama || '—')}</span>
+          <span class="px-1.5 py-0.5 rounded bg-slate-100 text-[9px] font-medium text-slate-500 shrink-0">${ohRoleLabel(e.role)}</span>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <span class="mono text-[10px] text-stone-400">${ohTime(e.created_at)}</span>
+          <span class="mono text-[10px] text-slate-400">${ohTime(e.created_at)}</span>
           <span class="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full ${isLogin ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}">
             <span class="w-1 h-1 rounded-full ${isLogin ? 'bg-blue-500' : 'bg-emerald-500'}"></span>
             ${isLogin ? 'Login' : 'Aktif'}
@@ -1040,15 +1040,15 @@ function renderOhPagination(d) {
   const from = (page - 1) * (d.limit || OH_PAGE_SIZE) + 1;
   const to = Math.min(page * (d.limit || OH_PAGE_SIZE), total);
   const btn = 'inline-flex items-center justify-center h-8 px-3 rounded-lg text-xs font-medium border transition-colors';
-  const disabled = ' text-stone-300 border-stone-100 cursor-not-allowed';
-  const active = ' text-stone-600 border-stone-200 hover:bg-stone-50 hover:text-stone-800';
-  return `<div class="px-5 py-3 border-t border-stone-100 flex items-center justify-between gap-3">
-    <span class="text-[10px] text-stone-400">Menampilkan <b class="text-stone-600">${from}–${to}</b> dari <b class="text-stone-600">${total}</b> aktivitas</span>
+  const disabled = ' text-slate-300 border-slate-100 cursor-not-allowed';
+  const active = ' text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800';
+  return `<div class="px-5 py-3 border-t border-slate-100 flex items-center justify-between gap-3">
+    <span class="text-[10px] text-slate-400">Menampilkan <b class="text-slate-600">${from}–${to}</b> dari <b class="text-slate-600">${total}</b> aktivitas</span>
     <div class="flex items-center gap-1.5">
       <button onclick="ohSetPage(${page - 1})" ${page <= 1 ? 'disabled' : ''} class="${btn}${page <= 1 ? disabled : active}">
         <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>Prev
       </button>
-      <span class="text-[11px] font-semibold text-stone-500 px-2">${page} / ${totalPages}</span>
+      <span class="text-[11px] font-semibold text-slate-500 px-2">${page} / ${totalPages}</span>
       <button onclick="ohSetPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''} class="${btn}${page >= totalPages ? disabled : active}">
         Next<svg class="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
       </button>

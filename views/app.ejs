@@ -12,8 +12,13 @@
   <script>try { if (localStorage.getItem('dark_mode')) document.documentElement.classList.add('dark'); } catch (e) {}</script>
   <style>
     
-    :root { --bg-body: #FAFAF9; --bg-card: #fff; --bg-sidebar: #fff; --text-body: #1C1917; --border: #e7e5e4; --bg-sidebar-hover: rgba(0,0,0,.05); --bg-sidebar-active: rgba(0,0,0,.08); --bg-header: #fff; }
-    html.dark { --bg-body: #0c0a09; --bg-card: #44403c; --bg-sidebar: #1c1917; --text-body: #e7e5e4; --border: #57534e; --bg-sidebar-hover: rgba(255,255,255,.06); --bg-sidebar-active: rgba(255,255,255,.1); --bg-header: #1c1917; }
+    :root {
+      --bg-body: #eef2f7; --bg-card: #fff; --bg-sidebar: #0d2657; --text-body: #1e293b;
+      --border: #e2e8f0; --bg-sidebar-hover: rgba(255,255,255,.08); --bg-sidebar-active: rgba(255,255,255,.13);
+      --bg-header: #fff; --brand: #14326b; --brand-dark: #0f2a5f; --gold: #c6a664;
+      --sidebar-text: #dbe4f5; --sidebar-muted: #93a6c9;
+    }
+    html.dark { --bg-body: #0b1220; --bg-card: #1a2334; --bg-sidebar: #0a1b3d; --text-body: #e2e8f0; --border: #334155; --bg-sidebar-hover: rgba(255,255,255,.07); --bg-sidebar-active: rgba(255,255,255,.12); --bg-header: #111a2e; }
     html.dark .sidebar-logo-wrap img { background: #fff !important; }
     html.dark #splash-screen { background: var(--bg-body) !important; background-size: auto !important; animation: none !important; }
     html.dark #splash-screen .splash-logo { box-shadow: 0 8px 32px rgba(0,0,0,.4); }
@@ -54,6 +59,56 @@
     #sidebar.collapsed .sidebar-toggle { display:none; }
     #app.sidebar-collapsed main { margin-left:64px; }
     @media (max-width:1023px) { #sidebar.collapsed { width:260px; } #sidebar.collapsed .sidebar-link { justify-content:flex-start;padding:.5rem .875rem;gap:.75rem; } #sidebar.collapsed .sidebar-link .nav-label, #sidebar.collapsed .nav-group-label { opacity:1;width:auto;display:block; } #sidebar.collapsed .sidebar-logo-text, #sidebar.collapsed .sidebar-logo-sub, #sidebar.collapsed .user-info-text { display:block; } #sidebar.collapsed .sidebar-logo-wrap { justify-content:flex-start;padding:.5rem 1.25rem; } #sidebar.collapsed .user-area { display:flex;justify-content:flex-start;padding:0; } #sidebar.collapsed .logout-text { display:inline; } #app.sidebar-collapsed main { margin-left:0; } }
+
+    /* ═══ Tema korporat (selaras halaman login) ═══ */
+    .text-brand { color: #14326b; }
+    .bg-brand { background-color: #14326b; }
+    .bg-brand-soft { background-color: #eef2f9; }
+    .border-brand { border-color: #c9d6ea; }
+    .btn-brand { background-color: #14326b; color: #fff; }
+    .btn-brand:hover { background-color: #0f2a5f; }
+    .gold-rule { width: 2.5rem; height: 2px; background: #c6a664; }
+    html.dark .text-brand { color: #93c5fd; }
+    html.dark .bg-brand-soft { background-color: #1e293b; }
+    html.dark .border-brand { border-color: #334155; }
+    html.dark .btn-brand { background-color: #1e3a8a; }
+    html.dark .text-\[\#14326b\] { color: #93c5fd; }
+    html.dark .text-\[\#0f766e\] { color: #5eead4; }
+    html.dark .text-\[\#a8853f\] { color: #e2c78b; }
+    html.dark .text-\[\#64748b\] { color: #94a3b8; }
+    html.dark .bg-\[\#eef2f9\] { background-color: #1e293b; }
+    html.dark .border-\[\#c9d6ea\] { border-color: #334155; }
+
+    #sidebar { color: var(--sidebar-text); }
+    #sidebar .sidebar-logo-text { color: #fff; }
+    #sidebar #sidebar-logo-sub { color: var(--sidebar-muted) !important; opacity: 1 !important; }
+    #sidebar .sidebar-link { color: #c7d3e8; opacity: .9; border-radius: .375rem; }
+    #sidebar .sidebar-link:hover { background: rgba(255,255,255,.08); color: #fff; opacity: 1; }
+    #sidebar .sidebar-link.active { background: rgba(255,255,255,.13); color: #fff; opacity: 1; box-shadow: inset 2px 0 0 var(--gold); }
+    #sidebar .nav-group-label { color: var(--sidebar-muted) !important; opacity: 1 !important; letter-spacing: .14em; }
+    #sidebar .sidebar-sub-link { color: #aebcd6; opacity: .92; }
+    #sidebar .sidebar-sub-link:hover, #sidebar .sidebar-sub-link.active { color: #fff; }
+    #sidebar .sidebar-dropdown-parent .dropdown-arrow { color: var(--sidebar-muted); }
+    #sidebar input#sidebar-search { background: rgba(255,255,255,.07) !important; border-color: rgba(255,255,255,.14) !important; color: #fff !important; }
+    #sidebar input#sidebar-search::placeholder { color: rgba(226,232,240,.45); }
+    #sidebar #sidebar-search-clear { color: rgba(226,232,240,.7); }
+    #sidebar #sidebar-search-results { background: #0a1b3d !important; border-color: rgba(255,255,255,.14) !important; color: var(--sidebar-text) !important; }
+    #sidebar #sidebar-search-results a { color: var(--sidebar-text) !important; }
+    #sidebar #sidebar-search-results a:hover, #sidebar #sidebar-search-results a.active-search { background: rgba(255,255,255,.1) !important; }
+    #sidebar #user-avatar { background: rgba(255,255,255,.12) !important; color: #fff !important; }
+    #sidebar .user-area, #sidebar #user-name { color: var(--sidebar-text) !important; }
+    #sidebar #user-role { color: var(--sidebar-muted) !important; opacity: 1 !important; }
+    #sidebar #logout-btn { color: #c7d3e8 !important; opacity: .8 !important; }
+    #sidebar #logout-btn:hover { color: #fff !important; opacity: 1 !important; }
+    #sidebar #sidebar-toggle { color: var(--sidebar-muted) !important; }
+    #sidebar [style*="border-top"], #sidebar [style*="border-bottom"], #sidebar [style*="border-right"] { border-color: rgba(255,255,255,.12) !important; }
+
+    #main-content > header { background: rgba(255,255,255,.94) !important; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 1px 0 rgba(15,23,42,.03); }
+    html.dark #main-content > header { background: rgba(17,26,46,.94) !important; }
+    #page-title { color: #0f2a5f; }
+    html.dark #page-title { color: #e2e8f0; }
+    #page-sub { color: #64748b !important; opacity: 1 !important; }
+    html.dark #page-sub { color: #94a3b8 !important; }
     .modal-content { background: var(--bg-body); border: 1px solid var(--border); }
     .modal-backdrop, [class*="bg-black/"] { background: rgba(0,0,0,.65); }
     html.dark .modal-backdrop, html.dark [class*="bg-black/"] { background: rgba(0,0,0,.8); }
@@ -95,7 +150,7 @@
 </head>
 <body>
   <!-- ═══ SPLASH / LOADING SCREEN ═══ -->
-  <div id="splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center" style="background:linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #06b6d4 100%);background-size:200% 200%;animation:splashGradient 6s ease-in-out infinite alternate">
+  <div id="splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center" style="background:linear-gradient(135deg, #0d2657 0%, #14326b 55%, #1e3a8a 100%);background-size:200% 200%;animation:splashGradient 6s ease-in-out infinite alternate">
     <style>
       @keyframes splashGradient {
         0% { background-position: 0% 50%; }
@@ -209,7 +264,7 @@
 
     <aside id="sidebar" class="w-[260px] shrink-0 fixed inset-y-0 left-0 flex flex-col transform -translate-x-full lg:translate-x-0 transition-all duration-200 z-40" style="background:var(--bg-sidebar);color:var(--text-body);border-right:1px solid var(--border)">
       <div class="sidebar-logo-wrap flex items-center gap-3 px-5 py-5 cursor-pointer" onclick="expandSidebar()" style="border-bottom:1px solid var(--border)">
-        <img src="/asset/logo.png?v=<%= logoVer %>" alt="Sppg Sukaluyu Tamansari" class="h-9 w-9 rounded-md shrink-0 object-contain" style="" />
+        <img src="/asset/logo.png?v=<%= logoVer %>" alt="Sppg Sukaluyu Tamansari" class="h-9 w-9 rounded-md shrink-0 object-contain bg-white p-0.5 ring-1 ring-white/30" style="" />
         <div class="min-w-0">
           <div class="sidebar-logo-text font-bold leading-tight truncate">Sppg Sukaluyu Tamansari</div>
           <div id="sidebar-logo-sub" class="hidden text-[10px] font-medium truncate" style="opacity:.6"></div>
@@ -221,7 +276,7 @@
           <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style="opacity:.45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input id="sidebar-search" type="text" placeholder="Cari menu…" autocomplete="off" spellcheck="false"
             oninput="onSidebarSearch(this.value)" onkeydown="onSidebarSearchKey(event)"
-            class="w-full h-9 pl-8 pr-8 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none"
+            class="w-full h-9 pl-8 pr-8 rounded-lg text-sm transition-all focus:ring-2 focus:ring-[#14326b]/25 focus:border-[#14326b] outline-none"
             style="background:var(--bg-card);border:1px solid var(--border)" />
           <button id="sidebar-search-clear" onclick="clearSidebarSearch()" class="hidden absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 items-center justify-center rounded-full transition-opacity" style="opacity:.5" title="Bersihkan">✕</button>
         </div>
@@ -286,7 +341,7 @@
       <div id="modal-body" class="p-4 lg:p-6 overflow-y-auto flex-1"></div>
       <div class="px-4 lg:px-6 py-3 flex justify-end gap-2" style="border-top:1px solid var(--border)">
         <button id="modal-cancel-btn" class="px-4 py-2 text-sm btn-ghost rounded">Batal</button>
-        <button id="modal-save" class="px-4 py-2 text-sm bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded font-medium">Simpan</button>
+        <button id="modal-save" class="px-4 py-2 text-sm bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded font-medium">Simpan</button>
       </div>
     </div>
   </div>
@@ -316,6 +371,7 @@
     html.dark table.w-full,
     html.dark [class*="bg-white"] { background:var(--bg-card);color:var(--text-body); }
     html.dark [class*="border-stone"] { border-color:var(--border) !important; }
+    html.dark [class*="border-slate"] { border-color:var(--border) !important; }
     html.dark [class*="border-red-"] { border-color:#991b1b !important; }
     html.dark [class*="border-orange-"] { border-color:#9a3412 !important; }
     html.dark [class*="border-emerald-"] { border-color:#065f46 !important; }
@@ -327,19 +383,28 @@
     html.dark .text-stone-600,
     html.dark .text-stone-700,
     html.dark .text-stone-800,
-    html.dark .text-stone-900 { color:var(--text-body); }
-    html.dark [class*="bg-stone-50"] { background:#292524; }
-    html.dark [class*="bg-stone-100"] { background:#44403c; }
-    html.dark [class*="hover:bg-stone-50"]:hover { background:#292524; }
+    html.dark .text-stone-900,
+    html.dark .text-slate-400,
+    html.dark .text-slate-500,
+    html.dark .text-slate-600,
+    html.dark .text-slate-700,
+    html.dark .text-slate-800,
+    html.dark .text-slate-900 { color:var(--text-body); }
+    html.dark [class*="bg-stone-50"] { background:#1e293b; }
+    html.dark [class*="bg-stone-100"] { background:#334155; }
+    html.dark [class*="bg-slate-50"] { background:#1e293b; }
+    html.dark [class*="bg-slate-100"] { background:#334155; }
+    html.dark [class*="hover:bg-stone-50"]:hover { background:#1e293b; }
+    html.dark [class*="hover:bg-slate-50"]:hover { background:#1e293b; }
     html.dark [class*="hover:bg-stone-100"]:hover,
-    html.dark [class*="hover:bg-stone-200"]:hover { background:#44403c; }
+    html.dark [class*="hover:bg-stone-200"]:hover { background:#334155; }
     html.dark .shadow-sm,
     html.dark .shadow { box-shadow:0 1px 3px rgba(0,0,0,.3); }
     html.dark .shadow-lg,
     html.dark .shadow-xl { box-shadow:0 4px 16px rgba(0,0,0,.4); }
     input, select, textarea { background:var(--bg-card);color:var(--text-body);border-color:var(--border); }
-    html.dark input, html.dark select, html.dark textarea { background:#1c1917; border-color:#57534e; }
-    html.dark input:focus, html.dark select:focus, html.dark textarea:focus { border-color:#a8a29e; }
+    html.dark input, html.dark select, html.dark textarea { background:#0f172a; border-color:#334155; }
+    html.dark input:focus, html.dark select:focus, html.dark textarea:focus { border-color:#64748b; }
     html.dark [class*="bg-blue-50"],
     html.dark [class*="bg-blue-100"] { background:#1e3a5f; }
     html.dark [class*="bg-emerald-50"],
@@ -374,9 +439,9 @@
     html.dark [class*="text-red"] { color:#fca5a5; }
     html.dark [class*="text-green"] { color:#86efac; }
     html.dark [class*="text-\[#1e40af\]"] { color:#93c5fd; }
-    html.dark [class*="bg-gradient"] { background: linear-gradient(135deg, #292524, #44403c) !important; }
-    html.dark [class*="bg-gradient"] [class*="bg-white"] { background: #44403c !important; }
-    html.dark [class*="bg-gradient"] [class*="bg-white"]:hover { background: #57534e !important; }
+    html.dark [class*="bg-gradient"] { background: linear-gradient(135deg, #1e293b, #334155) !important; }
+    html.dark [class*="bg-gradient"] [class*="bg-white"] { background: #334155 !important; }
+    html.dark [class*="bg-gradient"] [class*="bg-white"]:hover { background: #475569 !important; }
     html.dark [class*="bg-gradient"] .text-\[#1e40af\] { color: #e7e5e4 !important; }
   </style>
 
