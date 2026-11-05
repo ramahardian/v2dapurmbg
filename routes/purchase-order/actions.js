@@ -123,7 +123,7 @@ function registerActionRoutes(router) {
         for (const item of items) {
           const namaBahan = item.nama || item.bahan_nama || '';
           const qty = Number(item.qty || item.qty_buffer || item.total_qty || 0);
-          const satuan = item.satuan || 'kg';
+          const satuan = String(item.satuan || 'kg').trim() || 'kg';
 
           if (!namaBahan || qty <= 0) {
             hasil.push({ nama: namaBahan || '?', status: 'skip', alasan: 'qty 0' });
@@ -131,14 +131,31 @@ function registerActionRoutes(router) {
           }
 
           let bahanBakuId = Number(item.bahan_baku_id) || 0;
+          if (bahanBakuId) {
+            const [[cek]] = await conn.query('SELECT id FROM bahan_baku WHERE id=? AND tenant_id=?', [bahanBakuId, t]);
+            if (!cek) bahanBakuId = 0;
+          }
           if (!bahanBakuId) {
-            const [[bb]] = await conn.query('SELECT id FROM bahan_baku WHERE tenant_id=? AND nama=?', [t, namaBahan]);
+            // Item boleh diinput manual di form PO (tanpa bahan_baku_id).
+            // Cocokkan dulu dengan master berdasarkan nama (case-insensitive).
+            const [[bb]] = await conn.query(
+              'SELECT id FROM bahan_baku WHERE tenant_id=? AND LOWER(TRIM(nama))=LOWER(TRIM(?)) ORDER BY id LIMIT 1',
+              [t, namaBahan]
+            );
             if (bb) bahanBakuId = bb.id;
           }
 
+          const harga = Number(item.harga || item.harga_satuan || 0);
+          let bahanBaru = false;
           if (!bahanBakuId) {
-            hasil.push({ nama: namaBahan, status: 'skip', alasan: 'bahan tidak ditemukan di master' });
-            continue;
+            // Bahan yang diketik manual belum ada di master → buat otomatis agar
+            // stok masuk & penerimaan barang tetap tercatat.
+            const [ins] = await conn.query(
+              'INSERT INTO bahan_baku (tenant_id, nama, satuan, harga_satuan, stok_saat_ini, sumber) VALUES (?, ?, ?, ?, 0, ?)',
+              [t, namaBahan, satuan, harga, 'po_manual']
+            );
+            bahanBakuId = ins.insertId;
+            bahanBaru = true;
           }
 
           let qtyGram = qty;
@@ -156,7 +173,6 @@ function registerActionRoutes(router) {
             [t, bahanBakuId, qtyGram, 'PO: ' + refDok, 'Penerimaan dari PO #' + id]
           );
 
-          const harga = Number(item.harga || item.harga_satuan || 0);
           if (harga > 0) {
             await conn.query(
               'UPDATE bahan_baku SET harga_sebelumnya = harga_satuan, harga_satuan = ? WHERE id=? AND tenant_id=?',
@@ -164,7 +180,7 @@ function registerActionRoutes(router) {
             );
           }
 
-          hasil.push({ nama: namaBahan, qty: qtyGram, satuan: 'g', status: 'ok' });
+          hasil.push({ nama: namaBahan, qty: qtyGram, satuan: 'g', status: 'ok', bahan_baku_baru: bahanBaru || undefined });
         }
 
         // Update status PO

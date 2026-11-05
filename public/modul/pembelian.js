@@ -181,13 +181,14 @@ async function terimaPo(poId) {
     const detail = result.detail || [];
     const sukses = detail.filter(d => d.status === 'ok').length;
     const gagal = detail.filter(d => d.status === 'skip').length;
+    const baru = detail.filter(d => d.bahan_baku_baru).length;
     
     var info = '';
     if (gagal > 0) {
       info = detail.filter(d => d.status === 'skip').map(function(d) { return '• ' + d.nama + ': ' + d.alasan; }).join('<br>');
     }
     
-    showToast('✅ ' + sukses + ' bahan diterima' + (gagal ? ', ' + gagal + ' gagal' : ''), sukses > gagal ? 'success' : 'warning');
+    showToast('✅ ' + sukses + ' bahan diterima' + (baru ? ', ' + baru + ' bahan baru masuk master' : '') + (gagal ? ', ' + gagal + ' gagal' : ''), sukses > gagal ? 'success' : 'warning');
     if (info) showAlert('Bahan yang gagal:<br>' + info, 'warning');
     renderPembelianPage();
   } catch (e) {
@@ -387,8 +388,12 @@ async function openPembelianForm(editing) {
       </div>
       <div>
         <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Daftar Item</label>
+        <p class="text-[10px] text-stone-400 mt-1">Pilih bahan dari daftar, atau ubah pilihan menjadi <strong>Input Manual</strong> untuk mengetik nama bahan sendiri. Bahan manual otomatis ditambahkan ke master bahan baku saat barang diterima.</p>
         <div id="po-items-list" class="mt-1.5 space-y-2"></div>
-        <button onclick="addPoItemRow()" class="mt-2 text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">+ Tambah Item</button>
+        <div class="mt-2 flex flex-wrap items-center gap-3">
+          <button onclick="addPoItemRow()" class="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">+ Tambah dari Daftar</button>
+          <button onclick="addPoItemRow(true)" class="text-sm font-medium text-amber-600 hover:text-amber-800 flex items-center gap-1">+ Input Manual</button>
+        </div>
       </div>
       <div class="flex items-center justify-between rounded-xl bg-stone-50 px-4 py-3">
         <span class="text-sm font-bold text-stone-700">Total: <span id="po-total-display" class="mono">Rp 0</span></span>
@@ -422,40 +427,151 @@ async function openPembelianForm(editing) {
   document.getElementById('modal').classList.add('flex');
 }
 
+function cariBahanPo(id) {
+  if (id === '' || id === null || id === undefined) return null;
+  return _bahanBakuList.find(x => Number(x.id) === Number(id)) || null;
+}
+
+function cariBahanPoByNama(nama) {
+  const n = String(nama || '').trim().toLowerCase();
+  if (!n) return null;
+  return _bahanBakuList.find(b => String(b.nama || '').trim().toLowerCase() === n) || null;
+}
+
+// Item PO punya dua mode:
+//   'list'   → diambil dari master bahan baku (bahan_baku_id terisi)
+//   'manual' → nama/satuan/harga diketik bebas (bahan_baku_id kosong)
+function normalisasiPoItem(item) {
+  const it = Object.assign({}, item);
+  if (it.mode === 'list' || it.mode === 'manual') {
+    if (it.mode === 'list' && !it.bahan_baku_id) {
+      const match = cariBahanPoByNama(it.nama);
+      if (match) it.bahan_baku_id = match.id;
+    }
+    return it;
+  }
+  if (it.manual || it.mode === 'manual') { it.mode = 'manual'; return it; }
+  if (cariBahanPo(it.bahan_baku_id)) { it.mode = 'list'; return it; }
+  // Item lama (mis. hasil impor koperasi) tidak punya bahan_baku_id — cocokkan
+  // dulu dengan master berdasarkan nama; kalau tidak ada, buka sebagai manual.
+  const byName = cariBahanPoByNama(it.nama);
+  if (byName) { it.mode = 'list'; it.bahan_baku_id = byName.id; return it; }
+  it.mode = (it.nama || it.satuan || Number(it.harga) > 0) ? 'manual' : 'list';
+  return it;
+}
+
+function hitungSubtotalPoItem(item) {
+  const manual = item.mode === 'manual';
+  const b = cariBahanPo(item.bahan_baku_id);
+  let harga = Number(item.harga);
+  if (!Number.isFinite(harga)) harga = manual ? 0 : Number(b?.harga_satuan) || 0;
+  if (!manual && !item.harga && b) harga = Number(b.harga_satuan) || 0;
+  item.harga = harga;
+  item.subtotal = (Number(item.qty) || 0) * harga;
+}
+
+// Ganti mode item: pilih bahan dari daftar atau input manual bebas.
+function setPoItemMode(idx, value) {
+  const item = _poItems[idx];
+  if (!item) return;
+  if (value === '__manual__') {
+    item.mode = 'manual';
+    item.bahan_baku_id = '';
+    item.nama = item.nama || '';
+    item.satuan = item.satuan || '';
+    item.harga = Number(item.harga) || 0;
+  } else {
+    item.mode = 'list';
+    item.bahan_baku_id = value;
+    const b = cariBahanPo(value);
+    if (b) {
+      item.nama = b.nama;
+      item.kode = b.kode || '';
+      item.id_koperasi = b.id_koperasi || null;
+      item.satuan = b.satuan || '';
+      item.harga = Number(b.harga_satuan) || 0;
+    }
+  }
+  hitungSubtotalPoItem(item);
+  renderPoItems(_poItems);
+}
+
 function renderPoItems(items) {
-  _poItems = items;
+  _poItems = (items || []).map(normalisasiPoItem);
   const wrap = document.getElementById('po-items-list');
-  if (!items.length) {
-    wrap.innerHTML = '<div class="text-sm text-stone-400 py-2">Belum ada item. Klik "+ Tambah Item" untuk mulai.</div>';
+  if (!_poItems.length) {
+    wrap.innerHTML = '<div class="text-sm text-stone-400 py-2">Belum ada item. Klik "+ Tambah dari Daftar" atau "+ Input Manual" untuk mulai.</div>';
     updatePoTotal();
     return;
   }
-  wrap.innerHTML = items.map((item, i) => `
-    <div class="flex gap-2 items-center bg-stone-50 rounded-xl p-2.5">
-      <select onchange="updatePoItem(${i}, 'bahan_baku_id', this.value)" class="flex-1 h-10 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-        <option value="">— Pilih Bahan —</option>
-        ${_bahanBakuList.map(b => {
-          const isNew = b.created_at && (Date.now() - new Date(b.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
-          const sel = Number(b.id) === Number(item.bahan_baku_id) ? 'selected' : '';
-          const kodeNum = b.kode ? (b.kode.match(/EXT[-\s]?(\d+)/i)?.[1] || b.kode) : '';
-          const agLabel = b.sumber === 'ahli_gizi' ? ' [Permintaan Ahli Gizi]' : '';
-          return `<option value="${b.id}" ${sel}>${kodeNum ? '[' + kodeNum + '] ' : ''}${b.nama}${isNew ? ' 🆕' : ''}${agLabel}${b.harga_satuan ? ' @ ' + fmtIDR(b.harga_satuan) : ''}</option>`;
-        }).join('')}
-      </select>
-      <input type="number" step="0.001" value="${item.qty || ''}" placeholder="Qty"
-        onchange="updatePoItem(${i}, 'qty', this.value)"
-        class="w-24 h-10 px-3 rounded-lg border border-stone-200 text-sm mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-      <span class="h-10 leading-10 text-xs text-stone-500 shrink-0 font-medium">${item.satuan || ''}</span>
-      <button onclick="removePoItem(${i})" class="w-8 h-8 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 hover:text-red-700 transition-all" title="Hapus">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-  `).join('');
+  wrap.innerHTML = _poItems.map((item, i) => {
+    const manual = item.mode === 'manual';
+    const b = cariBahanPo(item.bahan_baku_id);
+    const satuan = item.satuan || (manual ? '' : (b?.satuan || ''));
+    const harga = Number(item.harga) || 0;
+    const subtotal = Number(item.subtotal) || (Number(item.qty) || 0) * harga;
+    const inputCls = 'h-10 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all';
+    const opsiBahan = _bahanBakuList.map(b => {
+      const isNew = b.created_at && (Date.now() - new Date(b.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
+      const sel = !manual && Number(b.id) === Number(item.bahan_baku_id) ? 'selected' : '';
+      const kodeNum = b.kode ? (b.kode.match(/EXT[-\s]?(\d+)/i)?.[1] || b.kode) : '';
+      const agLabel = b.sumber === 'ahli_gizi' ? ' [Permintaan Ahli Gizi]' : '';
+      return `<option value="${b.id}" ${sel}>${kodeNum ? '[' + kodeNum + '] ' : ''}${escHtml(b.nama)}${isNew ? ' 🆕' : ''}${agLabel}${b.harga_satuan ? ' @ ' + fmtIDR(b.harga_satuan) : ''}</option>`;
+    }).join('');
+    return `
+    <div class="rounded-xl p-2.5 space-y-2 border ${manual ? 'bg-amber-50/60 border-amber-200' : 'bg-stone-50 border-stone-100'}">
+      <div class="flex gap-2 items-center">
+        <select onchange="setPoItemMode(${i}, this.value)" class="flex-1 ${inputCls} bg-white">
+          <option value="">— Pilih Bahan —</option>
+          ${opsiBahan}
+          <option value="__manual__" ${manual ? 'selected' : ''}>✎ Input Manual (nama bahan bebas)</option>
+        </select>
+        <button onclick="removePoItem(${i})" class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 hover:text-red-700 transition-all" title="Hapus">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      ${manual ? `
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <input value="${escHtml(item.nama || '')}" placeholder="Nama bahan (mis. Ayam fillet)"
+          oninput="updatePoItem(${i}, 'nama', this.value)"
+          class="${inputCls} bg-white">
+        <input value="${escHtml(item.kode || '')}" placeholder="Kode (opsional)"
+          oninput="updatePoItem(${i}, 'kode', this.value)"
+          class="${inputCls} bg-white">
+        <div class="flex gap-2">
+          <input type="number" step="0.001" min="0" value="${item.qty || ''}" placeholder="Qty"
+            oninput="updatePoItem(${i}, 'qty', this.value)"
+            class="w-full ${inputCls} bg-white mono">
+          <input value="${escHtml(satuan)}" placeholder="Satuan"
+            oninput="updatePoItem(${i}, 'satuan', this.value)"
+            class="w-24 ${inputCls} bg-white">
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <input type="number" step="0.01" min="0" value="${harga || ''}" placeholder="Harga satuan (Rp)"
+          oninput="updatePoItem(${i}, 'harga', this.value)"
+          class="w-full sm:w-44 ${inputCls} bg-white mono">
+        <span class="text-xs text-stone-500 whitespace-nowrap">Subtotal: <span id="po-subtotal-${i}" class="mono font-semibold text-stone-700">${fmtIDR(subtotal)}</span></span>
+      </div>` : `
+      <div class="flex flex-wrap items-center gap-2">
+        <input type="number" step="0.001" min="0" value="${item.qty || ''}" placeholder="Qty"
+          oninput="updatePoItem(${i}, 'qty', this.value)"
+          class="w-24 ${inputCls} bg-white mono">
+        <span class="text-xs text-stone-500 font-medium min-w-[2rem]">${escHtml(satuan)}</span>
+        <span class="text-[11px] text-stone-500">@ ${fmtIDR(harga)}</span>
+        <span class="text-xs text-stone-500 whitespace-nowrap">= <span id="po-subtotal-${i}" class="mono font-semibold text-stone-700">${fmtIDR(subtotal)}</span></span>
+      </div>`}
+    </div>`;
+  }).join('');
   updatePoTotal();
 }
 
-function addPoItemRow() {
-  _poItems.push({ bahan_baku_id: '', qty: '', subtotal: 0, satuan: '' });
+function addPoItemRow(manual) {
+  if (manual) {
+    _poItems.push({ mode: 'manual', bahan_baku_id: '', nama: '', kode: '', qty: '', satuan: '', harga: '', subtotal: 0 });
+  } else {
+    _poItems.push({ mode: 'list', bahan_baku_id: '', qty: '', subtotal: 0, satuan: '', harga: '' });
+  }
   renderPoItems(_poItems);
 }
 
@@ -464,20 +580,24 @@ function removePoItem(idx) {
   renderPoItems(_poItems);
 }
 
+// Perbarui nilai item tanpa render ulang agar fokus input tidak hilang saat
+// mengetik (nama bahan manual, qty, satuan, harga).
 function updatePoItem(idx, field, value) {
-  _poItems[idx][field] = value;
-  const b = _bahanBakuList.find(x => Number(x.id) === Number(_poItems[idx].bahan_baku_id));
-  if (b) {
-    _poItems[idx].satuan = b.satuan || '';
-    _poItems[idx].subtotal = (Number(_poItems[idx].qty) || 0) * (Number(b.harga_satuan) || 0);
-  }
-  renderPoItems(_poItems);
+  const item = _poItems[idx];
+  if (!item) return;
+  item[field] = value;
+  hitungSubtotalPoItem(item);
+  updatePoTotal();
+  const sub = document.getElementById('po-subtotal-' + idx);
+  if (sub) sub.textContent = fmtIDR(item.subtotal || 0);
 }
 
 function updatePoTotal() {
   const total = _poItems.reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
-  document.getElementById('po-total-display').textContent = fmtIDR(total);
-  document.getElementById('po-total_nilai').value = total;
+  const display = document.getElementById('po-total-display');
+  const hidden = document.getElementById('po-total_nilai');
+  if (display) display.textContent = fmtIDR(total);
+  if (hidden) hidden.value = total;
 }
 
 function savePembelian() {
@@ -487,7 +607,42 @@ function savePembelian() {
   if (!tanggal) { showAlert('Tanggal wajib diisi', 'warning'); return; }
   if (!_poItems.length) { showAlert('Minimal satu item harus ditambahkan', 'warning'); return; }
 
-  const total = _poItems.reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
+  // Validasi item: qty wajib > 0; item manual wajib punya nama & satuan.
+  const masalah = [];
+  _poItems.forEach((i, idx) => {
+    const no = idx + 1;
+    if (!(Number(i.qty) > 0)) masalah.push('Item ' + no + ': qty harus lebih dari 0');
+    if (i.mode === 'manual') {
+      if (!String(i.nama || '').trim()) masalah.push('Item ' + no + ': nama bahan wajib diisi');
+      if (!String(i.satuan || '').trim()) masalah.push('Item ' + no + ': satuan wajib diisi');
+    } else if (!i.bahan_baku_id) {
+      masalah.push('Item ' + no + ': pilih bahan dari daftar atau gunakan Input Manual');
+    }
+  });
+  if (masalah.length) { showAlert(masalah.join('<br>'), 'warning'); return; }
+
+  const itemPo = _poItems.map(i => {
+    const manual = i.mode === 'manual';
+    const b = cariBahanPo(i.bahan_baku_id);
+    const qty = Number(i.qty) || 0;
+    const nama = manual ? String(i.nama || '').trim() : (b?.nama || String(i.nama || '').trim());
+    const satuan = manual ? String(i.satuan || '').trim() : (i.satuan || b?.satuan || '');
+    const harga = manual ? (Number(i.harga) || 0) : (Number(i.harga) || Number(b?.harga_satuan) || 0);
+    const item = {
+      bahan_baku_id: manual ? null : (i.bahan_baku_id || null),
+      id_koperasi: manual ? null : (b?.id_koperasi || i.id_koperasi || null),
+      kode: manual ? String(i.kode || '').trim() : (b?.kode || i.kode || ''),
+      nama,
+      qty,
+      satuan,
+      harga,
+      subtotal: qty * harga,
+    };
+    if (manual) item.manual = true;
+    return item;
+  });
+  const total = itemPo.reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
+
   const supplierEl = document.getElementById('po-supplier_nama');
   const supplierNama = supplierEl.value.trim();
   const supplierId = supplierEl.selectedIndex > 0 ? (supplierEl.options[supplierEl.selectedIndex]?.dataset?.id || null) : null;
@@ -497,19 +652,7 @@ function savePembelian() {
     supplier_id: supplierId,
     supplier_nama: supplierNama,
     unit_dapur: document.getElementById('po-unit_dapur').value.trim(),
-    item: JSON.stringify(_poItems.map(i => {
-      const b = _bahanBakuList.find(x => Number(x.id) === Number(i.bahan_baku_id));
-      return {
-        bahan_baku_id: i.bahan_baku_id,
-        id_koperasi: b?.id_koperasi || null,
-        kode: b?.kode || '',
-        nama: b?.nama || '',
-        qty: Number(i.qty) || 0,
-        satuan: i.satuan,
-        harga: Number(b?.harga_satuan || 0),
-        subtotal: Number(i.subtotal) || 0,
-      };
-    })),
+    item: JSON.stringify(itemPo),
     total_nilai: total,
     status: document.getElementById('po-status').value,
     catatan: document.getElementById('po-catatan').value.trim(),
