@@ -9,118 +9,390 @@
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; font-weight: 400; }
-    h1,h2,h3 { font-family: "Geist", sans-serif; font-weight: 500; }
-    .gradient-bg {
-      position: relative;
-      background: url('/bg.jpeg') center / cover no-repeat fixed;
-      animation: bgFadeIn 1.2s ease-out;
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      font-family: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+      font-weight: 400;
+      margin: 0;
+      background: #050b1c;
+      overflow-x: hidden;
     }
-    .gradient-bg::before {
-      content: "";
+    h1, h2, h3 { font-family: "Geist", sans-serif; font-weight: 500; }
+
+    /* ── Background photo (tetap memakai /bg.jpeg) ── */
+    .login-bg {
       position: fixed;
       inset: 0;
-      background: linear-gradient(90deg, rgba(30, 64, 175, 0.45) 0%, rgba(30, 64, 175, 0.7) 40%, rgba(37, 99, 235, 0.92) 100%);
-      pointer-events: none;
+      background: url('/bg.jpeg') center / cover no-repeat;
+      transform: scale(1.04);
+      animation: bgFadeIn 1.4s ease-out both;
+      z-index: -3;
+    }
+    .login-bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(1100px 600px at 12% 18%, rgba(37, 99, 235, 0.35), transparent 62%),
+        linear-gradient(115deg, rgba(3, 8, 25, 0.94) 0%, rgba(9, 20, 48, 0.86) 42%, rgba(21, 52, 118, 0.66) 100%);
     }
     @keyframes bgFadeIn {
-      0% { opacity: 0; transform: scale(1.05); }
-      100% { opacity: 1; transform: scale(1); }
+      from { opacity: 0; transform: scale(1.10); }
+      to   { opacity: 1; transform: scale(1.04); }
     }
-    .card-shadow { box-shadow: 0 20px 60px -15px rgba(0,0,0,0.15); }
+
+    /* ── Cahaya dekoratif ── */
+    .aurora {
+      position: fixed;
+      border-radius: 9999px;
+      filter: blur(90px);
+      pointer-events: none;
+      z-index: -2;
+      opacity: 0.55;
+    }
+    .aurora-1 {
+      width: 34rem; height: 34rem;
+      top: -12rem; left: -10rem;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.55), transparent 68%);
+      animation: drift 16s ease-in-out infinite;
+    }
+    .aurora-2 {
+      width: 28rem; height: 28rem;
+      bottom: -10rem; right: -8rem;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.36), transparent 68%);
+      animation: drift 20s ease-in-out infinite reverse;
+    }
+    .aurora-3 {
+      width: 18rem; height: 18rem;
+      top: 42%; right: 32%;
+      background: radial-gradient(circle, rgba(129, 140, 248, 0.30), transparent 70%);
+      animation: drift 14s ease-in-out infinite;
+    }
+    @keyframes drift {
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+      50%      { transform: translate3d(1.5rem, -1.25rem, 0) scale(1.06); }
+    }
+
+    /* ── Kartu kaca ── */
+    .glass-shell {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow:
+        0 40px 90px -30px rgba(2, 6, 23, 0.85),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .card-enter { animation: cardEnter 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    @keyframes cardEnter {
+      from { opacity: 0; transform: translateY(22px) scale(0.985); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .stagger-1 { animation-delay: 0.08s; }
+    .stagger-2 { animation-delay: 0.16s; }
+    .stagger-3 { animation-delay: 0.24s; }
+
+    /* ── Input ── */
+    .field {
+      width: 100%;
+      height: 3.25rem;
+      border-radius: 0.9rem;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      padding: 0 2.9rem 0 2.85rem;
+      font-size: 0.925rem;
+      color: #0f172a;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+    .field::placeholder { color: #94a3b8; }
+    .field:hover { border-color: #cbd5e1; }
+    .field:focus {
+      border-color: #2563eb;
+      background: #ffffff;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+    .field-icon { transition: color 0.2s ease; }
+    .field-wrap:focus-within .field-icon { color: #2563eb; }
+
+    /* ── Tombol ── */
+    .btn-login {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1e40af 0%, #2563eb 52%, #0ea5e9 100%);
+      background-size: 160% 160%;
+      box-shadow: 0 16px 34px -12px rgba(37, 99, 235, 0.65);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background-position 0.5s ease;
+    }
+    .btn-login:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background-position: 100% 50%;
+      box-shadow: 0 20px 42px -12px rgba(37, 99, 235, 0.75);
+    }
+    .btn-login:active:not(:disabled) { transform: translateY(0); }
+    .btn-login:disabled { opacity: 0.75; cursor: wait; }
+    .btn-login::after {
+      content: "";
+      position: absolute;
+      top: -60%; left: -30%;
+      width: 42%; height: 220%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+      transform: rotate(22deg);
+      animation: sheen 4.6s ease-in-out infinite;
+    }
+    @keyframes sheen {
+      0%, 62% { left: -45%; }
+      82%, 100% { left: 118%; }
+    }
+    .spinner {
+      width: 1.1rem; height: 1.1rem;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-shake { animation: shake 0.42s ease-in-out; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-3px); }
+    }
+
+    .feature-chip { transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease; }
+    .feature-chip:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+
+    ::selection { background: rgba(37, 99, 235, 0.25); }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
+    }
   </style>
 </head>
-<body class="min-h-screen flex gradient-bg">
-  <div class="hidden lg:flex lg:w-1/2 relative z-10 items-center justify-center p-12">
-    <div class="text-center max-w-md">
-      <div class="w-60 h-30 mx-auto mb-6 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden p-1">
-        <img src="/asset/logo.png?v=<%= logoVer %>" alt="Sppg Sukaluyu Tamansari" class="w-full h-full object-contain" />
-      </div>
-      <h2 class="text-3xl font-bold text-white mb-4">Sppg Sukaluyu Tamansari</h2>
-      <p class="text-white/70 text-lg leading-relaxed">Platform manajemen operasional dapur Makan Bergizi Gratis — kelola menu, bahan baku, produksi, distribusi, dan akuntansi dalam satu tempat.</p>
-    </div>
-  </div>
-  
-  <div class="w-full lg:w-1/2 relative z-10 flex items-center justify-center p-4 sm:p-8">
-    <div class="w-full max-w-md bg-white rounded-2xl card-shadow p-6 sm:p-8">
-      <h1 class="text-2xl font-bold text-stone-800 mb-1">Selamat Datang</h1>
-      <p class="text-sm text-stone-500 mb-6">Masuk ke dashboard untuk melanjutkan.</p>
-      <form id="login-form" class="space-y-4">
-        <div>
-          <label class="text-sm font-medium text-stone-700">Email</label>
-          <div class="relative mt-1">
-            <svg class="absolute left-3 top-3 w-5 h-5 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            <input id="email" type="email" required placeholder="nama@email.com" class="w-full h-11 pl-10 pr-3 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e40af]/20 focus:border-[#1e40af] transition" />
+<body class="min-h-screen text-slate-900">
+  <div class="login-bg"></div>
+  <div class="aurora aurora-1"></div>
+  <div class="aurora aurora-2"></div>
+  <div class="aurora aurora-3"></div>
+
+  <main class="relative z-10 min-h-screen w-full flex items-center justify-center p-3 sm:p-6 lg:p-10">
+    <div class="glass-shell card-enter w-full max-w-6xl rounded-[1.75rem] sm:rounded-[2.25rem] overflow-hidden grid lg:grid-cols-[1.08fr_0.92fr]">
+
+      <!-- ══════════ Panel branding (desktop) ══════════ -->
+      <section class="relative hidden lg:flex flex-col justify-between p-10 xl:p-12 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-950/75 via-blue-950/55 to-blue-700/25"></div>
+        <div class="absolute -right-24 top-1/4 h-72 w-72 rounded-full bg-sky-400/20 blur-3xl"></div>
+        <div class="absolute -left-16 bottom-10 h-56 w-56 rounded-full bg-blue-500/20 blur-3xl"></div>
+
+        <div class="relative">
+          <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-2xl bg-white/95 ring-1 ring-white/50 shadow-xl shadow-blue-950/40 flex items-center justify-center p-2">
+              <img src="/asset/logo.png?v=<%= logoVer %>" alt="Sppg Sukaluyu Tamansari" class="w-full h-full object-contain" />
+            </div>
+            <div>
+              <p class="text-[11px] uppercase tracking-[0.24em] text-sky-300/90 font-semibold">Sistem Manajemen Dapur</p>
+              <h2 class="text-lg font-semibold text-white mt-0.5">Sppg Sukaluyu Tamansari</h2>
+            </div>
           </div>
         </div>
-        <div>
-          <label class="text-sm font-medium text-stone-700">Kata Sandi</label>
-          <div class="relative mt-1">
-            <svg class="absolute left-3 top-3 w-5 h-5 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <input id="password" type="password" required placeholder="Kata sandi" class="w-full h-11 pl-10 pr-10 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e40af]/20 focus:border-[#1e40af] transition" />
-            <button type="button" id="toggle-pass" class="absolute right-3 top-3 text-stone-400 hover:text-stone-600" tabindex="-1">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
+
+        <div class="relative my-10">
+          <div class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-[11px] font-medium text-sky-100 backdrop-blur">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+              <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
+            </span>
+            Platform Operasional MBG
+          </div>
+          <h1 class="mt-5 text-4xl xl:text-[2.85rem] leading-[1.08] font-semibold tracking-tight text-white">
+            Dapur lebih rapi,<br />
+            <span class="bg-gradient-to-r from-sky-300 via-cyan-200 to-blue-200 bg-clip-text text-transparent">layanan lebih cepat.</span>
+          </h1>
+          <p class="mt-4 max-w-md text-[0.95rem] leading-relaxed text-slate-300/90">
+            Kelola menu, bahan baku, produksi, distribusi, dan akuntansi dapur Makan Bergizi Gratis dalam satu tempat.
+          </p>
+
+          <div class="mt-7 grid grid-cols-2 gap-2.5 max-w-md">
+            <div class="feature-chip flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2.5 text-[12px] font-medium text-slate-100">
+              <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-400/15 text-sky-300">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 12h10M4 18h7"/></svg>
+              </span>
+              Menu & Gizi
+            </div>
+            <div class="feature-chip flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2.5 text-[12px] font-medium text-slate-100">
+              <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-400/15 text-emerald-300">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+              </span>
+              Bahan & Stok
+            </div>
+            <div class="feature-chip flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2.5 text-[12px] font-medium text-slate-100">
+              <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-400/15 text-amber-300">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7h13v10H3zM16 10h3l2 3v4h-5zM7 20a2 2 0 100-4 2 2 0 000 4zm10 0a2 2 0 100-4 2 2 0 000 4z"/></svg>
+              </span>
+              Produksi & Distribusi
+            </div>
+            <div class="feature-chip flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2.5 text-[12px] font-medium text-slate-100">
+              <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-400/15 text-violet-300">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v18m7-14H8a3 3 0 000 6h8a3 3 0 010 6H5"/></svg>
+              </span>
+              Akuntansi
+            </div>
           </div>
         </div>
-        <div id="err" class="text-sm text-red-700 hidden bg-red-50 border border-red-200 p-3 rounded-xl flex items-center gap-2">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span id="err-text"></span>
+
+        <div class="relative flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-4 backdrop-blur">
+          <div>
+            <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400">Program</p>
+            <p class="text-sm font-semibold text-white mt-1">Makan Bergizi Gratis</p>
+          </div>
+          <div class="flex items-center gap-2 text-[11px] font-medium text-emerald-300">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+            Sistem aktif
+          </div>
         </div>
-        <button class="w-full h-11 bg-gradient-to-r from-[#1e40af] to-[#3b82f6] hover:from-[#1d4ed8] hover:to-[#2563eb] text-white rounded-xl font-medium text-sm transition shadow-md hover:shadow-lg flex items-center justify-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-          Masuk
-        </button>
-      </form>
-      <div class="mt-6 rounded-xl border border-stone-200 bg-stone-50/70 grid grid-cols-3 divide-x divide-stone-200 text-center" id="hero-stats">
-        <div class="px-2 py-3.5">
-          <div class="text-lg font-semibold text-[#1e40af]" id="stat-porsi">—</div>
-          <div class="text-[10px] font-medium uppercase tracking-wide text-stone-500 mt-0.5">Porsi/Hari</div>
+      </section>
+
+      <!-- ══════════ Panel form ══════════ -->
+      <section class="relative bg-white/95 backdrop-blur-2xl p-6 sm:p-9 lg:p-10 xl:p-12">
+        <!-- Logo di mobile -->
+        <div class="lg:hidden flex items-center gap-3 mb-7">
+          <div class="w-12 h-12 rounded-xl bg-white ring-1 ring-slate-200 shadow-sm flex items-center justify-center p-1.5">
+            <img src="/asset/logo.png?v=<%= logoVer %>" alt="Sppg Sukaluyu Tamansari" class="w-full h-full object-contain" />
+          </div>
+          <div>
+            <p class="text-[10px] uppercase tracking-[0.2em] text-blue-600 font-semibold">Sistem Manajemen Dapur</p>
+            <p class="text-sm font-semibold text-slate-800">Sppg Sukaluyu Tamansari</p>
+          </div>
         </div>
-        <div class="px-2 py-3.5">
-          <div class="text-lg font-semibold text-[#1e40af]" id="stat-menu">—</div>
-          <div class="text-[10px] font-medium uppercase tracking-wide text-stone-500 mt-0.5">Menu Gizi</div>
+
+        <div class="stagger-1 card-enter">
+          <div class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-blue-700 ring-1 ring-blue-100">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2V9a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2zm10-14V5a4 4 0 00-8 0v2"/></svg>
+            Area Terbatas
+          </div>
+          <h1 class="mt-4 text-[1.75rem] sm:text-3xl font-semibold tracking-tight text-slate-900">Selamat datang kembali</h1>
+          <p class="mt-2 text-sm leading-relaxed text-slate-500">Masuk ke dashboard untuk melanjutkan pengelolaan operasional dapur.</p>
         </div>
-        <div class="px-2 py-3.5">
-          <div class="text-lg font-semibold text-[#1e40af]" id="stat-karyawan">—</div>
-          <div class="text-[10px] font-medium uppercase tracking-wide text-stone-500 mt-0.5">Karyawan Aktif</div>
+
+        <form id="login-form" class="mt-7 space-y-4 stagger-2 card-enter" novalidate>
+          <div>
+            <label for="email" class="text-[13px] font-semibold text-slate-700">Email</label>
+            <div class="field-wrap relative mt-1.5">
+              <svg class="field-icon absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3.5 6.5L12 13l8.5-6.5"/></svg>
+              <input id="email" type="email" required autocomplete="username" inputmode="email" placeholder="nama@email.com" class="field" />
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between">
+              <label for="password" class="text-[13px] font-semibold text-slate-700">Kata Sandi</label>
+              <span class="text-[11px] text-slate-400">Minimal 5 karakter</span>
+            </div>
+            <div class="field-wrap relative mt-1.5">
+              <svg class="field-icon absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5" stroke-width="1.8"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10V7a4 4 0 018 0v3"/></svg>
+              <input id="password" type="password" required autocomplete="current-password" placeholder="Masukkan kata sandi" class="field pr-12" />
+              <button type="button" id="toggle-pass" class="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition" tabindex="-1" aria-label="Tampilkan kata sandi">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M1.5 12S5.5 4.5 12 4.5 22.5 12 22.5 12 18.5 19.5 12 19.5 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3" stroke-width="1.8"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div id="err" class="hidden text-sm text-red-700 bg-red-50 border border-red-200 p-3.5 rounded-xl flex items-start gap-2.5">
+            <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="err-text"></span>
+          </div>
+
+          <button type="submit" id="btn-login" class="btn-login group w-full h-[3.25rem] text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
+            <span id="btn-login-text">Masuk ke Dashboard</span>
+            <svg id="btn-login-arrow" class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7" stroke-width="2"/><line x1="15" y1="12" x2="3" y2="12" stroke-width="2"/></svg>
+            <span id="btn-login-spinner" class="spinner hidden"></span>
+          </button>
+        </form>
+
+        <!-- Statistik ringkas -->
+        <div class="mt-6 grid grid-cols-3 divide-x divide-slate-200 rounded-2xl border border-slate-200/80 bg-slate-50/80 overflow-hidden stagger-3 card-enter" id="hero-stats">
+          <div class="px-2 py-3.5 text-center">
+            <div class="text-lg font-semibold text-blue-700" id="stat-porsi">—</div>
+            <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mt-0.5">Porsi/Hari</div>
+          </div>
+          <div class="px-2 py-3.5 text-center">
+            <div class="text-lg font-semibold text-blue-700" id="stat-menu">—</div>
+            <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mt-0.5">Menu Gizi</div>
+          </div>
+          <div class="px-2 py-3.5 text-center">
+            <div class="text-lg font-semibold text-blue-700" id="stat-karyawan">—</div>
+            <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mt-0.5">Karyawan Aktif</div>
+          </div>
         </div>
-      </div>
-      <div class="mt-6 pt-6 border-t border-stone-100 text-center space-y-3">
-        <p class="text-xs text-stone-400">Sppg Sukaluyu Tamansari &mdash; Sistem Manajemen Operasional</p>
-        <a href="/absen" class="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium transition">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          Login Absen Karyawan
-        </a>
-      </div>
+
+        <div class="mt-7 pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p class="text-[11px] text-slate-400 text-center sm:text-left">© <%= new Date().getFullYear() %> Sppg Sukaluyu Tamansari &mdash; Sistem Manajemen Operasional</p>
+          <a href="/absen" class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 11l3 3L22 4"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            Login Absen Karyawan
+          </a>
+        </div>
+      </section>
     </div>
-  </div>
+  </main>
+
   <script>
+    const errBox = document.getElementById('err');
+    const errText = document.getElementById('err-text');
+
+    function tampilkanError(pesan) {
+      errText.textContent = pesan;
+      errBox.classList.remove('hidden');
+      errBox.classList.remove('error-shake');
+      void errBox.offsetWidth;
+      errBox.classList.add('error-shake');
+    }
+
     // Show timeout message if logged out due to inactivity
     if (new URLSearchParams(window.location.search).has('timeout')) {
-      const err = document.getElementById('err');
-      document.getElementById('err-text').textContent = 'Sesi berakhir karena tidak ada aktivitas selama 5 menit. Silakan login kembali.';
-      err.classList.remove('hidden');
+      tampilkanError('Sesi berakhir karena tidak ada aktivitas selama 5 menit. Silakan login kembali.');
     }
+
     // Load hero stats
     fetch('/api/public/stats').then(function(r) { return r.json(); }).then(function(d) {
       document.getElementById('stat-porsi').textContent = d.porsi_per_hari && d.porsi_per_hari > 0 ? d.porsi_per_hari + '+' : '0';
       document.getElementById('stat-menu').textContent = d.total_menu;
       document.getElementById('stat-karyawan').textContent = d.total_karyawan_aktif != null ? d.total_karyawan_aktif : '0';
     }).catch(function() {});
+
     // Toggle password visibility
     document.getElementById('toggle-pass').addEventListener('click', function() {
       const pwd = document.getElementById('password');
       const isPass = pwd.getAttribute('type') === 'password';
       pwd.setAttribute('type', isPass ? 'text' : 'password');
+      this.setAttribute('aria-label', isPass ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
       this.innerHTML = isPass
-        ? '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
-        : '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+        ? '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3l18 18M10.6 10.6a3 3 0 104.24 4.24M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M6.06 6.06A18.45 18.45 0 001 12s4 8 11 8a10.07 10.07 0 005.94-1.94"/></svg>'
+        : '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M1.5 12S5.5 4.5 12 4.5 22.5 12 22.5 12 18.5 19.5 12 19.5 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3" stroke-width="1.8"/></svg>';
     });
+
     // Login submit
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const err = document.getElementById('err'); err.classList.add('hidden');
+      errBox.classList.add('hidden');
+
+      const btn = document.getElementById('btn-login');
+      const btnText = document.getElementById('btn-login-text');
+      const btnArrow = document.getElementById('btn-login-arrow');
+      const btnSpinner = document.getElementById('btn-login-spinner');
+
+      btn.disabled = true;
+      btnText.textContent = 'Memverifikasi...';
+      btnArrow.classList.add('hidden');
+      btnSpinner.classList.remove('hidden');
+      let sukses = false;
+
       try {
         const r = await fetch('/api/auth/login', {
           method: 'POST', headers: {'Content-Type':'application/json'},
@@ -128,14 +400,22 @@
         });
         let data;
         try { data = await r.json(); } catch {
-          document.getElementById('err-text').textContent = 'Respons tidak valid dari server'; err.classList.remove('hidden'); return;
+          tampilkanError('Respons tidak valid dari server'); return;
         }
-        if (!r.ok) { document.getElementById('err-text').textContent = data.error || 'Gagal'; err.classList.remove('hidden'); return; }
+        if (!r.ok) { tampilkanError(data.error || 'Gagal masuk. Periksa kembali email dan kata sandi Anda.'); return; }
+        sukses = true;
+        btnText.textContent = 'Berhasil — membuka dashboard...';
         location.href = '/';
       } catch (e) {
         console.error('Login error:', e);
-        document.getElementById('err-text').textContent = 'Gagal terhubung ke server';
-        err.classList.remove('hidden');
+        tampilkanError('Gagal terhubung ke server. Periksa koneksi Anda lalu coba lagi.');
+      } finally {
+        if (!sukses) {
+          btn.disabled = false;
+          btnText.textContent = 'Masuk ke Dashboard';
+          btnArrow.classList.remove('hidden');
+          btnSpinner.classList.add('hidden');
+        }
       }
     });
   </script>
