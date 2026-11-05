@@ -404,6 +404,34 @@ function registerDynamicRoutes(router) {
     });
   });
 
+  // ─── EXTRA: Total anggaran (kartu ringkasan halaman Budgeting) ──────
+  // Didaftarkan SEBELUM rute generik lain agar '/budget/total' tidak dianggap id.
+  router.get('/budget/total', async (req, res) => {
+    try {
+      const [[row]] = await db.query(
+        `SELECT COALESCE(SUM(total_budget),0) AS total_budget,
+                COALESCE(SUM(realisasi),0) AS total_realisasi,
+                COALESCE(SUM(biaya_operasional),0) AS total_operasional,
+                COUNT(*) AS total_entri
+         FROM budget WHERE tenant_id=?`,
+        [req.user.tenant_id]
+      );
+      const pagu = Number(row.total_budget);
+      const realisasi = Number(row.total_realisasi);
+      res.json({
+        total: pagu,
+        total_budget: pagu,
+        total_realisasi: realisasi,
+        total_sisa: pagu - realisasi,
+        total_operasional: Number(row.total_operasional),
+        total_entri: Number(row.total_entri)
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'Gagal memuat total anggaran' });
+    }
+  });
+
   // ─── EXTRA: Stats distribusi (kartu ringkasan di halaman) ──────
   // Didaftarkan SEBELUM /distribusi/:id agar 'total' tidak tertangkap sebagai id.
   router.get('/distribusi/total', async (req, res) => {
