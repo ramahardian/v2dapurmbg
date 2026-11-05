@@ -146,6 +146,85 @@
       50% { transform: scale(1.08); }
     }
     .dash-icon-pulse { animation: dashPulseSoft 2.4s ease-in-out infinite; }
+
+    /* ═══ Lapisan korporat global — tabel, form, kartu (semua halaman) ═══ */
+    #content input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+    #content select,
+    #content textarea,
+    #modal-body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+    #modal-body select,
+    #modal-body textarea {
+      background-color: #fff !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: .5rem !important;
+      color: #0f172a !important;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    #content input::placeholder,
+    #content textarea::placeholder,
+    #modal-body input::placeholder,
+    #modal-body textarea::placeholder { color: #94a3b8 !important; }
+    #content input:focus,
+    #content select:focus,
+    #content textarea:focus,
+    #modal-body input:focus,
+    #modal-body select:focus,
+    #modal-body textarea:focus {
+      outline: none !important;
+      border-color: #14326b !important;
+      box-shadow: 0 0 0 3px rgba(20,50,107,.12) !important;
+    }
+    #content input[type="checkbox"],
+    #content input[type="radio"],
+    #modal-body input[type="checkbox"],
+    #modal-body input[type="radio"] { accent-color: #14326b; }
+
+    #content table thead,
+    #modal-body table thead { background-color: #f8fafc !important; }
+    #content table thead th,
+    #modal-body table thead th {
+      color: #475569 !important;
+      font-weight: 600 !important;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      border-bottom: 1px solid #e2e8f0 !important;
+    }
+    #content table tbody tr,
+    #modal-body table tbody tr { border-color: #f1f5f9; }
+    #content table tbody tr:hover,
+    #modal-body table tbody tr:hover { background-color: #f8fafc; }
+    #content table tfoot,
+    #modal-body table tfoot { border-top: 2px solid #e2e8f0; }
+
+    #content h1, #content h2, #content h3,
+    #content .page-heading { color: #0f2a5f; }
+    #content a:not([class*="bg-"]):not([class*="btn"]):focus-visible,
+    #content button:focus-visible,
+    #modal-body button:focus-visible { outline: 2px solid #14326b; outline-offset: 2px; }
+
+    /* Mode gelap: keterbacaan form/tabel korporat */
+    html.dark #content input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+    html.dark #content select,
+    html.dark #content textarea,
+    html.dark #modal-body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+    html.dark #modal-body select,
+    html.dark #modal-body textarea {
+      background-color: #111a2e !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+    }
+    html.dark #content table thead,
+    html.dark #modal-body table thead { background-color: #1e293b !important; }
+    html.dark #content table thead th,
+    html.dark #modal-body table thead th { color: #94a3b8 !important; border-color: #334155 !important; }
+    html.dark #content table tbody tr,
+    html.dark #modal-body table tbody tr { border-color: #253247; }
+    html.dark #content table tbody tr:hover,
+    html.dark #modal-body table tbody tr:hover { background-color: #1e293b; }
+    html.dark #content h1, html.dark #content h2, html.dark #content h3 { color: #e2e8f0; }
+    html.dark .text-\[\#0f2a5f\] { color: #93c5fd; }
+    html.dark .bg-\[\#14326b\] { background-color: #1e3a8a !important; }
+    html.dark .bg-\[\#0f2a5f\] { background-color: #1e3a8a !important; }
   </style>
 </head>
 <body>

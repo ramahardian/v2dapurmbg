@@ -16,16 +16,16 @@ async function renderCrud(cfg) {
   // Tombol Tambah + Export dipakai di dua tempat: di search tile (halaman tanpa
   // statistik) atau di action tile (saat kartu statistik tampil), supaya tombol
   // tetap ada walau blok stats ditampilkan.
-  const addExportBtns = '<div class="flex items-center gap-2"><button id="add-btn" class="h-10 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-[13px] font-semibold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap"><svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah</button><button onclick="exportXlsx()" class="h-10 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">Export XLSX</button></div>';
-  const searchTile = `<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 ${cfg.stats ? 'md:col-span-4' : 'md:col-span-2'} flex items-center gap-2"><div class="relative w-full"><input id="crud-search" placeholder="Cari..." class="w-full h-10 pl-10 pr-4 rounded-xl border border-stone-200 bg-stone-50/60 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"><svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div>${(cfg.stats || actionsOutside) ? '' : addExportBtns}</div>`;
-  const actionTile = `<div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center"><div class="flex flex-wrap items-center gap-4 w-full">
+  const addExportBtns = '<div class="flex items-center gap-2"><button id="add-btn" class="h-10 px-5 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-[13px] font-semibold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap"><svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah</button><button onclick="exportXlsx()" class="h-10 px-4 border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">Export XLSX</button></div>';
+  const searchTile = `<div class="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 ${cfg.stats ? 'md:col-span-4' : 'md:col-span-2'} flex items-center gap-2"><div class="relative w-full"><input id="crud-search" placeholder="Cari..." class="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-slate-50/60 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all"><svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div>${(cfg.stats || actionsOutside) ? '' : addExportBtns}</div>`;
+  const actionTile = `<div class="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center"><div class="flex flex-wrap items-center gap-4 w-full">
       ${(cfg.stats && !actionsOutside) ? addExportBtns : ''}
-      ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-400 hover:text-stone-600 hover:bg-stone-50 shadow-sm transition-all shrink-0" title="Info halaman ini">
+      ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:bg-slate-50 shadow-sm transition-all shrink-0" title="Info halaman ini">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       </button>` : ''}
-      ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="h-10 px-4 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${cfg.sync.label}</button>` : ''}
-      ${cfg.extraButtons ? cfg.extraButtons.filter(b => !b.adminOnly || currentUser?.role === 'admin').map(b => `<button onclick="${b.onclick}" class="h-10 px-4 border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${b.label}</button>`).join('') : ''}
-      <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden h-10 px-5 text-[13px] font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl items-center gap-2 shadow-sm transition-all whitespace-nowrap">
+      ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="h-10 px-4 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-lg text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${cfg.sync.label}</button>` : ''}
+      ${cfg.extraButtons ? cfg.extraButtons.filter(b => !b.adminOnly || currentUser?.role === 'admin').map(b => `<button onclick="${b.onclick}" class="h-10 px-4 border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${b.label}</button>`).join('') : ''}
+      <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden h-10 px-5 text-[13px] font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg items-center gap-2 shadow-sm transition-all whitespace-nowrap">
         Hapus Terpilih <span id="crud-selected-count" class="font-bold">0</span>
       </button>
     </div>
@@ -37,15 +37,15 @@ async function renderCrud(cfg) {
   // di luar kotak bento, tepat di atas tabel.
   const actionsRow = actionsOutside ? `<div class="mb-4 flex flex-wrap items-center gap-2">
       <div class="relative flex-1 min-w-[200px]">
-        <input id="crud-search" placeholder="Cari..." class="w-full h-10 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input id="crud-search" placeholder="Cari..." class="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
+        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
       </div>
       ${addExportBtns}
     </div>` : '';
   const bentoGrid = headerTiles ? `<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">${headerTiles}</div>` : '';
   c.innerHTML = `${actionsRow}${bentoGrid}
-  ${cfg.filters && cfg.filters.length ? `<div id="crud-filters" class="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-xl border border-stone-200 bg-stone-50/60">` : ''}
-  <div id="table-wrap" class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden"></div>
+  ${cfg.filters && cfg.filters.length ? `<div id="crud-filters" class="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg border border-slate-200 bg-slate-50/60">` : ''}
+  <div id="table-wrap" class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden"></div>
   <div id="crud-pagination" class="flex items-center justify-between mt-3"></div>`;
   window._crudInfoCfg = cfg;
   const addBtnEl = document.getElementById('add-btn');
@@ -110,13 +110,13 @@ async function reloadCrud(cfg) {
 
   const w = document.getElementById('table-wrap');
   if (!rows.length) {
-    w.innerHTML = '<div class="py-16 text-center text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Belum ada data</div><div class="text-xs text-stone-400 mt-1">Klik "Tambah" untuk mulai.</div></div>';
+    w.innerHTML = '<div class="py-16 text-center text-slate-400"><svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Belum ada data</div><div class="text-xs text-slate-400 mt-1">Klik "Tambah" untuk mulai.</div></div>';
     document.getElementById('crud-pagination').innerHTML = '';
     return;
   }
 
-  const headers = cfg.cols.map(k => `<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">${cfg.fields.find(f => f.k === k)?.l || k}</th>`).join('');
-  const body = rows.map(r => `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+  const headers = cfg.cols.map(k => `<th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">${cfg.fields.find(f => f.k === k)?.l || k}</th>`).join('');
+  const body = rows.map(r => `<tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
     <td class="px-4 py-3">
       <input type="checkbox" value="${r.id}" onchange="updateSelectedCrudCount()" class="crud-checkbox cb-modern">
     </td>
@@ -124,25 +124,25 @@ async function reloadCrud(cfg) {
       const f = cfg.fields.find(x => x.k === k);
       const v = r[k];
       let cell = v == null || v === '' ? '-' : v;
-      if (f?.badge && v) cell = `<span class="badge ${f.badge[v] || 'bg-stone-100 text-stone-600'}">${v}</span>`;
+      if (f?.badge && v) cell = `<span class="badge ${f.badge[v] || 'bg-slate-100 text-slate-600'}">${v}</span>`;
       else if (f?.fmt === 'idr') cell = `<span class="mono">${fmtIDR(v)}</span>`;
       else if (f?.type === 'number' && f.inline) cell = inlineNumCell(r.id, k, v, f);
       else if (f?.fmt === 'num') cell = `<span class="mono">${f.decimals != null ? Number(v).toFixed(f.decimals) : fmtNum(v)}</span>`;
       else if (f?.fmt === 'pct') cell = `<span class="mono">${Math.round(v * 100)}</span>%`;
       else if (f?.type === 'date') cell = fmtDate(v);
-      return `<td class="px-4 py-3 text-xs text-stone-600">${cell}</td>`;
+      return `<td class="px-4 py-3 text-xs text-slate-600">${cell}</td>`;
     }).join('')}
     <td class="px-4 py-3 text-right whitespace-nowrap">
-      ${cfg.suratJalan ? '<button onclick="cetakSuratJalan(' + r.id + ')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Cetak Surat Jalan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>' : ''}
-      ${(cfg.statusActions || []).filter(a => (!a.from || a.from === r.status) && a.to !== r.status).map(a => `<button onclick="quickSetStatus('${cfg.endpoint}', ${r.id}, '${a.to}')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 ${a.cls} transition-all" title="${a.title}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">${a.icon}</svg></button>`).join('')}
-      <button onclick='editRow(${JSON.stringify(cfg).replace(/'/g, "&#39;")}, ${JSON.stringify(r).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-      <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      ${cfg.suratJalan ? '<button onclick="cetakSuratJalan(' + r.id + ')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Cetak Surat Jalan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>' : ''}
+      ${(cfg.statusActions || []).filter(a => (!a.from || a.from === r.status) && a.to !== r.status).map(a => `<button onclick="quickSetStatus('${cfg.endpoint}', ${r.id}, '${a.to}')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 ${a.cls} transition-all" title="${a.title}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">${a.icon}</svg></button>`).join('')}
+      <button onclick='editRow(${JSON.stringify(cfg).replace(/'/g, "&#39;")}, ${JSON.stringify(r).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#14326b] hover:bg-slate-100 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      <button onclick='deleteRow("${cfg.endpoint}", ${r.id}, ${JSON.stringify(cfg).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
     </td></tr>`).join('');
-  w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-stone-100">
-    <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500 w-10">
+  w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-slate-100">
+    <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 w-10">
       <input type="checkbox" id="crud-select-all" onchange="toggleSelectAllCrud(this)" class="cb-modern">
     </th>
-    ${headers}<th class="px-4 py-3.5 text-right text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
+    ${headers}<th class="px-4 py-3.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
 
   renderCrudPagination();
 
@@ -158,10 +158,10 @@ async function reloadCrud(cfg) {
 function renderCrudPagination() {
   const wrap = document.getElementById('crud-pagination');
   const { page, totalPages, total } = _crudState;
-  if (totalPages <= 1) { wrap.innerHTML = total > 0 ? `<span class="text-sm text-stone-400">${total} data</span>` : ''; return; }
-  const prev = page > 1 ? `<button onclick="crudGoToPage(${page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Prev</button>` : '';
-  const next = page < totalPages ? `<button onclick="crudGoToPage(${page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Next</button>` : '';
-  wrap.innerHTML = `<span class="text-sm text-stone-500">${total} data — Hal ${page} dari ${totalPages}</span><div class="flex gap-2">${prev}${next}</div>`;
+  if (totalPages <= 1) { wrap.innerHTML = total > 0 ? `<span class="text-sm text-slate-400">${total} data</span>` : ''; return; }
+  const prev = page > 1 ? `<button onclick="crudGoToPage(${page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Prev</button>` : '';
+  const next = page < totalPages ? `<button onclick="crudGoToPage(${page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Next</button>` : '';
+  wrap.innerHTML = `<span class="text-sm text-slate-500">${total} data — Hal ${page} dari ${totalPages}</span><div class="flex gap-2">${prev}${next}</div>`;
 }
 
 function crudGoToPage(p) {
@@ -263,13 +263,15 @@ async function renderCrudStats(cfg) {
     if (!contentEl) return;
     var cards = '';
     var fmt = cfg.stats.format === 'num' ? fmtNum(totalVal) : totalVal;
-    cards += '<div class="col-span-2 flex-1 min-w-[140px] bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">' + cfg.stats.label + '</div><div class="text-xl font-bold text-blue-800 break-words">' + fmt + '</div></div>';
+    cards += '<div class="col-span-2 flex-1 min-w-[140px] relative overflow-hidden bg-white rounded-lg border border-slate-200 px-4 py-3 shadow-sm"><span class="absolute inset-x-0 top-0 h-[3px]" style="background:#14326b"></span><div class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1">' + cfg.stats.label + '</div><div class="text-xl font-semibold text-slate-900 break-words">' + fmt + '</div></div>';
     if (cfg.stats.extra) {
+      var accents = { blue: '#14326b', emerald: '#0f766e', amber: '#c6a664', violet: '#64748b', cyan: '#0e7490', red: '#b91c1c', orange: '#c2410c', teal: '#0f766e', pink: '#be185d', sky: '#0369a1', indigo: '#3730a3', lime: '#4d7c0f', rose: '#be123c', green: '#15803d', purple: '#6b21a8', slate: '#64748b' };
       cfg.stats.extra.forEach(function(x) {
         var c = x.color || 'blue';
         // Gunakan nilai total dari backend (prefixed total_) agar akurat untuk seluruh data
         var val = statsRes['total_' + x.field] != null ? Number(statsRes['total_' + x.field]) : 0;
-        cards += '<div class="flex-1 min-w-[140px] bg-gradient-to-br from-' + c + '-50 to-' + c + '-100/60 rounded-2xl border border-' + c + '-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-' + c + '-700 mb-0.5">' + x.label + '</div><div class="text-xl font-bold text-' + c + '-800 break-words">' + fmtNum(val) + '</div></div>';
+        var accent = accents[c] || '#64748b';
+        cards += '<div class="flex-1 min-w-[140px] relative overflow-hidden bg-white rounded-lg border border-slate-200 px-4 py-3 shadow-sm"><span class="absolute inset-x-0 top-0 h-[3px]" style="background:' + accent + '"></span><div class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1">' + x.label + '</div><div class="text-xl font-semibold text-slate-900 break-words">' + fmtNum(val) + '</div></div>';
       });
     }
     contentEl.innerHTML = cards;
@@ -377,21 +379,21 @@ function renderField(f, editing) {
     return `<input type="hidden" id="f-${f.k}" value="${editing?.[f.k] || ''}" />`;
   }
   const ro = f.readOnly;
-  const roCls = ro ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : '';
+  const roCls = ro ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : '';
   const val = editing?.[f.k];
   let actionHtml = '';
   if (f.action) {
-      actionHtml = `<button type="button" onclick='${f.action.onclick}' class="text-[10px] border border-blue-300 text-blue-700 hover:bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1 font-semibold"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>${f.action.label}</button>`;
+      actionHtml = `<button type="button" onclick='${f.action.onclick}' class="text-[10px] border border-slate-300 text-[#14326b] hover:bg-slate-100 px-2 py-1 rounded-lg flex items-center gap-1 font-semibold"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>${f.action.label}</button>`;
   }
   let input;
   if (f.type === 'select') {
-    input = `<select id="f-${f.k}" ${ro ? 'disabled' : ''} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all ${roCls}">
+    input = `<select id="f-${f.k}" ${ro ? 'disabled' : ''} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all ${roCls}">
       <option value="">— Pilih —</option>${f.opts.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
     </select>`;
   } else if (f.type === 'select-api') {
-    input = `<select id="f-${f.k}" ${ro ? 'disabled' : ''} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all ${roCls}"><option value="">— Memuat data... —</option></select>`;
+    input = `<select id="f-${f.k}" ${ro ? 'disabled' : ''} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all ${roCls}"><option value="">— Memuat data... —</option></select>`;
   } else if (f.type === 'textarea') {
-    input = `<textarea id="f-${f.k}" rows="2" ${ro ? 'readonly' : ''} class="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all ${roCls}">${val || ''}</textarea>`;
+    input = `<textarea id="f-${f.k}" rows="2" ${ro ? 'readonly' : ''} class="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all ${roCls}">${val || ''}</textarea>`;
   } else {
     const itype = f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text';
     let ival = val != null ? (f.type === 'date' ? String(val).slice(0,10) : val) : '';
@@ -402,11 +404,11 @@ function renderField(f, editing) {
     }
     if (f.fmt === 'pct' && val != null) ival = Math.round(val * 100);
     if (f.fmt === 'num' && f.decimals != null && val != null) ival = Number(val).toFixed(f.decimals);
-    input = `<input id="f-${f.k}" type="${itype}" value="${ival}" ${ro ? 'readonly' : ''} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all ${f.type === 'number' ? 'mono' : ''} ${roCls}" />`;
+    input = `<input id="f-${f.k}" type="${itype}" value="${ival}" ${ro ? 'readonly' : ''} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all ${f.type === 'number' ? 'mono' : ''} ${roCls}" />`;
   }
-  const label = `<label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>`;
+  const label = `<label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">${f.l}${f.req ? ' <span class="text-red-500">*</span>' : ''}</label>`;
   const header = f.action ? `<div class="flex items-center justify-between">${label}${actionHtml}</div>` : label;
-  const info = f.info ? `<div class="text-[10px] text-stone-400 mt-1 leading-relaxed">${f.info}</div>` : '';
+  const info = f.info ? `<div class="text-[10px] text-slate-400 mt-1 leading-relaxed">${f.info}</div>` : '';
   return `<div class="${f.type === 'hidden' ? '' : 'mb-4'}">${header}${input}${info}</div>`;
 }
 
@@ -417,7 +419,7 @@ function openForm(cfg, editing) {
 
   const apiSelects = cfg.fields.filter(f => f.type === 'select-api');
 
-  var formHelp = cfg.formHelp ? '<div class="flex items-start gap-2.5 p-3 mb-4 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800 leading-relaxed"><svg class="w-4 h-4 mt-0.5 shrink-0 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><div>' + cfg.formHelp + '</div></div>' : '';
+  var formHelp = cfg.formHelp ? '<div class="flex items-start gap-2.5 p-3 mb-4 bg-sky-50 border border-sky-200 rounded-lg text-xs text-sky-800 leading-relaxed"><svg class="w-4 h-4 mt-0.5 shrink-0 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><div>' + cfg.formHelp + '</div></div>' : '';
 
   if (cfg.groups && Array.isArray(cfg.groups)) {
     let html = formHelp;
@@ -425,7 +427,7 @@ function openForm(cfg, editing) {
       const gFields = cfg.fields.filter(f => f.group === g.key && f.type !== 'hidden');
       if (!gFields.length) return;
       html += `<div class="mb-5">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3 pb-2 border-b border-stone-200">${g.label}</h4>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 pb-2 border-b border-slate-200">${g.label}</h4>
         <div class="grid grid-cols-1 ${g.cols === 2 ? 'md:grid-cols-2' : ''} gap-x-4 gap-y-1">`;
       gFields.forEach(f => { html += renderField(f, editing); });
       html += `</div></div>`;
@@ -441,7 +443,7 @@ function openForm(cfg, editing) {
   // if (aiFields.length) {
   //   var aiBtn = document.createElement('div');
   //   aiBtn.className = 'flex items-center justify-between pt-2';
-  //   aiBtn.innerHTML = '<div class="text-xs text-stone-400">Isi gizi dengan AI berdasarkan nama bahan</div>' +
+  //   aiBtn.innerHTML = '<div class="text-xs text-slate-400">Isi gizi dengan AI berdasarkan nama bahan</div>' +
   //     '<button type="button" onclick="fillAiNutrisiSp()" class="px-4 py-2 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100">Isi AI</button>';
   //   body.appendChild(aiBtn);
   //   window._aiFields = aiFields;
@@ -590,14 +592,14 @@ function showConfirm(msg, okLabel, cancelLabel, okStyle, type) {
     const types = {
       warning: { bg: 'bg-amber-100', text: 'text-amber-600', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', title: 'Perhatian', btn: 'bg-amber-600 hover:bg-amber-700' },
       danger: { bg: 'bg-red-100', text: 'text-red-600', icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Konfirmasi Hapus', btn: 'bg-red-600 hover:bg-red-700' },
-      info: { bg: 'bg-blue-100', text: 'text-blue-600', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Informasi', btn: 'bg-blue-600 hover:bg-blue-700' },
-      success: { bg: 'bg-emerald-100', text: 'text-emerald-600', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Konfirmasi', btn: 'bg-emerald-600 hover:bg-emerald-700' },
-      question: { bg: 'bg-purple-100', text: 'text-purple-600', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Konfirmasi', btn: 'bg-purple-600 hover:bg-purple-700' },
+      info: { bg: 'bg-slate-100', text: 'text-[#14326b]', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Informasi', btn: 'bg-[#14326b] hover:bg-[#0f2a5f]' },
+      success: { bg: 'bg-emerald-100', text: 'text-emerald-600', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Konfirmasi', btn: 'bg-[#14326b] hover:bg-[#0f2a5f]' },
+      question: { bg: 'bg-purple-100', text: 'text-purple-600', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Konfirmasi', btn: 'bg-[#14326b] hover:bg-[#0f2a5f]' },
     };
     const t = types[type] || types.question;
     const isDark = document.documentElement.classList.contains('dark');
-    const darkBg = { 'bg-amber-100': 'bg-[#451a03]', 'bg-red-100': 'bg-[#450a0a]', 'bg-blue-100': 'bg-[#1e3a5f]', 'bg-emerald-100': 'bg-[#064e3b]', 'bg-purple-100': 'bg-[#3b0764]' };
-    const darkText = { 'text-amber-600': 'text-amber-300', 'text-red-600': 'text-red-300', 'text-blue-600': 'text-blue-300', 'text-emerald-600': 'text-emerald-300', 'text-purple-600': 'text-purple-300' };
+    const darkBg = { 'bg-amber-100': 'bg-[#451a03]', 'bg-red-100': 'bg-[#450a0a]', 'bg-slate-100': 'bg-[#1e3a5f]', 'bg-emerald-100': 'bg-[#064e3b]', 'bg-purple-100': 'bg-[#3b0764]' };
+    const darkText = { 'text-amber-600': 'text-amber-300', 'text-red-600': 'text-red-300', 'text-[#14326b]': 'text-blue-300', 'text-emerald-600': 'text-emerald-300', 'text-purple-600': 'text-purple-300' };
 
     const open = () => {
       modal.classList.remove('hidden');
@@ -672,7 +674,7 @@ function showAlert(msg, type) {
   var colors = {
     warning: { bg: 'bg-amber-100', text: 'text-amber-600', btn: 'bg-amber-600 hover:bg-amber-700', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', title: 'Perhatian' },
     error: { bg: 'bg-red-100', text: 'text-red-600', btn: 'bg-red-600 hover:bg-red-700', icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Error' },
-    success: { bg: 'bg-emerald-100', text: 'text-emerald-600', btn: 'bg-emerald-600 hover:bg-emerald-700', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Berhasil' },
+    success: { bg: 'bg-emerald-100', text: 'text-emerald-600', btn: 'bg-[#14326b] hover:bg-[#0f2a5f]', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Berhasil' },
   };
   var isDark = document.documentElement.classList.contains('dark');
   var c = colors[type] || colors.warning;
@@ -733,7 +735,7 @@ function showToast(msg, type) {
   if (!c) return;
   var colors = { success: 'bg-emerald-600', error: 'bg-red-600', warning: 'bg-amber-500' };
   var el = document.createElement('div');
-  el.className = (colors[type] || 'bg-stone-800') + ' text-white px-4 py-2.5 rounded-lg text-sm shadow-lg pointer-events-auto animate-alert-in';
+  el.className = (colors[type] || 'bg-slate-800') + ' text-white px-4 py-2.5 rounded-lg text-sm shadow-lg pointer-events-auto animate-alert-in';
   el.textContent = msg;
   c.appendChild(el);
   setTimeout(function() {
@@ -752,24 +754,24 @@ function showCrudInfo() {
   var div = document.createElement('div');
   div.id = 'crud-info-popup';
   div.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-black/30';
-  div.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6" onclick="event.stopPropagation()">' +
+  div.innerHTML = '<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6" onclick="event.stopPropagation()">' +
     '<div class="flex items-center justify-between mb-4">' +
       '<div class="flex items-center gap-3">' +
-        '<div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">' + (cfg.icon || '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>') + '</div>' +
-        '<div><h3 class="font-bold text-stone-700">' + (cfg.title || 'Halaman Ini') + '</h3><p class="text-xs text-stone-400">' + (cfg.subtitle || '') + '</p></div>' +
+        '<div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-[#14326b]">' + (cfg.icon || '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>') + '</div>' +
+        '<div><h3 class="font-bold text-slate-700">' + (cfg.title || 'Halaman Ini') + '</h3><p class="text-xs text-slate-400">' + (cfg.subtitle || '') + '</p></div>' +
       '</div>' +
-      '<button onclick="document.getElementById(\'crud-info-popup\').remove()" class="text-stone-400 hover:text-stone-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+      '<button onclick="document.getElementById(\'crud-info-popup\').remove()" class="text-slate-400 hover:text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
     '</div>' +
-    '<div class="space-y-4 text-sm text-stone-600">' +
+    '<div class="space-y-4 text-sm text-slate-600">' +
       hc.map(function(item, idx) {
         return '<div class="flex gap-3 items-start">' +
-          '<span class="shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">' + (idx + 1) + '</span>' +
-          '<div><span class="font-semibold text-stone-700">' + item.title + '</span><br>' + item.text + '</div>' +
+          '<span class="shrink-0 w-7 h-7 rounded-full bg-slate-100 text-[#14326b] flex items-center justify-center text-xs font-bold">' + (idx + 1) + '</span>' +
+          '<div><span class="font-semibold text-slate-700">' + item.title + '</span><br>' + item.text + '</div>' +
         '</div>';
       }).join('') +
     '</div>' +
-    '<div class="mt-4 pt-3 border-t border-stone-100 flex justify-end">' +
-      '<button onclick="document.getElementById(\'crud-info-popup\').remove()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">Mengerti</button>' +
+    '<div class="mt-4 pt-3 border-t border-slate-100 flex justify-end">' +
+      '<button onclick="document.getElementById(\'crud-info-popup\').remove()" class="px-4 py-2 text-sm font-medium text-white bg-[#14326b] hover:bg-[#0f2a5f] rounded-lg transition-colors">Mengerti</button>' +
     '</div>' +
   '</div>';
   div.onclick = function() { div.remove(); };
@@ -838,13 +840,13 @@ async function openKopSuratSettings() {
   try { data = await api.get('/system/kop-surat'); } catch (e) { /* fallback kosong */ }
   document.getElementById('modal-title').textContent = 'Atur Kop Surat';
   document.getElementById('modal-body').innerHTML =
-    '<div class="mb-4 text-xs text-stone-500 leading-relaxed">Data ini tampil di kop surat jalan (nama dapur, alamat, telepon). Tersimpan di profil tenant.</div>' +
-    '<div class="mb-4"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Dapur</label>' +
-    '<input id="ks-nama" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" value="' + escHtml(data.kop_nama || '') + '"></div>' +
-    '<div class="mb-4"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Alamat</label>' +
-    '<textarea id="ks-alamat" rows="2" class="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">' + escHtml(data.kop_alamat || '') + '</textarea></div>' +
-    '<div class="mb-4"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Telepon</label>' +
-    '<input id="ks-telepon" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" value="' + escHtml(data.kop_telepon || '') + '"></div>';
+    '<div class="mb-4 text-xs text-slate-500 leading-relaxed">Data ini tampil di kop surat jalan (nama dapur, alamat, telepon). Tersimpan di profil tenant.</div>' +
+    '<div class="mb-4"><label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama Dapur</label>' +
+    '<input id="ks-nama" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" value="' + escHtml(data.kop_nama || '') + '"></div>' +
+    '<div class="mb-4"><label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Alamat</label>' +
+    '<textarea id="ks-alamat" rows="2" class="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">' + escHtml(data.kop_alamat || '') + '</textarea></div>' +
+    '<div class="mb-4"><label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Telepon</label>' +
+    '<input id="ks-telepon" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" value="' + escHtml(data.kop_telepon || '') + '"></div>';
   document.getElementById('modal-save').onclick = async () => {
     try {
       await api.put('/system/kop-surat', {

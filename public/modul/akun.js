@@ -3,7 +3,7 @@ let _akunFotoHapus = false;
 
 async function renderAkun() {
   const c = document.getElementById('content');
-  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
+  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#14326b]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
     const r = await fetch('/api/template/akun', { credentials: 'include' });
     if (!r.ok) throw new Error((await r.json()).error || 'Gagal memuat');
@@ -34,7 +34,7 @@ async function renderAkun() {
       _akunFotoHapus = true;
       var preview = document.getElementById('akun-foto-preview');
       var initial = document.getElementById('akun-nama').value.trim().charAt(0).toUpperCase() || '?';
-      preview.innerHTML = '<span class="text-lg font-bold text-stone-500">' + initial + '</span>';
+      preview.innerHTML = '<span class="text-lg font-bold text-slate-500">' + initial + '</span>';
       document.getElementById('akun-foto-hapus').classList.add('hidden');
       document.getElementById('akun-foto-input').value = '';
     };

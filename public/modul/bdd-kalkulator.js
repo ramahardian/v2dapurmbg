@@ -260,9 +260,9 @@ async function renderBddKalkulator() {
     '<div class="max-w-100 mx-auto">',
 
     // Hero
-    '<div class="bg-gradient-to-br from-emerald-700 to-emerald-500 rounded-2xl p-6 lg:p-8 mb-6 text-white shadow-lg">',
+    '<div class="bg-gradient-to-br from-[#0d2657] to-[#14326b] rounded-lg p-6 lg:p-8 mb-6 text-white shadow-lg">',
       '<div class="flex items-center gap-3 mb-2">',
-        '<div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">',
+        '<div class="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">',
           '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>',
         '</div>',
         '<h2 class="text-xl lg:text-2xl font-bold tracking-tight">Kalkulator BDD</h2>',
@@ -271,12 +271,12 @@ async function renderBddKalkulator() {
     '</div>',
 
     // Panel Utama
-    '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-4">',
+    '<div class="bg-white rounded-lg border border-slate-200 shadow-sm p-5 mb-4">',
 
       // Pilih bahan
       '<div class="mb-5">',
-        '<label class="text-sm font-medium text-stone-700 block mb-1.5">Pilih Bahan (isi otomatis dari database)</label>',
-        '<select id="bdd-pilih-bahan" onchange="isiDariBahan()" class="w-full h-11 px-3 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">',
+        '<label class="text-sm font-medium text-slate-700 block mb-1.5">Pilih Bahan (isi otomatis dari database)</label>',
+        '<select id="bdd-pilih-bahan" onchange="isiDariBahan()" class="w-full h-11 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">',
           '<option value="">— Memuat data... —</option>',
         '</select>',
         '<div id="bdd-nama-terpilih" class="text-xs text-emerald-600 mt-1 font-medium"></div>',
@@ -284,48 +284,48 @@ async function renderBddKalkulator() {
 
       // Mode
       '<div class="mb-5">',
-        '<label class="text-sm font-medium text-stone-700 block mb-1.5">Mode Perhitungan</label>',
-        '<select id="bdd-mode" onchange="gantiModeBdd()" class="w-full h-11 px-3 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">',
+        '<label class="text-sm font-medium text-slate-700 block mb-1.5">Mode Perhitungan</label>',
+        '<select id="bdd-mode" onchange="gantiModeBdd()" class="w-full h-11 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">',
           '<option value="ke-kotor">Berat Bersih & BDD → Berat Kotor</option>',
           '<option value="ke-bersih">Berat Kotor & BDD → Berat Bersih</option>',
         '</select>',
-        '<div id="bdd-mode-label" class="text-xs text-stone-500 mt-1">Menghitung Berat Kotor dari Berat Bersih dan BDD</div>',
+        '<div id="bdd-mode-label" class="text-xs text-slate-500 mt-1">Menghitung Berat Kotor dari Berat Bersih dan BDD</div>',
       '</div>',
 
       // Input: BDD
       '<div class="mb-5">',
-        '<label class="text-sm font-medium text-stone-700 block mb-1.5">BDD (%) <span class="text-red-500">*</span></label>',
+        '<label class="text-sm font-medium text-slate-700 block mb-1.5">BDD (%) <span class="text-red-500">*</span></label>',
         '<div class="relative">',
-          '<input id="bdd-persen" type="number" min="1" max="100" step="1" value="100" oninput="perbaruiHasil()" class="w-full h-11 px-3 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 mono" placeholder="1–100" />',
-          '<span class="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">%</span>',
+          '<input id="bdd-persen" type="number" min="1" max="100" step="1" value="100" oninput="perbaruiHasil()" class="w-full h-11 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 mono" placeholder="1–100" />',
+          '<span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>',
         '</div>',
         '<div id="bdd-error-bdd" class="text-xs text-red-500 mt-1"></div>',
       '</div>',
 
       // Input: Berat Bersih
       '<div id="bdd-grup-bersih" class="mb-5">',
-        '<label class="text-sm font-medium text-stone-700 block mb-1.5">Berat Bersih (gram)</label>',
+        '<label class="text-sm font-medium text-slate-700 block mb-1.5">Berat Bersih (gram)</label>',
         '<div class="relative">',
-          '<input id="bdd-berat-bersih" type="number" min="0" step="0.1" value="" oninput="perbaruiHasil()" class="w-full h-11 px-3 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 mono" placeholder="0" />',
-          '<span class="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">g</span>',
+          '<input id="bdd-berat-bersih" type="number" min="0" step="0.1" value="" oninput="perbaruiHasil()" class="w-full h-11 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 mono" placeholder="0" />',
+          '<span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">g</span>',
         '</div>',
         '<div id="bdd-error-bersih" class="text-xs text-red-500 mt-1"></div>',
       '</div>',
 
       // Input: Berat Kotor
       '<div id="bdd-grup-kotor" class="mb-5 opacity-50 pointer-events-none">',
-        '<label class="text-sm font-medium text-stone-700 block mb-1.5">Berat Kotor (gram)</label>',
+        '<label class="text-sm font-medium text-slate-700 block mb-1.5">Berat Kotor (gram)</label>',
         '<div class="relative">',
-          '<input id="bdd-berat-kotor" type="number" min="0" step="0.1" value="" oninput="perbaruiHasil()" class="w-full h-11 px-3 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 mono" placeholder="0" />',
-          '<span class="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">g</span>',
+          '<input id="bdd-berat-kotor" type="number" min="0" step="0.1" value="" oninput="perbaruiHasil()" class="w-full h-11 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 mono" placeholder="0" />',
+          '<span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">g</span>',
         '</div>',
         '<div id="bdd-error-kotor" class="text-xs text-red-500 mt-1"></div>',
       '</div>',
 
       // Input: Jumlah Siswa
       '<div class="mb-5">',
-        '<label class="text-sm font-medium text-stone-700 block mb-1.5">Jumlah Siswa / Penerima Manfaat <span class="text-red-500">*</span></label>',
-        '<input id="bdd-jumlah-siswa" type="number" min="1" step="1" value="490" oninput="perbaruiHasil()" class="w-full h-11 px-3 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 mono" />',
+        '<label class="text-sm font-medium text-slate-700 block mb-1.5">Jumlah Siswa / Penerima Manfaat <span class="text-red-500">*</span></label>',
+        '<input id="bdd-jumlah-siswa" type="number" min="1" step="1" value="490" oninput="perbaruiHasil()" class="w-full h-11 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 mono" />',
         '<div id="bdd-error-siswa" class="text-xs text-red-500 mt-1"></div>',
       '</div>',
 
@@ -335,45 +335,45 @@ async function renderBddKalkulator() {
     '<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">',
 
       // Hasil Berat Bersih
-      '<div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 p-5 shadow-sm">',
+      '<div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">',
         '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Berat Bersih</span><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>',
         '<div class="text-2xl font-bold text-emerald-800"><span id="bdd-hasil-bersih" class="mono">0</span> <span class="text-sm font-normal text-emerald-500">g</span></div>',
         '<div class="text-[10px] text-emerald-600/70">Bagian yang dapat dimakan</div>',
       '</div>',
 
       // Hasil Berat Kotor
-      '<div class="bg-gradient-to-br from-amber-50 to-amber-100/60 rounded-2xl border border-amber-200/60 p-5 shadow-sm">',
+      '<div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">',
         '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Berat Kotor</span><svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></div>',
         '<div class="text-2xl font-bold text-amber-800"><span id="bdd-hasil-kotor" class="mono">0</span> <span class="text-sm font-normal text-amber-500">g</span></div>',
         '<div class="text-[10px] text-amber-600/70">Berat sebelum dibersihkan</div>',
       '</div>',
 
       // Hasil Kebutuhan
-      '<div class="bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 p-5 shadow-sm">',
-        '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700">Total Kebutuhan</span><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>',
-        '<div class="text-2xl font-bold text-blue-800"><span id="bdd-hasil-kebutuhan" class="mono">0</span> <span class="text-sm font-normal text-blue-500">kg</span></div>',
-        '<div class="text-[10px] text-blue-600/70">Untuk <span id="bdd-label-siswa">0</span> siswa</div>',
+      '<div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">',
+        '<div class="flex items-center justify-between mb-1"><span class="text-[10px] font-semibold uppercase tracking-wider text-[#14326b]">Total Kebutuhan</span><svg class="w-4 h-4 text-[#14326b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>',
+        '<div class="text-2xl font-bold text-slate-900"><span id="bdd-hasil-kebutuhan" class="mono">0</span> <span class="text-sm font-normal text-[#14326b]">kg</span></div>',
+        '<div class="text-[10px] text-[#14326b]/70">Untuk <span id="bdd-label-siswa">0</span> siswa</div>',
       '</div>',
 
     '</div>',
 
     // Breakdown Rumus
-    '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 mb-4">',
-      '<div class="text-sm font-bold text-stone-700 mb-3">Detail Perhitungan</div>',
+    '<div class="bg-white rounded-lg border border-slate-200 shadow-sm p-5 mb-4">',
+      '<div class="text-sm font-bold text-slate-700 mb-3">Detail Perhitungan</div>',
       '<div class="space-y-2 text-sm">',
         '<div class="flex items-start gap-3">',
-          '<span class="text-stone-400 font-medium shrink-0 w-28">Rumus:</span>',
-          '<div class="text-stone-600 font-mono text-xs leading-relaxed">',
+          '<span class="text-slate-400 font-medium shrink-0 w-28">Rumus:</span>',
+          '<div class="text-slate-600 font-mono text-xs leading-relaxed">',
             '<div>Berat Kotor = Berat Bersih / (BDD / 100)</div>',
             '<div class="mt-1">atau</div>',
             '<div class="mt-1">Berat Bersih = Berat Kotor x (BDD / 100)</div>',
             '<div class="mt-1">Kebutuhan (kg) = (Berat Kotor x Jumlah Siswa) / 1000</div>',
           '</div>',
         '</div>',
-        '<hr class="border-stone-100" />',
+        '<hr class="border-slate-100" />',
         '<div class="flex items-start gap-3">',
-          '<span class="text-stone-400 font-medium shrink-0 w-28">Perhitungan:</span>',
-          '<div class="text-stone-600 font-mono text-xs">',
+          '<span class="text-slate-400 font-medium shrink-0 w-28">Perhitungan:</span>',
+          '<div class="text-slate-600 font-mono text-xs">',
             '<div>Berat Kotor: <span id="bdd-rumus-kotor" class="text-emerald-700">—</span></div>',
             '<div class="mt-1">Kebutuhan: <span id="bdd-rumus-kebutuhan" class="text-emerald-700">—</span></div>',
           '</div>',

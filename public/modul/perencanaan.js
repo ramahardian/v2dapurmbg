@@ -37,7 +37,7 @@ function adjustExportVisibilityForEmptyData() {
       globalExport.style.display = hasContent ? '' : 'none';
     }
     
-    const statusMessage = document.querySelector('.rounded-xl.border.border-amber-200.bg-amber-50');
+    const statusMessage = document.querySelector('.rounded-lg.border.border-amber-200.bg-amber-50');
     if (statusMessage && !hasContent) {
       statusMessage.style.display = '';
     } else if (statusMessage) {
@@ -76,11 +76,11 @@ async function loadPerencanaanData(siklusId) {
     let html = '';
 
     // Filter bar
-    html += '<div class="bg-white border border-stone-200 rounded-lg p-4 mb-4 flex flex-wrap items-center gap-4">';
+    html += '<div class="bg-white border border-slate-200 rounded-lg p-4 mb-4 flex flex-wrap items-center gap-4">';
 
     // Siklus filter
-    html += '<label class="text-sm font-medium text-stone-700">Filter Siklus:</label>';
-    html += '<select onchange="onSiklusFilterChange(this)" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[200px] focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400">';
+    html += '<label class="text-sm font-medium text-slate-700">Filter Siklus:</label>';
+    html += '<select onchange="onSiklusFilterChange(this)" class="h-10 px-3 border border-slate-200 rounded-lg text-sm bg-white min-w-[200px] focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400">';
     for (var i = 0; i < siklus_list.length; i++) {
       var s = siklus_list[i];
       var sel = String(_pncSiklusId) === String(s.id);
@@ -89,10 +89,10 @@ async function loadPerencanaanData(siklusId) {
     html += '</select>';
 
     // View indicator
-    html += '<div class="text-xs font-medium text-stone-500 bg-stone-100 px-3 py-1.5 rounded-lg">Rekap Porsi</div>';
+    html += '<div class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg">Rekap Porsi</div>';
 
-    html += '<button onclick="exportPncExcel()" class="px-2.5 py-1.5 rounded bg-stone-600 text-white hover:bg-stone-700 transition-colors flex items-center gap-1 text-xs" title="Export All Excel"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export All XLSX</button>';
-    html += '<div class="text-xs text-stone-400">' + data.length + ' jenjang</div>';
+    html += '<button onclick="exportPncExcel()" class="px-2.5 py-1.5 rounded bg-slate-600 text-white hover:bg-slate-700 transition-colors flex items-center gap-1 text-xs" title="Export All Excel"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export All XLSX</button>';
+    html += '<div class="text-xs text-slate-400">' + data.length + ' jenjang</div>';
     html += '</div>';
 
     // ── Tampilkan validasi jika ada ──
@@ -100,7 +100,7 @@ async function loadPerencanaanData(siklusId) {
       var vl = _validation;
       var colors = { 'no_siklus': 'amber', 'no_target': 'orange', 'no_pm_match': 'amber' };
       var c = colors[vl.level] || 'stone';
-      html += '<div class="rounded-xl border border-' + c + '-200 bg-' + c + '-50 p-5 mb-4">';
+      html += '<div class="rounded-lg border border-' + c + '-200 bg-' + c + '-50 p-5 mb-4">';
       html += '<div class="flex items-start gap-3">';
       html += '<svg class="w-6 h-6 shrink-0 mt-0.5 text-' + c + '-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
       html += '<div>';
@@ -120,7 +120,7 @@ async function loadPerencanaanData(siklusId) {
     }
 
     if (!data || !data.length) {
-      html += '<div class="rounded-xl border border-amber-200 bg-amber-50 p-5 mb-4">';
+      html += '<div class="rounded-lg border border-amber-200 bg-amber-50 p-5 mb-4">';
       html += '<div class="flex items-start gap-3">';
       html += '<svg class="w-6 h-6 shrink-0 mt-0.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
       html += '<div>';
@@ -199,7 +199,7 @@ async function loadPncMatriksPerencanaan(siklusId) {
     // ── Peringatan jika jumlah_porsi siklus jauh lebih besar dari siswa aktual ──
     if (sync && sync.inflating) {
       var inflasiPct = Math.round((sync.factor - 1) * 100);
-      html += '<div class="mt-6 rounded-xl border-2 border-amber-300 bg-amber-50 p-4">';
+      html += '<div class="mt-6 rounded-lg border-2 border-amber-300 bg-amber-50 p-4">';
       html += '<div class="flex items-start gap-3">';
       html += '<svg class="w-5 h-5 shrink-0 mt-0.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
       html += '<div>';
@@ -212,10 +212,10 @@ async function loadPncMatriksPerencanaan(siklusId) {
     html += '<div class="flex items-center gap-2 flex-1 min-w-0">';
     html += '<svg class="w-5 h-5 text-sky-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="13" width="3" height="4"/><rect x="13" y="11" width="3" height="6"/></svg>';
     html += '<div class="min-w-0">';
-    html += '<span class="text-sm font-bold text-stone-700 truncate block">Perencanaan Final — Kebutuhan Bahan per Hari</span>';
-    html += '<span class="text-xs text-stone-400 truncate block">(format matriks, sesuai contoh)</span>';
+    html += '<span class="text-sm font-bold text-slate-700 truncate block">Perencanaan Final — Kebutuhan Bahan per Hari</span>';
+    html += '<span class="text-xs text-slate-400 truncate block">(format matriks, sesuai contoh)</span>';
     html += '</div></div>';
-    html += '<button onclick="exportPncFinalXlsx()" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-white bg-sky-600 hover:bg-sky-700 px-3 py-2 rounded-lg shadow-sm transition-colors shrink-0" title="Export Perencanaan Final ke Excel (template FINAL-PERENCANAAN.xlsx)">';
+    html += '<button onclick="exportPncFinalXlsx()" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-white bg-[#14326b] hover:bg-[#0f2a5f] px-3 py-2 rounded-lg shadow-sm transition-colors shrink-0" title="Export Perencanaan Final ke Excel (template FINAL-PERENCANAAN.xlsx)">';
     html += '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> EXPORT FINAL XLSX';
     html += '</button>';
     html += '</div>';
@@ -253,31 +253,31 @@ function renderPncMatriksFinal(hari, totalSiswaSemuaJenjang) {
     if (!day.bahan || !day.bahan.length) continue;
 
     // Day card
-    html += '<div class="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">';
+    html += '<div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">';
 
     // Day header
-    html += '<div class="px-5 py-3 bg-gradient-to-r from-emerald-50 to-green-50 border-b border-stone-200 flex items-center gap-3 flex-wrap">';
+    html += '<div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3 flex-wrap">';
     html += '<span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-sm">M' + (d + 1) + '</span>';
     html += '<div class="min-w-0 flex-1">';
     html += '<div class="font-semibold text-sm text-emerald-800 truncate">' + tkFmtTanggal(day.header_tanggal, day.hari_nama) + '</div>';
     if (day.menu_names && day.menu_names.length) {
-      html += '<div class="text-xs text-stone-500 mt-0.5 truncate">' + day.menu_names.join(' + ') + '</div>';
+      html += '<div class="text-xs text-slate-500 mt-0.5 truncate">' + day.menu_names.join(' + ') + '</div>';
     }
     html += '</div>';
-    html += '<div class="text-xs text-stone-500 shrink-0">Total Porsi: <strong class="text-emerald-700">' + fmtPncNum(totalPorsiDay) + '</strong></div>';
+    html += '<div class="text-xs text-slate-500 shrink-0">Total Porsi: <strong class="text-emerald-700">' + fmtPncNum(totalPorsiDay) + '</strong></div>';
     html += '</div>';
 
     // ── Matriks: baris = bahan, kolom = jenjang ──
     html += '<div class="overflow-x-auto p-4"><table class="w-full text-xs border-collapse">';
-    html += '<thead><tr class="border-b border-stone-200 bg-stone-50">';
-    html += '<th class="px-3 py-2 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
+    html += '<thead><tr class="border-b border-slate-200 bg-slate-50">';
+    html += '<th class="px-3 py-2 text-left font-semibold text-slate-600 min-w-[140px]">Bahan Pangan</th>';
     for (var jc = 0; jc < tkJenjangOrder.length; jc++) {
-      html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">' + tkJenjangOrder[jc] + '</th>';
+      html += '<th class="px-3 py-2 text-right font-semibold text-slate-600 whitespace-nowrap">' + tkJenjangOrder[jc] + '</th>';
     }
-    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Total Porsi</th>';
-    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan Pangan (kg)</th>';
-    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap" title="Kebutuhan + buffer per bahan (1-10%)">1-10%</th>';
-    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Aksi</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-slate-600 whitespace-nowrap">Total Porsi</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-slate-600 whitespace-nowrap">Kebutuhan Pangan (kg)</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-slate-600 whitespace-nowrap" title="Kebutuhan + buffer per bahan (1-10%)">1-10%</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-slate-600 whitespace-nowrap">Aksi</th>';
     html += '</tr></thead><tbody>';
 
     var colTotal = {};
@@ -312,14 +312,14 @@ function renderPncMatriksFinal(hari, totalSiswaSemuaJenjang) {
       grandTotalKg += rowKg;
       grandBufferKg += bufferKg;
 
-      html += '<tr class="border-b border-stone-100 hover:bg-emerald-50/30 transition-colors">';
-      html += '<td class="px-3 py-1.5 text-sm font-medium text-stone-800">' + (b.nama_display || b.nama) +
+      html += '<tr class="border-b border-slate-100 hover:bg-emerald-50/30 transition-colors">';
+      html += '<td class="px-3 py-1.5 text-sm font-medium text-slate-800">' + (b.nama_display || b.nama) +
         (ovCount ? ' <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700" title="Diubah manual untuk ' + ovCount + ' jenjang">diubah</span>' : '') +
         '</td>';
       html += cells;
-      html += '<td class="px-3 py-1.5 text-sm text-right mono text-stone-600">' + fmtPncNum(totalPorsiDay) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono text-slate-600">' + fmtPncNum(totalPorsiDay) + '</td>';
       html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtPncPecahan(rowKg) + '</td>';
-      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold ' + (bufferPersen > 0 ? 'text-sky-700' : 'text-stone-500') + '" title="Buffer ' + bufferPersen + '%">' + fmtPncPecahan(bufferKg) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold ' + (bufferPersen > 0 ? 'text-sky-700' : 'text-slate-500') + '" title="Buffer ' + bufferPersen + '%">' + fmtPncPecahan(bufferKg) + '</td>';
       html += '<td class="px-3 py-1.5 text-right whitespace-nowrap">';
       html += '<button onclick="pncEditBahan(' + d + ',' + bi + ')" class="inline-flex items-center justify-center w-6 h-6 rounded-lg text-sky-600 hover:bg-sky-50 align-middle" title="Edit bahan/jumlah untuk hari ini">';
       html += '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
@@ -334,12 +334,12 @@ function renderPncMatriksFinal(hari, totalSiswaSemuaJenjang) {
     }
 
     // Total row
-    html += '<tr class="bg-stone-50 border-t-2 border-stone-200 font-bold">';
-    html += '<td class="px-3 py-2 text-sm font-semibold text-stone-700">Total</td>';
+    html += '<tr class="bg-slate-50 border-t-2 border-slate-200 font-bold">';
+    html += '<td class="px-3 py-2 text-sm font-semibold text-slate-700">Total</td>';
     for (var jc4 = 0; jc4 < tkJenjangOrder.length; jc4++) {
-      html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtPncPecahan(colTotal[tkJenjangOrder[jc4]]) + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono text-slate-700">' + fmtPncPecahan(colTotal[tkJenjangOrder[jc4]]) + '</td>';
     }
-    html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtPncNum(totalPorsiDay) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono text-slate-700">' + fmtPncNum(totalPorsiDay) + '</td>';
     html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-emerald-700">' + fmtPncPecahan(Math.round(grandTotalKg * 100) / 100) + '</td>';
     html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-sky-700">' + fmtPncPecahan(Math.round(grandBufferKg * 100) / 100) + '</td>';
     html += '<td class="px-3 py-2"></td>';
@@ -351,7 +351,7 @@ function renderPncMatriksFinal(hari, totalSiswaSemuaJenjang) {
   html += '</div>';
 
   if (!html.trim() || html === '<div class="space-y-4"></div>') {
-    return '<div class="text-xs text-stone-400 italic py-4 text-center">Tidak ada data bahan untuk ditampilkan</div>';
+    return '<div class="text-xs text-slate-400 italic py-4 text-center">Tidak ada data bahan untuk ditampilkan</div>';
   }
 
   return html;
@@ -395,36 +395,36 @@ async function pncEditBahan(dayIdx, rowIdx) {
   }
 
   var body = '<div class="space-y-4">';
-  body += '<div class="rounded-xl border border-stone-200 bg-stone-50 p-3">';
-  body += '<div class="text-[11px] uppercase tracking-wider font-semibold text-stone-500">Bahan saat ini</div>';
-  body += '<div class="text-sm font-semibold text-stone-800">' + escHtml(row.nama_display || row.nama) + '</div>';
-  body += '<div class="text-xs text-stone-500 mt-1 leading-relaxed">Perubahan hanya berlaku untuk hari ini dan jenjang yang dicentang. Resep menu dan siklus tidak diubah.</div>';
+  body += '<div class="rounded-lg border border-slate-200 bg-slate-50 p-3">';
+  body += '<div class="text-[11px] uppercase tracking-wider font-semibold text-slate-500">Bahan saat ini</div>';
+  body += '<div class="text-sm font-semibold text-slate-800">' + escHtml(row.nama_display || row.nama) + '</div>';
+  body += '<div class="text-xs text-slate-500 mt-1 leading-relaxed">Perubahan hanya berlaku untuk hari ini dan jenjang yang dicentang. Resep menu dan siklus tidak diubah.</div>';
   body += '</div>';
 
-  body += '<div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Ganti bahan (opsional)</label>';
-  body += '<input id="pnc-ov-bahan" list="pnc-ov-bahan-list" autocomplete="off" placeholder="Kosongkan bila hanya mengubah jumlah" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400">';
+  body += '<div><label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Ganti bahan (opsional)</label>';
+  body += '<input id="pnc-ov-bahan" list="pnc-ov-bahan-list" autocomplete="off" placeholder="Kosongkan bila hanya mengubah jumlah" class="mt-1 w-full h-10 px-3 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400">';
   body += '<datalist id="pnc-ov-bahan-list">' + datalist + '</datalist></div>';
 
-  body += '<div class="border border-stone-200 rounded-xl overflow-hidden"><table class="w-full text-xs"><thead><tr class="bg-stone-50 border-b border-stone-200">';
-  body += '<th class="px-3 py-2 text-left font-semibold text-stone-600">Jenjang</th>';
-  body += '<th class="px-3 py-2 text-right font-semibold text-stone-600">Jumlah (g/porsi)</th>';
-  body += '<th class="px-3 py-2 text-right font-semibold text-stone-600">BDD %</th>';
+  body += '<div class="border border-slate-200 rounded-lg overflow-hidden"><table class="w-full text-xs"><thead><tr class="bg-slate-50 border-b border-slate-200">';
+  body += '<th class="px-3 py-2 text-left font-semibold text-slate-600">Jenjang</th>';
+  body += '<th class="px-3 py-2 text-right font-semibold text-slate-600">Jumlah (g/porsi)</th>';
+  body += '<th class="px-3 py-2 text-right font-semibold text-slate-600">BDD %</th>';
   body += '</tr></thead><tbody>';
   for (var ji = 0; ji < jenjangList.length; ji++) {
     var jn = jenjangList[ji];
     var pj = cells[jn];
-    body += '<tr class="border-b border-stone-100">';
-    body += '<td class="px-3 py-2"><label class="inline-flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pnc-ov-on-' + ji + '" checked class="rounded border-stone-300"><span class="font-medium text-stone-700">' + escHtml(jn) + '</span></label>' +
+    body += '<tr class="border-b border-slate-100">';
+    body += '<td class="px-3 py-2"><label class="inline-flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pnc-ov-on-' + ji + '" checked class="rounded border-slate-300"><span class="font-medium text-slate-700">' + escHtml(jn) + '</span></label>' +
       (pj.override_id ? '<span class="ml-1 text-[10px] font-semibold text-amber-700">diubah</span>' : '') + '</td>';
-    body += '<td class="px-3 py-2 text-right"><input type="number" min="0" step="0.01" id="pnc-ov-jml-' + ji + '" value="' + (Number(pj.berat_bersih) || 0) + '" class="w-24 h-9 px-2 text-right border border-stone-200 rounded-lg mono"></td>';
-    body += '<td class="px-3 py-2 text-right"><input type="number" min="1" max="100" step="0.1" id="pnc-ov-bdd-' + ji + '" value="' + (Number(pj.persen_bdd) || 100) + '" class="w-20 h-9 px-2 text-right border border-stone-200 rounded-lg mono"></td>';
+    body += '<td class="px-3 py-2 text-right"><input type="number" min="0" step="0.01" id="pnc-ov-jml-' + ji + '" value="' + (Number(pj.berat_bersih) || 0) + '" class="w-24 h-9 px-2 text-right border border-slate-200 rounded-lg mono"></td>';
+    body += '<td class="px-3 py-2 text-right"><input type="number" min="1" max="100" step="0.1" id="pnc-ov-bdd-' + ji + '" value="' + (Number(pj.persen_bdd) || 100) + '" class="w-20 h-9 px-2 text-right border border-slate-200 rounded-lg mono"></td>';
     body += '</tr>';
   }
   body += '</tbody></table></div>';
-  body += '<div class="text-[11px] text-stone-400 leading-relaxed">Jumlah = gram bahan per porsi untuk satu siswa. Kebutuhan kg dihitung ulang = jumlah × porsi ÷ BDD.</div>';
+  body += '<div class="text-[11px] text-slate-400 leading-relaxed">Jumlah = gram bahan per porsi untuk satu siswa. Kebutuhan kg dihitung ulang = jumlah × porsi ÷ BDD.</div>';
   body += '</div>';
 
-  document.getElementById('modal-title').innerHTML = 'Edit Bahan <span class="text-stone-400 font-normal">· ' + escHtml(day.hari_nama || '') + ', ' + escHtml(day.tanggal || '') + '</span>';
+  document.getElementById('modal-title').innerHTML = 'Edit Bahan <span class="text-slate-400 font-normal">· ' + escHtml(day.hari_nama || '') + ', ' + escHtml(day.tanggal || '') + '</span>';
   document.getElementById('modal-body').innerHTML = body;
   document.getElementById('modal-save').style.display = 'block';
   document.getElementById('modal-save').textContent = 'Simpan';
@@ -531,7 +531,7 @@ function renderPncRekapPorsi(allData) {
   //    Card SELALU dirender agar layout "Porsi Besar & Porsi Kecil" tidak menghilang,
   //    walau salah satu porsi belum punya penerima manfaat (count = 0).
   function renderRekapTable(porsiKey, porsiLabel, porsiCount, colorClass, iconSvg) {
-    var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden h-full">';
+    var html = '<div class="bg-white border border-slate-200 rounded-lg overflow-hidden h-full">';
     html += '<div class="px-5 py-3 ' + colorClass + ' flex items-center gap-3">';
     if (iconSvg) html += iconSvg;
     html += '<span class="font-bold text-base">' + porsiLabel + '</span>';
@@ -542,9 +542,9 @@ function renderPncRekapPorsi(allData) {
     // Empty state: card tetap tampil, konten diganti pesan informatif
     if (porsiCount <= 0) {
       html += '<div class="px-5 py-8 text-center">';
-      html += '<svg class="w-10 h-10 mx-auto mb-2 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>';
-      html += '<div class="text-sm font-medium text-stone-500">Belum ada penerima untuk ' + porsiLabel.toLowerCase() + '</div>';
-      html += '<div class="text-xs text-stone-400 mt-1">Isi paket besar/kecil di Master Data → Penerima Manfaat agar kebutuhan porsi ini muncul.</div>';
+      html += '<svg class="w-10 h-10 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>';
+      html += '<div class="text-sm font-medium text-slate-500">Belum ada penerima untuk ' + porsiLabel.toLowerCase() + '</div>';
+      html += '<div class="text-xs text-slate-400 mt-1">Isi paket besar/kecil di Master Data → Penerima Manfaat agar kebutuhan porsi ini muncul.</div>';
       html += '</div>';
       html += '</div>';
       return html;
@@ -555,19 +555,19 @@ function renderPncRekapPorsi(allData) {
 
       // Siklus header
       html += '<div data-siklus-idx="' + skIdx + '">';
-      html += '<div class="px-5 py-2 bg-stone-50 border-b border-stone-200 text-sm font-semibold text-stone-600 flex items-center gap-2">';
+      html += '<div class="px-5 py-2 bg-slate-50 border-b border-slate-200 text-sm font-semibold text-slate-600 flex items-center gap-2">';
       html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
       html += sk.siklus_nama;
       html += '</div>';
 
       // Day tabs
       if (sk.hari.length > 1) {
-        html += '<div class="px-5 py-2 border-b border-stone-100">';
-        html += '<div class="flex gap-1 bg-stone-100 rounded-lg p-0.5 overflow-x-auto siklus-tab-bar" role="tablist" data-siklus-idx="' + skIdx + '">';
+        html += '<div class="px-5 py-2 border-b border-slate-100">';
+        html += '<div class="flex gap-1 bg-slate-100 rounded-lg p-0.5 overflow-x-auto siklus-tab-bar" role="tablist" data-siklus-idx="' + skIdx + '">';
         for (var h = 0; h < sk.hari.length; h++) {
           var day = sk.hari[h];
           var isFirst = h === 0;
-          html += '<button onclick="pncSwitchDayTab(event, this)" class="px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all ' + (isFirst ? 'bg-white shadow-sm font-bold text-sky-700' : 'text-stone-500 hover:text-stone-700 hover:bg-stone-200/50') + '" role="tab" aria-selected="' + (isFirst ? 'true' : 'false') + '">' + day.hari_nama + '</button>';
+          html += '<button onclick="pncSwitchDayTab(event, this)" class="px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all ' + (isFirst ? 'bg-white shadow-sm font-bold text-sky-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50') + '" role="tab" aria-selected="' + (isFirst ? 'true' : 'false') + '">' + day.hari_nama + '</button>';
         }
         html += '</div></div>';
       }
@@ -577,25 +577,25 @@ function renderPncRekapPorsi(allData) {
         var day = sk.hari[h];
         var tabExtraClass = (sk.hari.length > 1 && h > 0) ? ' hidden' : '';
         html += '<div class="pnc-day-content' + tabExtraClass + '" role="tabpanel">';
-        html += '<div class="px-5 py-3 border-b border-stone-100 bg-stone-50/30">';
+        html += '<div class="px-5 py-3 border-b border-slate-100 bg-slate-50/30">';
         html += '<div class="flex items-center gap-3 mb-2">';
         html += '<span class="inline-block px-3 py-1 rounded-lg ' + (porsiKey === 'BESAR' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800') + ' text-sm font-bold">' + day.menu_label + '</span>';
-        html += '<span class="text-sm font-semibold text-stone-700">' + day.hari_nama + '</span>';
-        html += '<span class="text-xs text-stone-400">' + (day.menu_nama || '') + '</span>';
+        html += '<span class="text-sm font-semibold text-slate-700">' + day.hari_nama + '</span>';
+        html += '<span class="text-xs text-slate-400">' + (day.menu_nama || '') + '</span>';
         html += '</div>';
 
         if (!day.bahan || !day.bahan.length) {
-          html += '<div class="text-xs text-stone-400 italic px-2 pb-2">Tidak ada bahan</div>';
+          html += '<div class="text-xs text-slate-400 italic px-2 pb-2">Tidak ada bahan</div>';
         } else {
           // Table
           html += '<div class="overflow-x-auto pb-2"><table class="w-full text-xs border-collapse">';
-          html += '<thead><tr class="border-b border-stone-200">';
-          html += '<th class="px-2 py-1.5 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
-          html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Bersih (g)</th>';
-          html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">BDD (%)</th>';
-          html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Kotor (g)</th>';
-          html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Jumlah Siswa</th>';
-          html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan (kg)</th>';
+          html += '<thead><tr class="border-b border-slate-200">';
+          html += '<th class="px-2 py-1.5 text-left font-semibold text-slate-600 min-w-[140px]">Bahan Pangan</th>';
+          html += '<th class="px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">Berat Bersih (g)</th>';
+          html += '<th class="px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">BDD (%)</th>';
+          html += '<th class="px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">Berat Kotor (g)</th>';
+          html += '<th class="px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">Jumlah Siswa</th>';
+          html += '<th class="px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">Kebutuhan (kg)</th>';
           html += '</tr></thead><tbody>';
 
           for (var bi = 0; bi < day.bahan.length; bi++) {
@@ -606,7 +606,7 @@ function renderPncRekapPorsi(allData) {
             // Kebutuhan untuk porsi ini
             var kebutuhanPorsi = Math.round((bkPerSiswa * porsiCount / 1000) * 100) / 100;
 
-            html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
+            html += '<tr class="border-b border-slate-100 hover:bg-slate-50/50">';
             html += '<td class="px-2 py-1.5 text-sm font-medium">' + b.nama_display + '</td>';
             html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPncNum(bbPerSiswa) + '</td>';
             html += '<td class="px-2 py-1.5 text-sm text-right mono">' + b.persen_bdd + '%</td>';
@@ -632,11 +632,11 @@ function renderPncRekapPorsi(allData) {
 
   var html = '<div class="mb-6">';
   html += '<div class="flex items-center gap-2 mb-3 flex-wrap">';
-  html += '<svg class="w-5 h-5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>';
-  html += '<span class="text-sm font-bold text-stone-700">Rekap Kebutuhan — Porsi Besar & Kecil</span>';
-  html += '<span class="text-xs text-stone-400">(Semua jenjang digabung)</span>';
+  html += '<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>';
+  html += '<span class="text-sm font-bold text-slate-700">Rekap Kebutuhan — Porsi Besar & Kecil</span>';
+  html += '<span class="text-xs text-slate-400">(Semua jenjang digabung)</span>';
   html += '<span class="flex-1"></span>';
-  html += '<button onclick="exportPncKebutuhanPangan()" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg shadow-sm transition-colors shrink-0" title="Export Kebutuhan Pangan per hari (4 sheet: Bumil Busui, Balita, Porsi Besar, Porsi Kecil)">';
+  html += '<button onclick="exportPncKebutuhanPangan()" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-white bg-[#14326b] hover:bg-[#0f2a5f] px-3 py-2 rounded-lg shadow-sm transition-colors shrink-0" title="Export Kebutuhan Pangan per hari (4 sheet: Bumil Busui, Balita, Porsi Besar, Porsi Kecil)">';
   html += '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export Kebutuhan Pangan XLSX';
   html += '</button>';
   html += '</div>';
@@ -659,7 +659,7 @@ function pncSwitchDayTab(event, btn) {
   var tabs = tabBar.querySelectorAll('button');
   var idx = -1;
   for (var i = 0; i < tabs.length; i++) {
-    tabs[i].className = 'px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all text-stone-500 hover:text-stone-700 hover:bg-stone-200/50';
+    tabs[i].className = 'px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all text-slate-500 hover:text-slate-700 hover:bg-slate-200/50';
     tabs[i].setAttribute('aria-selected', 'false');
     if (tabs[i] === btn) idx = i;
   }

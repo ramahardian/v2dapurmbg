@@ -75,9 +75,9 @@ async function renderTemplatePoster() {
 }
 
 function posterPageHtml(tpl) {
-  const inputCls = 'mt-1 w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all';
-  const labelCls = 'text-xs font-semibold text-stone-500 uppercase tracking-wide';
-  const cardCls = 'bg-white rounded-xl border border-stone-200 p-5';
+  const inputCls = 'mt-1 w-full h-10 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all';
+  const labelCls = 'text-xs font-semibold text-slate-500 uppercase tracking-wide';
+  const cardCls = 'bg-white rounded-lg border border-slate-200 p-5';
   const catatanText = (tpl.catatan || []).join('\n');
 
   return '' +
@@ -85,7 +85,7 @@ function posterPageHtml(tpl) {
     '<div class="xl:col-span-3 space-y-4">' +
 
       // Info
-      '<div class="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-xs text-emerald-800">' +
+      '<div class="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 text-xs text-emerald-800">' +
         '<svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
         '<div>Template ini otomatis dipakai tombol <b>Bagikan menu</b> di Dashboard. Perubahan langsung berlaku untuk semua user di dapur ini setelah disimpan.</div>' +
       '</div>' +
@@ -94,7 +94,7 @@ function posterPageHtml(tpl) {
       '<div class="' + cardCls + '">' +
         '<div class="flex items-center gap-2 mb-4">' +
           '<span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span>' +
-          '<h3 class="text-sm font-bold text-stone-800">Identitas &amp; Teks</h3>' +
+          '<h3 class="text-sm font-bold text-slate-800">Identitas &amp; Teks</h3>' +
         '</div>' +
         '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
           '<div class="sm:col-span-2"><label class="' + labelCls + '">Judul Poster</label>' +
@@ -115,26 +115,26 @@ function posterPageHtml(tpl) {
         '<div class="flex items-center justify-between gap-3 mb-4 flex-wrap">' +
           '<div class="flex items-center gap-2">' +
             '<span class="w-7 h-7 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 0 0 0 14h2a3 3 0 0 1 0 6"/></svg></span>' +
-            '<h3 class="text-sm font-bold text-stone-800">Warna Tema</h3>' +
+            '<h3 class="text-sm font-bold text-slate-800">Warna Tema</h3>' +
           '</div>' +
           '<div class="flex items-center gap-1.5">' +
-            '<button type="button" onclick="posterApplyPreset(\'#14532D\',\'#F97316\')" class="w-7 h-7 rounded-full border-2 border-white shadow ring-1 ring-stone-200" style="background:#14532D" title="Hijau & Oranye"></button>' +
-            '<button type="button" onclick="posterApplyPreset(\'#1E3A8A\',\'#F59E0B\')" class="w-7 h-7 rounded-full border-2 border-white shadow ring-1 ring-stone-200" style="background:#1E3A8A" title="Biru & Kuning"></button>' +
-            '<button type="button" onclick="posterApplyPreset(\'#7C2D12\',\'#D97706\')" class="w-7 h-7 rounded-full border-2 border-white shadow ring-1 ring-stone-200" style="background:#7C2D12" title="Maroon & Emas"></button>' +
-            '<button type="button" onclick="posterApplyPreset(\'#4C1D95\',\'#EC4899\')" class="w-7 h-7 rounded-full border-2 border-white shadow ring-1 ring-stone-200" style="background:#4C1D95" title="Ungu & Pink"></button>' +
-            '<button type="button" onclick="posterApplyPreset(\'#111827\',\'#22C55E\')" class="w-7 h-7 rounded-full border-2 border-white shadow ring-1 ring-stone-200" style="background:#111827" title="Hitam & Hijau"></button>' +
+            '<button type="button" onclick="posterApplyPreset(\'#14532D\',\'#F97316\')" class="w-7 h-7 rounded-full border-2 border-white shadow ring-1 ring-slate-200" style="background:#14532D" title="Hijau & Oranye"></button>' +
+            '<button type="button" onclick="posterApplyPreset(\'#1E3A8A\',\'#F59E0B\')" class="w-7 h-7 rounded-full border-2 border-white shadow ring-1 ring-slate-200" style="background:#1E3A8A" title="Biru & Kuning"></button>' +
+            '<button type="button" onclick="posterApplyPreset(\'#7C2D12\',\'#D97706\')" class="w-7 h-7 rounded-full border-2 border-white shadow ring-1 ring-slate-200" style="background:#7C2D12" title="Maroon & Emas"></button>' +
+            '<button type="button" onclick="posterApplyPreset(\'#4C1D95\',\'#EC4899\')" class="w-7 h-7 rounded-full border-2 border-white shadow ring-1 ring-slate-200" style="background:#4C1D95" title="Ungu & Pink"></button>' +
+            '<button type="button" onclick="posterApplyPreset(\'#111827\',\'#22C55E\')" class="w-7 h-7 rounded-full border-2 border-white shadow ring-1 ring-slate-200" style="background:#111827" title="Hitam & Hijau"></button>' +
           '</div>' +
         '</div>' +
         '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
           '<div><label class="' + labelCls + '">Warna Utama</label>' +
             '<div class="mt-1 flex items-center gap-2">' +
-              '<input id="pt-warna-utama" type="color" value="' + posterEsc(tpl.warna_utama) + '" oninput="posterSyncColor(\'utama\', this.value)" class="w-10 h-10 rounded-lg border border-stone-200 bg-white cursor-pointer shrink-0" />' +
-              '<input id="pt-warna-utama-hex" maxlength="7" value="' + posterEsc(tpl.warna_utama) + '" oninput="posterColorText(\'utama\', this.value)" class="flex-1 min-w-0 h-10 px-3 border border-stone-200 rounded-lg text-sm mono uppercase" />' +
+              '<input id="pt-warna-utama" type="color" value="' + posterEsc(tpl.warna_utama) + '" oninput="posterSyncColor(\'utama\', this.value)" class="w-10 h-10 rounded-lg border border-slate-200 bg-white cursor-pointer shrink-0" />' +
+              '<input id="pt-warna-utama-hex" maxlength="7" value="' + posterEsc(tpl.warna_utama) + '" oninput="posterColorText(\'utama\', this.value)" class="flex-1 min-w-0 h-10 px-3 border border-slate-200 rounded-lg text-sm mono uppercase" />' +
             '</div></div>' +
           '<div><label class="' + labelCls + '">Warna Aksen</label>' +
             '<div class="mt-1 flex items-center gap-2">' +
-              '<input id="pt-warna-aksen" type="color" value="' + posterEsc(tpl.warna_aksen) + '" oninput="posterSyncColor(\'aksen\', this.value)" class="w-10 h-10 rounded-lg border border-stone-200 bg-white cursor-pointer shrink-0" />' +
-              '<input id="pt-warna-aksen-hex" maxlength="7" value="' + posterEsc(tpl.warna_aksen) + '" oninput="posterColorText(\'aksen\', this.value)" class="flex-1 min-w-0 h-10 px-3 border border-stone-200 rounded-lg text-sm mono uppercase" />' +
+              '<input id="pt-warna-aksen" type="color" value="' + posterEsc(tpl.warna_aksen) + '" oninput="posterSyncColor(\'aksen\', this.value)" class="w-10 h-10 rounded-lg border border-slate-200 bg-white cursor-pointer shrink-0" />' +
+              '<input id="pt-warna-aksen-hex" maxlength="7" value="' + posterEsc(tpl.warna_aksen) + '" oninput="posterColorText(\'aksen\', this.value)" class="flex-1 min-w-0 h-10 px-3 border border-slate-200 rounded-lg text-sm mono uppercase" />' +
             '</div></div>' +
         '</div>' +
       '</div>' +
@@ -142,8 +142,8 @@ function posterPageHtml(tpl) {
       // Catatan
       '<div class="' + cardCls + '">' +
         '<div class="flex items-center gap-2 mb-4">' +
-          '<span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></span>' +
-          '<h3 class="text-sm font-bold text-stone-800">Catatan Menu</h3>' +
+          '<span class="w-7 h-7 rounded-lg bg-slate-100 text-[#14326b] flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></span>' +
+          '<h3 class="text-sm font-bold text-slate-800">Catatan Menu</h3>' +
         '</div>' +
         '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
           '<div><label class="' + labelCls + '">Judul Kotak</label>' +
@@ -154,8 +154,8 @@ function posterPageHtml(tpl) {
               '<option value="menu"' + (tpl.catatan_mode === 'menu' ? ' selected' : '') + '>Deskripsi menu (otomatis)</option>' +
             '</select></div>' +
           '<div class="sm:col-span-2"><label class="' + labelCls + '">Poin Catatan (satu baris = satu poin, maks 6)</label>' +
-            '<textarea id="pt-catatan" rows="5" maxlength="960" oninput="posterSchedulePreview()" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all" placeholder="Tulis satu poin per baris...">' + posterEsc(catatanText) + '</textarea>' +
-            '<div class="text-[11px] text-stone-400 mt-1">Jika memilih <b>Deskripsi menu</b>, poin otomatis diambil dari deskripsi menu yang dibagikan (fallback ke teks manual bila kosong).</div>' +
+            '<textarea id="pt-catatan" rows="5" maxlength="960" oninput="posterSchedulePreview()" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all" placeholder="Tulis satu poin per baris...">' + posterEsc(catatanText) + '</textarea>' +
+            '<div class="text-[11px] text-slate-400 mt-1">Jika memilih <b>Deskripsi menu</b>, poin otomatis diambil dari deskripsi menu yang dibagikan (fallback ke teks manual bila kosong).</div>' +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -164,47 +164,47 @@ function posterPageHtml(tpl) {
       '<div class="' + cardCls + '">' +
         '<div class="flex items-center gap-2 mb-4">' +
           '<span class="w-7 h-7 rounded-lg bg-fuchsia-100 text-fuchsia-700 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>' +
-          '<h3 class="text-sm font-bold text-stone-800">Logo &amp; Background</h3>' +
+          '<h3 class="text-sm font-bold text-slate-800">Logo &amp; Background</h3>' +
         '</div>' +
 
         '<div class="flex items-center gap-3">' +
-          '<div class="w-16 h-16 rounded-lg border border-stone-200 bg-stone-50 overflow-hidden flex items-center justify-center shrink-0">' +
+          '<div class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center shrink-0">' +
             '<img id="pt-logo-thumb" alt="Logo" class="w-full h-full object-contain" />' +
-            '<span id="pt-logo-empty" class="text-[10px] text-stone-400 text-center px-1">Logo<br>default</span>' +
+            '<span id="pt-logo-empty" class="text-[10px] text-slate-400 text-center px-1">Logo<br>default</span>' +
           '</div>' +
           '<div class="flex-1 min-w-0">' +
-            '<div class="text-xs font-semibold text-stone-600 mb-1">Logo Poster</div>' +
-            '<input type="file" accept="image/png,image/jpeg,image/webp" onchange="posterPickImage(\'logo\', this)" class="block w-full text-[11px] text-stone-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />' +
-            '<div class="text-[10px] text-stone-400 mt-1">PNG/JPG/WEBP, maks 4 MB. Kosong = logo default aplikasi.</div>' +
+            '<div class="text-xs font-semibold text-slate-600 mb-1">Logo Poster</div>' +
+            '<input type="file" accept="image/png,image/jpeg,image/webp" onchange="posterPickImage(\'logo\', this)" class="block w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />' +
+            '<div class="text-[10px] text-slate-400 mt-1">PNG/JPG/WEBP, maks 4 MB. Kosong = logo default aplikasi.</div>' +
           '</div>' +
           '<button type="button" id="pt-logo-remove" onclick="posterRemoveImage(\'logo\')" class="shrink-0 text-[11px] font-semibold text-red-600 hover:text-red-700 px-2 py-1.5 rounded-lg hover:bg-red-50">Hapus</button>' +
         '</div>' +
 
-        '<div class="flex items-center gap-3 mt-4 pt-4 border-t border-stone-100">' +
-          '<div class="w-16 h-16 rounded-lg border border-stone-200 bg-stone-50 overflow-hidden flex items-center justify-center shrink-0">' +
+        '<div class="flex items-center gap-3 mt-4 pt-4 border-t border-slate-100">' +
+          '<div class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center shrink-0">' +
             '<img id="pt-bg-thumb" alt="Background" class="w-full h-full object-cover" />' +
-            '<span id="pt-bg-empty" class="text-[10px] text-stone-400 text-center px-1">Tanpa<br>background</span>' +
+            '<span id="pt-bg-empty" class="text-[10px] text-slate-400 text-center px-1">Tanpa<br>background</span>' +
           '</div>' +
           '<div class="flex-1 min-w-0">' +
-            '<div class="text-xs font-semibold text-stone-600 mb-1">Foto Background (opsional)</div>' +
-            '<input type="file" accept="image/png,image/jpeg,image/webp" onchange="posterPickImage(\'background\', this)" class="block w-full text-[11px] text-stone-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />' +
-            '<div class="text-[10px] text-stone-400 mt-1">Dipakai sebagai latar dengan overlay putih agar teks tetap terbaca.</div>' +
+            '<div class="text-xs font-semibold text-slate-600 mb-1">Foto Background (opsional)</div>' +
+            '<input type="file" accept="image/png,image/jpeg,image/webp" onchange="posterPickImage(\'background\', this)" class="block w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />' +
+            '<div class="text-[10px] text-slate-400 mt-1">Dipakai sebagai latar dengan overlay putih agar teks tetap terbaca.</div>' +
           '</div>' +
           '<button type="button" id="pt-bg-remove" onclick="posterRemoveImage(\'background\')" class="shrink-0 text-[11px] font-semibold text-red-600 hover:text-red-700 px-2 py-1.5 rounded-lg hover:bg-red-50">Hapus</button>' +
         '</div>' +
 
-        '<label class="flex items-center gap-2 mt-4 pt-4 border-t border-stone-100 cursor-pointer select-none">' +
-          '<input id="pt-tampilkan-foto" type="checkbox" ' + (tpl.tampilkan_foto ? 'checked' : '') + ' onchange="posterSchedulePreview()" class="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />' +
-          '<span class="text-xs text-stone-600">Tampilkan foto menu di poster bila menu punya foto (jika tidak ada, tetap pakai ilustrasi tray)</span>' +
+        '<label class="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100 cursor-pointer select-none">' +
+          '<input id="pt-tampilkan-foto" type="checkbox" ' + (tpl.tampilkan_foto ? 'checked' : '') + ' onchange="posterSchedulePreview()" class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />' +
+          '<span class="text-xs text-slate-600">Tampilkan foto menu di poster bila menu punya foto (jika tidak ada, tetap pakai ilustrasi tray)</span>' +
         '</label>' +
       '</div>' +
 
       // Actions
       '<div class="flex flex-wrap items-center gap-2 pb-6">' +
-        '<button type="button" id="pt-save" onclick="posterSave()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">' +
+        '<button type="button" id="pt-save" onclick="posterSave()" class="inline-flex items-center gap-2 bg-[#14326b] hover:bg-[#0f2a5f] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">' +
           '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>' +
           'Simpan Template</button>' +
-        '<button type="button" onclick="posterDownloadPreview()" class="inline-flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">' +
+        '<button type="button" onclick="posterDownloadPreview()" class="inline-flex items-center gap-2 border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">' +
           '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
           'Unduh Preview</button>' +
         '<button type="button" onclick="posterReset()" class="inline-flex items-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">Reset Default</button>' +
@@ -213,16 +213,16 @@ function posterPageHtml(tpl) {
 
     // Preview
     '<div class="xl:col-span-2">' +
-      '<div class="xl:sticky xl:top-20 bg-white rounded-xl border border-stone-200 p-4">' +
+      '<div class="xl:sticky xl:top-20 bg-white rounded-lg border border-slate-200 p-4">' +
         '<div class="flex items-center justify-between mb-3">' +
-          '<div><div class="text-sm font-bold text-stone-800">Preview Poster</div>' +
-          '<div class="text-[11px] text-stone-400">1080 × 1200 px</div></div>' +
+          '<div><div class="text-sm font-bold text-slate-800">Preview Poster</div>' +
+          '<div class="text-[11px] text-slate-400">1080 × 1200 px</div></div>' +
           '<button type="button" onclick="posterRefreshPreview()" class="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50">Muat ulang</button>' +
         '</div>' +
-        '<div class="rounded-xl overflow-hidden border border-stone-200 bg-stone-100">' +
+        '<div class="rounded-lg overflow-hidden border border-slate-200 bg-slate-100">' +
           '<img id="pt-preview" alt="Preview poster" class="w-full block" />' +
         '</div>' +
-        '<p class="text-[11px] text-stone-400 mt-2 leading-relaxed">Preview memakai contoh menu. Saat tombol <b>Bagikan menu</b> dipakai, data menu asli (nama, tanggal, gizi, foto) otomatis masuk ke template ini.</p>' +
+        '<p class="text-[11px] text-slate-400 mt-2 leading-relaxed">Preview memakai contoh menu. Saat tombol <b>Bagikan menu</b> dipakai, data menu asli (nama, tanggal, gizi, foto) otomatis masuk ke template ini.</p>' +
       '</div>' +
     '</div>' +
   '</div>';

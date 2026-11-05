@@ -483,73 +483,73 @@ function renderGroqVision() {
 
   c.innerHTML = `
     ${currentUser?.role === 'admin' ? `
-    <div class="mb-5 bg-white rounded-2xl border border-stone-200 p-4">
+    <div class="mb-5 bg-white rounded-lg border border-slate-200 p-4">
       <div class="flex flex-wrap items-center gap-2">
-        <span class="text-xs font-semibold text-stone-700">⚙️ API Key Groq</span>
+        <span class="text-xs font-semibold text-slate-700">⚙️ API Key Groq</span>
         <span class="text-[11px]" style="opacity:.5">khusus admin</span>
         <span id="gv-key-source" class="text-[11px]" style="opacity:.5"></span>
         <button id="gv-key-clear" type="button"
-          class="hidden ml-auto px-2.5 py-1 rounded-md border border-stone-300 text-[11px] text-stone-500 hover:bg-stone-100 transition-colors">Hapus key dari DB</button>
+          class="hidden ml-auto px-2.5 py-1 rounded-md border border-slate-300 text-[11px] text-slate-500 hover:bg-slate-100 transition-colors">Hapus key dari DB</button>
       </div>
       <div class="flex gap-2 mt-2.5">
         <input id="gv-key-input" type="password" autocomplete="off" spellcheck="false"
           placeholder="gsk_..."
-          class="flex-1 h-9 px-3 rounded-lg border border-stone-300 text-sm mono" />
+          class="flex-1 h-9 px-3 rounded-lg border border-slate-300 text-sm mono" />
         <button id="gv-key-save" type="button"
           class="h-9 px-4 rounded-lg text-white text-xs font-semibold"
-          style="background:#1e40af">Simpan</button>
+          style="background:#14326b">Simpan</button>
       </div>
       <p class="text-[11px] mt-1.5" style="opacity:.5">Tersimpan di database dan langsung dipakai — tanpa edit .env, tanpa restart server.</p>
     </div>` : ''}
 
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
       <!-- ═══ Panel Upload ═══ -->
-      <section class="bg-white rounded-2xl border border-stone-200 p-5">
+      <section class="bg-white rounded-lg border border-slate-200 p-5">
         <div class="flex items-center gap-2 mb-4">
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style="background:#dbeafe;color:#1e40af">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="background:#dbeafe;color:#14326b">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           </div>
           <div>
-            <h2 class="font-bold text-base text-stone-800">Unggah Gambar</h2>
-            <p class="text-[11px] text-stone-400">Foto dokumen, nota, tabel, atau menu</p>
+            <h2 class="font-bold text-base text-slate-800">Unggah Gambar</h2>
+            <p class="text-[11px] text-slate-400">Foto dokumen, nota, tabel, atau menu</p>
           </div>
         </div>
 
         <div id="gv-dropzone" role="button" tabindex="0" aria-label="Pilih atau tarik gambar"
-          class="relative rounded-xl border-2 border-dashed border-stone-300 px-5 py-9 text-center cursor-pointer transition-all hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          class="relative rounded-lg border-2 border-dashed border-slate-300 px-5 py-9 text-center cursor-pointer transition-all hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           style="background:var(--bg-sidebar-hover)">
           <input id="gv-file" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" />
 
           <div id="gv-empty">
-            <div class="mx-auto mb-3 w-14 h-14 rounded-2xl flex items-center justify-center" style="background:#dbeafe;color:#1e40af">
+            <div class="mx-auto mb-3 w-14 h-14 rounded-lg flex items-center justify-center" style="background:#dbeafe;color:#14326b">
               <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
             </div>
-            <div class="font-semibold text-sm text-stone-700">Tarik & lepas gambar di sini</div>
-            <p class="text-xs text-stone-500 mt-1">atau klik untuk pilih file · bisa juga tempel dengan Ctrl+V</p>
-            <p class="text-[11px] text-stone-400 mt-2">PNG, JPG, WEBP · maks 6 MB · otomatis diperkecil bila perlu</p>
+            <div class="font-semibold text-sm text-slate-700">Tarik & lepas gambar di sini</div>
+            <p class="text-xs text-slate-500 mt-1">atau klik untuk pilih file · bisa juga tempel dengan Ctrl+V</p>
+            <p class="text-[11px] text-slate-400 mt-2">PNG, JPG, WEBP · maks 6 MB · otomatis diperkecil bila perlu</p>
           </div>
 
           <div id="gv-preview-wrap" class="hidden">
-            <img id="gv-preview" alt="Pratinjau gambar" class="mx-auto max-h-72 w-auto max-w-full rounded-lg border border-stone-200" />
-            <div class="mt-3 flex items-center justify-center gap-2 text-xs text-stone-500">
+            <img id="gv-preview" alt="Pratinjau gambar" class="mx-auto max-h-72 w-auto max-w-full rounded-lg border border-slate-200" />
+            <div class="mt-3 flex items-center justify-center gap-2 text-xs text-slate-500">
               <span id="gv-file-info" class="truncate max-w-[78%]"></span>
-              <button id="gv-remove" type="button" class="shrink-0 px-2.5 py-1 rounded-md border border-stone-300 hover:bg-stone-100 transition-colors">Hapus</button>
+              <button id="gv-remove" type="button" class="shrink-0 px-2.5 py-1 rounded-md border border-slate-300 hover:bg-slate-100 transition-colors">Hapus</button>
             </div>
           </div>
         </div>
 
         <div class="mt-4">
-          <label for="gv-prompt" class="block text-xs font-semibold mb-1.5 text-stone-600">
-            Instruksi tambahan <span class="font-normal text-stone-400">(opsional)</span>
+          <label for="gv-prompt" class="block text-xs font-semibold mb-1.5 text-slate-600">
+            Instruksi tambahan <span class="font-normal text-slate-400">(opsional)</span>
           </label>
           <textarea id="gv-prompt" rows="3" maxlength="2000"
             placeholder="Contoh: jumlah bahan dalam gram."
-            class="w-full px-3 py-2 rounded-lg border border-stone-300 text-sm resize-y"></textarea>
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm resize-y"></textarea>
         </div>
 
         <button id="gv-run" type="button" disabled
-          class="mt-4 w-full h-11 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-          style="background:#1e40af">
+          class="mt-4 w-full h-11 rounded-lg font-semibold text-white flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          style="background:#14326b">
           <svg id="gv-run-spinner" class="hidden animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -557,52 +557,52 @@ function renderGroqVision() {
           <span id="gv-run-label">Ekstrak</span>
         </button>
 
-        <div class="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-stone-400">
+        <div class="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-slate-400">
           <span id="gv-api-status" class="flex items-center gap-1.5">Memeriksa status API…</span>
           <span>Maks 6 MB</span>
         </div>
       </section>
 
       <!-- ═══ Panel Hasil ═══ -->
-      <section class="bg-white rounded-2xl border border-stone-200 p-5 flex flex-col min-h-[460px]">
+      <section class="bg-white rounded-lg border border-slate-200 p-5 flex flex-col min-h-[460px]">
         <div class="flex items-start justify-between gap-3 mb-3">
           <div class="min-w-0">
-            <h2 class="font-bold text-base text-stone-800">Hasil Ekstraksi</h2>
+            <h2 class="font-bold text-base text-slate-800">Hasil Ekstraksi</h2>
           </div>
           <span id="gv-json-badge" class="hidden badge shrink-0" style="background:#dcfce7;color:#166534">JSON valid</span>
         </div>
 
-        <div id="gv-result-empty" class="flex-1 flex flex-col items-center justify-center text-center py-16 text-stone-400">
+        <div id="gv-result-empty" class="flex-1 flex flex-col items-center justify-center text-center py-16 text-slate-400">
           <svg class="w-14 h-14 mb-1" style="opacity:.35" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <p class="text-sm mt-3">Hasil teks akan muncul di sini</p>
           <p class="text-xs mt-1" style="opacity:.7">Bisa langsung diedit, disalin, atau diunduh.</p>
         </div>
 
         <textarea id="gv-result" spellcheck="false"
-          class="hidden mono mt-1 w-full flex-1 min-h-[320px] p-3 rounded-xl border border-stone-200 text-[12.5px] leading-relaxed resize-y"
+          class="hidden mono mt-1 w-full flex-1 min-h-[320px] p-3 rounded-lg border border-slate-200 text-[12.5px] leading-relaxed resize-y"
           placeholder="Hasil ekstraksi…"></textarea>
 
         <div id="gv-target-row" class="hidden mt-3 flex flex-wrap items-center gap-2">
-          <label for="gv-target-menu" class="text-xs font-semibold text-stone-600">Simpan ke menu</label>
+          <label for="gv-target-menu" class="text-xs font-semibold text-slate-600">Simpan ke menu</label>
           <select id="gv-target-menu"
-            class="h-9 max-w-[240px] px-2.5 rounded-lg border border-stone-300 text-xs bg-white"></select>
-          <span id="gv-target-note" class="text-[11px] text-stone-400"></span>
+            class="h-9 max-w-[240px] px-2.5 rounded-lg border border-slate-300 text-xs bg-white"></select>
+          <span id="gv-target-note" class="text-[11px] text-slate-400"></span>
         </div>
 
         <div id="gv-actions" class="hidden mt-3 flex flex-wrap items-center gap-2">
-          <button id="gv-copy" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-stone-300 hover:bg-stone-100 transition-colors">
+          <button id="gv-copy" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 hover:bg-slate-100 transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
             Salin
           </button>
-          <button id="gv-download" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-stone-300 hover:bg-stone-100 transition-colors">
+          <button id="gv-download" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 hover:bg-slate-100 transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Unduh
           </button>
-          <button id="gv-format" type="button" class="hidden px-3 py-1.5 rounded-lg text-xs font-medium border border-stone-300 hover:bg-stone-100 transition-colors">Rapikan JSON</button>
+          <button id="gv-format" type="button" class="hidden px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 hover:bg-slate-100 transition-colors">Rapikan JSON</button>
           <button id="gv-to-menu" type="button"
             class="hidden px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
             style="background:#166534">⬆ Masukkan ke Data Menu</button>
-          <button id="gv-clear" type="button" class="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium text-stone-500 hover:bg-stone-100 transition-colors">Bersihkan</button>
+          <button id="gv-clear" type="button" class="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-100 transition-colors">Bersihkan</button>
         </div>
       </section>
     </div>
@@ -635,20 +635,20 @@ function renderGroqVision() {
       dropzone.addEventListener(ev, (e) => {
         e.preventDefault();
         e.stopPropagation();
-        dropzone.classList.add('ring-2', 'ring-blue-400');
+        dropzone.classList.add('ring-2', 'ring-[#14326b]');
       });
     });
     ['dragleave', 'dragend'].forEach((ev) => {
       dropzone.addEventListener(ev, (e) => {
         e.preventDefault();
         e.stopPropagation();
-        dropzone.classList.remove('ring-2', 'ring-blue-400');
+        dropzone.classList.remove('ring-2', 'ring-[#14326b]');
       });
     });
     dropzone.addEventListener('drop', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      dropzone.classList.remove('ring-2', 'ring-blue-400');
+      dropzone.classList.remove('ring-2', 'ring-[#14326b]');
       const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (f) gvSelectFile(f);
     });

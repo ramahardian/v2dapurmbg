@@ -28,36 +28,36 @@ function renderPanduanKeuangan() {
   ];
 
   const alurHtml = `
-  <div class="mt-8 bg-white border border-stone-200 rounded-xl overflow-hidden">
-    <div class="px-5 py-4 font-bold border-b border-stone-200 text-sm">Alur Data Pembelian ke Laporan Keuangan</div>
+  <div class="mt-8 bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div class="px-5 py-4 font-bold border-b border-slate-200 text-sm">Alur Data Pembelian ke Laporan Keuangan</div>
     <div class="p-5">
       <div class="flex flex-col md:flex-row items-stretch gap-3 text-xs">
-        <div class="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-          <div class="font-semibold text-blue-700 mb-1">PO Dibuat</div>
-          <div class="text-blue-500">status: Draft / Disetujui</div>
+        <div class="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
+          <div class="font-semibold text-[#14326b] mb-1">PO Dibuat</div>
+          <div class="text-[#14326b]">status: Draft / Disetujui</div>
         </div>
-        <div class="flex items-center justify-center text-stone-400">
+        <div class="flex items-center justify-center text-slate-400">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
         <div class="flex-1 bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
           <div class="font-semibold text-amber-700 mb-1">PO Dibayar</div>
           <div class="text-amber-500">status: Dibayar</div>
         </div>
-        <div class="flex items-center justify-center text-stone-400">
+        <div class="flex items-center justify-center text-slate-400">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
         <div class="flex-1 bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center">
           <div class="font-semibold text-emerald-700 mb-1">Kas & Bank</div>
           <div class="text-emerald-500">keluar — Pembayaran Supplier</div>
         </div>
-        <div class="flex items-center justify-center text-stone-400">
+        <div class="flex items-center justify-center text-slate-400">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
         <div class="flex-1 bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
           <div class="font-semibold text-purple-700 mb-1">Realisasi Budget</div>
           <div class="text-purple-500">update otomatis</div>
         </div>
-        <div class="flex items-center justify-center text-stone-400">
+        <div class="flex items-center justify-center text-slate-400">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
         <div class="flex-1 bg-rose-50 border border-rose-200 rounded-lg p-4 text-center">
@@ -69,11 +69,11 @@ function renderPanduanKeuangan() {
   </div>`;
 
   const tabelLaporan = `
-  <div class="mt-6 bg-white border border-stone-200 rounded-xl overflow-hidden">
-    <div class="px-5 py-4 font-bold border-b border-stone-200 text-sm">Laporan Terkait Pembelian</div>
+  <div class="mt-6 bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div class="px-5 py-4 font-bold border-b border-slate-200 text-sm">Laporan Terkait Pembelian</div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
-        <thead class="bg-stone-50">
+        <thead class="bg-slate-50">
           <tr>
             <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Laporan</th>
             <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Sumber</th>
@@ -81,17 +81,17 @@ function renderPanduanKeuangan() {
           </tr>
         </thead>
         <tbody>
-          <tr class="border-t border-stone-100"><td class="px-4 py-3 font-medium">Pembelian</td><td class="px-4 py-3">PO langsung</td><td class="px-4 py-3 text-stone-500">Data mentah PO + status</td></tr>
-          <tr class="border-t border-stone-100"><td class="px-4 py-3 font-medium">Laba/Rugi</td><td class="px-4 py-3">Kas & Bank</td><td class="px-4 py-3 text-stone-500">PO dibayar = biaya</td></tr>
-          <tr class="border-t border-stone-100"><td class="px-4 py-3 font-medium">Pengeluaran Bulanan</td><td class="px-4 py-3">Kat: Pembayaran Supplier</td><td class="px-4 py-3 text-stone-500">Biaya bahan baku</td></tr>
-          <tr class="border-t border-stone-100"><td class="px-4 py-3 font-medium">Penggunaan Anggaran</td><td class="px-4 py-3">Kat: Pembayaran Supplier</td><td class="px-4 py-3 text-stone-500">Dana terpakai bahan</td></tr>
-          <tr class="border-t border-stone-100"><td class="px-4 py-3 font-medium">RAB Bulanan</td><td class="px-4 py-3">Budget.realisasi</td><td class="px-4 py-3 text-stone-500">Anggaran vs realisasi</td></tr>
-          <tr class="border-t border-stone-100"><td class="px-4 py-3 font-medium">BP Kas</td><td class="px-4 py-3">Kas & Bank</td><td class="px-4 py-3 text-stone-500">Transaksi per akun BP Kas</td></tr>
-          <tr class="border-t border-stone-100"><td class="px-4 py-3 font-medium">Keuangan</td><td class="px-4 py-3">Kas & Bank</td><td class="px-4 py-3 text-stone-500">Ringkasan arus kas</td></tr>
+          <tr class="border-t border-slate-100"><td class="px-4 py-3 font-medium">Pembelian</td><td class="px-4 py-3">PO langsung</td><td class="px-4 py-3 text-slate-500">Data mentah PO + status</td></tr>
+          <tr class="border-t border-slate-100"><td class="px-4 py-3 font-medium">Laba/Rugi</td><td class="px-4 py-3">Kas & Bank</td><td class="px-4 py-3 text-slate-500">PO dibayar = biaya</td></tr>
+          <tr class="border-t border-slate-100"><td class="px-4 py-3 font-medium">Pengeluaran Bulanan</td><td class="px-4 py-3">Kat: Pembayaran Supplier</td><td class="px-4 py-3 text-slate-500">Biaya bahan baku</td></tr>
+          <tr class="border-t border-slate-100"><td class="px-4 py-3 font-medium">Penggunaan Anggaran</td><td class="px-4 py-3">Kat: Pembayaran Supplier</td><td class="px-4 py-3 text-slate-500">Dana terpakai bahan</td></tr>
+          <tr class="border-t border-slate-100"><td class="px-4 py-3 font-medium">RAB Bulanan</td><td class="px-4 py-3">Budget.realisasi</td><td class="px-4 py-3 text-slate-500">Anggaran vs realisasi</td></tr>
+          <tr class="border-t border-slate-100"><td class="px-4 py-3 font-medium">BP Kas</td><td class="px-4 py-3">Kas & Bank</td><td class="px-4 py-3 text-slate-500">Transaksi per akun BP Kas</td></tr>
+          <tr class="border-t border-slate-100"><td class="px-4 py-3 font-medium">Keuangan</td><td class="px-4 py-3">Kas & Bank</td><td class="px-4 py-3 text-slate-500">Ringkasan arus kas</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="px-5 py-3 bg-stone-50 text-xs text-stone-500 border-t border-stone-200">
+    <div class="px-5 py-3 bg-slate-50 text-xs text-slate-500 border-t border-slate-200">
       <strong>Catatan:</strong> Semua laporan di atas (kecuali "Pembelian") hanya menampilkan PO yang sudah berstatus <strong>Dibayar</strong>.
     </div>
   </div>`;
@@ -99,11 +99,11 @@ function renderPanduanKeuangan() {
   c.innerHTML = `
     <div class="grid gap-4">
       ${steps.map(function(s) {
-        return '<div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-md transition-shadow flex items-start gap-4">' +
-          '<div class="w-12 h-12 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0">' + s.icon + '</div>' +
+        return '<div class="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-md transition-shadow flex items-start gap-4">' +
+          '<div class="w-12 h-12 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0">' + s.icon + '</div>' +
           '<div class="flex-1 min-w-0">' +
             '<h3 class="font-bold text-sm mb-1">' + s.title + '</h3>' +
-            '<p class="text-sm text-stone-500 leading-relaxed">' + s.desc + '</p>' +
+            '<p class="text-sm text-slate-500 leading-relaxed">' + s.desc + '</p>' +
             (s.link ? '<button onclick="' + s.link.action + '()" class="mt-2 text-xs font-medium text-cyan-600 hover:text-cyan-800 inline-flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' + s.link.label + '</button>' : '') +
           '</div>' +
         '</div>';

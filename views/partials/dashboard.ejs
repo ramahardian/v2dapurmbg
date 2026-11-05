@@ -7,7 +7,7 @@
        style="background-image: linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px); background-size: 44px 44px;"></div>
   <div class="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5">
     <div class="min-w-0">
-      <div class="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200">
+      <div class="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">
         <span class="h-1.5 w-1.5 rounded-full bg-[#c6a664]"></span>
         Sistem Operasional <%= tenant && tenant.nama ? tenant.nama : 'Sppg Sukaluyu Tamansari' %>
       </div>
@@ -15,7 +15,7 @@
       <p class="mt-1 text-xs text-slate-300/90">Ringkasan operasional dapur hari ini.</p>
     </div>
     <div class="hidden md:block text-right shrink-0 border-l border-white/15 pl-6">
-      <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-200">Penyerapan Budget</div>
+      <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">Penyerapan Budget</div>
       <div class="mono mt-1 text-2xl font-semibold text-white"><%= summary.persen_budget %>%</div>
       <div class="w-28 h-1.5 bg-white/20 rounded-full mt-2 ml-auto overflow-hidden">
         <div class="h-full rounded-full" style="width:<%= Math.min(summary.persen_budget,100) %>%; background:#c6a664;"></div>

@@ -1,6 +1,6 @@
 async function renderAbsensi() {
   const c = document.getElementById('content');
-  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
+  c.innerHTML = '<div class="dash-card-item flex items-center justify-center py-12"><svg class="animate-spin h-9 w-9 text-[#14326b]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
     const r = await fetch('/api/template/absensi', { credentials: 'include' });
     if (!r.ok) {
@@ -9,22 +9,21 @@ async function renderAbsensi() {
     }
     c.innerHTML = await r.text();
     try {
-      // Filter dropdown: hanya karyawan yang punya data absensi
-      const filterData = await api.get('/karyawan?status=Aktif&has_absensi=1');
-      const filterList = Array.isArray(filterData) ? filterData : [];
+      // Set global karyawanOptions dari karyawan aktif
+      const allData = await api.get('/karyawan?status=Aktif');
+      const allList = Array.isArray(allData) ? allData : [];
+      window.karyawanOptions = allList;
+
+      // Dropdown filter: tangkep semua karyawan aktif
       const filterOpts = '<option value="">Semua Karyawan</option>' +
-        filterList.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+        allList.map(k => '<option value="' + k.id + '">' + k.nama + ' - ' + (k.jabatan_nama || '-') + '</option>').join('');
       const absFilter = document.getElementById('abs-filter-karyawan');
       if (absFilter) absFilter.innerHTML = filterOpts;
 
-      // Form input: semua karyawan aktif (agar bisa input absensi untuk siapa saja)
-      const allData = await api.get('/karyawan?status=Aktif');
-      const allList = Array.isArray(allData) ? allData : [];
+      // Form input: tangkep semua karyawan aktif
       const absForm = document.getElementById('absensi-karyawan');
       if (absForm) absForm.innerHTML = '<option value="">— Pilih —</option>' +
-        allList.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
-      // Set global karyawanOptions agar form edit absensi juga bisa akses
-      window.karyawanOptions = allList;
+        allList.map(k => '<option value="' + k.id + '">' + k.nama + ' - ' + (k.jabatan_nama || '-') + '</option>').join('');
     } catch (e) {
       console.error('Gagal load karyawan:', e);
     }
@@ -35,26 +34,45 @@ async function renderAbsensi() {
       if (!ta.value) ta.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
       if (!tb.value) tb.value = now.toISOString().slice(0, 10);
     }
-    document.getElementById('absensi-save') && (document.getElementById('absensi-save').onclick = saveAbsensi);
+      document.getElementById('absensi-save') && (document.getElementById('absensi-save').onclick = saveAbsensi);
     if (window._absenFilterKaryawanId) {
       const sel = document.getElementById('abs-filter-karyawan');
       if (sel) {
-        const check = setInterval(() => {
+        var check = setInterval(function() {
           if (sel.options.length > 1) {
             sel.value = window._absenFilterKaryawanId;
             clearInterval(check);
             loadAbsensi();
           }
         }, 50);
-        setTimeout(() => clearInterval(check), 3000);
+        setTimeout(function() { clearInterval(check); }, 3000);
       }
       delete window._absenFilterKaryawanId;
     } else {
       loadAbsensi();
     }
+    try {
+      // Set global karyawanOptions dari karyawan aktif
+      const allData = await api.get('/karyawan?status=Aktif');
+      const allList = Array.isArray(allData) ? allData : [];
+      window.karyawanOptions = allList;
+
+      // Dropdown filter: tangkep semua karyawan aktif
+      const filterOpts = '<option value="">Semua Karyawan</option>' +
+        allList.map(k => '<option value="' + k.id + '">' + k.nama + ' - ' + (k.jabatan_nama || '-') + '</option>').join('');
+      const absFilter = document.getElementById('abs-filter-karyawan');
+      if (absFilter) absFilter.innerHTML = filterOpts;
+
+      // Form input: tangkep semua karyawan aktif
+      const absForm = document.getElementById('absensi-karyawan');
+      if (absForm) absForm.innerHTML = '<option value="">— Pilih —</option>' +
+        allList.map(k => '<option value="' + k.id + '">' + k.nama + ' - ' + (k.jabatan_nama || '-') + '</option>').join('');
+    } catch (e) {
+      console.error('Gagal load karyawan:', e);
+    }
   } catch (err) {
     console.error('Absensi error:', err);
-    c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat absensi: ${err.message}</div>`;
+    c.innerHTML = '<div class="dash-card-item"><div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat absensi: ' + err.message + '</div></div>';
   }
 }
 

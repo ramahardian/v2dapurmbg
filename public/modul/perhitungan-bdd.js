@@ -55,7 +55,7 @@ async function loadPbdData(siklusId) {
       var vl = _validation;
       var colors = { 'no_siklus': 'amber', 'no_target': 'orange', 'no_pm_match': 'amber' };
       var c = colors[vl.level] || 'stone';
-      html += '<div class="rounded-xl border border-' + c + '-200 bg-' + c + '-50 p-5 mb-4">';
+      html += '<div class="rounded-lg border border-' + c + '-200 bg-' + c + '-50 p-5 mb-4">';
       html += '<div class="flex items-start gap-3">';
       html += '<svg class="w-6 h-6 shrink-0 mt-0.5 text-' + c + '-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
       html += '<div>';
@@ -75,7 +75,7 @@ async function loadPbdData(siklusId) {
     }
 
     if (!data || !data.length) {
-      html += '<div class="text-center py-16 text-stone-400 bg-white border border-stone-200 rounded-lg"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Tidak ada data untuk ditampilkan</div><div class="text-xs mt-1">Pastikan siklus sudah memiliki menu dengan bahan baku yang terisi.</div></div>';
+      html += '<div class="text-center py-16 text-slate-400 bg-white border border-slate-200 rounded-lg"><svg class="w-14 h-14 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Tidak ada data untuk ditampilkan</div><div class="text-xs mt-1">Pastikan siklus sudah memiliki menu dengan bahan baku yang terisi.</div></div>';
       wrap.innerHTML = html;
       return;
     }
@@ -88,11 +88,11 @@ async function loadPbdData(siklusId) {
     }
 
     // Legenda
-    html += '<div class="bg-white border border-stone-200 rounded-lg p-4 mt-4 text-xs text-stone-500">';
-    html += '<div class="font-semibold text-stone-700 mb-2">Keterangan:</div>';
+    html += '<div class="bg-white border border-slate-200 rounded-lg p-4 mt-4 text-xs text-slate-500">';
+    html += '<div class="font-semibold text-slate-700 mb-2">Keterangan:</div>';
     html += '<ul class="space-y-1 list-disc list-inside">';
     html += '<li><strong>Berat Bersih</strong> = Jumlah bahan per porsi (gram) — dihitung dari SP × Berat 1 SP atau dari data Menu</li>';
-    html += '<li><strong>BDD%</strong> = <em>Bahan Dapat Dimakan</em> — persentase bagian yang dapat dikonsumsi. Sumber: <span class="text-emerald-600 font-medium">SP Referensi</span> (prioritas) atau data <span class="text-stone-500">Bahan Baku</span></li>';
+    html += '<li><strong>BDD%</strong> = <em>Bahan Dapat Dimakan</em> — persentase bagian yang dapat dikonsumsi. Sumber: <span class="text-emerald-600 font-medium">SP Referensi</span> (prioritas) atau data <span class="text-slate-500">Bahan Baku</span></li>';
     html += '<li><strong>Berat Kotor</strong> = Berat Bersih ÷ (BDD ÷ 100)</li>';
     html += '<li><strong>Kebutuhan (kg)</strong> = Berat Kotor × Jumlah Siswa ÷ 1000</li>';
     html += '</ul></div>';
@@ -104,27 +104,27 @@ async function loadPbdData(siklusId) {
 }
 
 function renderPbdFilter(siklusList, selectedId) {
-  var html = '<div class="bg-white border border-stone-200 rounded-lg p-4 mb-4 flex flex-wrap items-center gap-4">';
-  html += '<label class="text-sm font-medium text-stone-700">Pilih Siklus:</label>';
-  html += '<select id="pbd-siklus-select" onchange="loadPbdData(this.value)" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white min-w-[200px] focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
+  var html = '<div class="bg-white border border-slate-200 rounded-lg p-4 mb-4 flex flex-wrap items-center gap-4">';
+  html += '<label class="text-sm font-medium text-slate-700">Pilih Siklus:</label>';
+  html += '<select id="pbd-siklus-select" onchange="loadPbdData(this.value)" class="h-10 px-3 border border-slate-200 rounded-lg text-sm bg-white min-w-[200px] focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
   for (var i = 0; i < siklusList.length; i++) {
     var s = siklusList[i];
     html += '<option value="' + s.id + '" ' + (selectedId && Number(selectedId) === s.id ? 'selected' : '') + '>' + escHtml(s.nama) + ' (' + escHtml(s.status) + ')' + '</option>';
   }
   html += '</select>';
-  html += '<div class="text-xs text-stone-400 ml-auto">' + siklusList.length + ' siklus aktif</div>';
+  html += '<div class="text-xs text-slate-400 ml-auto">' + siklusList.length + ' siklus aktif</div>';
   html += '</div>';
   return html;
 }
 
 function renderPbdJenjangSection(jd, idx) {
-  var html = '<div class="bg-white border border-stone-200 rounded-lg overflow-hidden mb-6">';
+  var html = '<div class="bg-white border border-slate-200 rounded-lg overflow-hidden mb-6">';
 
   // Jenjang header
-  var jColors = ['bg-blue-50 text-blue-800', 'bg-emerald-50 text-emerald-800', 'bg-amber-50 text-amber-800', 'bg-violet-50 text-violet-800', 'bg-cyan-50 text-cyan-800', 'bg-rose-50 text-rose-800'];
+  var jColors = ['bg-slate-50 text-slate-900', 'bg-emerald-50 text-emerald-800', 'bg-amber-50 text-amber-800', 'bg-violet-50 text-violet-800', 'bg-cyan-50 text-cyan-800', 'bg-rose-50 text-rose-800'];
   var jIdx = ['TK/PAUD','SD/MI (1-3)','SD/MI (4-6)','SMP/MTs, SMA/SMK','Bumil/Busui','Balita'].indexOf(jd.jenjang);
   if (jIdx < 0) jIdx = 0;
-  html += '<div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between ' + jColors[jIdx % jColors.length] + '">';
+  html += '<div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between ' + jColors[jIdx % jColors.length] + '">';
   html += '<div><span class="font-bold text-base">' + jd.jenjang + '</span>';
   html += '<span class="ml-3 text-sm font-normal">Jumlah Siswa: <strong>' + fmtPbdNum(jd.jumlah_siswa) + '</strong> orang</span></div>';
   html += '<div class="flex items-center gap-2 text-xs">';
@@ -139,19 +139,19 @@ function renderPbdJenjangSection(jd, idx) {
     var sk = jd.siklus[s];
 
     // Siklus sub-header
-    html += '<div class="px-5 py-2 bg-stone-50 border-b border-stone-200 text-sm font-semibold text-stone-600 flex items-center gap-2">';
+    html += '<div class="px-5 py-2 bg-slate-50 border-b border-slate-200 text-sm font-semibold text-slate-600 flex items-center gap-2">';
     html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
     html += sk.siklus_nama;
     html += '</div>';
 
     // Day tabs (only if more than 1 day)
     if (sk.hari.length > 1) {
-      html += '<div class="px-5 py-2 border-b border-stone-100">';
-      html += '<div class="flex gap-1 bg-stone-100 rounded-lg p-0.5 overflow-x-auto siklus-tab-bar" role="tablist">';
+      html += '<div class="px-5 py-2 border-b border-slate-100">';
+      html += '<div class="flex gap-1 bg-slate-100 rounded-lg p-0.5 overflow-x-auto siklus-tab-bar" role="tablist">';
       for (var h = 0; h < sk.hari.length; h++) {
         var day = sk.hari[h];
         var isFirst = h === 0;
-        html += '<button onclick="switchPbdTab(event, this)" class="px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all ' + (isFirst ? 'bg-white shadow-sm font-bold text-emerald-700' : 'text-stone-500 hover:text-stone-700 hover:bg-stone-200/50') + '" role="tab" aria-selected="' + (isFirst ? 'true' : 'false') + '">' + day.hari_nama + '</button>';
+        html += '<button onclick="switchPbdTab(event, this)" class="px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all ' + (isFirst ? 'bg-white shadow-sm font-bold text-emerald-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50') + '" role="tab" aria-selected="' + (isFirst ? 'true' : 'false') + '">' + day.hari_nama + '</button>';
       }
       html += '</div></div>';
     }
@@ -170,35 +170,35 @@ function renderPbdJenjangSection(jd, idx) {
 }
 
 function renderPbdMenuTable(day, jumlahSiswa) {
-  var html = '<div class="px-5 py-3 border-b border-stone-100 bg-stone-50/30">';
+  var html = '<div class="px-5 py-3 border-b border-slate-100 bg-slate-50/30">';
 
   // Menu header
   html += '<div class="flex items-center gap-3 mb-2">';
   html += '<span class="inline-block px-3 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-sm font-bold">' + day.menu_label + '</span>';
-  html += '<span class="text-sm font-semibold text-stone-700">' + day.hari_nama + '</span>';
-  html += '<span class="text-xs text-stone-400">' + (day.menu_nama || '') + '</span>';
+  html += '<span class="text-sm font-semibold text-slate-700">' + day.hari_nama + '</span>';
+  html += '<span class="text-xs text-slate-400">' + (day.menu_nama || '') + '</span>';
   html += '</div>';
 
   if (!day.bahan || !day.bahan.length) {
-    html += '<div class="text-xs text-stone-400 italic px-2 pb-2">Tidak ada bahan</div></div>';
+    html += '<div class="text-xs text-slate-400 italic px-2 pb-2">Tidak ada bahan</div></div>';
     return html;
   }
 
   // Table
   html += '<div class="overflow-x-auto pb-2"><table class="w-full text-xs border-collapse">';
-  html += '<thead><tr class="border-b border-stone-200">';
-  html += '<th class="px-2 py-1.5 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
-  html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Bersih (g)</th>';
-  html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">BDD (%)</th>';
-  html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Berat Kotor (g)</th>';
-  html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Jumlah Siswa</th>';
-  html += '<th class="px-2 py-1.5 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan (kg)</th>';
+  html += '<thead><tr class="border-b border-slate-200">';
+  html += '<th class="px-2 py-1.5 text-left font-semibold text-slate-600 min-w-[140px]">Bahan Pangan</th>';
+  html += '<th class="px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">Berat Bersih (g)</th>';
+  html += '<th class="px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">BDD (%)</th>';
+  html += '<th class="px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">Berat Kotor (g)</th>';
+  html += '<th class="px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">Jumlah Siswa</th>';
+  html += '<th class="px-2 py-1.5 text-right font-semibold text-slate-600 whitespace-nowrap">Kebutuhan (kg)</th>';
   html += '</tr></thead><tbody>';
 
   for (var i = 0; i < day.bahan.length; i++) {
     var b = day.bahan[i];
     var sumberBdd = b.sumber_bdd === 'sp_referensi';
-    html += '<tr class="border-b border-stone-100 hover:bg-stone-50/50">';
+    html += '<tr class="border-b border-slate-100 hover:bg-slate-50/50">';
     html += '<td class="px-2 py-1.5 text-sm font-medium">' + b.nama_display + '</td>';
     html += '<td class="px-2 py-1.5 text-sm text-right mono">' + fmtPbdNum(b.berat_bersih) + '</td>';
     html += '<td class="px-2 py-1.5 text-sm text-right mono ' + (sumberBdd ? 'text-emerald-600 font-semibold' : '') + '">' + b.persen_bdd + '%</td>';
@@ -219,7 +219,7 @@ function switchPbdTab(event, btn) {
   var tabs = tabBar.querySelectorAll('button');
   var idx = -1;
   for (var i = 0; i < tabs.length; i++) {
-    tabs[i].className = 'px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all text-stone-500 hover:text-stone-700 hover:bg-stone-200/50';
+    tabs[i].className = 'px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all text-slate-500 hover:text-slate-700 hover:bg-slate-200/50';
     tabs[i].setAttribute('aria-selected', 'false');
     if (tabs[i] === btn) idx = i;
   }

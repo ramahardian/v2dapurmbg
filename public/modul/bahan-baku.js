@@ -58,7 +58,7 @@ async function renderBahanBaku() {
   if (bahanSyncInterval) { clearInterval(bahanSyncInterval); bahanSyncInterval = null; }
 
   const c = document.getElementById('content');
-  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
+  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#14326b]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
     const r = await fetch('/api/template/bahan-baku', { credentials: 'include' });
     c.innerHTML = await r.text();
@@ -119,7 +119,7 @@ async function loadBahanBaku() {
 function renderBahanBakuTable(rows) {
   const w = document.getElementById('table-wrap');
   if (!rows.length) {
-    w.innerHTML = '<div class="py-16 text-center text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Belum ada data</div><div class="text-xs text-stone-400 mt-1">Klik "Tambah" untuk mulai.</div></div>';
+    w.innerHTML = '<div class="py-16 text-center text-slate-400"><svg class="w-14 h-14 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Belum ada data</div><div class="text-xs text-slate-400 mt-1">Klik "Tambah" untuk mulai.</div></div>';
     return;
   }
   const fields = getBahanCrud();
@@ -128,13 +128,13 @@ function renderBahanBakuTable(rows) {
   const headers = fields.cols.map(k => {
     const align = numKeys.includes(k) ? 'text-right' : 'text-left';
     const width = narrowCols.includes(k) ? ' w-16' : '';
-    return `<th class="${align} px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500${width}">${fields.fields.find(f => f.k === k)?.l || k}</th>`;
+    return `<th class="${align} px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500${width}">${fields.fields.find(f => f.k === k)?.l || k}</th>`;
   }).join('');
-  const body = rows.map((r, i) => `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+  const body = rows.map((r, i) => `<tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
     ${fields.cols.map(k => {
       const f = fields.fields.find(x => x.k === k);
       const v = r[k];
-      let cell = v == null || v === '' ? '<span class="text-stone-300">—</span>' : String(v);
+      let cell = v == null || v === '' ? '<span class="text-slate-300">—</span>' : String(v);
       const align = numKeys.includes(k) ? 'text-right' : 'text-left';
       const width = narrowCols.includes(k) ? ' w-16' : '';
       if (f?.fmt === 'idr') {
@@ -144,23 +144,23 @@ function renderBahanBakuTable(rows) {
           const curr = Number(v);
           if (curr > prev) cell += ` <span class="text-green-600 text-[10px]">▲</span>`;
           else if (curr < prev) cell += ` <span class="text-red-600 text-[10px]">▼</span>`;
-          else cell += ` <span class="text-stone-400 text-[10px]">—</span>`;
+          else cell += ` <span class="text-slate-400 text-[10px]">—</span>`;
         }
       }
       else if (f?.fmt === 'num') cell = fmtNum(v);
       else if (f?.type === 'date') cell = fmtDate(v);
       else if (k === 'kategori_sp' && v) {
-        const colors = { 'Karbohidrat':'bg-amber-100 text-amber-800','Protein Hewani':'bg-red-100 text-red-800','Protein Nabati':'bg-emerald-100 text-emerald-800','Sayur':'bg-green-100 text-green-800','Buah':'bg-orange-100 text-orange-800','Bumbu':'bg-rose-100 text-rose-800','Susu':'bg-blue-100 text-blue-800','Minyak':'bg-yellow-100 text-yellow-800' };
-        cell = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[v]||'bg-stone-100 text-stone-700'}">${v}</span>`;
+        const colors = { 'Karbohidrat':'bg-amber-100 text-amber-800','Protein Hewani':'bg-red-100 text-red-800','Protein Nabati':'bg-emerald-100 text-emerald-800','Sayur':'bg-green-100 text-green-800','Buah':'bg-orange-100 text-orange-800','Bumbu':'bg-rose-100 text-rose-800','Susu':'bg-slate-100 text-slate-900','Minyak':'bg-yellow-100 text-yellow-800' };
+        cell = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[v]||'bg-slate-100 text-slate-700'}">${v}</span>`;
       }
-      return `<td class="${align} px-4 py-3 text-xs text-stone-600${width}">${cell}</td>`;
+      return `<td class="${align} px-4 py-3 text-xs text-slate-600${width}">${cell}</td>`;
     }).join('')}
     <td class="px-4 py-3 text-right whitespace-nowrap">
       ${spRefLookup[(r.nama||'').toLowerCase()] ? `<button onclick='showSpRefNutrisi(${JSON.stringify(r.nama||'').replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-all" title="Nutrisi"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></button>` : ''}
-      <button onclick='editBahanBaku(${JSON.stringify(r).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-      ${currentUser?.role !== 'ahli_gizi' ? `<button onclick='deleteBahanBaku(${r.id})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
+      <button onclick='editBahanBaku(${JSON.stringify(r).replace(/'/g, "&#39;")})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#14326b] hover:bg-slate-100 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      ${currentUser?.role !== 'ahli_gizi' ? `<button onclick='deleteBahanBaku(${r.id})' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
     </td></tr>`).join('');
-  w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-stone-100">${headers}<th class="px-4 py-3.5 text-right text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  w.innerHTML = `<div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-slate-100">${headers}<th class="px-4 py-3.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">Aksi</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 function editBahanBaku(row) {
@@ -182,26 +182,26 @@ function showSpRefNutrisi(nama) {
   const o = document.createElement('div');
   o.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/40';
   o.onclick = () => o.remove();
-  o.innerHTML = '<div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6" onclick="event.stopPropagation()">'
+  o.innerHTML = '<div class="bg-white rounded-lg shadow-2xl w-full max-w-sm mx-4 p-6" onclick="event.stopPropagation()">'
     + '<div class="flex items-center justify-between mb-4">'
-    + '<h3 class="text-base font-bold text-stone-800">Referensi SP</h3>'
-    + '<button onclick="this.closest(\'.fixed\').remove()" class="w-8 h-8 flex items-center justify-center rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
+    + '<h3 class="text-base font-bold text-slate-800">Referensi SP</h3>'
+    + '<button onclick="this.closest(\'.fixed\').remove()" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
     + '</div>'
     + '<div class="space-y-2">'
-    + '<div class="flex justify-between py-2 border-b border-stone-100"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-500">Nama Bahan</span><span class="text-sm font-medium text-stone-800" id="spref-nama"></span></div>'
-    + '<div class="flex justify-between py-2 border-b border-stone-100"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-500">Kategori SP</span><span class="text-sm font-medium text-stone-800">' + (ref.kategori || '-') + '</span></div>'
-    + '<div class="flex justify-between py-2 border-b border-stone-100"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-500">Berat Bersih</span><span class="text-sm font-medium mono text-stone-800">' + fmtNum(ref.berat_bersih) + ' g</span></div>'
-    + '<div class="flex justify-between py-2 border-b border-stone-100"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-500">BDD</span><span class="text-sm font-medium text-stone-800">' + bddPct + '%</span></div>'
-    + '<div class="flex justify-between py-2 border-b border-stone-100"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-500">Berat Kotor</span><span class="text-sm font-medium mono text-stone-800">' + fmtNum(ref.berat_kotor) + ' g</span></div>'
-    + '<div class="border-t border-stone-200 my-1"></div>'
-    + '<div class="flex justify-between py-2"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-500">Informasi Nutrisi</span><span></span></div>'
-    + '<div class="flex justify-between py-2 border-b border-stone-100"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-500">Energi</span><span class="text-sm font-medium mono text-stone-800">' + (ref.energi ? fmtNum(ref.energi) + ' kkal' : '-') + '</span></div>'
-    + '<div class="flex justify-between py-2 border-b border-stone-100"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-500">Protein</span><span class="text-sm font-medium mono text-stone-800">' + (ref.protein ? fmtNum(ref.protein) + ' g' : '-') + '</span></div>'
-    + '<div class="flex justify-between py-2 border-b border-stone-100"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-500">Lemak</span><span class="text-sm font-medium mono text-stone-800">' + (ref.lemak ? fmtNum(ref.lemak) + ' g' : '-') + '</span></div>'
-    + '<div class="flex justify-between py-2 border-b border-stone-100"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-500">Karbohidrat</span><span class="text-sm font-medium mono text-stone-800">' + (ref.karbohidrat ? fmtNum(ref.karbohidrat) + ' g' : '-') + '</span></div>'
-    + '<div class="flex justify-between py-2"><span class="text-[10px] font-bold uppercase tracking-wider text-stone-500">Serat</span><span class="text-sm font-medium mono text-stone-800">' + (ref.serat ? fmtNum(ref.serat) + ' g' : '-') + '</span></div>'
+    + '<div class="flex justify-between py-2 border-b border-slate-100"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Nama Bahan</span><span class="text-sm font-medium text-slate-800" id="spref-nama"></span></div>'
+    + '<div class="flex justify-between py-2 border-b border-slate-100"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Kategori SP</span><span class="text-sm font-medium text-slate-800">' + (ref.kategori || '-') + '</span></div>'
+    + '<div class="flex justify-between py-2 border-b border-slate-100"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Berat Bersih</span><span class="text-sm font-medium mono text-slate-800">' + fmtNum(ref.berat_bersih) + ' g</span></div>'
+    + '<div class="flex justify-between py-2 border-b border-slate-100"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">BDD</span><span class="text-sm font-medium text-slate-800">' + bddPct + '%</span></div>'
+    + '<div class="flex justify-between py-2 border-b border-slate-100"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Berat Kotor</span><span class="text-sm font-medium mono text-slate-800">' + fmtNum(ref.berat_kotor) + ' g</span></div>'
+    + '<div class="border-t border-slate-200 my-1"></div>'
+    + '<div class="flex justify-between py-2"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Informasi Nutrisi</span><span></span></div>'
+    + '<div class="flex justify-between py-2 border-b border-slate-100"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Energi</span><span class="text-sm font-medium mono text-slate-800">' + (ref.energi ? fmtNum(ref.energi) + ' kkal' : '-') + '</span></div>'
+    + '<div class="flex justify-between py-2 border-b border-slate-100"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Protein</span><span class="text-sm font-medium mono text-slate-800">' + (ref.protein ? fmtNum(ref.protein) + ' g' : '-') + '</span></div>'
+    + '<div class="flex justify-between py-2 border-b border-slate-100"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Lemak</span><span class="text-sm font-medium mono text-slate-800">' + (ref.lemak ? fmtNum(ref.lemak) + ' g' : '-') + '</span></div>'
+    + '<div class="flex justify-between py-2 border-b border-slate-100"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Karbohidrat</span><span class="text-sm font-medium mono text-slate-800">' + (ref.karbohidrat ? fmtNum(ref.karbohidrat) + ' g' : '-') + '</span></div>'
+    + '<div class="flex justify-between py-2"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Serat</span><span class="text-sm font-medium mono text-slate-800">' + (ref.serat ? fmtNum(ref.serat) + ' g' : '-') + '</span></div>'
     + '</div>'
-    + '<button onclick="this.closest(\'.fixed\').remove()" class="mt-5 w-full py-2.5 bg-stone-100 hover:bg-stone-200 rounded-xl text-sm font-medium text-stone-700 transition-all">Tutup</button>'
+    + '<button onclick="this.closest(\'.fixed\').remove()" class="mt-5 w-full py-2.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium text-slate-700 transition-all">Tutup</button>'
     + '</div>';
   document.body.appendChild(o);
   document.getElementById('spref-nama').textContent = ref.nama;
@@ -212,9 +212,9 @@ function renderBahanPagination() {
   if (!wrap) return;
   if (bahanBakuState.totalPages <= 1) { wrap.innerHTML = ''; return; }
 
-  const prevBtn = bahanBakuState.page > 1 ? `<button onclick="bahanGoToPage(${bahanBakuState.page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Prev</button>` : '';
-  const nextBtn = bahanBakuState.page < bahanBakuState.totalPages ? `<button onclick="bahanGoToPage(${bahanBakuState.page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Next</button>` : '';
-  wrap.innerHTML = `<span class="text-sm text-stone-500">Hal ${bahanBakuState.page} dari ${bahanBakuState.totalPages}</span>
+  const prevBtn = bahanBakuState.page > 1 ? `<button onclick="bahanGoToPage(${bahanBakuState.page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Prev</button>` : '';
+  const nextBtn = bahanBakuState.page < bahanBakuState.totalPages ? `<button onclick="bahanGoToPage(${bahanBakuState.page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Next</button>` : '';
+  wrap.innerHTML = `<span class="text-sm text-slate-500">Hal ${bahanBakuState.page} dari ${bahanBakuState.totalPages}</span>
     <div class="flex gap-2">${prevBtn}${nextBtn}</div>`;
 }
 
@@ -240,11 +240,11 @@ function toggleSumberFilter() {
   const btn = document.getElementById('filter-koperasi-btn');
   if (btn) {
     if (bahanBakuState.sumber === 'koperasi') {
-      btn.classList.add('bg-[#1e40af]', 'text-white', 'hover:bg-[#1d4ed8]');
-      btn.classList.remove('border', 'border-stone-300', 'text-stone-700', 'hover:bg-stone-100');
+      btn.classList.add('bg-[#14326b]', 'text-white', 'hover:bg-[#0f2a5f]');
+      btn.classList.remove('border', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-100');
     } else {
-      btn.classList.remove('bg-[#1e40af]', 'text-white', 'hover:bg-[#1d4ed8]');
-      btn.classList.add('border', 'border-stone-300', 'text-stone-700', 'hover:bg-stone-100');
+      btn.classList.remove('bg-[#14326b]', 'text-white', 'hover:bg-[#0f2a5f]');
+      btn.classList.add('border', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-100');
     }
   }
   loadBahanBaku();

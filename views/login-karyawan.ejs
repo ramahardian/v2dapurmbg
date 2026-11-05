@@ -4,205 +4,209 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Absen Karyawan — Sppg Sukaluyu Tamansari</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
     body {
-      font-family: "Geist", sans-serif;
+      font-family: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
       font-weight: 400;
       min-height: 100vh;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #334155 100%);
+      background: #eef2f7;
+      color: #0f172a;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 1rem;
+      position: relative;
+      overflow-x: hidden;
     }
-    h1,h2,h3 { font-family: "Geist", sans-serif; font-weight: 500; }
-    
-    /* Card glassmorphism */
-    .glass-card {
-      background: rgba(255,255,255,0.04);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255,255,255,0.08);
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
-    }
-    
-    /* Floating particles */
-    .particle {
+    h1, h2, h3 { font-family: "Geist", sans-serif; font-weight: 600; letter-spacing: -0.02em; }
+
+    /* ── Latar belakang foto (tetap /bg.jpeg) ── */
+    .page-bg {
       position: fixed;
-      border-radius: 50%;
-      pointer-events: none;
-      opacity: 0.15;
+      inset: 0;
+      background: url('/bg.jpeg') center / cover no-repeat;
+      z-index: -2;
     }
-    
-    /* Input styling */
+    .page-bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(241, 245, 249, 0.92) 0%, rgba(226, 232, 240, 0.90) 55%, rgba(203, 213, 225, 0.92) 100%);
+    }
+
+    /* Kartu korporat */
+    .corp-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      box-shadow: 0 30px 70px -30px rgba(15, 23, 42, 0.35), 0 2px 6px rgba(15, 23, 42, 0.04);
+      animation: cardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Input */
     .input-field {
       width: 100%;
-      height: 3.25rem;
-      padding: 0 1rem 0 3rem;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 1rem;
-      color: #fff;
-      font-size: 1rem;
+      height: 3.1rem;
+      padding: 0 1rem 0 5.5rem;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.5rem;
+      color: #0f172a;
+      font-size: 0.95rem;
       outline: none;
-      transition: all 0.3s ease;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
     }
-    .input-field::placeholder { color: rgba(255,255,255,0.3); }
+    .input-field::placeholder { color: #94a3b8; }
+    .input-field:hover { border-color: #94a3b8; }
     .input-field:focus {
-      border-color: rgba(251,191,36,0.4);
-      background: rgba(255,255,255,0.1);
-      box-shadow: 0 0 0 4px rgba(251,191,36,0.08);
+      border-color: #14326b;
+      box-shadow: 0 0 0 3px rgba(20, 50, 107, 0.12);
     }
     .input-field.error {
-      border-color: rgba(239,68,68,0.5);
-      background: rgba(239,68,68,0.08);
+      border-color: #dc2626;
+      background: #fef2f2;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.10);
     }
-    
-    /* Button */
+
+    /* Tombol */
     .btn-primary {
       width: 100%;
-      height: 3.25rem;
-      background: linear-gradient(135deg, #f59e0b, #fbbf24, #f59e0b);
-      background-size: 200% 200%;
-      border: none;
-      border-radius: 1rem;
-      color: #0f172a;
-      font-weight: 700;
-      font-size: 0.95rem;
+      height: 3.1rem;
+      background: #14326b;
+      border: 1px solid #14326b;
+      border-radius: 0.5rem;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: 0.01em;
       cursor: pointer;
-      transition: all 0.4s ease;
-      position: relative;
-      overflow: hidden;
-      animation: shimmer 3s ease-in-out infinite;
+      transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
     }
     .btn-primary:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 30px -8px rgba(251,191,36,0.3);
+      background: #0f2a5f;
+      border-color: #0f2a5f;
+      box-shadow: 0 8px 18px -10px rgba(15, 42, 95, 0.8);
     }
-    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:focus-visible { outline: 2px solid #14326b; outline-offset: 2px; }
     .btn-primary:disabled {
-      opacity: 0.4;
+      opacity: 0.55;
       cursor: not-allowed;
-      animation: none;
-      background: rgba(255,255,255,0.1);
-      color: rgba(255,255,255,0.3);
     }
-    @keyframes shimmer {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-    }
-    
-    /* Slide transition */
-    .slide-content {
-      animation: slideUp 0.4s ease forwards;
-    }
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    /* Pulse dot */
+
+    /* Aturan emas tipis */
+    .rule-gold { width: 2.5rem; height: 2px; background: #c6a664; }
+
+    /* Titik status */
     .pulse-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      background: #22c55e;
+      background: #16a34a;
       display: inline-block;
       animation: pulse 2s ease-in-out infinite;
     }
     @keyframes pulse {
-      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
-      50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.35); }
+      50% { opacity: 0.7; box-shadow: 0 0 0 5px rgba(22, 163, 74, 0); }
     }
-    
+
     /* Toast */
     .toast {
       position: fixed;
       bottom: 2rem;
       left: 50%;
       transform: translateX(-50%) translateY(100px);
-      background: rgba(0,0,0,0.8);
-      backdrop-filter: blur(12px);
+      background: #0f172a;
       color: #fff;
-      padding: 0.75rem 1.5rem;
-      border-radius: 1rem;
-      font-size: 0.875rem;
+      padding: 0.7rem 1.25rem;
+      border-radius: 0.5rem;
+      font-size: 0.85rem;
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.65rem;
       opacity: 0;
-      transition: all 0.4s ease;
+      transition: all 0.35s ease;
       z-index: 100;
       white-space: nowrap;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 16px 40px -18px rgba(15, 23, 42, 0.6);
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    .toast.error { border-color: rgba(239,68,68,0.3); }
-    .toast.success { border-color: rgba(34,197,94,0.3); }
-    
-    /* Loading spinner */
+    .toast.error { border-color: rgba(220, 38, 38, 0.55); }
+    .toast.success { border-color: rgba(22, 163, 74, 0.55); }
+
+    /* Spinner */
     .spinner {
-      width: 1.25rem;
-      height: 1.25rem;
-      border: 2px solid rgba(255,255,255,0.15);
-      border-top-color: #fbbf24;
+      width: 1.05rem;
+      height: 1.05rem;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-top-color: #ffffff;
       border-radius: 50%;
-      animation: spin 0.6s linear infinite;
+      animation: spin 0.65s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    
-    @media (max-width: 480px) {
-      body { padding: 0.75rem; }
+
+    ::selection { background: rgba(20, 50, 107, 0.18); }
+    @media (max-width: 480px) { body { padding: 0.75rem; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
     }
   </style>
 </head>
 <body>
-  <!-- Particles -->
-  <div class="particle" style="width:300px;height:300px;top:-80px;right:-80px;background:radial-gradient(circle,rgba(251,191,36,0.1),transparent)"></div>
-  <div class="particle" style="width:200px;height:200px;bottom:10%;left:-60px;background:radial-gradient(circle,rgba(59,130,246,0.08),transparent)"></div>
-  <div class="particle" style="width:150px;height:150px;bottom:-40px;right:25%;background:radial-gradient(circle,rgba(168,85,247,0.08),transparent)"></div>
+  <div class="page-bg"></div>
 
-  <div class="w-full max-w-sm">
+  <div class="w-full max-w-sm relative z-10">
     <!-- Logo & Header -->
-    <div class="text-center mb-8 slide-content">
-      <div class="w-20 h-20 mx-auto mb-4 rounded-2xl overflow-hidden bg-white/5 backdrop-blur border border-white/10 shadow-xl flex items-center justify-center p-1.5">
+    <div class="text-center mb-6">
+      <div class="w-[4.5rem] h-[4.5rem] mx-auto mb-4 rounded-lg overflow-hidden bg-white border border-slate-200 shadow-sm flex items-center justify-center p-2">
         <img src="/asset/logo.png?v=<%= logoVer %>" alt="Sppg Sukaluyu Tamansari" class="w-full h-full object-contain" />
       </div>
-      <h1 class="text-2xl font-bold text-white mb-1">Absen Karyawan</h1>
-      <p class="text-white/40 text-sm">Masuk untuk melakukan absensi</p>
+      <div class="rule-gold mx-auto mb-3"></div>
+      <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#14326b]">Portal Karyawan</p>
+      <h1 class="mt-1.5 text-[1.6rem] font-semibold text-slate-900">Absen Karyawan</h1>
+      <p class="mt-1.5 text-[13px] text-slate-500">Masuk untuk melakukan absensi harian.</p>
     </div>
 
     <!-- Card -->
-    <div class="glass-card rounded-2xl p-6 slide-content" style="animation-delay:0.1s">
-      
+    <div class="corp-card p-6">
       <!-- Form -->
       <form id="login-form" class="space-y-4">
         <!-- Phone Input -->
-        <div id="phone-input-group" class="space-y-4 slide-content">
+        <div id="phone-input-group" class="space-y-2">
+          <label for="phone" class="block text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Nomor Telepon</label>
           <div class="relative">
             <input id="phone" type="tel" inputmode="numeric"
               placeholder="81234567890"
-              class="input-field pl-[5.5rem]"
+              class="input-field"
               autocomplete="tel" />
-            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none pl-3 gap-1">
-              <svg class="w-5 h-5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              <span class="text-white/40 text-sm font-medium ml-1">+62</span>
-              <span class="text-white/20 mx-0.5">|</span>
+            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none pl-3 gap-1.5">
+              <svg class="w-[18px] h-[18px] text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              <span class="text-slate-500 text-sm font-medium">+62</span>
+              <span class="text-slate-300">|</span>
             </div>
           </div>
-          <p class="text-white/25 text-xs pl-1">Nomor tanpa angka 0 di depan (cth: 81234567890)</p>
+          <p class="text-slate-400 text-[11px] pl-0.5">Nomor tanpa angka 0 di depan (cth: 81234567890)</p>
         </div>
 
         <!-- Error -->
         <div id="err" class="hidden">
-          <div class="flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl p-3.5">
-            <svg class="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div class="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-lg p-3.5">
+            <svg class="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <div>
-              <p class="text-red-300 text-sm font-medium" id="err-title">Gagal</p>
-              <p class="text-red-400/70 text-xs mt-0.5" id="err-detail"></p>
+              <p class="text-red-700 text-sm font-medium" id="err-title">Gagal</p>
+              <p class="text-red-600/80 text-xs mt-0.5" id="err-detail"></p>
             </div>
           </div>
         </div>
@@ -216,8 +220,8 @@
       </form>
 
       <!-- Info -->
-      <div class="mt-6 pt-4 border-t border-white/5 text-center">
-        <p class="text-white/20 text-xs flex items-center justify-center gap-1.5">
+      <div class="mt-5 pt-4 border-t border-slate-200 text-center">
+        <p class="text-slate-400 text-[11px] flex items-center justify-center gap-1.5">
           <span class="pulse-dot"></span>
           Sistem Absensi Sppg Sukaluyu Tamansari
         </p>
@@ -225,8 +229,8 @@
     </div>
 
     <!-- Quick tips -->
-    <div class="mt-4 text-center slide-content" style="animation-delay:0.2s">
-      <button id="btn-bantuan" class="text-white/25 hover:text-white/50 text-xs transition inline-flex items-center gap-1">
+    <div class="mt-4 text-center">
+      <button id="btn-bantuan" class="text-slate-500 hover:text-[#14326b] text-[11px] transition inline-flex items-center gap-1">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         Hubungi admin jika nomor telepon tidak dikenali
       </button>
@@ -307,12 +311,12 @@
           btnLogin.disabled = false;
           btnText.textContent = 'Masuk & Absen';
           btnSpinner.classList.add('hidden');
-          
+
           // Show inline error
           err.classList.remove('hidden');
           errTitle.textContent = data.error || 'Gagal masuk';
           errDetail.textContent = data.solusi || 'Silakan coba lagi atau hubungi admin';
-          
+
           // Highlight input
           phoneInput.classList.add('error');
           return;

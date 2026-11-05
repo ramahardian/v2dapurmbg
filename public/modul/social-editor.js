@@ -306,11 +306,11 @@ function socialSourceHasAlpha(src) {
 
 function socialProgressHtml(kind) {
   return '<div id="social-' + kind + '-progress" class="mt-2 hidden">' +
-    '<div class="flex items-center justify-between text-[10px] text-stone-500 mb-1">' +
+    '<div class="flex items-center justify-between text-[10px] text-slate-500 mb-1">' +
     '<span id="social-' + kind + '-progress-text">Menyiapkan...</span>' +
     '<span id="social-' + kind + '-progress-pct">0%</span>' +
     '</div>' +
-    '<div class="h-1.5 w-full rounded-full bg-stone-200 overflow-hidden">' +
+    '<div class="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">' +
     '<div id="social-' + kind + '-progress-bar" class="h-full bg-emerald-500 transition-all duration-150" style="width:0%"></div>' +
     '</div>' +
     '</div>';
@@ -436,18 +436,18 @@ function socialEditorHtml(st) {
   const m = st.menu || {};
   const sel = socialSelectedLayer();
   const pr = socialNormalizePhotoRect(st.photoRect);
-  const inputCls = 'mt-1 w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all';
-  const textareaCls = 'mt-1 w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all';
-  const labelCls = 'text-xs font-semibold text-stone-500 uppercase tracking-wide';
-  const cardCls = 'bg-white rounded-xl border border-stone-200 p-5';
+  const inputCls = 'mt-1 w-full h-10 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all';
+  const textareaCls = 'mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all';
+  const labelCls = 'text-xs font-semibold text-slate-500 uppercase tracking-wide';
+  const cardCls = 'bg-white rounded-lg border border-slate-200 p-5';
   const jn = (function() {
     try { const p = JSON.parse(m.kategori || '[]'); return Array.isArray(p) ? p.join(' + ') : ''; } catch (e) { return ''; }
   })();
 
   return `
   <div class="space-y-4">
-    ${st.notice ? `<div class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800"><span class="text-base leading-none">⚠️</span><div>${socialEsc(st.notice)}</div></div>` : ''}
-    <div class="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-xs text-emerald-800">
+    ${st.notice ? `<div class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-xs text-amber-800"><span class="text-base leading-none">⚠️</span><div>${socialEsc(st.notice)}</div></div>` : ''}
+    <div class="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 text-xs text-emerald-800">
       <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div>Buat gambar postingan menu untuk Instagram/media sosial. Geser teks, foto, dan objek langsung di preview, unggah background/foto, lalu <b>Simpan ke Riwayat</b> atau <b>Unduh JPEG</b>.</div>
     </div>
@@ -457,14 +457,14 @@ function socialEditorHtml(st) {
         <div class="${cardCls}">
           <div class="flex items-center justify-between gap-3 mb-4">
             <div>
-              <h3 class="text-sm font-bold text-stone-800">Menu &amp; Format</h3>
-              <div class="text-[11px] text-stone-400">Data menu aktif yang akan ditampilkan.</div>
+              <h3 class="text-sm font-bold text-slate-800">Menu &amp; Format</h3>
+              <div class="text-[11px] text-slate-400">Data menu aktif yang akan ditampilkan.</div>
             </div>
             <a href="/dashboard" data-key="dashboard" class="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800">Ganti menu →</a>
           </div>
-          <div class="rounded-xl bg-stone-50 border border-stone-200 px-3 py-2.5">
-            <div class="text-sm font-bold text-stone-800">${socialEsc(m.menu_nama || 'Tanpa menu')}</div>
-            <div class="text-[11px] text-stone-500 mt-0.5">${socialEsc(socialFmtTanggal(m.tanggal))}${jn ? ' · ' + socialEsc(jn) : ''}</div>
+          <div class="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2.5">
+            <div class="text-sm font-bold text-slate-800">${socialEsc(m.menu_nama || 'Tanpa menu')}</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">${socialEsc(socialFmtTanggal(m.tanggal))}${jn ? ' · ' + socialEsc(jn) : ''}</div>
           </div>
           <label class="block mt-3 ${labelCls}">Format</label>
           <select id="social-format" onchange="socialSetFormat(this.value)" class="${inputCls}">
@@ -475,108 +475,108 @@ function socialEditorHtml(st) {
         </div>
 
         <div class="${cardCls}">
-          <h3 class="text-sm font-bold text-stone-800 mb-1">Latar &amp; Foto</h3>
-          <div class="text-[11px] text-stone-400 mb-3">PNG transparan didukung. Gambar dikompres otomatis; garis panduan tengah di preview membantu posisi ompreng.</div>
+          <h3 class="text-sm font-bold text-slate-800 mb-1">Latar &amp; Foto</h3>
+          <div class="text-[11px] text-slate-400 mb-3">PNG transparan didukung. Gambar dikompres otomatis; garis panduan tengah di preview membantu posisi ompreng.</div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="${labelCls}">Warna Latar</label>
               <div class="flex items-center gap-2 mt-1">
-                <input id="social-bg-color" type="color" value="${socialEsc(st.bgColor)}" oninput="socialSetBgColor(this.value)" class="w-11 h-10 rounded-lg border border-stone-200 bg-white cursor-pointer shrink-0" />
-                <input id="social-bg-color-hex" maxlength="7" value="${socialEsc(st.bgColor)}" oninput="socialSetBgColor(this.value)" class="flex-1 min-w-0 h-10 px-3 border border-stone-200 rounded-lg text-sm mono uppercase" />
+                <input id="social-bg-color" type="color" value="${socialEsc(st.bgColor)}" oninput="socialSetBgColor(this.value)" class="w-11 h-10 rounded-lg border border-slate-200 bg-white cursor-pointer shrink-0" />
+                <input id="social-bg-color-hex" maxlength="7" value="${socialEsc(st.bgColor)}" oninput="socialSetBgColor(this.value)" class="flex-1 min-w-0 h-10 px-3 border border-slate-200 rounded-lg text-sm mono uppercase" />
               </div>
             </div>
             <div>
-              <label class="${labelCls}">Overlay Gambar <span id="social-bg-overlay-val" class="text-stone-400 normal-case">${st.bgOverlay}%</span></label>
+              <label class="${labelCls}">Overlay Gambar <span id="social-bg-overlay-val" class="text-slate-400 normal-case">${st.bgOverlay}%</span></label>
               <input id="social-bg-overlay" type="range" min="0" max="80" step="1" value="${st.bgOverlay}" oninput="socialSetBgOverlay(this.value)" class="mt-3 w-full accent-emerald-600" />
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-            <div class="rounded-xl border border-stone-200 p-3">
+            <div class="rounded-lg border border-slate-200 p-3">
               <div class="flex items-center justify-between mb-2">
-                <div class="text-xs font-semibold text-stone-700">Gambar Latar</div>
+                <div class="text-xs font-semibold text-slate-700">Gambar Latar</div>
                 <button type="button" id="social-bg-remove" onclick="socialRemoveImage('background')" class="text-[10px] font-semibold text-red-600 hover:text-red-700 hidden">Hapus</button>
               </div>
-              <img id="social-bg-thumb" alt="Background" class="w-full h-20 object-cover rounded-lg border border-stone-200 hidden" />
-              <div id="social-bg-empty" class="w-full h-20 rounded-lg border border-dashed border-stone-200 bg-stone-50 flex items-center justify-center text-[11px] text-stone-400">Belum ada gambar latar</div>
-              <input type="file" accept="image/png,image/jpeg,image/webp" onchange="socialPickImage('background', this)" class="mt-2 block w-full text-[11px] text-stone-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
+              <img id="social-bg-thumb" alt="Background" class="w-full h-20 object-cover rounded-lg border border-slate-200 hidden" />
+              <div id="social-bg-empty" class="w-full h-20 rounded-lg border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-[11px] text-slate-400">Belum ada gambar latar</div>
+              <input type="file" accept="image/png,image/jpeg,image/webp" onchange="socialPickImage('background', this)" class="mt-2 block w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
               ${socialProgressHtml('background')}
             </div>
-            <div class="rounded-xl border border-stone-200 p-3">
+            <div class="rounded-lg border border-slate-200 p-3">
               <div class="flex items-center justify-between mb-2">
-                <div class="text-xs font-semibold text-stone-700">Foto Menu</div>
+                <div class="text-xs font-semibold text-slate-700">Foto Menu</div>
                 <button type="button" id="social-photo-remove" onclick="socialRemoveImage('photo')" class="text-[10px] font-semibold text-red-600 hover:text-red-700 hidden">Hapus</button>
               </div>
-              <img id="social-photo-thumb" alt="Foto menu" class="w-full h-20 object-cover rounded-lg border border-stone-200 hidden" style="background-image:linear-gradient(45deg,#e7e5e4 25%,transparent 25%),linear-gradient(-45deg,#e7e5e4 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e7e5e4 75%),linear-gradient(-45deg,transparent 75%,#e7e5e4 75%);background-size:12px 12px;background-position:0 0,0 6px,6px -6px,-6px 0" />
-              <div id="social-photo-empty" class="w-full h-20 rounded-lg border border-dashed border-stone-200 bg-stone-50 flex items-center justify-center text-[11px] text-stone-400">Belum ada foto menu</div>
-              <input type="file" accept="image/png,image/jpeg,image/webp" onchange="socialPickImage('photo', this)" class="mt-2 block w-full text-[11px] text-stone-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
+              <img id="social-photo-thumb" alt="Foto menu" class="w-full h-20 object-cover rounded-lg border border-slate-200 hidden" style="background-image:linear-gradient(45deg,#e7e5e4 25%,transparent 25%),linear-gradient(-45deg,#e7e5e4 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e7e5e4 75%),linear-gradient(-45deg,transparent 75%,#e7e5e4 75%);background-size:12px 12px;background-position:0 0,0 6px,6px -6px,-6px 0" />
+              <div id="social-photo-empty" class="w-full h-20 rounded-lg border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-[11px] text-slate-400">Belum ada foto menu</div>
+              <input type="file" accept="image/png,image/jpeg,image/webp" onchange="socialPickImage('photo', this)" class="mt-2 block w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
               ${socialProgressHtml('photo')}
             </div>
           </div>
 
-          <div class="mt-4 border-t border-stone-200 pt-3">
+          <div class="mt-4 border-t border-slate-200 pt-3">
             <div class="flex items-center justify-between">
-              <div class="text-xs font-semibold text-stone-700">Posisi &amp; Ukuran Foto</div>
+              <div class="text-xs font-semibold text-slate-700">Posisi &amp; Ukuran Foto</div>
               <button type="button" onclick="socialResetPhotoRect()" class="text-[10px] font-semibold text-emerald-700 hover:text-emerald-800 px-2 py-1 rounded-md hover:bg-emerald-50">Reset</button>
             </div>
             <div class="grid grid-cols-2 gap-x-3 gap-y-2 mt-2">
-              <label class="block text-[10px] font-medium text-stone-500">X <span id="social-photo-x-val" class="text-stone-400">${Math.round(pr.xPct * 100)}%</span>
+              <label class="block text-[10px] font-medium text-slate-500">X <span id="social-photo-x-val" class="text-slate-400">${Math.round(pr.xPct * 100)}%</span>
                 <input id="social-photo-x" type="range" min="-20" max="95" step="1" value="${Math.round(pr.xPct * 100)}" oninput="socialUpdatePhotoRect('xPct', this.value)" class="mt-1 w-full accent-emerald-600" />
               </label>
-              <label class="block text-[10px] font-medium text-stone-500">Y <span id="social-photo-y-val" class="text-stone-400">${Math.round(pr.yPct * 100)}%</span>
+              <label class="block text-[10px] font-medium text-slate-500">Y <span id="social-photo-y-val" class="text-slate-400">${Math.round(pr.yPct * 100)}%</span>
                 <input id="social-photo-y" type="range" min="-20" max="95" step="1" value="${Math.round(pr.yPct * 100)}" oninput="socialUpdatePhotoRect('yPct', this.value)" class="mt-1 w-full accent-emerald-600" />
               </label>
-              <label class="block text-[10px] font-medium text-stone-500">Lebar <span id="social-photo-w-val" class="text-stone-400">${Math.round(pr.wPct * 100)}%</span>
+              <label class="block text-[10px] font-medium text-slate-500">Lebar <span id="social-photo-w-val" class="text-slate-400">${Math.round(pr.wPct * 100)}%</span>
                 <input id="social-photo-w" type="range" min="10" max="110" step="1" value="${Math.round(pr.wPct * 100)}" oninput="socialUpdatePhotoRect('wPct', this.value)" class="mt-1 w-full accent-emerald-600" />
               </label>
-              <label class="block text-[10px] font-medium text-stone-500">Tinggi <span id="social-photo-h-val" class="text-stone-400">${Math.round(pr.hPct * 100)}%</span>
+              <label class="block text-[10px] font-medium text-slate-500">Tinggi <span id="social-photo-h-val" class="text-slate-400">${Math.round(pr.hPct * 100)}%</span>
                 <input id="social-photo-h" type="range" min="10" max="110" step="1" value="${Math.round(pr.hPct * 100)}" oninput="socialUpdatePhotoRect('hPct', this.value)" class="mt-1 w-full accent-emerald-600" />
               </label>
             </div>
-            <div class="text-[10px] text-stone-400 mt-1">Geser kotak foto langsung di preview.</div>
+            <div class="text-[10px] text-slate-400 mt-1">Geser kotak foto langsung di preview.</div>
           </div>
         </div>
 
         <div class="${cardCls}">
           <div class="flex items-start justify-between gap-3 mb-3">
             <div>
-              <h3 class="text-sm font-bold text-stone-800">Objek &amp; Bentuk</h3>
-              <div class="text-[11px] text-stone-400">Tambah kotak, lingkaran, garis, panah, atau segitiga. Geser langsung di preview.</div>
+              <h3 class="text-sm font-bold text-slate-800">Objek &amp; Bentuk</h3>
+              <div class="text-[11px] text-slate-400">Tambah kotak, lingkaran, garis, panah, atau segitiga. Geser langsung di preview.</div>
             </div>
           </div>
           <div class="flex flex-wrap gap-1.5">
-            <button type="button" onclick="socialAddObject('rect')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[11px] font-semibold text-stone-600 transition-colors">+ Kotak</button>
-            <button type="button" onclick="socialAddObject('ellipse')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[11px] font-semibold text-stone-600 transition-colors">+ Lingkaran</button>
-            <button type="button" onclick="socialAddObject('line')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[11px] font-semibold text-stone-600 transition-colors">+ Garis</button>
-            <button type="button" onclick="socialAddObject('arrow')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[11px] font-semibold text-stone-600 transition-colors">+ Panah</button>
-            <button type="button" onclick="socialAddObject('triangle')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[11px] font-semibold text-stone-600 transition-colors">+ Segitiga</button>
+            <button type="button" onclick="socialAddObject('rect')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-600 transition-colors">+ Kotak</button>
+            <button type="button" onclick="socialAddObject('ellipse')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-600 transition-colors">+ Lingkaran</button>
+            <button type="button" onclick="socialAddObject('line')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-600 transition-colors">+ Garis</button>
+            <button type="button" onclick="socialAddObject('arrow')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-600 transition-colors">+ Panah</button>
+            <button type="button" onclick="socialAddObject('triangle')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-600 transition-colors">+ Segitiga</button>
           </div>
           <div id="social-object-list" class="flex flex-wrap gap-1.5 mt-3"></div>
-          <div id="social-object-controls" class="mt-3 border-t border-stone-200 pt-3 hidden">
+          <div id="social-object-controls" class="mt-3 border-t border-slate-200 pt-3 hidden">
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="${labelCls}">Warna</label>
-                <input id="social-object-color" type="color" oninput="socialUpdateObject('color', this.value)" class="mt-1 w-full h-10 rounded-lg border border-stone-200 bg-white cursor-pointer" />
+                <input id="social-object-color" type="color" oninput="socialUpdateObject('color', this.value)" class="mt-1 w-full h-10 rounded-lg border border-slate-200 bg-white cursor-pointer" />
               </div>
               <div>
                 <label class="${labelCls}">Ketebalan</label>
                 <input id="social-object-stroke" type="number" min="1" max="60" step="1" oninput="socialUpdateObject('strokeWidth', this.value)" class="${inputCls}" />
               </div>
               <div>
-                <label class="${labelCls}">Lebar <span id="social-object-w-val" class="text-stone-400 normal-case">26%</span></label>
+                <label class="${labelCls}">Lebar <span id="social-object-w-val" class="text-slate-400 normal-case">26%</span></label>
                 <input id="social-object-w" type="range" min="4" max="110" step="1" oninput="socialUpdateObject('wPct', this.value)" class="mt-3 w-full accent-emerald-600" />
               </div>
               <div>
-                <label class="${labelCls}">Tinggi <span id="social-object-h-val" class="text-stone-400 normal-case">16%</span></label>
+                <label class="${labelCls}">Tinggi <span id="social-object-h-val" class="text-slate-400 normal-case">16%</span></label>
                 <input id="social-object-h" type="range" min="0" max="110" step="1" oninput="socialUpdateObject('hPct', this.value)" class="mt-3 w-full accent-emerald-600" />
               </div>
               <div>
-                <label class="${labelCls}">Rotasi <span id="social-object-rot-val" class="text-stone-400 normal-case">0°</span></label>
+                <label class="${labelCls}">Rotasi <span id="social-object-rot-val" class="text-slate-400 normal-case">0°</span></label>
                 <input id="social-object-rotation" type="range" min="-180" max="180" step="1" oninput="socialUpdateObject('rotation', this.value)" class="mt-3 w-full accent-emerald-600" />
               </div>
               <div>
-                <label class="${labelCls}">Opasitas <span id="social-object-opacity-val" class="text-stone-400 normal-case">100%</span></label>
+                <label class="${labelCls}">Opasitas <span id="social-object-opacity-val" class="text-slate-400 normal-case">100%</span></label>
                 <input id="social-object-opacity" type="range" min="10" max="100" step="1" oninput="socialUpdateObject('opacity', this.value)" class="mt-3 w-full accent-emerald-600" />
               </div>
             </div>
@@ -586,7 +586,7 @@ function socialEditorHtml(st) {
                 ${Object.keys(SOCIAL_ARROW_STYLES).map(function(k) { return socialFormatOption(k, 'classic', SOCIAL_ARROW_STYLES[k].label); }).join('')}
               </select>
             </div>
-            <label class="inline-flex items-center gap-2 mt-3 text-xs font-medium text-stone-600"><input id="social-object-fill" type="checkbox" onchange="socialUpdateObject('fill', this.checked)" class="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" /> Isi penuh (kotak/lingkaran/segitiga)</label>
+            <label class="inline-flex items-center gap-2 mt-3 text-xs font-medium text-slate-600"><input id="social-object-fill" type="checkbox" onchange="socialUpdateObject('fill', this.checked)" class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" /> Isi penuh (kotak/lingkaran/segitiga)</label>
             <button type="button" onclick="socialDeleteObject()" class="mt-3 text-[11px] font-semibold text-red-600 hover:text-red-700 px-2.5 py-1.5 rounded-lg hover:bg-red-50">Hapus objek ini</button>
           </div>
         </div>
@@ -594,8 +594,8 @@ function socialEditorHtml(st) {
         <div class="${cardCls}">
           <div class="flex items-center justify-between gap-3 mb-3">
             <div>
-              <h3 class="text-sm font-bold text-stone-800">Teks &amp; Posisi</h3>
-              <div class="text-[11px] text-stone-400">Pilih layer, edit teks, lalu geser di preview.</div>
+              <h3 class="text-sm font-bold text-slate-800">Teks &amp; Posisi</h3>
+              <div class="text-[11px] text-slate-400">Pilih layer, edit teks, lalu geser di preview.</div>
             </div>
             <button type="button" onclick="socialAddLayer()" class="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 px-2.5 py-1.5 rounded-lg hover:bg-emerald-50">
               <span class="text-base leading-none">+</span> Teks Baru
@@ -613,7 +613,7 @@ function socialEditorHtml(st) {
               <select id="social-layer-font" onchange="socialUpdateLayer('font', this.value)" class="${inputCls}">
                 ${Object.keys(SOCIAL_FONTS).map(function(k) { return socialFormatOption(k, sel && sel.font, SOCIAL_FONTS[k].label); }).join('')}
               </select>
-              <div class="text-[10px] text-stone-400 mt-1">Font Google dimuat otomatis saat dipilih.</div>
+              <div class="text-[10px] text-slate-400 mt-1">Font Google dimuat otomatis saat dipilih.</div>
             </div>
             <div>
               <label class="${labelCls}">Ukuran (px)</label>
@@ -621,7 +621,7 @@ function socialEditorHtml(st) {
             </div>
             <div>
               <label class="${labelCls}">Warna</label>
-              <input id="social-layer-color" type="color" oninput="socialUpdateLayer('color', this.value)" class="mt-1 w-full h-10 rounded-lg border border-stone-200 bg-white cursor-pointer" />
+              <input id="social-layer-color" type="color" oninput="socialUpdateLayer('color', this.value)" class="mt-1 w-full h-10 rounded-lg border border-slate-200 bg-white cursor-pointer" />
             </div>
             <div>
               <label class="${labelCls}">Ketebalan</label>
@@ -640,58 +640,58 @@ function socialEditorHtml(st) {
               </select>
             </div>
             <div class="sm:col-span-2">
-              <label class="${labelCls}">Lebar Teks <span id="social-layer-width-val" class="text-stone-400 normal-case">${sel ? Math.round((sel.maxWidthPct || 0.86) * 100) : 86}%</span></label>
+              <label class="${labelCls}">Lebar Teks <span id="social-layer-width-val" class="text-slate-400 normal-case">${sel ? Math.round((sel.maxWidthPct || 0.86) * 100) : 86}%</span></label>
               <input id="social-layer-width" type="range" min="20" max="100" step="1" value="${sel ? Math.round((sel.maxWidthPct || 0.86) * 100) : 86}" oninput="socialUpdateLayer('width', this.value)" class="mt-3 w-full accent-emerald-600" />
             </div>
-            <div class="sm:col-span-2 border-t border-stone-200 pt-3 mt-1">
-              <label class="inline-flex items-center gap-2 text-xs font-semibold text-stone-700">
-                <input id="social-layer-shadow" type="checkbox" ${sel && sel.shadow ? 'checked' : ''} onchange="socialUpdateLayer('shadow', this.checked)" class="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+            <div class="sm:col-span-2 border-t border-slate-200 pt-3 mt-1">
+              <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <input id="social-layer-shadow" type="checkbox" ${sel && sel.shadow ? 'checked' : ''} onchange="socialUpdateLayer('shadow', this.checked)" class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
                 Bayangan teks
               </label>
               <div class="grid grid-cols-3 gap-2 mt-2">
                 <div>
-                  <label class="text-[10px] font-medium text-stone-500">Warna</label>
-                  <input id="social-layer-shadow-color" type="color" value="${(sel && sel.shadowColor) || '#000000'}" oninput="socialUpdateLayer('shadowColor', this.value)" class="mt-1 w-full h-9 rounded-lg border border-stone-200 bg-white cursor-pointer" />
+                  <label class="text-[10px] font-medium text-slate-500">Warna</label>
+                  <input id="social-layer-shadow-color" type="color" value="${(sel && sel.shadowColor) || '#000000'}" oninput="socialUpdateLayer('shadowColor', this.value)" class="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white cursor-pointer" />
                 </div>
                 <div>
-                  <label class="text-[10px] font-medium text-stone-500">Blur</label>
+                  <label class="text-[10px] font-medium text-slate-500">Blur</label>
                   <input id="social-layer-shadow-blur" type="number" min="0" max="60" step="1" value="${sel ? Math.round(Number(sel.shadowBlur) || 0) : 10}" oninput="socialUpdateLayer('shadowBlur', this.value)" class="${inputCls}" />
                 </div>
                 <div>
-                  <label class="text-[10px] font-medium text-stone-500">Offset Y</label>
+                  <label class="text-[10px] font-medium text-slate-500">Offset Y</label>
                   <input id="social-layer-shadow-offset" type="number" min="-40" max="40" step="1" value="${sel ? Math.round(Number(sel.shadowOffsetY) || 0) : 3}" oninput="socialUpdateLayer('shadowOffsetY', this.value)" class="${inputCls}" />
                 </div>
               </div>
 
-              <label class="inline-flex items-center gap-2 mt-3 text-xs font-semibold text-stone-700">
-                <input id="social-layer-stroke" type="checkbox" ${sel && sel.stroke ? 'checked' : ''} onchange="socialUpdateLayer('stroke', this.checked)" class="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <label class="inline-flex items-center gap-2 mt-3 text-xs font-semibold text-slate-700">
+                <input id="social-layer-stroke" type="checkbox" ${sel && sel.stroke ? 'checked' : ''} onchange="socialUpdateLayer('stroke', this.checked)" class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
                 Garis tepi (outline)
               </label>
               <div class="grid grid-cols-2 gap-2 mt-2">
                 <div>
-                  <label class="text-[10px] font-medium text-stone-500">Warna tepi</label>
-                  <input id="social-layer-stroke-color" type="color" value="${(sel && sel.strokeColor) || '#000000'}" oninput="socialUpdateLayer('strokeColor', this.value)" class="mt-1 w-full h-9 rounded-lg border border-stone-200 bg-white cursor-pointer" />
+                  <label class="text-[10px] font-medium text-slate-500">Warna tepi</label>
+                  <input id="social-layer-stroke-color" type="color" value="${(sel && sel.strokeColor) || '#000000'}" oninput="socialUpdateLayer('strokeColor', this.value)" class="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white cursor-pointer" />
                 </div>
                 <div>
-                  <label class="text-[10px] font-medium text-stone-500">Ketebalan</label>
+                  <label class="text-[10px] font-medium text-slate-500">Ketebalan</label>
                   <input id="social-layer-stroke-width" type="number" min="0" max="20" step="0.5" value="${sel ? Number(sel.strokeWidth) || 0 : 2}" oninput="socialUpdateLayer('strokeWidth', this.value)" class="${inputCls}" />
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3 mt-3">
                 <div>
-                  <label class="${labelCls}">Opasitas <span id="social-layer-opacity-val" class="text-stone-400 normal-case">${sel ? Math.round(Number(sel.opacity) || 100) : 100}%</span></label>
+                  <label class="${labelCls}">Opasitas <span id="social-layer-opacity-val" class="text-slate-400 normal-case">${sel ? Math.round(Number(sel.opacity) || 100) : 100}%</span></label>
                   <input id="social-layer-opacity" type="range" min="10" max="100" step="1" value="${sel ? Math.round(Number(sel.opacity) || 100) : 100}" oninput="socialUpdateLayer('opacity', this.value)" class="mt-3 w-full accent-emerald-600" />
                 </div>
                 <div>
-                  <label class="${labelCls}">Jarak Baris <span id="social-layer-lineheight-val" class="text-stone-400 normal-case">${sel ? Math.round(Number(sel.lineHeight) || 118) : 118}%</span></label>
+                  <label class="${labelCls}">Jarak Baris <span id="social-layer-lineheight-val" class="text-slate-400 normal-case">${sel ? Math.round(Number(sel.lineHeight) || 118) : 118}%</span></label>
                   <input id="social-layer-lineheight" type="range" min="80" max="200" step="5" value="${sel ? Math.round(Number(sel.lineHeight) || 118) : 118}" oninput="socialUpdateLayer('lineHeight', this.value)" class="mt-3 w-full accent-emerald-600" />
                 </div>
               </div>
               <div class="mt-3">
-                <label class="${labelCls}">Lengkungan Teks <span id="social-layer-curve-val" class="text-stone-400 normal-case">${sel ? Math.round(Number(sel.curve) || 0) : 0}%</span></label>
+                <label class="${labelCls}">Lengkungan Teks <span id="social-layer-curve-val" class="text-slate-400 normal-case">${sel ? Math.round(Number(sel.curve) || 0) : 0}%</span></label>
                 <input id="social-layer-curve" type="range" min="-100" max="100" step="1" value="${sel ? Math.round(Number(sel.curve) || 0) : 0}" oninput="socialUpdateLayer('curve', this.value)" class="mt-3 w-full accent-emerald-600" />
-                <div class="text-[10px] text-stone-400 mt-1">Kanan = melengkung ke atas, kiri = ke bawah. 0% = lurus.</div>
+                <div class="text-[10px] text-slate-400 mt-1">Kanan = melengkung ke atas, kiri = ke bawah. 0% = lurus.</div>
               </div>
             </div>
           </div>
@@ -701,8 +701,8 @@ function socialEditorHtml(st) {
         <div class="${cardCls}">
           <div class="flex items-center justify-between gap-3 mb-3">
             <div>
-              <h3 class="text-sm font-bold text-stone-800">Caption &amp; Hashtag</h3>
-              <div class="text-[11px] text-stone-400">Disimpan bersama postingan, tidak dicetak ke gambar.</div>
+              <h3 class="text-sm font-bold text-slate-800">Caption &amp; Hashtag</h3>
+              <div class="text-[11px] text-slate-400">Disimpan bersama postingan, tidak dicetak ke gambar.</div>
             </div>
             <button type="button" onclick="socialCopyCaption()" class="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 px-2.5 py-1.5 rounded-lg hover:bg-emerald-50">Salin</button>
           </div>
@@ -713,27 +713,27 @@ function socialEditorHtml(st) {
         </div>
 
         <div class="flex flex-wrap items-center gap-2 pb-6">
-          <button type="button" id="social-save" onclick="socialSave()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60">
+          <button type="button" id="social-save" onclick="socialSave()" class="inline-flex items-center gap-2 bg-[#14326b] hover:bg-[#0f2a5f] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             Simpan ke Riwayat
           </button>
-          <button type="button" onclick="socialDownload()" class="inline-flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+          <button type="button" onclick="socialDownload()" class="inline-flex items-center gap-2 border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Unduh JPEG
           </button>
-          <button type="button" onclick="socialShare()" class="inline-flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+          <button type="button" onclick="socialShare()" class="inline-flex items-center gap-2 border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             Bagikan
           </button>
-          <button type="button" onclick="socialNewPost()" class="inline-flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">Postingan Baru</button>
+          <button type="button" onclick="socialNewPost()" class="inline-flex items-center gap-2 border border-slate-200 hover:bg-slate-50 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">Postingan Baru</button>
           ${st.postId ? `<button type="button" onclick="socialDeletePost(${Number(st.postId)})" class="inline-flex items-center gap-2 border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">Hapus Postingan</button>` : ''}
-          <span id="social-save-status" class="text-[11px] text-stone-400"></span>
+          <span id="social-save-status" class="text-[11px] text-slate-400"></span>
           <div id="social-save-progress" class="w-full mt-1 hidden">
-            <div class="flex items-center justify-between text-[10px] text-stone-500 mb-1">
+            <div class="flex items-center justify-between text-[10px] text-slate-500 mb-1">
               <span id="social-save-progress-text">Menyiapkan...</span>
               <span id="social-save-progress-pct">0%</span>
             </div>
-            <div class="h-1.5 w-full rounded-full bg-stone-200 overflow-hidden">
+            <div class="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
               <div id="social-save-progress-bar" class="h-full bg-emerald-500 transition-all duration-150" style="width:0%"></div>
             </div>
           </div>
@@ -741,31 +741,31 @@ function socialEditorHtml(st) {
       </div>
 
       <div class="xl:col-span-2">
-        <div class="xl:sticky xl:top-20 bg-white rounded-xl border border-stone-200 p-4 xl:max-h-[calc(100vh_-_6rem)] xl:overflow-y-auto">
+        <div class="xl:sticky xl:top-20 bg-white rounded-lg border border-slate-200 p-4 xl:max-h-[calc(100vh_-_6rem)] xl:overflow-y-auto">
           <div class="flex items-center justify-between mb-3">
             <div>
-              <div class="text-sm font-bold text-stone-800">Preview</div>
-              <div id="social-preview-meta" class="text-[11px] text-stone-400"></div>
+              <div class="text-sm font-bold text-slate-800">Preview</div>
+              <div id="social-preview-meta" class="text-[11px] text-slate-400"></div>
             </div>
             <button type="button" onclick="socialDrawPreview()" class="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50">Muat ulang</button>
           </div>
-          <div class="rounded-xl overflow-hidden border border-stone-200 bg-stone-100">
+          <div class="rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
             <canvas id="social-preview" class="w-full block" style="touch-action:none"></canvas>
           </div>
-          <p class="text-[11px] text-stone-400 mt-2 leading-relaxed">Geser teks, foto, atau objek langsung di preview. Gambar final disimpan sebagai JPEG terkompresi.</p>
+          <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">Geser teks, foto, atau objek langsung di preview. Gambar final disimpan sebagai JPEG terkompresi.</p>
         </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-stone-200 p-5">
+    <div class="bg-white rounded-lg border border-slate-200 p-5">
       <div class="flex items-center justify-between gap-3 mb-3">
         <div>
-          <h3 class="text-sm font-bold text-stone-800">Riwayat Postingan</h3>
-          <div class="text-[11px] text-stone-400">Hapus di sini akan menghapus baris database dan file gambar asli.</div>
+          <h3 class="text-sm font-bold text-slate-800">Riwayat Postingan</h3>
+          <div class="text-[11px] text-slate-400">Hapus di sini akan menghapus baris database dan file gambar asli.</div>
         </div>
         <button type="button" onclick="socialLoadHistory()" class="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50">Muat ulang</button>
       </div>
-      <div id="social-history" class="text-sm text-stone-400">Memuat riwayat...</div>
+      <div id="social-history" class="text-sm text-slate-400">Memuat riwayat...</div>
     </div>
   </div>`;
 }
@@ -791,7 +791,7 @@ function socialRenderLayerList() {
     const active = i === _socialEd.selected && _socialEd.active === 'text';
     const raw = String(l.text || 'Teks').split('\n')[0] || 'Teks';
     return '<button type="button" onclick="socialSelectLayer(' + i + ')" class="inline-flex items-center gap-1.5 max-w-[210px] px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ' +
-      (active ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50') + '">' +
+      (active ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50') + '">' +
       '<span class="truncate">' + socialEsc(raw) + '</span>' +
       '<span class="text-[9px] opacity-60 shrink-0">' + Math.round(Number(l.size) || 0) + 'px</span>' +
       '</button>';
@@ -941,13 +941,13 @@ function socialRenderObjectList() {
   if (!el || !_socialEd) return;
   const items = _socialEd.objects || [];
   if (!items.length) {
-    el.innerHTML = '<div class="text-[11px] text-stone-400">Belum ada objek.</div>';
+    el.innerHTML = '<div class="text-[11px] text-slate-400">Belum ada objek.</div>';
     return;
   }
   el.innerHTML = items.map(function(o, i) {
     const active = _socialEd.active === 'object' && i === _socialEd.selectedObject;
     return '<button type="button" onclick="socialSelectObject(' + i + ')" class="inline-flex items-center gap-1.5 max-w-[190px] px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ' +
-      (active ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50') + '">' +
+      (active ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50') + '">' +
       '<span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background:' + socialEsc(o.color || '#F97316') + '"></span>' +
       '<span class="truncate">' + socialEsc(SOCIAL_OBJECT_TYPES[o.type] || o.type) + '</span>' +
       '</button>';
@@ -2136,7 +2136,7 @@ function socialNewPost() {
 async function socialLoadHistory() {
   const el = document.getElementById('social-history');
   if (!el) return;
-  el.innerHTML = '<div class="flex items-center gap-2 text-stone-400"><svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Memuat riwayat...</div>';
+  el.innerHTML = '<div class="flex items-center gap-2 text-slate-400"><svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Memuat riwayat...</div>';
   try {
     const res = await api.get('/social-posts?limit=40');
     socialRenderHistory(res.data || []);
@@ -2149,19 +2149,19 @@ function socialRenderHistory(items) {
   const el = document.getElementById('social-history');
   if (!el) return;
   if (!items.length) {
-    el.innerHTML = '<div class="text-sm text-stone-400 py-4 text-center">Belum ada postingan tersimpan. Klik <b>Simpan ke Riwayat</b> setelah membuat gambar.</div>';
+    el.innerHTML = '<div class="text-sm text-slate-400 py-4 text-center">Belum ada postingan tersimpan. Klik <b>Simpan ke Riwayat</b> setelah membuat gambar.</div>';
     return;
   }
   el.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">' + items.map(function(p) {
-    return '<div class="flex gap-3 rounded-xl border border-stone-200 bg-stone-50 p-2.5">' +
-      '<a href="' + socialEsc(p.image_url) + '" target="_blank" rel="noopener" class="shrink-0 w-16 h-20 rounded-lg overflow-hidden border border-stone-200 bg-white">' +
+    return '<div class="flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-2.5">' +
+      '<a href="' + socialEsc(p.image_url) + '" target="_blank" rel="noopener" class="shrink-0 w-16 h-20 rounded-lg overflow-hidden border border-slate-200 bg-white">' +
         '<img src="' + socialEsc(p.image_url) + '" alt="Postingan" class="w-full h-full object-cover" />' +
       '</a>' +
       '<div class="min-w-0 flex-1">' +
-        '<div class="text-xs font-bold text-stone-800 truncate">' + socialEsc(p.menu_nama || 'Tanpa menu') + '</div>' +
-        '<div class="text-[10px] text-stone-500 mt-0.5">' + socialEsc(socialFmtTanggal(p.tanggal)) + ' · ' + socialEsc(p.format || 'portrait') + '</div>' +
-        '<div class="text-[10px] text-stone-400 mt-0.5">Disimpan ' + socialEsc(fmtDate(p.created_at)) + '</div>' +
-        '<div class="text-[10px] text-stone-500 mt-1 line-clamp-2">' + socialEsc(p.caption || '') + '</div>' +
+        '<div class="text-xs font-bold text-slate-800 truncate">' + socialEsc(p.menu_nama || 'Tanpa menu') + '</div>' +
+        '<div class="text-[10px] text-slate-500 mt-0.5">' + socialEsc(socialFmtTanggal(p.tanggal)) + ' · ' + socialEsc(p.format || 'portrait') + '</div>' +
+        '<div class="text-[10px] text-slate-400 mt-0.5">Disimpan ' + socialEsc(fmtDate(p.created_at)) + '</div>' +
+        '<div class="text-[10px] text-slate-500 mt-1 line-clamp-2">' + socialEsc(p.caption || '') + '</div>' +
         '<div class="flex items-center gap-1.5 mt-2">' +
           '<button type="button" onclick="socialLoadPost(' + Number(p.id) + ')" class="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 px-2 py-1 rounded-md hover:bg-emerald-50">Muat</button>' +
           '<button type="button" onclick="socialDeletePost(' + Number(p.id) + ')" class="text-[10px] font-bold text-red-600 hover:text-red-700 px-2 py-1 rounded-md hover:bg-red-50">Hapus</button>' +

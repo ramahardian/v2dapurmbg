@@ -53,28 +53,28 @@ async function renderPoView() {
   const wrap = document.getElementById('pr-po-content');
   wrap.innerHTML = `
     <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-      <div class="md:col-span-3 bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 flex items-center">
+      <div class="md:col-span-3 bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 flex items-center">
         <div class="flex flex-wrap items-stretch gap-2 w-full">
-        <button id="po-add-btn" class="flex-1 sm:flex-none h-11 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2">
+        <button id="po-add-btn" class="flex-1 sm:flex-none h-11 px-5 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span class="sm:hidden">Tambah</span><span class="hidden sm:inline">Tambah PO</span>
         </button>
-        <button id="po-from-siklus-btn" class="flex-1 sm:flex-none h-11 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all whitespace-nowrap">+ Buat dari Siklus</button>
-        <button id="po-sync-koperasi-btn" class="flex-1 sm:flex-none h-11 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all whitespace-nowrap" title="Tarik nomor PO/Invoice dari koperasi">
+        <button id="po-from-siklus-btn" class="flex-1 sm:flex-none h-11 px-4 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-sm font-semibold shadow-sm transition-all whitespace-nowrap">+ Buat dari Siklus</button>
+        <button id="po-sync-koperasi-btn" class="flex-1 sm:flex-none h-11 px-4 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-sm font-semibold shadow-sm transition-all whitespace-nowrap" title="Tarik nomor PO/Invoice dari koperasi">
           <span class="sm:hidden">Sinkron</span><span class="hidden sm:inline">Sinkron dari Koperasi</span>
         </button>
-        <button id="po-riwayat-btn" class="flex-1 sm:flex-none h-11 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all whitespace-nowrap" title="Lihat riwayat invoice/pesanan dari koperasi (riwayat_dapur.php)">Riwayat Koperasi</button>
+        <button id="po-riwayat-btn" class="flex-1 sm:flex-none h-11 px-4 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-sm font-semibold shadow-sm transition-all whitespace-nowrap" title="Lihat riwayat invoice/pesanan dari koperasi (riwayat_dapur.php)">Riwayat Koperasi</button>
       </div>
     </div>
-    <div class="md:col-span-1 bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 flex items-center">
+    <div class="md:col-span-1 bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 flex items-center">
       <div class="relative w-full">
-        <input id="po-search" placeholder="Cari PO..." class="w-full h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input id="po-search" placeholder="Cari PO..." class="w-full h-11 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
+        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
       </div>
     </div>
   </div>
-    <div id="po-table-wrap" class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-      ${_poList.length === 0 ? '<div class="py-16 text-center text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><div class="text-sm">Belum ada PO</div><div class="text-xs text-stone-400 mt-1">Klik "Tambah PO" atau "Buat dari Siklus" untuk mulai.</div></div>' : renderPoTable(_poList)}
+    <div id="po-table-wrap" class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+      ${_poList.length === 0 ? '<div class="py-16 text-center text-slate-400"><svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><div class="text-sm">Belum ada PO</div><div class="text-xs text-slate-400 mt-1">Klik "Tambah PO" atau "Buat dari Siklus" untuk mulai.</div></div>' : renderPoTable(_poList)}
     </div>`;
 
   document.getElementById('po-add-btn').onclick = () => openPembelianForm(null);
@@ -92,27 +92,27 @@ async function renderPoView() {
       (r.status || '').toLowerCase().includes(q)
     );
     document.getElementById('po-table-wrap').innerHTML = filtered.length === 0
-      ? '<div class="p-12 text-center text-stone-400">Tidak ditemukan</div>'
+      ? '<div class="p-12 text-center text-slate-400">Tidak ditemukan</div>'
       : renderPoTable(filtered);
   };
 }
 
 function renderPoTable(rows) {
   return `<div class="overflow-x-auto"><table class="w-full">
-    <thead><tr class="border-b border-stone-100">
-      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">No PO</th>
-      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Tanggal</th>
-      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Supplier</th>
-      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Unit Dapur</th>
-      <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Total</th>
-      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Status</th>
-      <th class="text-center px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th>
+    <thead><tr class="border-b border-slate-100">
+      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">No PO</th>
+      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Tanggal</th>
+      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Supplier</th>
+      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Unit Dapur</th>
+      <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Total</th>
+      <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</th>
+      <th class="text-center px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Aksi</th>
     </tr></thead>
     <tbody>
       ${rows.map(r => {
         let items = [];
         try { items = JSON.parse(r.item); } catch {}
-        const statusColors = { 'Draft': 'bg-stone-100 text-stone-700', 'Menunggu Koperasi': 'bg-purple-100 text-purple-700', 'Disetujui': 'bg-blue-100 text-blue-700', 'Dikirim': 'bg-amber-100 text-amber-700', 'Diterima': 'bg-emerald-100 text-emerald-700', 'Dibayar': 'bg-green-100 text-green-700' };
+        const statusColors = { 'Draft': 'bg-slate-100 text-slate-700', 'Menunggu Koperasi': 'bg-purple-100 text-purple-700', 'Disetujui': 'bg-slate-100 text-[#14326b]', 'Dikirim': 'bg-amber-100 text-amber-700', 'Diterima': 'bg-emerald-100 text-emerald-700', 'Dibayar': 'bg-green-100 text-green-700' };
         // Nomor utama = nomor invoice koperasi bila sudah terbit; kalau belum,
         // tampilkan nomor PO lokal (untuk PO baru: referensi sementara TMP-<id>)
         const noInv = r.no_invoice_koperasi || '';
@@ -121,20 +121,20 @@ function renderPoTable(rows) {
         const subs = [];
         if (noInv && r.no_po) subs.push('PO: ' + r.no_po);
         if (r.no_po_koperasi) subs.push('Pesanan: ' + r.no_po_koperasi);
-        return `<tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-          <td class="px-4 py-3 text-xs font-semibold text-stone-700">${escHtml(noDok)}${pending ? ' <span class="text-[10px] font-normal font-medium text-amber-600">menunggu koperasi</span>' : ''}
+        return `<tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <td class="px-4 py-3 text-xs font-semibold text-slate-700">${escHtml(noDok)}${pending ? ' <span class="text-[10px] font-normal font-medium text-amber-600">menunggu koperasi</span>' : ''}
             ${subs.length ? `<div class="text-[10px] font-normal text-emerald-600 mt-0.5">${escHtml(subs.join(' · '))}</div>` : ''}
           </td>
-          <td class="px-4 py-3 text-xs text-stone-600">${fmtDate(r.tanggal)}</td>
-          <td class="px-4 py-3 text-xs text-stone-600">${r.supplier_nama || '-'}</td>
-          <td class="px-4 py-3 text-xs text-stone-600">${r.unit_dapur || '-'}</td>
-          <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(r.total_nilai || 0)}</td>
-          <td class="px-4 py-3 text-xs"><span class="inline-block px-2.5 py-0.5 text-[10px] font-semibold rounded-lg ${statusColors[r.status] || 'bg-stone-100 text-stone-700'}">${r.status || 'Draft'}</span></td>
+          <td class="px-4 py-3 text-xs text-slate-600">${fmtDate(r.tanggal)}</td>
+          <td class="px-4 py-3 text-xs text-slate-600">${r.supplier_nama || '-'}</td>
+          <td class="px-4 py-3 text-xs text-slate-600">${r.unit_dapur || '-'}</td>
+          <td class="px-4 py-3 text-xs text-right mono font-medium text-slate-700">${fmtIDR(r.total_nilai || 0)}</td>
+          <td class="px-4 py-3 text-xs"><span class="inline-block px-2.5 py-0.5 text-[10px] font-semibold rounded-lg ${statusColors[r.status] || 'bg-slate-100 text-slate-700'}">${r.status || 'Draft'}</span></td>
           <td class="px-4 py-3 text-center whitespace-nowrap">
-            <button onclick="openPembelianForm(JSON.parse(this.dataset.po))" data-po='${JSON.stringify(r).replace(/'/g, "&#39;")}' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit">
+            <button onclick="openPembelianForm(JSON.parse(this.dataset.po))" data-po='${JSON.stringify(r).replace(/'/g, "&#39;")}' class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#14326b] hover:bg-slate-100 transition-all" title="Edit">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
-            <button onclick="deletePo(${r.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus">
+            <button onclick="deletePo(${r.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
             ${r.status === 'Dikirim' ? `<button onclick="terimaPo(${r.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 transition-all" title="Terima Barang">
@@ -366,43 +366,43 @@ async function openPembelianForm(editing) {
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nomor PO ${editing ? '' : '<span class="text-amber-500 normal-case font-normal">(terbit dari koperasi)</span>'}</label>
-          <input id="po-no_po" value="${editing ? (editing.no_po || '') : ''}" placeholder="Belum ada — nomor terbit setelah koperasi menyetujui" ${editing ? '' : 'readonly'} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 bg-stone-50 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-          <div class="text-[10px] text-stone-400 mt-1">${editing ? 'Kosongkan untuk mempertahankan nomor saat ini — bisa diisi manual bila nomor koperasi diketahui.' : 'Saat disimpan sistem membuat referensi sementara (TMP-…); nomor invoice koperasi muncul setelah PO disetujui.'}</div>
+          <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Nomor PO ${editing ? '' : '<span class="text-amber-500 normal-case font-normal">(terbit dari koperasi)</span>'}</label>
+          <input id="po-no_po" value="${editing ? (editing.no_po || '') : ''}" placeholder="Belum ada — nomor terbit setelah koperasi menyetujui" ${editing ? '' : 'readonly'} class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 bg-slate-50 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
+          <div class="text-[10px] text-slate-400 mt-1">${editing ? 'Kosongkan untuk mempertahankan nomor saat ini — bisa diisi manual bila nomor koperasi diketahui.' : 'Saat disimpan sistem membuat referensi sementara (TMP-…); nomor invoice koperasi muncul setelah PO disetujui.'}</div>
         </div>
         <div>
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal <span class="text-red-500">*</span></label>
-          <input id="po-tanggal" type="date" value="${editing ? (editing.tanggal || '').slice(0, 10) : tgl}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+          <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Tanggal <span class="text-red-500">*</span></label>
+          <input id="po-tanggal" type="date" value="${editing ? (editing.tanggal || '').slice(0, 10) : tgl}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
         </div>
       </div>
       <div>
-        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Supplier</label>
-        <select id="po-supplier_nama" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Supplier</label>
+        <select id="po-supplier_nama" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
           <option value="">— Pilih Supplier —</option>
           ${supplierList.map(s => `<option value="${s.nama}" data-id="${s.id}" ${editing && editing.supplier_nama === s.nama ? 'selected' : ''}>${s.nama}</option>`).join('')}
         </select>
       </div>
       <div>
-        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Unit Dapur</label>
-        <input id="po-unit_dapur" value="${editing ? (editing.unit_dapur || '') : ''}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Unit Dapur</label>
+        <input id="po-unit_dapur" value="${editing ? (editing.unit_dapur || '') : ''}" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
       </div>
       <div>
-        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Daftar Item</label>
-        <p class="text-[10px] text-stone-400 mt-1">Pilih bahan dari daftar, atau ubah pilihan menjadi <strong>Input Manual</strong> untuk mengetik nama bahan sendiri. Bahan manual otomatis ditambahkan ke master bahan baku saat barang diterima.</p>
+        <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Daftar Item</label>
+        <p class="text-[10px] text-slate-400 mt-1">Pilih bahan dari daftar, atau ubah pilihan menjadi <strong>Input Manual</strong> untuk mengetik nama bahan sendiri. Bahan manual otomatis ditambahkan ke master bahan baku saat barang diterima.</p>
         <div id="po-items-list" class="mt-1.5 space-y-2"></div>
         <div class="mt-2 flex flex-wrap items-center gap-3">
-          <button onclick="addPoItemRow()" class="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">+ Tambah dari Daftar</button>
+          <button onclick="addPoItemRow()" class="text-sm font-medium text-[#14326b] hover:text-[#0f2a5f] flex items-center gap-1">+ Tambah dari Daftar</button>
           <button onclick="addPoItemRow(true)" class="text-sm font-medium text-amber-600 hover:text-amber-800 flex items-center gap-1">+ Input Manual</button>
         </div>
       </div>
-      <div class="flex items-center justify-between rounded-xl bg-stone-50 px-4 py-3">
-        <span class="text-sm font-bold text-stone-700">Total: <span id="po-total-display" class="mono">Rp 0</span></span>
+      <div class="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
+        <span class="text-sm font-bold text-slate-700">Total: <span id="po-total-display" class="mono">Rp 0</span></span>
         <input type="hidden" id="po-item-json" value='${JSON.stringify(items)}'>
         <input type="hidden" id="po-total_nilai" value="0">
       </div>
       <div>
-        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Status</label>
-        <select id="po-status" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</label>
+        <select id="po-status" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
           ${(() => {
             const statusSekarang = editing ? (editing.status || 'Draft') : 'Draft';
             // PO yang sudah Diterima tetap menampilkan statusnya (terkunci, tidak bisa
@@ -411,11 +411,11 @@ async function openPembelianForm(editing) {
             return opsi.map(s => `<option ${s === statusSekarang ? 'selected' : ''}${s === 'Diterima' ? ' disabled' : ''}>${s}</option>`).join('');
           })()}
         </select>
-        <div class="text-[10px] text-stone-400 mt-1">Status <strong>Diterima</strong> tidak bisa dipilih di form — pakai tombol ✓ Terima Barang pada daftar PO agar stok bahan & Penerimaan Barang ikut tercatat.</div>
+        <div class="text-[10px] text-slate-400 mt-1">Status <strong>Diterima</strong> tidak bisa dipilih di form — pakai tombol ✓ Terima Barang pada daftar PO agar stok bahan & Penerimaan Barang ikut tercatat.</div>
       </div>
       <div>
-        <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Catatan</label>
-        <textarea id="po-catatan" class="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" rows="2">${editing ? (editing.catatan || '') : ''}</textarea>
+        <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Catatan</label>
+        <textarea id="po-catatan" class="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" rows="2">${editing ? (editing.catatan || '') : ''}</textarea>
       </div>
     </div>`;
 
@@ -500,7 +500,7 @@ function renderPoItems(items) {
   _poItems = (items || []).map(normalisasiPoItem);
   const wrap = document.getElementById('po-items-list');
   if (!_poItems.length) {
-    wrap.innerHTML = '<div class="text-sm text-stone-400 py-2">Belum ada item. Klik "+ Tambah dari Daftar" atau "+ Input Manual" untuk mulai.</div>';
+    wrap.innerHTML = '<div class="text-sm text-slate-400 py-2">Belum ada item. Klik "+ Tambah dari Daftar" atau "+ Input Manual" untuk mulai.</div>';
     updatePoTotal();
     return;
   }
@@ -510,7 +510,7 @@ function renderPoItems(items) {
     const satuan = item.satuan || (manual ? '' : (b?.satuan || ''));
     const harga = Number(item.harga) || 0;
     const subtotal = Number(item.subtotal) || (Number(item.qty) || 0) * harga;
-    const inputCls = 'h-10 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all';
+    const inputCls = 'h-10 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all';
     const opsiBahan = _bahanBakuList.map(b => {
       const isNew = b.created_at && (Date.now() - new Date(b.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
       const sel = !manual && Number(b.id) === Number(item.bahan_baku_id) ? 'selected' : '';
@@ -519,7 +519,7 @@ function renderPoItems(items) {
       return `<option value="${b.id}" ${sel}>${kodeNum ? '[' + kodeNum + '] ' : ''}${escHtml(b.nama)}${isNew ? ' 🆕' : ''}${agLabel}${b.harga_satuan ? ' @ ' + fmtIDR(b.harga_satuan) : ''}</option>`;
     }).join('');
     return `
-    <div class="rounded-xl p-2.5 space-y-2 border ${manual ? 'bg-amber-50/60 border-amber-200' : 'bg-stone-50 border-stone-100'}">
+    <div class="rounded-lg p-2.5 space-y-2 border ${manual ? 'bg-amber-50/60 border-amber-200' : 'bg-slate-50 border-slate-100'}">
       <div class="flex gap-2 items-center">
         <select onchange="setPoItemMode(${i}, this.value)" class="flex-1 ${inputCls} bg-white">
           <option value="">— Pilih Bahan —</option>
@@ -551,15 +551,15 @@ function renderPoItems(items) {
         <input type="number" step="0.01" min="0" value="${harga || ''}" placeholder="Harga satuan (Rp)"
           oninput="updatePoItem(${i}, 'harga', this.value)"
           class="w-full sm:w-44 ${inputCls} bg-white mono">
-        <span class="text-xs text-stone-500 whitespace-nowrap">Subtotal: <span id="po-subtotal-${i}" class="mono font-semibold text-stone-700">${fmtIDR(subtotal)}</span></span>
+        <span class="text-xs text-slate-500 whitespace-nowrap">Subtotal: <span id="po-subtotal-${i}" class="mono font-semibold text-slate-700">${fmtIDR(subtotal)}</span></span>
       </div>` : `
       <div class="flex flex-wrap items-center gap-2">
         <input type="number" step="0.001" min="0" value="${item.qty || ''}" placeholder="Qty"
           oninput="updatePoItem(${i}, 'qty', this.value)"
           class="w-24 ${inputCls} bg-white mono">
-        <span class="text-xs text-stone-500 font-medium min-w-[2rem]">${escHtml(satuan)}</span>
-        <span class="text-[11px] text-stone-500">@ ${fmtIDR(harga)}</span>
-        <span class="text-xs text-stone-500 whitespace-nowrap">= <span id="po-subtotal-${i}" class="mono font-semibold text-stone-700">${fmtIDR(subtotal)}</span></span>
+        <span class="text-xs text-slate-500 font-medium min-w-[2rem]">${escHtml(satuan)}</span>
+        <span class="text-[11px] text-slate-500">@ ${fmtIDR(harga)}</span>
+        <span class="text-xs text-slate-500 whitespace-nowrap">= <span id="po-subtotal-${i}" class="mono font-semibold text-slate-700">${fmtIDR(subtotal)}</span></span>
       </div>`}
     </div>`;
   }).join('');
@@ -678,25 +678,25 @@ async function openSiklusPicker() {
     return;
   }
 
-  document.getElementById('modal-title').innerHTML = 'Buat PO <span class="text-stone-400 font-normal">dari Siklus Menu</span>';
+  document.getElementById('modal-title').innerHTML = 'Buat PO <span class="text-slate-400 font-normal">dari Siklus Menu</span>';
   document.getElementById('modal-body').innerHTML = `
     <div class="mb-4">
-      <label class="flex items-center gap-1.5 text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">
+      <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
         Pilih Siklus Menu
       </label>
-      <div class="max-h-48 overflow-y-auto rounded-xl border border-stone-200">
-        ${siklusList && siklusList.length ? '<div class="divide-y divide-stone-100">' + siklusList.map(s => {
+      <div class="max-h-48 overflow-y-auto rounded-lg border border-slate-200">
+        ${siklusList && siklusList.length ? '<div class="divide-y divide-slate-100">' + siklusList.map(s => {
           var statusBadge = s.status === 'Aktif' ? '<span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-700">Aktif</span>' : '<span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-amber-100 text-amber-700">Draft</span>';
-          return '<label class="flex items-center gap-3 cursor-pointer hover:bg-blue-50/50 transition-colors px-3 py-2.5">' +
+          return '<label class="flex items-center gap-3 cursor-pointer hover:bg-slate-100/50 transition-colors px-3 py-2.5">' +
             '<input type="checkbox" class="siklus-check cb-modern" value="' + s.id + '" data-status="' + (s.status || 'Draft') + '">' +
             '<div class="flex-1 min-w-0">' +
-              '<div class="text-sm font-medium text-stone-700 truncate">' + escHtml(s.nama) + '</div>' +
-              '<div class="text-[11px] text-stone-400 mt-0.5">' + (s.kategori_penerima || '-') + ' &middot; ' + (s.jumlah_porsi || 0) + ' porsi</div>' +
+              '<div class="text-sm font-medium text-slate-700 truncate">' + escHtml(s.nama) + '</div>' +
+              '<div class="text-[11px] text-slate-400 mt-0.5">' + (s.kategori_penerima || '-') + ' &middot; ' + (s.jumlah_porsi || 0) + ' porsi</div>' +
             '</div>' +
             statusBadge +
           '</label>';
-        }).join('') + '</div>' : '<div class="flex items-center gap-3 p-4 text-amber-700 bg-amber-50 rounded-xl m-2"><svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-medium">Belum ada siklus menu</div><div class="text-[10px] mt-0.5">Buat siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>'}
+        }).join('') + '</div>' : '<div class="flex items-center gap-3 p-4 text-amber-700 bg-amber-50 rounded-lg m-2"><svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-medium">Belum ada siklus menu</div><div class="text-[10px] mt-0.5">Buat siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>'}
       </div>
     </div>
     <div id="po-preview"></div>`;
@@ -719,12 +719,12 @@ async function generatePOFromSiklus() {
   var draftSiklus = Array.from(checked).filter(function(cb) { return cb.getAttribute('data-status') === 'Draft'; });
   if (draftSiklus.length) {
     var draftNames = draftSiklus.map(function(cb) { return cb.closest('label')?.querySelector('.font-medium')?.textContent?.trim() || '#' + cb.value; }).join(', ');
-    document.getElementById('po-preview').innerHTML = '<div class="flex items-start gap-3 p-4 text-amber-700 bg-amber-50 rounded-xl border border-amber-200"><svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-semibold">Siklus masih Draft</div><div class="text-xs mt-0.5 text-amber-600">Siklus berikut belum Aktif dan tidak bisa di-generate: <strong>' + draftNames + '</strong>. Aktifkan siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>';
+    document.getElementById('po-preview').innerHTML = '<div class="flex items-start gap-3 p-4 text-amber-700 bg-amber-50 rounded-lg border border-amber-200"><svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="text-sm font-semibold">Siklus masih Draft</div><div class="text-xs mt-0.5 text-amber-600">Siklus berikut belum Aktif dan tidak bisa di-generate: <strong>' + draftNames + '</strong>. Aktifkan siklus terlebih dahulu di menu Ahli Gizi &gt; Siklus Menu.</div></div></div>';
     return;
   }
 
   const preview = document.getElementById('po-preview');
-  preview.innerHTML = '<div class="text-center py-4 text-stone-500">⏳ Menghitung kebutuhan bahan...</div>';
+  preview.innerHTML = '<div class="text-center py-4 text-slate-500">⏳ Menghitung kebutuhan bahan...</div>';
 
   try {
     const result = await api.post('/purchase_order/generate-from-siklus', { siklus_ids: ids });
@@ -751,8 +751,8 @@ async function generatePOFromSiklus() {
 
     preview.innerHTML = `
       <div class="flex items-center justify-between mb-2">
-        <div class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Pilih Menu — Buat PO per Menu</div>
-        <label class="flex items-center gap-1.5 text-xs text-stone-500 cursor-pointer hover:text-stone-700">
+        <div class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Pilih Menu — Buat PO per Menu</div>
+        <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer hover:text-slate-700">
           <input type="checkbox" id="menu-po-select-all" checked class="cb-modern" onchange="toggleAllMenuPo(this)">
           Semua
         </label>
@@ -761,29 +761,29 @@ async function generatePOFromSiklus() {
         ${menus.map((m, idx) => {
           const itemsHtml = m.items.map(i => {
             const kodeNum = i.kode ? (i.kode.match(/EXT[-\s]?(\d+)/i)?.[1] || i.kode) : '';
-            return `<tr class="border-b border-stone-50">
-              <td class="px-3 py-2 text-xs text-stone-700">${kodeNum ? '[' + kodeNum + '] ' : ''}${i.bahan_nama}</td>
-              <td class="px-3 py-2 text-xs text-right mono text-stone-700">${i.buffer_10} ${i.satuan}</td>
-              <td class="px-3 py-2 text-xs text-right mono text-stone-600">${fmtIDR(i.harga_satuan)}</td>
-              <td class="px-3 py-2 text-xs text-right mono font-medium text-stone-700">${fmtIDR(i.estimated_subtotal)}</td>
+            return `<tr class="border-b border-slate-50">
+              <td class="px-3 py-2 text-xs text-slate-700">${kodeNum ? '[' + kodeNum + '] ' : ''}${i.bahan_nama}</td>
+              <td class="px-3 py-2 text-xs text-right mono text-slate-700">${i.buffer_10} ${i.satuan}</td>
+              <td class="px-3 py-2 text-xs text-right mono text-slate-600">${fmtIDR(i.harga_satuan)}</td>
+              <td class="px-3 py-2 text-xs text-right mono font-medium text-slate-700">${fmtIDR(i.estimated_subtotal)}</td>
             </tr>`;
           }).join('');
-          return `<div class="border border-stone-200 rounded-xl overflow-hidden bg-white">
-            <label class="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-stone-50/70 transition-colors">
+          return `<div class="border border-slate-200 rounded-lg overflow-hidden bg-white">
+            <label class="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-slate-50/70 transition-colors">
               <input type="checkbox" class="menu-po-cb cb-modern" value="${idx}" checked data-subtotal="${m.subtotal}" onchange="updateMenuPoSelection()">
               <div class="flex-1 min-w-0">
-                <div class="text-sm font-semibold text-stone-800 truncate">Hari ${m.hari_ke} — ${m.menu_nama}</div>
-                <div class="text-[10px] text-stone-400 mt-0.5">${m.items.length} bahan · ${fmtIDR(m.subtotal)}${m.jumlah_porsi ? ' · ' + fmtNum(m.jumlah_porsi) + ' porsi' : ''}</div>
+                <div class="text-sm font-semibold text-slate-800 truncate">Hari ${m.hari_ke} — ${m.menu_nama}</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">${m.items.length} bahan · ${fmtIDR(m.subtotal)}${m.jumlah_porsi ? ' · ' + fmtNum(m.jumlah_porsi) + ' porsi' : ''}</div>
               </div>
-              <button type="button" onclick="event.preventDefault();event.stopPropagation();toggleMenuPoItems(${idx})" class="shrink-0 text-[10px] font-medium text-blue-600 hover:text-blue-800 border border-stone-200 rounded-lg px-2 py-1">Item</button>
+              <button type="button" onclick="event.preventDefault();event.stopPropagation();toggleMenuPoItems(${idx})" class="shrink-0 text-[10px] font-medium text-[#14326b] hover:text-[#0f2a5f] border border-slate-200 rounded-lg px-2 py-1">Item</button>
             </label>
-            <div id="menu-po-items-${idx}" class="hidden border-t border-stone-100 bg-stone-50/50">
+            <div id="menu-po-items-${idx}" class="hidden border-t border-slate-100 bg-slate-50/50">
               <div class="overflow-x-auto"><table class="w-full">
-                <thead><tr class="border-b border-stone-100">
-                  <th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">Bahan</th>
-                  <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">Qty</th>
-                  <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">Harga</th>
-                  <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">Subtotal</th>
+                <thead><tr class="border-b border-slate-100">
+                  <th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Bahan</th>
+                  <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Qty</th>
+                  <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Harga</th>
+                  <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Subtotal</th>
                 </tr></thead>
                 <tbody>${itemsHtml}</tbody>
               </table></div>
@@ -791,15 +791,15 @@ async function generatePOFromSiklus() {
           </div>`;
         }).join('')}
       </div>
-      <div id="menu-po-summary" class="flex items-center justify-between text-xs text-stone-500 bg-stone-50 rounded-xl px-3 py-2 mb-3"></div>
+      <div id="menu-po-summary" class="flex items-center justify-between text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 mb-3"></div>
       <div class="flex gap-2 mb-3">
-        <select id="po-supplier" class="flex-1 h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        <select id="po-supplier" class="flex-1 h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
           <option value="">— Pilih Supplier —</option>
           ${siklusSupplierList.map(s => `<option value="${s.nama}" data-id="${s.id}">${s.nama}</option>`).join('')}
         </select>
-        <input id="po-unit_dapur-siklus" placeholder="Unit Dapur" class="flex-1 h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        <input id="po-unit_dapur-siklus" placeholder="Unit Dapur" class="flex-1 h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
       </div>
-      <button id="confirm-create-po" class="w-full h-11 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all">Buat PO Terpilih</button>`;
+      <button id="confirm-create-po" class="w-full h-11 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-sm font-semibold shadow-sm transition-all">Buat PO Terpilih</button>`;
 
     document.getElementById('modal-save').style.display = 'none';
     window._menuPoData = menus;
@@ -884,7 +884,7 @@ function updateMenuPoSelection() {
   const total = checked.reduce((s, cb) => s + (Number(cb.dataset.subtotal) || 0), 0);
   const sumEl = document.getElementById('menu-po-summary');
   if (sumEl) {
-    sumEl.innerHTML = '<span>' + checked.length + ' dari ' + cbs.length + ' menu terpilih</span><span class="font-semibold text-stone-700 mono">Total: ' + fmtIDR(total) + '</span>';
+    sumEl.innerHTML = '<span>' + checked.length + ' dari ' + cbs.length + ' menu terpilih</span><span class="font-semibold text-slate-700 mono">Total: ' + fmtIDR(total) + '</span>';
   }
   const allEl = document.getElementById('menu-po-select-all');
   if (allEl) allEl.checked = cbs.length > 0 && checked.length === cbs.length;
@@ -899,7 +899,7 @@ function updateMenuPoSelection() {
 // HTML info status pengaturan dapur (dipakai di modal Riwayat Koperasi)
 function koperasiSettingInfoHtml(idUnit, namaDapur) {
   if (!idUnit && !namaDapur) {
-    return '<div id="rw-setting-info" class="text-[11px] text-stone-400">Belum ada pengaturan dapur tersimpan — klik "Simpan Dapur" agar nama & ID dapur terisi otomatis.</div>';
+    return '<div id="rw-setting-info" class="text-[11px] text-slate-400">Belum ada pengaturan dapur tersimpan — klik "Simpan Dapur" agar nama & ID dapur terisi otomatis.</div>';
   }
   return '<div id="rw-setting-info" class="text-[11px] text-emerald-600 bg-emerald-50 rounded-lg px-3 py-2">Tersimpan di sistem: <strong>' + escHtml(namaDapur || '-') + '</strong>' + (idUnit ? ' (id unit ' + escHtml(idUnit) + ')' : '') + '</div>';
 }
@@ -961,20 +961,20 @@ async function bukaRiwayatKoperasi() {
 
   // Admin boleh mengisi & menyimpan identitas dapur; non-admin hanya melihat.
   const readonlyAttr = isAdmin ? '' : ' disabled';
-  const inputCls = 'mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all' + (isAdmin ? '' : ' bg-stone-100 text-stone-500 cursor-not-allowed');
-  const labelKunci = isAdmin ? '' : ' <span class="text-[9px] font-medium text-stone-400 normal-case">(terkunci)</span>';
+  const inputCls = 'mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all' + (isAdmin ? '' : ' bg-slate-100 text-slate-500 cursor-not-allowed');
+  const labelKunci = isAdmin ? '' : ' <span class="text-[9px] font-medium text-slate-400 normal-case">(terkunci)</span>';
   const namaDapurHint = isAdmin
     ? 'Isi lalu klik "💾 Simpan Dapur" untuk menyimpan identitas dapur ini — dipakai sebagai filter riwayat koperasi.'
     : 'Nilai diambil dari identitas dapur tersimpan — hubungi admin untuk mengubah.';
 
   const identitasWarning = identitasKosong
-    ? `<div class="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700"><svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="font-semibold">Identitas dapur belum disimpan</div><div class="text-[10px] mt-0.5">${isAdmin ? 'Isi Nama Dapur / ID Unit Dapur di bawah lalu klik "💾 Simpan Dapur".' : 'Riwayat koperasi hanya bisa dimuat setelah Nama Dapur / ID Unit Dapur disimpan oleh admin (klik "💾 Simpan Dapur").'}</div></div></div>`
+    ? `<div class="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-xs text-red-700"><svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="font-semibold">Identitas dapur belum disimpan</div><div class="text-[10px] mt-0.5">${isAdmin ? 'Isi Nama Dapur / ID Unit Dapur di bawah lalu klik "💾 Simpan Dapur".' : 'Riwayat koperasi hanya bisa dimuat setelah Nama Dapur / ID Unit Dapur disimpan oleh admin (klik "💾 Simpan Dapur").'}</div></div></div>`
     : '';
 
   document.getElementById('modal-title').textContent = 'Riwayat Invoice Koperasi';
   document.getElementById('modal-body').innerHTML = `
     <div class="space-y-4">
-      <div class="flex items-start gap-2.5 bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-800">
+      <div class="flex items-start gap-2.5 bg-slate-50 border border-indigo-100 rounded-lg px-4 py-3 text-xs text-indigo-800">
         <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         <div>
           <div class="font-semibold">Riwayat dari sistem koperasi</div>
@@ -984,41 +984,41 @@ async function bukaRiwayatKoperasi() {
       ${identitasWarning}
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Jenis</label>
-          <select id="rw-jenis" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+          <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Jenis</label>
+          <select id="rw-jenis" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
             <option value="semua">Semua</option>
             <option value="invoice">Invoice</option>
             <option value="pesanan">Pesanan</option>
           </select>
         </div>
         <div>
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">ID Unit Dapur${labelKunci}</label>
+          <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">ID Unit Dapur${labelKunci}</label>
           <input id="rw-id-unit" type="number" min="1" value="${idUnit}" placeholder="contoh: 1"${readonlyAttr} class="${inputCls}">
         </div>
         <div class="col-span-2">
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Dapur${labelKunci}</label>
+          <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama Dapur${labelKunci}</label>
           <input id="rw-nama-dapur" value="${escHtml(namaDapur)}" placeholder="contoh: Dapur Pusat"${readonlyAttr} class="${inputCls}">
-          <p class="text-[10px] text-stone-400 mt-1">${namaDapurHint}</p>
+          <p class="text-[10px] text-slate-400 mt-1">${namaDapurHint}</p>
         </div>
         <div>
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Awal</label>
-          <input id="rw-tgl-awal" type="date" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+          <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Tanggal Awal</label>
+          <input id="rw-tgl-awal" type="date" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
         </div>
         <div>
-          <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Akhir</label>
-          <input id="rw-tgl-akhir" type="date" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+          <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Tanggal Akhir</label>
+          <input id="rw-tgl-akhir" type="date" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-3">
-        <button onclick="muatRiwayatKoperasi()" class="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+        <button onclick="muatRiwayatKoperasi()" class="h-10 px-5 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Muat Riwayat
         </button>
-        ${(typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin') ? `<button onclick="simpanKoperasiSetting()" class="h-10 px-4 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-sm font-semibold transition-all" title="Simpan nama & ID unit dapur sebagai default di sistem ini (khusus admin)">💾 Simpan Dapur</button>` : ''}
-        <span class="text-[11px] text-stone-400">Filter yang kosong tidak dikirim ke API koperasi.</span>
+        ${(typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin') ? `<button onclick="simpanKoperasiSetting()" class="h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold transition-all" title="Simpan nama & ID unit dapur sebagai default di sistem ini (khusus admin)">💾 Simpan Dapur</button>` : ''}
+        <span class="text-[11px] text-slate-400">Filter yang kosong tidak dikirim ke API koperasi.</span>
       </div>
       ${koperasiSettingInfoHtml(setting.id_unit_dapur, setting.nama_dapur)}
-      <div id="rw-result" class="text-sm text-stone-500">Isi filter (opsional) lalu klik "Muat Riwayat" untuk menarik data invoice/pesanan dari koperasi.</div>
+      <div id="rw-result" class="text-sm text-slate-500">Isi filter (opsional) lalu klik "Muat Riwayat" untuk menarik data invoice/pesanan dari koperasi.</div>
     </div>`;
 
   document.getElementById('modal-save').style.display = 'none';
@@ -1030,7 +1030,7 @@ async function bukaRiwayatKoperasi() {
 async function muatRiwayatKoperasi() {
   const qs = new URLSearchParams(bacaFilterRiwayat()).toString();
   const resultEl = document.getElementById('rw-result');
-  resultEl.innerHTML = '<div class="text-center py-8 text-stone-500">⏳ Mengambil riwayat dari koperasi...</div>';
+  resultEl.innerHTML = '<div class="text-center py-8 text-slate-500">⏳ Mengambil riwayat dari koperasi...</div>';
   try {
     const data = await api.get('/purchase_order/riwayat-koperasi' + (qs ? '?' + qs : ''));
     tampilRiwayatKoperasi(data);
@@ -1060,7 +1060,7 @@ function tampilRiwayatKoperasi(data) {
   const resultEl = document.getElementById('rw-result');
 
   if (!records.length) {
-    resultEl.innerHTML = '<div class="text-stone-400 text-center py-10 text-sm">Tidak ada riwayat invoice/pesanan untuk filter tersebut.</div>';
+    resultEl.innerHTML = '<div class="text-slate-400 text-center py-10 text-sm">Tidak ada riwayat invoice/pesanan untuk filter tersebut.</div>';
     return;
   }
 
@@ -1070,66 +1070,66 @@ function tampilRiwayatKoperasi(data) {
     ((ringkasan.total_pesanan != null || ringkasan.total_invoice_manual != null) ? '<span class="text-[10px] text-indigo-400">Ringkasan: ' + Number(ringkasan.total_pesanan || 0) + ' pesanan, ' + Number(ringkasan.total_invoice_manual || 0) + ' invoice manual</span>' : '');
 
   resultEl.innerHTML = `
-    <div class="rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-      <div class="px-4 py-3 bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-indigo-100 flex flex-wrap items-center justify-between gap-2 text-xs text-indigo-800">
+    <div class="rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-4 py-3 bg-slate-50 border-b border-indigo-100 flex flex-wrap items-center justify-between gap-2 text-xs text-indigo-800">
         <span class="font-semibold">${records.length} dokumen</span>
         <span class="font-semibold mono">Total: ${fmtIDR(totalNilai)}</span>
         ${extraMeta}
       </div>
-      <div class="px-4 py-2.5 bg-white border-b border-stone-100 flex flex-wrap items-center gap-2">
-        <button id="rw-impor-btn" onclick="imporRiwayatKoperasi()" class="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5" title="Simpan semua dokumen di hasil ini sebagai PO baru di list /pembelian (yang sudah tersimpan dilewati)">
+      <div class="px-4 py-2.5 bg-white border-b border-slate-100 flex flex-wrap items-center gap-2">
+        <button id="rw-impor-btn" onclick="imporRiwayatKoperasi()" class="h-9 px-4 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5" title="Simpan semua dokumen di hasil ini sebagai PO baru di list /pembelian (yang sudah tersimpan dilewati)">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           Simpan ke List Pembelian
         </button>
-        <span class="text-[10px] text-stone-400">Menyimpan ${records.length} dokumen sebagai PO baru (status Draft) — aman diulang, yang sudah tersimpan otomatis dilewati.</span>
+        <span class="text-[10px] text-slate-400">Menyimpan ${records.length} dokumen sebagai PO baru (status Draft) — aman diulang, yang sudah tersimpan otomatis dilewati.</span>
       </div>
       <div class="overflow-x-auto max-h-[45vh] overflow-y-auto"><table class="w-full">
-        <thead class="sticky top-0 bg-white z-10"><tr class="border-b border-stone-100">
-          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">No Invoice</th>
-          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Tanggal</th>
-          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Penerima</th>
-          <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Item</th>
-          <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Total</th>
-          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Status</th>
-          <th class="text-center px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">Detail</th>
+        <thead class="sticky top-0 bg-white z-10"><tr class="border-b border-slate-100">
+          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">No Invoice</th>
+          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Tanggal</th>
+          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Penerima</th>
+          <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Item</th>
+          <th class="text-right px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Total</th>
+          <th class="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</th>
+          <th class="text-center px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Detail</th>
         </tr></thead>
         <tbody>
           ${records.map((r, i) => `
-            <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors cursor-pointer" onclick="toggleRiwayatDetail(${i})">
-              <td class="px-4 py-3 text-xs font-semibold text-stone-700">${escHtml(r.no_invoice || '-')}</td>
-              <td class="px-4 py-3 text-xs text-stone-600">${r.tanggal ? fmtDate(r.tanggal) : '-'}</td>
-              <td class="px-4 py-3 text-xs text-stone-600">${escHtml(r.penerima || '-')}</td>
-              <td class="px-4 py-3 text-xs text-right text-stone-600">${r.jumlah_item}</td>
-              <td class="px-4 py-3 text-xs text-right mono font-medium text-stone-700">${fmtIDR(r.total)}</td>
-              <td class="px-4 py-3 text-xs"><span class="inline-block px-2.5 py-0.5 text-[10px] font-semibold rounded-lg bg-stone-100 text-stone-700">${escHtml(r.status || '-')}</span></td>
+            <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onclick="toggleRiwayatDetail(${i})">
+              <td class="px-4 py-3 text-xs font-semibold text-slate-700">${escHtml(r.no_invoice || '-')}</td>
+              <td class="px-4 py-3 text-xs text-slate-600">${r.tanggal ? fmtDate(r.tanggal) : '-'}</td>
+              <td class="px-4 py-3 text-xs text-slate-600">${escHtml(r.penerima || '-')}</td>
+              <td class="px-4 py-3 text-xs text-right text-slate-600">${r.jumlah_item}</td>
+              <td class="px-4 py-3 text-xs text-right mono font-medium text-slate-700">${fmtIDR(r.total)}</td>
+              <td class="px-4 py-3 text-xs"><span class="inline-block px-2.5 py-0.5 text-[10px] font-semibold rounded-lg bg-slate-100 text-slate-700">${escHtml(r.status || '-')}</span></td>
               <td class="px-4 py-3 text-center"><span class="text-indigo-600 text-xs font-medium">Detail ▾</span></td>
             </tr>
-            <tr id="rw-detail-${i}" class="hidden bg-stone-50/70">
+            <tr id="rw-detail-${i}" class="hidden bg-slate-50/70">
               <td colspan="7" class="px-4 py-3">
-                <div class="text-[10px] text-stone-400 mb-2 flex flex-wrap gap-x-3 gap-y-1">
+                <div class="text-[10px] text-slate-400 mb-2 flex flex-wrap gap-x-3 gap-y-1">
                   <span>No Dokumen: <span class="mono">${escHtml(r.no_dokumen || '-')}</span></span>
                   ${r.no_po ? '<span>No PO: <span class="mono">' + escHtml(r.no_po) + '</span></span>' : ''}
                   ${r.no_kendaraan ? '<span>Kendaraan: ' + escHtml(r.no_kendaraan) + '</span>' : ''}
                   ${r.nama_driver ? '<span>Driver: ' + escHtml(r.nama_driver) + '</span>' : ''}
                 </div>
                 ${r.detail && r.detail.length ? `<div class="overflow-x-auto"><table class="w-full">
-                  <thead><tr class="border-b border-stone-200">
-                    <th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Barang</th>
-                    <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Qty</th>
-                    <th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Satuan</th>
-                    <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Harga</th>
-                    <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Subtotal</th>
+                  <thead><tr class="border-b border-slate-200">
+                    <th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Barang</th>
+                    <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Qty</th>
+                    <th class="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Satuan</th>
+                    <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Harga</th>
+                    <th class="text-right px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Subtotal</th>
                   </tr></thead>
                   <tbody>
-                    ${r.detail.map(d => `<tr class="border-b border-stone-100/60">
-                      <td class="px-3 py-2 text-xs text-stone-700">${escHtml(d.nama_barang)}</td>
-                      <td class="px-3 py-2 text-xs text-right mono text-stone-600">${escHtml(d.qty != null ? d.qty : 0)}</td>
-                      <td class="px-3 py-2 text-xs text-stone-500">${escHtml(d.satuan)}</td>
-                      <td class="px-3 py-2 text-xs text-right mono text-stone-600">${fmtIDR(d.harga_satuan)}</td>
-                      <td class="px-3 py-2 text-xs text-right mono font-medium text-stone-700">${fmtIDR(d.subtotal)}</td>
+                    ${r.detail.map(d => `<tr class="border-b border-slate-100/60">
+                      <td class="px-3 py-2 text-xs text-slate-700">${escHtml(d.nama_barang)}</td>
+                      <td class="px-3 py-2 text-xs text-right mono text-slate-600">${escHtml(d.qty != null ? d.qty : 0)}</td>
+                      <td class="px-3 py-2 text-xs text-slate-500">${escHtml(d.satuan)}</td>
+                      <td class="px-3 py-2 text-xs text-right mono text-slate-600">${fmtIDR(d.harga_satuan)}</td>
+                      <td class="px-3 py-2 text-xs text-right mono font-medium text-slate-700">${fmtIDR(d.subtotal)}</td>
                     </tr>`).join('')}
                   </tbody>
-                </table></div>` : '<div class="text-xs text-stone-400">Tidak ada detail item.</div>'}
+                </table></div>` : '<div class="text-xs text-slate-400">Tidak ada detail item.</div>'}
               </td>
             </tr>`).join('')}
         </tbody>

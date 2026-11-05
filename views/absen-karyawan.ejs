@@ -16,7 +16,7 @@
     body {
       font-family: "Geist", sans-serif;
       font-weight: 400;
-      background: #f1f5f9;
+      background: #eef2f7;
       min-height: 100vh;
       padding-bottom: 2rem;
       color: #1e293b;
@@ -27,13 +27,13 @@
       border-radius: 0.75rem;
     }
     .header-bar {
-      background: #1e293b;
+      background: linear-gradient(135deg, #0d2657 0%, #14326b 100%);
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
       width: 1.25rem; height: 1.25rem;
       border: 2px solid #e2e8f0;
-      border-top-color: #2563eb;
+      border-top-color: #14326b;
       border-radius: 50%;
       animation: spin 0.6s linear infinite;
     }
@@ -62,7 +62,7 @@
     }
     .badge-hadir { background: #dcfce7; color: #166534; }
     .badge-sakit { background: #fef9c3; color: #854d0e; }
-    .badge-izin { background: #dbeafe; color: #1e40af; }
+    .badge-izin { background: #eef2f9; color: #14326b; }
     .badge-cuti { background: #f3e8ff; color: #6b21a8; }
     .badge-alpha { background: #fee2e2; color: #991b1b; }
     .badge-terlambat { background: #ffedd5; color: #9a3412; }
@@ -83,8 +83,8 @@
       border: 2px solid transparent;
     }
     .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
-    .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
-    .btn-primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
+    .btn-primary { background: #14326b; color: #fff; border-color: #14326b; }
+    .btn-primary:hover:not(:disabled) { background: #0f2a5f; border-color: #0f2a5f; }
     .btn-primary:active:not(:disabled) { transform: scale(0.97); }
     .btn-success { background: #16a34a; color: #fff; border-color: #16a34a; }
     .btn-success:hover:not(:disabled) { background: #15803d; border-color: #15803d; }
@@ -161,7 +161,7 @@
       </div>
       <div id="shift-progress-wrap" class="mt-3">
         <div class="bar">
-          <div id="shift-progress" class="bar-fill bg-amber-500" style="width:0%"></div>
+          <div id="shift-progress" class="bar-fill bg-slate-500" style="width:0%"></div>
         </div>
         <div class="flex justify-between text-[0.6rem] text-slate-400 mt-1">
           <span id="shift-label-masuk">Mulai</span>
@@ -201,7 +201,7 @@
     <div class="card p-4">
       <div class="flex items-center justify-between mb-1">
         <h2 class="text-slate-800 font-bold text-sm">Riwayat Absen</h2>
-        <button id="btn-lihat-semua" class="text-blue-600/70 hover:text-blue-600 text-[0.65rem] font-medium transition hidden">Lihat Semua</button>
+        <button id="btn-lihat-semua" class="text-[#14326b]/70 hover:text-[#14326b] text-[0.65rem] font-medium transition hidden">Lihat Semua</button>
       </div>
       <div id="riwayat-skeleton" class="space-y-2 pt-2">
         <div class="skeleton h-10 w-full"></div>
@@ -215,72 +215,72 @@
 
   <!-- ─── Modal Profil Karyawan ─── -->
   <div id="profile-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
-      <div class="sticky top-0 bg-white z-10 px-5 py-4 border-b border-stone-200 flex items-center justify-between">
-        <h3 class="font-bold text-base text-stone-800">Profil Karyawan</h3>
-        <button onclick="closeProfileModal()" class="w-8 h-8 flex items-center justify-center rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-all">
+    <div class="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
+      <div class="sticky top-0 bg-white z-10 px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+        <h3 class="font-bold text-base text-slate-800">Profil Karyawan</h3>
+        <button onclick="closeProfileModal()" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
       
       <div class="p-5 space-y-5">
         <div class="flex items-center gap-4">
-          <div class="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center shrink-0 overflow-hidden" id="profile-modal-avatar">
+          <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden" id="profile-modal-avatar">
             <img id="profile-modal-photo" src="" alt="" class="w-full h-full object-cover hidden" />
             <div id="profile-modal-placeholder" class="w-full h-full flex items-center justify-center">
-              <svg class="w-8 h-8 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg>
+              <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg>
             </div>
           </div>
           <div class="min-w-0 flex-1">
-            <div class="font-bold text-lg text-stone-800 truncate" id="profile-modal-nama">—</div>
-            <div class="text-xs text-stone-500 mt-0.5">NIK <span id="profile-modal-nik">—</span></div>
+            <div class="font-bold text-lg text-slate-800 truncate" id="profile-modal-nama">—</div>
+            <div class="text-xs text-slate-500 mt-0.5">NIK <span id="profile-modal-nik">—</span></div>
             <div class="flex items-center gap-2 mt-1">
               <span class="text-xs font-medium text-amber-600" id="profile-modal-jabatan"></span>
-              <span class="text-xs text-stone-300">·</span>
-              <span class="text-xs text-stone-500" id="profile-modal-departemen"></span>
+              <span class="text-xs text-slate-300">·</span>
+              <span class="text-xs text-slate-500" id="profile-modal-departemen"></span>
             </div>
-            <div class="text-xs text-stone-400 mt-0.5" id="profile-modal-phone"></div>
+            <div class="text-xs text-slate-400 mt-0.5" id="profile-modal-phone"></div>
           </div>
         </div>
 
-        <hr class="border-stone-100" />
+        <hr class="border-slate-100" />
 
         <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3">Ajukan Ijin / Cuti</h4>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Ajukan Ijin / Cuti</h4>
           <form id="cuti-form-profil" class="space-y-4" onsubmit="return false;">
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Jenis <span class="text-red-500">*</span></label>
-                <select id="cuti-jenis" onchange="toggleDokumenProfil()" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+                <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Jenis <span class="text-red-500">*</span></label>
+                <select id="cuti-jenis" onchange="toggleDokumenProfil()" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
                   <option value="Izin">Izin</option>
                   <option value="Cuti">Cuti</option>
                 </select>
               </div>
               <div>
-                <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Mulai <span class="text-red-500">*</span></label>
-                <input id="cuti-tanggal-mulai" type="date" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />
+                <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Tanggal Mulai <span class="text-red-500">*</span></label>
+                <input id="cuti-tanggal-mulai" type="date" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" />
               </div>
             </div>
             <div>
-              <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Tanggal Selesai</label>
-              <input id="cuti-tanggal-selesai" type="date" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />
+              <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Tanggal Selesai</label>
+              <input id="cuti-tanggal-selesai" type="date" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" />
             </div>
             <div id="cuti-dokumen-wrap-profil">
-              <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Upload Dokumen</label>
-              <p class="text-[10px] text-stone-400 mt-0.5">Surat sakit / izin (opsional, maks 2MB)</p>
+              <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Upload Dokumen</label>
+              <p class="text-[10px] text-slate-400 mt-0.5">Surat sakit / izin (opsional, maks 2MB)</p>
               <div class="flex items-center gap-2 mt-1.5">
-                <button type="button" onclick="document.getElementById('cuti-dokumen-input').click()" class="h-9 px-3 text-xs font-medium border border-stone-200 rounded-lg hover:bg-stone-50 shadow-sm transition-all">Pilih File</button>
-                <span id="cuti-dokumen-name" class="text-xs text-stone-500 truncate"></span>
+                <button type="button" onclick="document.getElementById('cuti-dokumen-input').click()" class="h-9 px-3 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50 shadow-sm transition-all">Pilih File</button>
+                <span id="cuti-dokumen-name" class="text-xs text-slate-500 truncate"></span>
                 <input type="file" id="cuti-dokumen-input" accept=".pdf,.jpg,.jpeg,.png" class="hidden" onchange="previewDokumenProfil(this)" />
                 <input type="hidden" id="cuti-dokumen" value="" />
                 <button type="button" id="cuti-dokumen-hapus" onclick="hapusDokumenProfil()" class="hidden text-xs font-medium text-red-600 hover:text-red-800">Hapus</button>
               </div>
             </div>
             <div>
-              <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Alasan</label>
-              <textarea id="cuti-alasan" class="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" rows="2" placeholder="Alasan izin/cuti..."></textarea>
+              <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Alasan</label>
+              <textarea id="cuti-alasan" class="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" rows="2" placeholder="Alasan izin/cuti..."></textarea>
             </div>
-            <button type="button" onclick="submitCutiProfil()" class="w-full h-11 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm flex items-center justify-center gap-2 transition-all">
+            <button type="button" onclick="submitCutiProfil()" class="w-full h-11 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-sm font-semibold shadow-sm flex items-center justify-center gap-2 transition-all">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14"/></svg>
               Ajukan Ijin/Cuti
             </button>
@@ -303,43 +303,43 @@
 
   <!-- ─── Modal Konfirmasi ─── -->
   <div id="modal-overlay" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-sm p-6 space-y-5 shadow-xl">
+    <div class="bg-white rounded-lg w-full max-w-sm p-6 space-y-5 shadow-xl">
       <div class="text-center">
-        <div id="modal-icon" class="w-16 h-16 mx-auto mb-3 rounded-2xl flex items-center justify-center bg-amber-100">
+        <div id="modal-icon" class="w-16 h-16 mx-auto mb-3 rounded-lg flex items-center justify-center bg-amber-100">
           <svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </div>
-        <h3 class="font-bold text-lg text-stone-800" id="modal-title">Konfirmasi</h3>
-        <p class="text-stone-500 text-sm mt-1" id="modal-desc">Apakah Anda yakin?</p>
+        <h3 class="font-bold text-lg text-slate-800" id="modal-title">Konfirmasi</h3>
+        <p class="text-slate-500 text-sm mt-1" id="modal-desc">Apakah Anda yakin?</p>
       </div>
       
       <!-- Camera Capture Section (WAJIB) -->
       <div id="modal-photo-container" class="hidden">
-        <div class="text-xs font-medium text-stone-500 mb-2 mt-2">Foto Bukti Absen <span class="text-red-500 font-bold text-xs ml-1">* Wajib</span></div>
-        <div id="modal-camera-area" class="relative w-full aspect-[4/3] max-h-48 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 flex items-center justify-center overflow-hidden transition-all">
+        <div class="text-xs font-medium text-slate-500 mb-2 mt-2">Foto Bukti Absen <span class="text-red-500 font-bold text-xs ml-1">* Wajib</span></div>
+        <div id="modal-camera-area" class="relative w-full aspect-[4/3] max-h-48 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden transition-all">
           <video id="modal-camera-video" class="w-full h-full object-cover hidden" autoplay playsinline></video>
           <canvas id="modal-camera-canvas" class="hidden"></canvas>
           <div id="modal-photo-preview" class="w-full h-full hidden">
             <img id="modal-photo-img" src="" alt="Bukti Absen" class="w-full h-full object-cover">
           </div>
           <div id="modal-camera-start" class="flex flex-col items-center gap-2 cursor-pointer" onclick="startCamera()">
-            <svg class="w-10 h-10 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            <span class="text-stone-500 text-sm font-medium">Buka Kamera</span>
-            <span class="text-stone-400 text-[10px]">Izinkan akses kamera untuk foto</span>
+            <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span class="text-slate-500 text-sm font-medium">Buka Kamera</span>
+            <span class="text-slate-400 text-[10px]">Izinkan akses kamera untuk foto</span>
           </div>
           <div id="modal-camera-loading" class="hidden flex-col items-center gap-2">
-            <svg class="animate-spin w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-            <span class="text-stone-500 text-xs">Mengakses kamera...</span>
+            <svg class="animate-spin w-8 h-8 text-[#14326b]" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            <span class="text-slate-500 text-xs">Mengakses kamera...</span>
           </div>
           <div id="modal-camera-active" class="hidden absolute inset-0">
             <div class="absolute bottom-3 left-0 right-0 flex justify-center gap-4 z-10">
-              <button type="button" onclick="capturePhoto()" class="w-14 h-14 rounded-full bg-white border-4 border-blue-500 shadow-lg flex items-center justify-center hover:scale-105 transition-transform active:scale-95">
-                <div class="w-10 h-10 rounded-full bg-blue-500"></div>
+              <button type="button" onclick="capturePhoto()" class="w-14 h-14 rounded-full bg-white border-4 border-[#14326b] shadow-lg flex items-center justify-center hover:scale-105 transition-transform active:scale-95">
+                <div class="w-10 h-10 rounded-full bg-[#14326b]"></div>
               </button>
             </div>
           </div>
           <div id="modal-camera-retake" class="hidden absolute inset-0">
             <div class="absolute bottom-3 left-0 right-0 flex justify-center gap-4 z-10">
-              <button type="button" onclick="retakePhoto()" class="px-5 py-2.5 bg-white/90 backdrop-blur rounded-full text-sm font-medium text-stone-700 shadow-lg hover:bg-white transition-all flex items-center gap-2">
+              <button type="button" onclick="retakePhoto()" class="px-5 py-2.5 bg-white/90 backdrop-blur rounded-full text-sm font-medium text-slate-700 shadow-lg hover:bg-white transition-all flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                 Ambil Ulang
               </button>
@@ -351,7 +351,7 @@
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span>Foto wajib diambil</span>
           </div>
-          <div id="modal-photo-compressing" class="hidden text-xs text-blue-600 flex items-center gap-1.5">
+          <div id="modal-photo-compressing" class="hidden text-xs text-[#14326b] flex items-center gap-1.5">
             <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             <span>Memproses foto...</span>
           </div>
@@ -368,8 +368,8 @@
       <input type="file" id="modal-photo-file" class="hidden" accept="image/*" capture="environment">
       
       <div class="flex gap-3">
-        <button id="modal-batal" class="flex-1 h-11 rounded-xl border border-stone-200 text-sm font-medium text-stone-600 hover:bg-stone-50 shadow-sm transition-all">Batal</button>
-        <button id="modal-ya" class="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-all">Ya, Absen!</button>
+        <button id="modal-batal" class="flex-1 h-11 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 shadow-sm transition-all">Batal</button>
+        <button id="modal-ya" class="flex-1 h-11 rounded-lg bg-[#14326b] hover:bg-[#0f2a5f] text-white text-sm font-semibold shadow-sm transition-all">Ya, Absen!</button>
       </div>
     </div>
   </div>
@@ -474,10 +474,10 @@
       if (!s.sudah_absensi) {
         if (s.terkunci) {
           if (s.hari_libur) {
-            el.innerHTML = '<div class="flex items-start gap-3 bg-violet-50 border border-violet-200 rounded-lg p-4">'
-              +'<div class="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">'
-              +'<svg class="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>'
-              +'<div><div class="font-semibold text-violet-700">Hari Libur</div><div class="text-xs text-violet-500 mt-0.5">Hari ini libur. Silakan nikmati hari libur Anda! 🎉</div></div></div>';
+            el.innerHTML = '<div class="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4">'
+              +'<div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">'
+              +'<svg class="w-5 h-5 text-[#14326b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>'
+              +'<div><div class="font-semibold text-[#14326b]">Hari Libur</div><div class="text-xs text-[#14326b] mt-0.5">Hari ini libur. Silakan nikmati hari libur Anda! 🎉</div></div></div>';
           } else if (s.bolos) {
             el.innerHTML = '<div class="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">'
               +'<div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">'
@@ -495,7 +495,7 @@
             +'<svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>'
             +'<div><div class="font-semibold text-orange-700">Terlambat!</div><div class="text-xs text-orange-500 mt-0.5">Anda melewati batas toleransi 15 menit. Clock-in sekarang akan dicatat sebagai TERLAMBAT.</div></div></div>';
         } else {
-          el.innerHTML = '<div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">'
+          el.innerHTML = '<div class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4">'
             +'<div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">'
             +'<svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>'
             +'<div><div class="font-semibold text-slate-800">Belum Absen</div><div class="text-xs text-slate-500 mt-0.5">Silakan clock-in untuk memulai</div></div></div>';
@@ -529,7 +529,7 @@
           +'<svg class="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
           +'<div><div class="font-semibold text-red-700 text-sm">Batas Clock-Out Habis</div>'
           +'<div class="text-red-600/70 text-xs mt-0.5">'+escapeHtml(s.pesan_deadline||'Batas waktu clock-out sudah lewat. Hubungi admin untuk koreksi.')+'</div></div></div>':'')
-        +(s.pesan_early?'<div class="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">'
+        +(s.pesan_early?'<div class="mt-2 bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-start gap-2">'
           +'<svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
           +'<div><div class="font-semibold text-amber-700 text-sm">Belum Waktunya Clock-Out</div>'
           +'<div class="text-amber-600/70 text-xs mt-0.5">'+escapeHtml(s.pesan_early)+'</div></div></div>':'');
@@ -564,10 +564,10 @@
       // Jika terkunci, disable kedua tombol
       if (s.terkunci) {
         if (s.hari_libur) {
-          ci.className='h-16 btn btn-outline text-violet-400 cursor-not-allowed';
+          ci.className='h-16 btn btn-outline text-slate-400 cursor-not-allowed';
           ci.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Hari Libur</span>';
           ci.disabled=true; ci.onclick=null;
-          co.className='h-16 btn btn-outline text-violet-400 cursor-not-allowed';
+          co.className='h-16 btn btn-outline text-slate-400 cursor-not-allowed';
           co.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Hari Libur</span>';
           co.disabled=true; co.onclick=null;
         } else if (s.bolos) {
@@ -687,8 +687,8 @@
         video.classList.remove('hidden');
         active.classList.remove('hidden');
         active.classList.add('flex');
-        document.getElementById('modal-camera-area').classList.remove('border-dashed','border-stone-300','bg-stone-50');
-        document.getElementById('modal-camera-area').classList.add('border-solid','border-stone-400','bg-black');
+        document.getElementById('modal-camera-area').classList.remove('border-dashed','border-slate-300','bg-slate-50');
+        document.getElementById('modal-camera-area').classList.add('border-solid','border-slate-400','bg-black');
       } catch (e) {
         loading.classList.add('hidden');
         start.classList.remove('hidden');
@@ -833,8 +833,8 @@
       _absenTipe = type;
       const overlay=document.getElementById('modal-overlay'),icon=document.getElementById('modal-icon'),title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc'),btnYa=document.getElementById('modal-ya'),photoContainer=document.getElementById('modal-photo-container'),photoError=document.getElementById('modal-photo-error'),photoOk=document.getElementById('modal-photo-ok'),compressing=document.getElementById('modal-photo-compressing'),photoOkText=document.getElementById('modal-photo-ok-text'),camOff=document.getElementById('modal-photo-camera-off');
       const in_=type==='in';
-      icon.className='w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center '+(in_?'bg-amber-100':'bg-blue-100');
-      icon.innerHTML=in_?'<svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>':'<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+      icon.className='w-16 h-16 mx-auto mb-3 rounded-lg flex items-center justify-center '+(in_?'bg-amber-100':'bg-slate-100');
+      icon.innerHTML=in_?'<svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>':'<svg class="w-8 h-8 text-[#14326b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
       title.textContent=in_?'Clock In':'Clock Out'; desc.textContent=in_?'Konfirmasi clock-in untuk memulai hari kerja?':'Konfirmasi clock-out untuk mengakhiri hari kerja?';
       // Reset photo state
       _photoBase64 = null;
@@ -850,7 +850,7 @@
       if (loading) { loading.classList.add('hidden'); loading.classList.remove('flex'); }
       if (preview) { preview.classList.add('hidden'); img.src = ''; }
       if (retake) { retake.classList.add('hidden'); retake.classList.remove('flex'); }
-      document.getElementById('modal-camera-area').className='relative w-full aspect-[4/3] max-h-48 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 flex items-center justify-center overflow-hidden transition-all';
+      document.getElementById('modal-camera-area').className='relative w-full aspect-[4/3] max-h-48 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden transition-all';
       if (photoContainer) photoContainer.classList.remove('hidden');
       if (photoError) photoError.classList.add('hidden');
       if (photoOk) photoOk.classList.add('hidden');

@@ -227,7 +227,7 @@ function renderChatContacts() {
   const contacts = chatState.contacts || [];
 
   const umumHtml = `
-    <div class="p-2 mx-2 mt-2 rounded-xl cursor-pointer hover:bg-stone-50 flex items-center gap-3" style="border:1px solid var(--border);background:var(--bg-sidebar-hover)" onclick="openChatRoom('umum','Ngobrol Semua',null)">
+    <div class="p-2 mx-2 mt-2 rounded-lg cursor-pointer hover:bg-slate-50 flex items-center gap-3" style="border:1px solid var(--border);background:var(--bg-sidebar-hover)" onclick="openChatRoom('umum','Ngobrol Semua',null)">
       <div class="w-9 h-9 rounded-full flex items-center justify-center text-white shrink-0" style="background:linear-gradient(135deg,#059669,#10b981)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       </div>
@@ -240,10 +240,10 @@ function renderChatContacts() {
 
   const sorted = [...contacts].sort((a, b) => (b.is_online ? 1 : 0) - (a.is_online ? 1 : 0) || a.nama.localeCompare(b.nama));
   const contactHtml = sorted.map(c => `
-    <div class="flex items-center gap-3 p-2 mx-2 rounded-lg cursor-pointer hover:bg-stone-50 transition-colors" onclick="openChatRoom('${esc(c.room)}','${esc(c.nama)}',${c.user_id})">
+    <div class="flex items-center gap-3 p-2 mx-2 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors" onclick="openChatRoom('${esc(c.room)}','${esc(c.nama)}',${c.user_id})">
       <div class="relative shrink-0">
         ${chatAvatarHTML(c.foto, c.nama, 'w-9 h-9')}
-        <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 ${c.is_online ? 'bg-emerald-500' : 'bg-stone-300'}" style="border-color:var(--bg-card)" title="${c.is_online ? 'Online' : 'Offline'}"></span>
+        <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 ${c.is_online ? 'bg-emerald-500' : 'bg-slate-300'}" style="border-color:var(--bg-card)" title="${c.is_online ? 'Online' : 'Offline'}"></span>
       </div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-1.5">
@@ -293,7 +293,7 @@ function openChatRoom(room, name, userId) {
   const dot = document.getElementById('chat-conv-dot');
   const subEl = document.getElementById('chat-conv-online');
   const isOnline = room === 'umum' ? true : !!(_c && _c.is_online);
-  dot.className = 'w-1.5 h-1.5 rounded-full inline-block ' + (isOnline ? 'bg-emerald-500' : 'bg-stone-300');
+  dot.className = 'w-1.5 h-1.5 rounded-full inline-block ' + (isOnline ? 'bg-emerald-500' : 'bg-slate-300');
   subEl.textContent = room === 'umum' ? 'Room bersama' : (isOnline ? 'Online' : 'Offline');
 
   // Clear unread untuk room ini
@@ -399,7 +399,7 @@ function renderChatMsg(m, showDay) {
     return dayBlock + `
       <div class="chat-msg-anim flex justify-end">
         <div class="max-w-[78%] flex flex-col items-end">
-          <div class="px-4 py-2 rounded-2xl rounded-br-sm chat-bubble-mine text-sm whitespace-pre-wrap break-words">
+          <div class="px-4 py-2 rounded-lg rounded-br-sm chat-bubble-mine text-sm whitespace-pre-wrap break-words">
             ${body}
           </div>
           <div class="chat-time mine mt-1 pr-1" data-ts="${esc(m.created_at)}" title="${stamp}">${time}</div>
@@ -412,7 +412,7 @@ function renderChatMsg(m, showDay) {
       ${chatAvatarHTML(m.sender_id === chatState.activeUserId ? chatState.activeFoto : null, m.sender_nama, 'w-6 h-6')}
       <div class="max-w-[78%] flex flex-col">
         ${m.sender_id !== chatState.activeUserId ? `<div class="text-[10px] font-semibold mb-0.5 px-1" style="color:var(--text-body);opacity:.55">${esc(m.sender_nama || 'User')}</div>` : ''}
-        <div class="px-4 py-2 rounded-2xl rounded-bl-sm chat-bubble-other text-sm whitespace-pre-wrap break-words">
+        <div class="px-4 py-2 rounded-lg rounded-bl-sm chat-bubble-other text-sm whitespace-pre-wrap break-words">
           ${body}
         </div>
         <div class="chat-time other mt-1 pl-1" data-ts="${esc(m.created_at)}" title="${stamp}">${time}</div>

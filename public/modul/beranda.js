@@ -1,6 +1,6 @@
 async function renderDashboard() {
   const c = document.getElementById('content');
-  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
+  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#14326b]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
     const r = await fetch('/api/template/dashboard', { credentials: 'include' });
     if (!r.ok) {
@@ -962,8 +962,8 @@ function renderOhEntries(entries) {
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <span class="mono text-[10px] text-slate-400">${ohTime(e.created_at)}</span>
-          <span class="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full ${isLogin ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}">
-            <span class="w-1 h-1 rounded-full ${isLogin ? 'bg-blue-500' : 'bg-emerald-500'}"></span>
+          <span class="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full ${isLogin ? 'bg-slate-50 text-[#14326b]' : 'bg-emerald-50 text-emerald-700'}">
+            <span class="w-1 h-1 rounded-full ${isLogin ? 'bg-slate-500' : 'bg-emerald-500'}"></span>
             ${isLogin ? 'Login' : 'Aktif'}
           </span>
         </div>

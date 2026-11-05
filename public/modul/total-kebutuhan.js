@@ -48,25 +48,25 @@ async function loadTotalKebutuhan() {
     let html = '';
 
     // ── Filter bar ──
-    html += '<div class="bg-white border border-stone-200 rounded-xl p-4 mb-4 shadow-sm">';
+    html += '<div class="bg-white border border-slate-200 rounded-lg p-4 mb-4 shadow-sm">';
     html += '<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">';
     html += '<div class="flex flex-wrap items-center gap-2">';
-    html += '<label class="text-sm font-medium text-stone-700 whitespace-nowrap">Dari:</label>';
-    html += '<input type="date" id="tk-tanggal-mulai" value="' + (tanggal_mulai || '') + '" onchange="loadTotalKebutuhan()" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
-    html += '<label class="text-sm font-medium text-stone-700 whitespace-nowrap">Sampai:</label>';
-    html += '<input type="date" id="tk-tanggal-selesai" value="' + (tanggal_selesai || '') + '" onchange="loadTotalKebutuhan()" class="h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
-    html += '<button onclick="tkResetTanggal()" class="h-10 px-3 bg-white border border-stone-200 rounded-xl text-xs text-stone-500 hover:bg-stone-50 transition-colors whitespace-nowrap" title="Reset filter">Reset</button>';
+    html += '<label class="text-sm font-medium text-slate-700 whitespace-nowrap">Dari:</label>';
+    html += '<input type="date" id="tk-tanggal-mulai" value="' + (tanggal_mulai || '') + '" onchange="loadTotalKebutuhan()" class="h-10 px-3 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
+    html += '<label class="text-sm font-medium text-slate-700 whitespace-nowrap">Sampai:</label>';
+    html += '<input type="date" id="tk-tanggal-selesai" value="' + (tanggal_selesai || '') + '" onchange="loadTotalKebutuhan()" class="h-10 px-3 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">';
+    html += '<button onclick="tkResetTanggal()" class="h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-500 hover:bg-slate-50 transition-colors whitespace-nowrap" title="Reset filter">Reset</button>';
     html += '</div>';
     var tkAdaData = !_validation && hari && hari.length;
     if (tkAdaData) {
       html += '<div class="flex flex-wrap items-center gap-2">';
-      html += '<button onclick="exportTotalKebutuhanXlsx()" class="h-10 px-4 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap" title="Export Total Kebutuhan Pangan ke Excel (template total-kebutuhan.xlsx)">';
+      html += '<button onclick="exportTotalKebutuhanXlsx()" class="h-10 px-4 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap" title="Export Total Kebutuhan Pangan ke Excel (template total-kebutuhan.xlsx)">';
       html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Export XLSX';
       html += '</button>';
       html += '</div>';
     }
     html += '</div>';
-    html += '<div class="text-xs text-stone-400 mt-3 pt-3 border-t border-stone-100">' + (hari ? hari.length + ' hari' : '0 hari') + ' | Total ' + totalSiswaSemuaJenjang + ' siswa</div>';
+    html += '<div class="text-xs text-slate-400 mt-3 pt-3 border-t border-slate-100">' + (hari ? hari.length + ' hari' : '0 hari') + ' | Total ' + totalSiswaSemuaJenjang + ' siswa</div>';
     html += '</div>';
 
     // ── Tampilkan validasi jika ada ──
@@ -74,7 +74,7 @@ async function loadTotalKebutuhan() {
       var vl = _validation;
       var colors = { 'no_siklus': 'amber', 'no_target': 'orange', 'no_pm_match': 'amber' };
       var c = colors[vl.level] || 'stone';
-      html += '<div class="rounded-xl border border-' + c + '-200 bg-' + c + '-50 p-5 mb-4">';
+      html += '<div class="rounded-lg border border-' + c + '-200 bg-' + c + '-50 p-5 mb-4">';
       html += '<div class="flex items-start gap-3">';
       html += '<svg class="w-6 h-6 shrink-0 mt-0.5 text-' + c + '-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
       html += '<div>';
@@ -94,7 +94,7 @@ async function loadTotalKebutuhan() {
     }
 
     if (!hari || !hari.length) {
-      html += '<div class="text-center py-16 text-stone-400 bg-white border border-stone-200 rounded-lg"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Tidak ada data</div></div>';
+      html += '<div class="text-center py-16 text-slate-400 bg-white border border-slate-200 rounded-lg"><svg class="w-14 h-14 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2" ry="2"/><path d="M12 17v-6"/><circle cx="12" cy="21" r="2"/></svg><div class="text-sm">Tidak ada data</div></div>';
       wrap.innerHTML = html;
       return;
     }
@@ -218,31 +218,31 @@ function renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang) {
     if (!day.bahan || !day.bahan.length) continue;
 
     // Day card
-    html += '<div class="bg-white border border-stone-200 rounded-xl overflow-hidden mb-4 shadow-sm">';
+    html += '<div class="bg-white border border-slate-200 rounded-lg overflow-hidden mb-4 shadow-sm">';
 
     // Day header
-    html += '<div class="px-5 py-3 bg-gradient-to-r from-emerald-50 to-green-50 border-b border-stone-200 flex items-center gap-3 flex-wrap">';
+    html += '<div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3 flex-wrap">';
     html += '<span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-sm">M' + (d + 1) + '</span>';
     html += '<div>';
     html += '<div class="font-semibold text-sm text-emerald-800">' + tkFmtTanggal(day.header_tanggal, day.hari_nama) + '</div>';
     if (day.menu_names && day.menu_names.length) {
-      html += '<div class="text-xs text-stone-500 mt-0.5">' + day.menu_names.join(' + ') + '</div>';
+      html += '<div class="text-xs text-slate-500 mt-0.5">' + day.menu_names.join(' + ') + '</div>';
     }
     html += '</div>';
-    html += '<div class="ml-auto text-xs text-stone-500">Total Porsi: <strong class="text-emerald-700">' + fmtTkNum(totalPorsiDay) + '</strong></div>';
+    html += '<div class="ml-auto text-xs text-slate-500">Total Porsi: <strong class="text-emerald-700">' + fmtTkNum(totalPorsiDay) + '</strong></div>';
     html += '</div>';
 
     // ── Matriks: baris = bahan, kolom = jenjang ──
     html += '<div class="overflow-x-auto p-4"><table class="w-full text-xs border-collapse">';
-    html += '<thead><tr class="border-b border-stone-200 bg-stone-50">';
-    html += '<th class="px-3 py-2 text-left font-semibold text-stone-600 min-w-[140px]">Bahan Pangan</th>';
+    html += '<thead><tr class="border-b border-slate-200 bg-slate-50">';
+    html += '<th class="px-3 py-2 text-left font-semibold text-slate-600 min-w-[140px]">Bahan Pangan</th>';
     for (var jc = 0; jc < tkJenjangOrder.length; jc++) {
-      html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">' + tkJenjangOrder[jc] + '</th>';
+      html += '<th class="px-3 py-2 text-right font-semibold text-slate-600 whitespace-nowrap">' + tkJenjangOrder[jc] + '</th>';
     }
-    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Total Porsi</th>';
-    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan Pangan (kg)</th>';
-    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap" title="Kebutuhan + buffer per bahan (1-10%)">1-10%</th>';
-    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Rincian</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-slate-600 whitespace-nowrap">Total Porsi</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-slate-600 whitespace-nowrap">Kebutuhan Pangan (kg)</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-slate-600 whitespace-nowrap" title="Kebutuhan + buffer per bahan (1-10%)">1-10%</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-slate-600 whitespace-nowrap">Rincian</th>';
     html += '</tr></thead><tbody>';
 
     var colTotal = {};
@@ -268,23 +268,23 @@ function renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang) {
       grandTotalKg += rowKg;
       grandBufferKg += bufferKg;
 
-      html += '<tr class="border-b border-stone-100 hover:bg-emerald-50/30 transition-colors">';
-      html += '<td class="px-3 py-1.5 text-sm font-medium text-stone-800">' + (b.nama_display || b.nama) + '</td>';
+      html += '<tr class="border-b border-slate-100 hover:bg-emerald-50/30 transition-colors">';
+      html += '<td class="px-3 py-1.5 text-sm font-medium text-slate-800">' + (b.nama_display || b.nama) + '</td>';
       html += cells;
-      html += '<td class="px-3 py-1.5 text-sm text-right mono text-stone-600">' + fmtTkNum(totalPorsiDay) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono text-slate-600">' + fmtTkNum(totalPorsiDay) + '</td>';
       html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtTkPecahan(rowKg) + '</td>';
-      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold ' + (bufferPersen > 0 ? 'text-sky-700' : 'text-stone-500') + '" title="Buffer ' + bufferPersen + '%">' + fmtTkPecahan(bufferKg) + '</td>';
-      html += '<td class="px-3 py-1.5 text-sm text-right text-stone-400"></td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold ' + (bufferPersen > 0 ? 'text-sky-700' : 'text-slate-500') + '" title="Buffer ' + bufferPersen + '%">' + fmtTkPecahan(bufferKg) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm text-right text-slate-400"></td>';
       html += '</tr>';
     }
 
     // Total row
-    html += '<tr class="bg-stone-50 border-t-2 border-stone-200 font-bold">';
-    html += '<td class="px-3 py-2 text-sm font-semibold text-stone-700">Total</td>';
+    html += '<tr class="bg-slate-50 border-t-2 border-slate-200 font-bold">';
+    html += '<td class="px-3 py-2 text-sm font-semibold text-slate-700">Total</td>';
     for (var jc4 = 0; jc4 < tkJenjangOrder.length; jc4++) {
-      html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtTkPecahan(colTotal[tkJenjangOrder[jc4]]) + '</td>';
+      html += '<td class="px-3 py-2 text-sm text-right mono text-slate-700">' + fmtTkPecahan(colTotal[tkJenjangOrder[jc4]]) + '</td>';
     }
-    html += '<td class="px-3 py-2 text-sm text-right mono text-stone-700">' + fmtTkNum(totalPorsiDay) + '</td>';
+    html += '<td class="px-3 py-2 text-sm text-right mono text-slate-700">' + fmtTkNum(totalPorsiDay) + '</td>';
     html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-emerald-700">' + fmtTkPecahan(Math.round(grandTotalKg * 100) / 100) + '</td>';
     html += '<td class="px-3 py-2 text-sm text-right mono font-bold text-sky-700">' + fmtTkPecahan(Math.round(grandBufferKg * 100) / 100) + '</td>';
     html += '<td class="px-3 py-2"></td>';
@@ -294,11 +294,11 @@ function renderTkMatriksPerHari(hari, totalSiswaSemuaJenjang) {
   }
 
   if (!html) {
-    html = '<div class="text-center py-16 text-stone-400 bg-white border border-stone-200 rounded-lg"><div class="text-sm">Tidak ada data untuk ditampilkan</div></div>';
+    html = '<div class="text-center py-16 text-slate-400 bg-white border border-slate-200 rounded-lg"><div class="text-sm">Tidak ada data untuk ditampilkan</div></div>';
   } else {
     // ── Legenda ──
-    html += '<div class="bg-white border border-stone-200 rounded-lg p-4 mt-4 text-xs text-stone-500">';
-    html += '<div class="font-semibold text-stone-700 mb-2">Keterangan:</div>';
+    html += '<div class="bg-white border border-slate-200 rounded-lg p-4 mt-4 text-xs text-slate-500">';
+    html += '<div class="font-semibold text-slate-700 mb-2">Keterangan:</div>';
     html += '<ul class="space-y-1 list-disc list-inside">';
     html += '<li><strong>Kolom jenjang</strong> = kebutuhan bahan (kg) per kategori penerima manfaat (TK/PAUD, SD, SMP/SMA, Bumil/Busui, Balita).</li>';
     html += '<li><strong>Total Porsi</strong> = total penerima manfaat (porsi) semua jenjang pada hari tersebut.</li>';
@@ -499,11 +499,11 @@ async function renderTkBelanjaPerHari(hari, totalSiswaSemuaJenjang) {
   }
 
   if (!html) {
-    html = '<div class="text-center py-16 text-stone-400 bg-white border border-stone-200 rounded-lg"><div class="text-sm">Tidak ada data untuk ditampilkan</div></div>';
+    html = '<div class="text-center py-16 text-slate-400 bg-white border border-slate-200 rounded-lg"><div class="text-sm">Tidak ada data untuk ditampilkan</div></div>';
   } else {
     // ── Legenda ──
-    html += '<div class="bg-white border border-stone-200 rounded-lg p-4 mt-4 text-xs text-stone-500">';
-    html += '<div class="font-semibold text-stone-700 mb-2">Keterangan:</div>';
+    html += '<div class="bg-white border border-slate-200 rounded-lg p-4 mt-4 text-xs text-slate-500">';
+    html += '<div class="font-semibold text-slate-700 mb-2">Keterangan:</div>';
     html += '<ul class="space-y-1 list-disc list-inside">';
     html += '<li><strong>QTY</strong> = jumlah belanja per bahan — dihitung otomatis dari kebutuhan pangan (bahan berat → kg; bahan satuan → pcs/btl/dll.). Kebutuhan ≥ 1 kg dibulatkan <em>ke atas</em> ke satuan beli utuh agar aman untuk pembelian (mis. kebutuhan 285,4 kg → QTY 286 kg). Kebutuhan < 1 kg ditampilkan dalam pecahan (mis. 1/2 kg, 1/5 kg) agar tidak membesar menjadi 1 kg. Arahkan kursor ke tanda ⓘ pada QTY untuk melihat rincian asalnya.</li>';
     html += '<li><strong>HARGA</strong> = harga satuan dari master Bahan Baku (bahan_baku.harga_satuan).</li>';
@@ -528,14 +528,14 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
   var daftarMenuId = day.menu_ids || [];
 
   // ── Header (hero: hari pelaksanaan + menu; judul instansi dihilangkan di total-kebutuhan) ──
-  var html = '<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden mb-4">';
-  html += '<div class="px-5 py-4 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 text-white">';
+  var html = '<div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden mb-4">';
+  html += '<div class="px-5 py-4 bg-gradient-to-r from-[#14326b] to-[#0f2a5f] text-white">';
   html += '<div class="flex flex-wrap items-center gap-x-6 gap-y-3">';
 
   // Kiri: ikon kalender + tanggal besar
   if (tglFormatted) {
     html += '<div class="flex items-center gap-3 min-w-0">';
-    html += '<div class="w-11 h-11 shrink-0 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center shadow-sm">';
+    html += '<div class="w-11 h-11 shrink-0 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center shadow-sm">';
     html += '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
     html += '</div>';
     html += '<div class="min-w-0">';
@@ -571,24 +571,24 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
   // ── Tabel ──
   if (rows.length) {
     html += '<div class="overflow-x-auto"><table class="w-full text-xs">';
-    html += '<thead><tr class="bg-stone-50">';
-    html += '<th class="text-center px-2 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider w-8">NO</th>';
-    html += '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">URAIAN</th>';
-    html += '<th class="text-center px-2 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">TARGET</th>';
-    html += '<th class="text-right px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">QTY</th>';
-    html += '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">SATUAN</th>';
-    html += '<th class="text-right px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">HARGA</th>';
-    html += '<th class="text-right px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">JUMLAH</th>';
-    html += '<th class="text-left px-3 py-3 text-[10px] font-bold text-stone-500 uppercase tracking-wider">KETERANGAN</th>';
+    html += '<thead><tr class="bg-slate-50">';
+    html += '<th class="text-center px-2 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-8">NO</th>';
+    html += '<th class="text-left px-3 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">URAIAN</th>';
+    html += '<th class="text-center px-2 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">TARGET</th>';
+    html += '<th class="text-right px-3 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">QTY</th>';
+    html += '<th class="text-left px-3 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">SATUAN</th>';
+    html += '<th class="text-right px-3 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">HARGA</th>';
+    html += '<th class="text-right px-3 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">JUMLAH</th>';
+    html += '<th class="text-left px-3 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">KETERANGAN</th>';
     html += '</tr></thead><tbody>';
 
     rows.forEach(function(r) {
       var rowCls = r.kekurangan
-        ? 'border-t border-stone-100 bg-red-50/70'
-        : 'border-t border-stone-100 hover:bg-cyan-50/40 transition-colors';
+        ? 'border-t border-slate-100 bg-red-50/70'
+        : 'border-t border-slate-100 hover:bg-cyan-50/40 transition-colors';
       html += '<tr class="' + rowCls + '">';
-      html += '<td class="px-2 py-3 text-center text-xs text-stone-500">' + r.no + '</td>';
-      html += '<td class="px-3 py-3 text-xs font-medium ' + (r.kekurangan ? 'text-red-700' : 'text-stone-700') + '">' + escHtmlTk(r.uraian);
+      html += '<td class="px-2 py-3 text-center text-xs text-slate-500">' + r.no + '</td>';
+      html += '<td class="px-3 py-3 text-xs font-medium ' + (r.kekurangan ? 'text-red-700' : 'text-slate-700') + '">' + escHtmlTk(r.uraian);
       if (r.kekurangan) {
         var editHref = r.bahanBakuId ? "onclick=\"tkEditBahanBaku(" + r.bahanBakuId + ")\"" : '';
         html += ' <span ' + editHref + ' class="inline-block ml-1 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap cursor-pointer" title="Klik untuk melengkapi di master Bahan Baku">' + escHtmlTk(r.ketKurang || 'Data belum lengkap') + '</span>';
@@ -599,26 +599,26 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
         html += '<button type="button" onclick="tkSetTargetBelanja(this)" data-bahan-id="' + r.bahanBakuId + '" data-nama="' + escHtmlTk(r.uraian) + '" data-satuan="' + escHtmlTk(r.satuan || '') + '" title="Atur target belanja harian (' + (/butir/i.test(r.satuan || '') ? 'butir' : 'kg') + ') — gram/porsi di resep, master bahan &amp; referensi SP disesuaikan agar total belanja pas target" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap hover:bg-emerald-100 hover:border-emerald-300 transition-colors cursor-pointer">🎯 Target</button>';
       }
       html += '</td>';
-      html += '<td class="px-3 py-3 text-right mono text-xs font-semibold text-stone-700"' + (r.qtyTooltip ? ' title="' + escHtmlTk(r.qtyTooltip) + '" style="cursor:help"' : '') + '>' + r.qty + (r.qtyTooltip ? ' <span class="text-[9px] text-stone-400 font-normal align-middle">ⓘ</span>' : '') + '</td>';
-      html += '<td class="px-3 py-3 text-xs text-stone-500">' + escHtmlTk(r.satuan) + '</td>';
-      html += '<td class="px-3 py-3 text-right mono text-xs ' + (r.kekurangan ? 'font-bold text-red-700' : 'text-stone-600') + '">' + fmtTkRp(r.harga) + '</td>';
-      html += '<td class="px-3 py-3 text-right mono text-xs font-bold ' + (r.kekurangan ? 'text-red-700' : 'text-stone-800') + '">' + fmtTkRp(r.jumlah) + '</td>';
-      html += '<td class="px-3 py-3 text-xs text-stone-400">' + (r.ket ? escHtmlTk(r.ket) : '') + '</td>';
+      html += '<td class="px-3 py-3 text-right mono text-xs font-semibold text-slate-700"' + (r.qtyTooltip ? ' title="' + escHtmlTk(r.qtyTooltip) + '" style="cursor:help"' : '') + '>' + r.qty + (r.qtyTooltip ? ' <span class="text-[9px] text-slate-400 font-normal align-middle">ⓘ</span>' : '') + '</td>';
+      html += '<td class="px-3 py-3 text-xs text-slate-500">' + escHtmlTk(r.satuan) + '</td>';
+      html += '<td class="px-3 py-3 text-right mono text-xs ' + (r.kekurangan ? 'font-bold text-red-700' : 'text-slate-600') + '">' + fmtTkRp(r.harga) + '</td>';
+      html += '<td class="px-3 py-3 text-right mono text-xs font-bold ' + (r.kekurangan ? 'text-red-700' : 'text-slate-800') + '">' + fmtTkRp(r.jumlah) + '</td>';
+      html += '<td class="px-3 py-3 text-xs text-slate-400">' + (r.ket ? escHtmlTk(r.ket) : '') + '</td>';
       html += '</tr>';
     });
 
-    html += '<tr class="border-t-2 border-stone-300 bg-gradient-to-r from-cyan-50 to-blue-50 font-bold">';
-    html += '<td colspan="6" class="px-4 py-3.5 text-xs text-right text-stone-800 uppercase tracking-wider">TOTAL</td>';
-    html += '<td class="px-3 py-3.5 text-right mono text-xs font-bold text-blue-700">' + fmtTkRp(grandTotal) + '</td>';
+    html += '<tr class="border-t-2 border-slate-300 bg-slate-100 font-bold">';
+    html += '<td colspan="6" class="px-4 py-3.5 text-xs text-right text-slate-800 uppercase tracking-wider">TOTAL</td>';
+    html += '<td class="px-3 py-3.5 text-right mono text-xs font-bold text-[#14326b]">' + fmtTkRp(grandTotal) + '</td>';
     html += '<td></td>';
     html += '</tr>';
     if (anggaran > 0) {
-      html += '<tr class="border-t border-stone-200 bg-white">';
-      html += '<td colspan="6" class="px-4 py-3 text-xs text-right text-stone-600">ANGGARAN BELANJA HARIAN</td>';
-      html += '<td class="px-3 py-3 text-right mono text-xs font-bold text-stone-800">' + fmtTkRp(anggaran) + '</td>';
+      html += '<tr class="border-t border-slate-200 bg-white">';
+      html += '<td colspan="6" class="px-4 py-3 text-xs text-right text-slate-600">ANGGARAN BELANJA HARIAN</td>';
+      html += '<td class="px-3 py-3 text-right mono text-xs font-bold text-slate-800">' + fmtTkRp(anggaran) + '</td>';
       html += '<td></td>';
       html += '</tr>';
-      html += '<tr class="border-t border-stone-200 ' + (sisa >= 0 ? 'bg-emerald-50/50' : 'bg-red-50/50') + '">';
+      html += '<tr class="border-t border-slate-200 ' + (sisa >= 0 ? 'bg-emerald-50/50' : 'bg-red-50/50') + '">';
       html += '<td colspan="6" class="px-4 py-3 text-xs text-right font-bold text-' + (sisa >= 0 ? 'emerald' : 'red') + '-700">SISA</td>';
       html += '<td class="px-3 py-3 text-right mono text-xs font-bold text-' + (sisa >= 0 ? 'emerald' : 'red') + '-600">' + (sisa < 0 ? '-' : '') + fmtTkRp(Math.abs(sisa)) + '</td>';
       html += '<td class="px-3 py-3 text-xs text-' + (sisa >= 0 ? 'emerald' : 'red') + '-500">' + (sisa < 0 ? 'DEFISIT' : '') + '</td>';
@@ -626,7 +626,7 @@ function renderTkRabDoc(day, rows, grandTotal, anggaran, sisa) {
     }
     html += '</tbody></table></div>';
   } else {
-    html += '<div class="p-6 text-center text-xs text-stone-400">Tidak ada bahan dengan jumlah untuk ditampilkan.</div>';
+    html += '<div class="p-6 text-center text-xs text-slate-400">Tidak ada bahan dengan jumlah untuk ditampilkan.</div>';
   }
 
   html += '</div>';
@@ -725,10 +725,10 @@ function tkPromptTarget(nama, unit, isButir) {
     m.id = 'tk-target-modal';
     m.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4';
     m.innerHTML =
-      '<div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-auto overflow-hidden">' +
-        '<div class="px-5 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white flex items-center justify-between">' +
+      '<div class="bg-white rounded-lg shadow-2xl w-full max-w-sm mx-auto overflow-hidden">' +
+        '<div class="px-5 py-4 bg-gradient-to-r from-[#14326b] to-[#0f2a5f] text-white flex items-center justify-between">' +
           '<div class="flex items-center gap-2.5">' +
-            '<span class="w-9 h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center text-base">🎯</span>' +
+            '<span class="w-9 h-9 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center text-base">🎯</span>' +
             '<div>' +
               '<div class="font-bold text-sm">Set Target Belanja Harian</div>' +
               '<div class="text-[11px] text-emerald-100/90">' + escHtmlTk(nama) + '</div>' +
@@ -739,13 +739,13 @@ function tkPromptTarget(nama, unit, isButir) {
           '</button>' +
         '</div>' +
         '<div class="p-5">' +
-          '<label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">Target (' + unit + ')</label>' +
+          '<label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Target (' + unit + ')</label>' +
           '<input id="tk-target-input" type="number" min="0" step="any" inputmode="decimal" placeholder="mis. ' + (isButir ? '2859' : '13') + '" ' +
-            'class="w-full h-11 px-3.5 border border-stone-300 rounded-xl text-base font-semibold text-stone-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">' +
-          '<p class="text-[11px] text-stone-400 mt-2 leading-relaxed">Gram/porsi di resep, master bahan &amp; referensi SP akan disesuaikan agar total belanja pas dengan target.</p>' +
+            'class="w-full h-11 px-3.5 border border-slate-300 rounded-lg text-base font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">' +
+          '<p class="text-[11px] text-slate-400 mt-2 leading-relaxed">Gram/porsi di resep, master bahan &amp; referensi SP akan disesuaikan agar total belanja pas dengan target.</p>' +
           '<div class="flex justify-end gap-2 mt-5">' +
-            '<button type="button" onclick="tkCloseTargetModal()" class="px-4 h-10 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-xl transition-colors">Batal</button>' +
-            '<button type="button" onclick="tkSubmitTargetModal(' + (isButir ? 'true' : 'false') + ')" class="px-5 h-10 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-colors flex items-center gap-1.5">' +
+            '<button type="button" onclick="tkCloseTargetModal()" class="px-4 h-10 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Batal</button>' +
+            '<button type="button" onclick="tkSubmitTargetModal(' + (isButir ? 'true' : 'false') + ')" class="px-5 h-10 text-sm font-semibold text-white bg-[#14326b] hover:bg-[#0f2a5f] rounded-lg shadow-sm transition-colors flex items-center gap-1.5">' +
               '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> Simpan Target' +
             '</button>' +
           '</div>' +

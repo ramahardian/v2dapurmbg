@@ -101,7 +101,7 @@ async function renderMenu() {
   // Jika datang dari total-kebutuhan (?edit=ID), paksa tampilan daftar lalu buka form edit menu otomatis
   const autoEditId = new URLSearchParams(location.search).get('edit');
   if (autoEditId) menuViewMode = 'list';
-  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
+  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#14326b]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
     if (menuViewMode === 'siklus') {
       await ensureBahanBakuLoaded();
@@ -156,12 +156,12 @@ function renderMenuBySiklusHtml(data) {
   const usedInSiklus = data.used_in_siklus || 0;
 
   // Tab navigation
-  const tabsHtml = `<div class="flex items-center gap-1 mb-5 bg-stone-100 rounded-xl p-1 w-fit border border-stone-200">
-    <button onclick="switchMenuView('list')" class="px-4 py-2 text-sm font-medium rounded-lg transition-all ${menuViewMode === 'list' ? 'bg-white text-stone-900 shadow-sm border border-stone-200' : 'text-stone-500 hover:text-stone-700'}">
+  const tabsHtml = `<div class="flex items-center gap-1 mb-5 bg-slate-100 rounded-lg p-1 w-fit border border-slate-200">
+    <button onclick="switchMenuView('list')" class="px-4 py-2 text-sm font-medium rounded-lg transition-all ${menuViewMode === 'list' ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}">
       <svg class="w-4 h-4 inline -mt-0.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
       Semua Menu
     </button>
-    <button onclick="switchMenuView('siklus')" class="px-4 py-2 text-sm font-medium rounded-lg transition-all ${menuViewMode === 'siklus' ? 'bg-white text-stone-900 shadow-sm border border-stone-200' : 'text-stone-500 hover:text-stone-700'}">
+    <button onclick="switchMenuView('siklus')" class="px-4 py-2 text-sm font-medium rounded-lg transition-all ${menuViewMode === 'siklus' ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}">
       <svg class="w-4 h-4 inline -mt-0.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Berdasarkan Siklus
     </button>
@@ -169,55 +169,55 @@ function renderMenuBySiklusHtml(data) {
 
   // Stats cards (bento: tile utama lebar + 3 tile kecil)
   const statsHtml = `<div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
-    <div class="col-span-2 bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl border border-blue-200/60 px-5 py-4 shadow-sm flex items-center justify-between"><div><div class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">Total Menu</div><div class="text-3xl font-bold text-blue-800">${totalMenu}</div></div><svg class="w-8 h-8 text-blue-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></div>
-    <div class="bg-gradient-to-br from-sky-50 to-sky-100/60 rounded-2xl border border-sky-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-sky-700 mb-0.5">Digunakan di Siklus</div><div class="text-xl font-bold text-sky-800">${usedInSiklus}</div></div>
-    <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/60 rounded-2xl border border-emerald-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 mb-0.5">Standalone</div><div class="text-xl font-bold text-emerald-800">${standalone.length}</div></div>
-    <div class="bg-gradient-to-br from-amber-50 to-amber-100/60 rounded-2xl border border-amber-200/60 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-amber-700 mb-0.5">Siklus Aktif</div><div class="text-xl font-bold text-amber-800">${groups.filter(g => g.status === 'Aktif').length}</div></div>
+    <div class="col-span-2 bg-white rounded-lg border border-slate-200 px-5 py-4 shadow-sm flex items-center justify-between"><div><div class="text-[10px] font-semibold uppercase tracking-wider text-[#14326b] mb-0.5">Total Menu</div><div class="text-3xl font-bold text-slate-900">${totalMenu}</div></div><svg class="w-8 h-8 text-slate-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></div>
+    <div class="bg-white rounded-lg border border-slate-200 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-sky-700 mb-0.5">Digunakan di Siklus</div><div class="text-xl font-bold text-sky-800">${usedInSiklus}</div></div>
+    <div class="bg-white rounded-lg border border-slate-200 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 mb-0.5">Standalone</div><div class="text-xl font-bold text-emerald-800">${standalone.length}</div></div>
+    <div class="bg-white rounded-lg border border-slate-200 px-4 py-3 shadow-sm"><div class="text-[10px] font-semibold uppercase tracking-wider text-amber-700 mb-0.5">Siklus Aktif</div><div class="text-xl font-bold text-amber-800">${groups.filter(g => g.status === 'Aktif').length}</div></div>
   </div>`;
 
   // Siklus groups
   let siklusHtml = '';
   if (groups.length === 0) {
-    siklusHtml = `<div class="col-span-full text-center py-12 text-stone-400">
-      <svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    siklusHtml = `<div class="col-span-full text-center py-12 text-slate-400">
+      <svg class="w-14 h-14 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <div>Belum ada siklus menu</div>
       <div class="text-sm mt-1">Buat siklus terlebih dahulu untuk mengelompokkan menu</div>
-      <a href="/siklus" onclick="return loadPage('siklus')" class="inline-flex items-center gap-1.5 mt-4 px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
+      <a href="/siklus" onclick="return loadPage('siklus')" class="inline-flex items-center gap-1.5 mt-4 px-4 py-2 text-xs font-semibold rounded-lg bg-[#14326b] text-white hover:bg-[#0f2a5f] transition-colors shadow-sm">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
         Buat Siklus Baru
       </a>
     </div>`;
   } else {
     siklusHtml = groups.map(s => {
-      const statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-600';
+      const statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600';
       const filledDays = s.days.filter(d => d.menu_id || d._has_content).length;
       const coverage = s.total_hari ? Math.round((filledDays / s.total_hari) * 100) : 0;
 
-      return `<div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
+      return `<div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
         <!-- Siklus Header -->
-        <div class="px-5 py-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-3">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div class="flex items-center gap-2">
-              <h3 class="font-bold text-stone-800">${s.nama}</h3>
+              <h3 class="font-bold text-slate-800">${s.nama}</h3>
               <span class="text-[10px] px-2.5 py-1 rounded-full font-medium ${statusColor} capitalize">${s.status}</span>
             </div>
-            <div class="flex flex-wrap items-center gap-3 mt-1 text-xs text-stone-500">
+            <div class="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
               <span>${s.kategori_penerima ? kategoriBadge(s.kategori_penerima) : 'Semua'}</span>
               <span>${s.jumlah_porsi} porsi/hari</span>
               <span>${s.total_hari} hari</span>
               ${fmtSiklusRentang(s) ? `<span>${fmtSiklusRentang(s)}</span>` : ''}
-              <span class="${coverage >= 100 ? 'text-emerald-600 font-semibold' : coverage > 0 ? 'text-amber-600' : 'text-stone-400'}">${coverage}% terisi</span>
+              <span class="${coverage >= 100 ? 'text-emerald-600 font-semibold' : coverage > 0 ? 'text-amber-600' : 'text-slate-400'}">${coverage}% terisi</span>
               <span>${s.menu_count} menu unik</span>
             </div>
           </div>
-          <a href="#" onclick="navigate('siklus');return false" class="text-xs text-[#1e40af] hover:text-[#1d4ed8] font-medium hover:underline whitespace-nowrap">
+          <a href="#" onclick="navigate('siklus');return false" class="text-xs text-[#14326b] hover:text-[#0f2a5f] font-medium hover:underline whitespace-nowrap">
             Kelola Siklus →
           </a>
         </div>
         ${s.status === 'Draft' ? `
         <!-- Draft Info -->
         <div class="px-4 pb-4">
-          <div class="bg-amber-50 border-2 border-amber-200/80 rounded-xl p-5 text-center shadow-sm">
+          <div class="bg-amber-50 border-2 border-amber-200/80 rounded-lg p-5 text-center shadow-sm">
             <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center">
               <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
             </div>
@@ -235,20 +235,20 @@ function renderMenuBySiklusHtml(data) {
           <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
             ${s.days.map(d => {
               const isFilled = d.menu_id || d._has_content;
-              return `<div class="border rounded-lg p-3 transition-all ${isFilled ? (d.menu_id ? 'border-stone-200 hover:border-[#1e40af]/30 hover:shadow-sm' : 'border-emerald-200 bg-emerald-50/30 hover:border-emerald-300 hover:shadow-sm') : 'border-dashed bg-stone-50/50'} ">
+              return `<div class="border rounded-lg p-3 transition-all ${isFilled ? (d.menu_id ? 'border-slate-200 hover:border-[#14326b]/30 hover:shadow-sm' : 'border-emerald-200 bg-emerald-50/30 hover:border-emerald-300 hover:shadow-sm') : 'border-dashed bg-slate-50/50'} ">
                 <div class="flex items-center justify-between mb-2">
-                  <span class="text-[10px] font-semibold uppercase text-stone-400">Hari ${d.hari_ke}</span>
-                  <span class="text-[10px] text-stone-400">${d.hari_nama}</span>
+                  <span class="text-[10px] font-semibold uppercase text-slate-400">Hari ${d.hari_ke}</span>
+                  <span class="text-[10px] text-slate-400">${d.hari_nama}</span>
                 </div>
                 ${isFilled ? `
-                  <div class="font-medium text-sm text-stone-800 truncate" title="${d.menu_nama}">${d.menu_nama}</div>
-                  <div class="flex items-center gap-2 mt-1.5 text-[10px] text-stone-500">
+                  <div class="font-medium text-sm text-slate-800 truncate" title="${d.menu_nama}">${d.menu_nama}</div>
+                  <div class="flex items-center gap-2 mt-1.5 text-[10px] text-slate-500">
                     <span>${d.jumlah_porsi} porsi</span>
                     ${d.kalori ? `<span class="mono">${fmtNum(d.kalori)} kkal</span>` : ''}
                     ${d.gramasi_total ? `<span class="mono">${fmtNum(d.gramasi_total)}g</span>` : ''}
                     ${!d.menu_id && d._has_content ? '<span class="text-emerald-600 font-medium">Resep</span>' : ''}
                   </div>
-                ` : `<div class="text-sm text-stone-400 italic">Belum diisi</div>`}
+                ` : `<div class="text-sm text-slate-400 italic">Belum diisi</div>`}
               </div>`;
             }).join('')}
           </div>
@@ -263,39 +263,39 @@ function renderMenuBySiklusHtml(data) {
   if (standalone.length > 0) {
     standaloneHtml = `<div class="mt-6">
       <div class="flex items-center gap-2 mb-3">
-        <h3 class="font-bold text-stone-700">Menu Tidak Terpakai</h3>
-        <span class="bg-stone-100 text-stone-500 text-xs px-2.5 py-0.5 rounded-full font-medium">${standalone.length}</span>
+        <h3 class="font-bold text-slate-700">Menu Tidak Terpakai</h3>
+        <span class="bg-slate-100 text-slate-500 text-xs px-2.5 py-0.5 rounded-full font-medium">${standalone.length}</span>
       </div>
-      <div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead>
-              <tr class="border-b border-stone-100">
-                <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Nama</th>
-                <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kategori</th>
-                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Gramasi</th>
-                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kalori</th>
-                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Protein</th>
-                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Karbo</th>
-                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th>
+              <tr class="border-b border-slate-100">
+                <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Nama</th>
+                <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Kategori</th>
+                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Gramasi</th>
+                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Kalori</th>
+                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Protein</th>
+                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Karbo</th>
+                <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Aksi</th>
               </tr>
             </thead>
             <tbody>
               ${standalone.length > 0 ? standalone.map(m => `
-                <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-                  <td class="px-4 py-3 text-xs font-medium text-stone-700">
+                <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                  <td class="px-4 py-3 text-xs font-medium text-slate-700">
                     <div class="flex items-center gap-2">
                       <span class="truncate max-w-[180px]" title="${m.nama}">${m.nama}</span>
                     </div>
                   </td>
                   <td class="px-4 py-3 text-xs whitespace-nowrap">${m.kategori_penerima ? kategoriBadge(m.kategori_penerima) : '-'}</td>
-                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
-                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${m.kalori}</td>
-                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${m.protein}</td>
-                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${m.karbohidrat}</td>
+                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-slate-600">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
+                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-slate-600">${m.kalori}</td>
+                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-slate-600">${m.protein}</td>
+                  <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-slate-600">${m.karbohidrat}</td>
                  <td class="px-4 py-3 text-xs text-right">
-                    <button onclick="switchMenuView('list');editMenuById(${m.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                    ${currentUser?.role !== 'ahli_gizi' ? `<button onclick="switchMenuView('list');saveCurrentMenuForPO({id: ${m.id}, nama: '${m.nama}', kategori_penerima: '${m.kategori_penerima}', jumlah_porsi: ${m.jumlah_porsi || 0}, gramasi_total: ${m.gramasi_total}, kalori: ${m.kalori}, protein: ${m.protein}, karbohidrat: ${m.karbohidrat}, lemak: ${m.lemak}, serat: ${m.serat}, bahan: ${JSON.stringify(m.bahan || [])}, status: '${m.status}'}); openMenuPoModal();" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Buat PO"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
+                    <button onclick="switchMenuView('list');editMenuById(${m.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#14326b] hover:bg-slate-100 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                    ${currentUser?.role !== 'ahli_gizi' ? `<button onclick="switchMenuView('list');saveCurrentMenuForPO({id: ${m.id}, nama: '${m.nama}', kategori_penerima: '${m.kategori_penerima}', jumlah_porsi: ${m.jumlah_porsi || 0}, gramasi_total: ${m.gramasi_total}, kalori: ${m.kalori}, protein: ${m.protein}, karbohidrat: ${m.karbohidrat}, lemak: ${m.lemak}, serat: ${m.serat}, bahan: ${JSON.stringify(m.bahan || [])}, status: '${m.status}'}); openMenuPoModal();" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Buat PO"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
                  </td>
                </tr>
               `).join('') : ''}
@@ -337,7 +337,7 @@ const KATEGORI_COLORS = {
   'TK/PAUD': { bg: '#0e7490' },
   'SD 1-3': { bg: '#0891b2' },
   'SD 4-6': { bg: '#d97706' },
-  'SMP': { bg: '#1d4ed8' },
+  'SMP': { bg: '#0f2a5f' },
   'SMA': { bg: '#7c3aed' },
   'Ibu Hamil': { bg: '#be123c' },
   'Ibu Menyusui': { bg: '#6d28d9' },
@@ -361,11 +361,11 @@ function kategoriBadge(kat) {
 
 function renderBahanCell(bahan) {
   if (!bahan || !bahan.length) {
-    return '<span class="text-stone-300">-</span>';
+    return '<span class="text-slate-300">-</span>';
   }
   const names = bahan.map(function(b) { return b.nama; }).filter(Boolean);
   if (!names.length) {
-    return '<span class="text-stone-300">-</span>';
+    return '<span class="text-slate-300">-</span>';
   }
   const count = names.length;
   // Bahan hasil Ekstrak Gambar ditandai terpisah: tampil di Data Menu, tetapi
@@ -374,8 +374,8 @@ function renderBahanCell(bahan) {
   var display = names.slice(0, 2).join(', ');
   if (count > 2) display += ', ...';
   return '<span class="inline-flex items-center gap-1.5" title="' + escHtml(names.join(', ')) + '">' +
-    '<span class="truncate max-w-[140px] block text-stone-600">' + escHtml(display) + '</span>' +
-    '<span class="shrink-0 bg-stone-100 text-stone-500 text-[10px] font-medium px-1.5 py-0.5 rounded-full">' + count + '</span>' +
+    '<span class="truncate max-w-[140px] block text-slate-600">' + escHtml(display) + '</span>' +
+    '<span class="shrink-0 bg-slate-100 text-slate-500 text-[10px] font-medium px-1.5 py-0.5 rounded-full">' + count + '</span>' +
     (jmlEkstrak ? '<span class="shrink-0 bg-amber-100 text-amber-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full" title="' + jmlEkstrak + ' bahan hasil Ekstrak Gambar — tampil di Data Menu, tidak dihitung di Perencanaan">' + jmlEkstrak + ' ekstrak</span>' : '') +
   '</span>';
 }
@@ -392,7 +392,7 @@ function renderGramasiCell(gramasiTotal, bahan) {
     displayGramasi = calculated;
   }
   if (displayGramasi === 0) {
-    return '<span class="text-stone-300 cursor-help" title="Gramasi 0 karena menu belum memiliki bahan atau jumlah bahan belum diisi. Tambah bahan & pilih dari SP Referensi untuk isi otomatis.">0g</span>';
+    return '<span class="text-slate-300 cursor-help" title="Gramasi 0 karena menu belum memiliki bahan atau jumlah bahan belum diisi. Tambah bahan & pilih dari SP Referensi untuk isi otomatis.">0g</span>';
   }
   var rounded = Math.round(displayGramasi * 10) / 10;
   var title = '';
@@ -403,7 +403,7 @@ function renderGramasiCell(gramasiTotal, bahan) {
 }
 
 function renderSiklusBadges(usage) {
-  if (!usage || !usage.length) return '<span class="text-stone-300">—</span>';
+  if (!usage || !usage.length) return '<span class="text-slate-300">—</span>';
   var groups = {};
   usage.forEach(function(u) {
     if (!groups[u.siklus]) groups[u.siklus] = [];
@@ -418,57 +418,57 @@ function renderSiklusBadges(usage) {
 function renderMenuHtml(menus) {
   return `<div class="flex flex-wrap justify-between gap-2 mb-4">
     <div class="flex flex-wrap items-center gap-2">
-      <button id="add-menu-btn" class="h-11 px-5 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+      <button id="add-menu-btn" class="h-11 px-5 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Tambah Menu
       </button>
-      <button id="menu-delete-selected" onclick="deleteSelectedMenu()" class="hidden h-10 px-4 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl items-center gap-1.5 shadow-sm transition-all">
+      <button id="menu-delete-selected" onclick="deleteSelectedMenu()" class="hidden h-10 px-4 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg items-center gap-1.5 shadow-sm transition-all">
         Hapus Terpilih <span id="menu-selected-count" class="font-bold">0</span>
       </button>
     </div>
     <div class="flex gap-2">
       <div class="relative">
         <input type="text" id="search-menu-input" placeholder="Cari nama menu..." value="${menuState.search}"
-          class="w-56 h-11 pl-10 pr-4 rounded-xl border border-stone-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          class="w-56 h-11 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
+        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
       </div>
     </div>
   </div>
-  <div class="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
+  <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full">
         <thead>
-          <tr class="border-b border-stone-100">
-            <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500 w-10">
+          <tr class="border-b border-slate-100">
+            <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 w-10">
               <input type="checkbox" id="menu-select-all" onchange="toggleSelectAllMenu(this)" class="cb-modern">
             </th>
-            <th class="text-left px-3 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Siklus</th>
-            <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Nama</th>
-            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Gramasi <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-stone-200 text-stone-500 text-[9px] cursor-help font-bold" title="Gramasi total = jumlah seluruh bahan (g). 0 = belum ada bahan/ jumlah. Default terisi otomatis dari SP Referensi saat pilih bahan.">?</span></th>
-            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Kalori</th>
-            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Bahan</th>
-            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-stone-500">Aksi</th>
+            <th class="text-left px-3 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Siklus</th>
+            <th class="text-left px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Nama</th>
+            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Gramasi <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-500 text-[9px] cursor-help font-bold" title="Gramasi total = jumlah seluruh bahan (g). 0 = belum ada bahan/ jumlah. Default terisi otomatis dari SP Referensi saat pilih bahan.">?</span></th>
+            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Kalori</th>
+            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Bahan</th>
+            <th class="text-right px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Aksi</th>
           </tr>
         </thead>
         <tbody id="menu-table-body">
             ${menus.length > 0 ? menus.map((m) => `
-            <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+            <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
               <td class="px-4 py-3 text-xs">
                 <input type="checkbox" value="${m.id}" onchange="updateSelectedMenuCount()" class="menu-checkbox cb-modern">
               </td>
               <td class="px-3 py-3 text-xs">${renderSiklusBadges(m.siklus_usage)}</td>
-              <td class="px-4 py-3 text-xs font-medium text-stone-700 truncate max-w-[180px]" title="${m.nama}">${m.nama}</td>
-              <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
-              <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-stone-600">${m.kalori} kkal</td>
+              <td class="px-4 py-3 text-xs font-medium text-slate-700 truncate max-w-[180px]" title="${m.nama}">${m.nama}</td>
+              <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-slate-600">${renderGramasiCell(m.gramasi_total, m.bahan)}</td>
+              <td class="px-4 py-3 text-xs text-right mono whitespace-nowrap text-slate-600">${m.kalori} kkal</td>
               <td class="px-4 py-3 text-xs text-left whitespace-nowrap">${renderBahanCell(m.bahan)}</td>
               <td class="px-4 py-3 text-xs text-right whitespace-nowrap">
-                <button data-menu-tpl="${m.id}" class="tpl-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-amber-600 hover:bg-amber-50 transition-all" title="Simpan sebagai template siklus (bisa dipakai di form Siklus lewat tombol Template)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 7v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 11h6"/></svg></button>
-                <button data-menu-id="${m.id}" class="edit-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                <button data-menu-id="${m.id}" class="delete-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                <button data-menu-tpl="${m.id}" class="tpl-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-all" title="Simpan sebagai template siklus (bisa dipakai di form Siklus lewat tombol Template)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 7v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 11h6"/></svg></button>
+                <button data-menu-id="${m.id}" class="edit-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#14326b] hover:bg-slate-100 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button data-menu-id="${m.id}" class="delete-btn w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
               </td>
-            </tr>`).join('') : '<tr><td colspan="7" class="text-center py-16 text-stone-400"><svg class="w-12 h-12 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><div class="text-sm">Belum ada menu</div></td></tr>'}
+            </tr>`).join('') : '<tr><td colspan="7" class="text-center py-16 text-slate-400"><svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><div class="text-sm">Belum ada menu</div></td></tr>'}
         </tbody>
       </table>
     </div>
@@ -482,11 +482,11 @@ function renderPagination() {
   if (menuState.totalPages <= 1) { wrap.innerHTML = ''; return; }
   var total = menuState.total;
   wrap.innerHTML = `<div class="flex items-center justify-between mt-3">
-    <span class="text-sm text-stone-500">${total} data</span>
+    <span class="text-sm text-slate-500">${total} data</span>
     <div class="flex gap-2">
-      ${menuState.page > 1 ? '<button onclick="goToPage(' + (menuState.page - 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Prev</button>' : ''}
-      <span class="text-sm text-stone-500">Hal ${menuState.page} dari ${menuState.totalPages}</span>
-      ${menuState.page < menuState.totalPages ? '<button onclick="goToPage(' + (menuState.page + 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Next</button>' : ''}
+      ${menuState.page > 1 ? '<button onclick="goToPage(' + (menuState.page - 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Prev</button>' : ''}
+      <span class="text-sm text-slate-500">Hal ${menuState.page} dari ${menuState.totalPages}</span>
+      ${menuState.page < menuState.totalPages ? '<button onclick="goToPage(' + (menuState.page + 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Next</button>' : ''}
     </div>
   </div>`;
 }
@@ -534,16 +534,16 @@ function attachMenuHandlers() {
 async function openMenuForm(editing) {
   await ensureBahanBakuLoaded();
   const m = editing || { nama: '', deskripsi: '', gramasi_total: 0, kalori: 0, protein: 0, karbohidrat: 0, lemak: 0, serat: 0, bahan: [] };
-  document.getElementById('modal-title').innerHTML = (editing ? 'Edit Menu' : 'Menu Baru') + '<button onclick="event.stopPropagation();showMenuInfo()" class="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-stone-100 hover:bg-blue-100 hover:text-blue-700 text-stone-400 transition-all" title="Info"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button>';
+  document.getElementById('modal-title').innerHTML = (editing ? 'Edit Menu' : 'Menu Baru') + '<button onclick="event.stopPropagation();showMenuInfo()" class="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 hover:bg-slate-100 hover:text-[#0f2a5f] text-slate-400 transition-all" title="Info"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button>';
   document.getElementById('modal-body').innerHTML = `
     <div>
-      <label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Menu *</label>
+      <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama Menu *</label>
       <div class="flex gap-2 mt-1.5">
-        <input id="m-nama" value="${m.nama}" class="flex-1 h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />
-        <button type="button" onclick="openSiklusMenuPicker()" class="shrink-0 px-4 h-11 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 whitespace-nowrap transition-all shadow-sm" title="Ambil nama & bahan dari siklus">📋 Siklus</button>
+        <input id="m-nama" value="${m.nama}" class="flex-1 h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" />
+        <button type="button" onclick="openSiklusMenuPicker()" class="shrink-0 px-4 h-11 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 whitespace-nowrap transition-all shadow-sm" title="Ambil nama & bahan dari siklus">📋 Siklus</button>
       </div>
     </div>
-    <div class="mt-3"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1.5 w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">${m.deskripsi || ''}</textarea></div>
+    <div class="mt-3"><label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Deskripsi</label><textarea id="m-deskripsi" rows="2" class="mt-1.5 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">${m.deskripsi || ''}</textarea></div>
     
     <input id="m-kalori" type="hidden" value="${m.kalori || 0}" />
     <input id="m-protein" type="hidden" value="${m.protein || 0}" />
@@ -551,14 +551,14 @@ async function openMenuForm(editing) {
     <input id="m-lemak" type="hidden" value="${m.lemak || 0}" />
     <input id="m-serat" type="hidden" value="${m.serat || 0}" />
 
-    <div class="border-t border-stone-200 mt-4 pt-3">
+    <div class="border-t border-slate-200 mt-4 pt-3">
       <div class="flex items-center justify-between gap-3 mb-2">
-        <div class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Bahan</div>
+        <div class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Bahan</div>
         <div class="flex items-center gap-2">
-          <button type="button" onclick="addBahanRow()" class="text-xs font-medium border border-stone-200 px-3 py-1.5 rounded-lg hover:bg-stone-50 shadow-sm transition-all">+ Tambah Bahan</button>
+          <button type="button" onclick="addBahanRow()" class="text-xs font-medium border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 shadow-sm transition-all">+ Tambah Bahan</button>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-2 text-xs text-stone-500">
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-2 text-xs text-slate-500">
         <span>Hitung kebutuhan untuk</span>
         <label class="inline-flex items-center gap-1.5">
           <span class="font-semibold text-amber-700">Porsi Besar</span>
@@ -571,7 +571,7 @@ async function openMenuForm(editing) {
           <span>porsi</span>
         </label>
       </div>
-      <div class="hidden sm:grid grid-cols-12 gap-1.5 mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+      <div class="hidden sm:grid grid-cols-12 gap-1.5 mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
         <div class="col-span-4">Bahan</div>
         <div class="col-span-4" title="Gramasi per 1 porsi besar (mis. beras 60 = 60 g per porsi). Jumlah kebutuhan untuk seluruh penerima manfaat dihitung otomatis: gramasi × jumlah porsi besar.">Porsi Besar (per porsi)</div>
         <div class="col-span-3" title="Gramasi per 1 porsi kecil (input manual). Jumlah kebutuhan dihitung otomatis: gramasi × jumlah porsi kecil.">Porsi Kecil (per porsi)</div>
@@ -841,11 +841,11 @@ function bufferCalcHtml(v) {
       var kebutuhan = perPorsi * porsi;
       var denganBuffer = kebutuhan * (1 + v.bufferPersen / 100);
       return fmtNum(perPorsi) + ' ' + sat + '/porsi × ' + fmtNum(porsi) + ' = <b>' + totalTxt(kebutuhan) + '</b>' +
-        ' <span class="text-stone-400">(+' + fmtNum(v.bufferPersen) + '% → ' + totalTxt(denganBuffer) + ')</span>';
+        ' <span class="text-slate-400">(+' + fmtNum(v.bufferPersen) + '% → ' + totalTxt(denganBuffer) + ')</span>';
     }
     var buffer = perPorsi * v.bufferPersen / 100;
     return fmtNum(perPorsi) + ' ' + sat + '/porsi' +
-      ' <span class="text-stone-400">(+' + satuanTxt(buffer) + ' → ' + satuanTxt(perPorsi + buffer) +
+      ' <span class="text-slate-400">(+' + satuanTxt(buffer) + ' → ' + satuanTxt(perPorsi + buffer) +
       ') · jumlah porsi belum diisi</span>';
   }
   // Dua baris terpisah — Besar (amber) & Kecil (hijau) selalu tampil, label di
@@ -914,30 +914,30 @@ function renderBahanList() {
     return '<div class="mb-1.5' + (b.hanya_tampil ? ' rounded-lg border border-amber-200 bg-amber-50/40 p-1.5' : '') + '">' +
       '<div class="grid grid-cols-12 gap-1.5 items-center">' +
         '<div class="order-1 col-span-12 sm:col-span-4 relative">' +
-          '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
-          '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-stone-200 rounded-lg shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
+          '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" />' +
+          '<div id="b-drop-' + i + '" class="hidden absolute z-10 w-full mt-0.5 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto text-sm"></div>' +
         '</div>' +
         '<div class="order-2 col-span-10 sm:col-span-4 flex">' +
           '<input id="b-besar-' + i + '" type="text" inputmode="decimal" autocomplete="off" value="' + besarValue + '" onchange="updateBahan(' + i + ', \'jumlah_besar\', this.value)" class="flex-1 min-w-0 w-full h-10 px-3 border border-amber-200 bg-amber-50/40 rounded-l-lg text-sm mono focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" title="' + besarTitle + ' — bisa diisi pecahan, mis. 1/5 kg" />' +
-          '<span class="inline-flex items-center px-2 sm:px-2.5 h-10 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-lg whitespace-nowrap">' + displaySatuan + '</span>' +
+          '<span class="inline-flex items-center px-2 sm:px-2.5 h-10 text-xs font-semibold bg-slate-100 text-slate-600 border border-l-0 border-slate-200 rounded-r-lg whitespace-nowrap">' + displaySatuan + '</span>' +
         '</div>' +
         '<div class="order-3 sm:order-4 col-span-10 sm:col-span-3 flex">' +
           '<input id="b-kecil-' + i + '" type="text" inputmode="decimal" autocomplete="off" value="' + kecilValue + '" onchange="updateBahan(' + i + ', \'jumlah_kecil\', this.value)" class="flex-1 min-w-0 w-full h-10 px-3 border border-emerald-200 bg-emerald-50/40 rounded-l-lg text-sm mono focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all" title="' + kecilTitle + ' — bisa diisi pecahan, mis. 1/5 kg" />' +
-          '<span class="inline-flex items-center px-2 sm:px-2.5 h-10 text-xs font-semibold bg-stone-100 text-stone-600 border border-l-0 border-stone-200 rounded-r-lg whitespace-nowrap">' + displaySatuan + '</span>' +
+          '<span class="inline-flex items-center px-2 sm:px-2.5 h-10 text-xs font-semibold bg-slate-100 text-slate-600 border border-l-0 border-slate-200 rounded-r-lg whitespace-nowrap">' + displaySatuan + '</span>' +
         '</div>' +
         '<button type="button" onclick="removeBahanRow(' + i + ')" class="order-4 sm:order-5 col-span-2 sm:col-span-1 inline-flex items-center justify-center h-10 w-full text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Hapus bahan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
       '</div>' +
       '<div class="mt-1.5 px-1 space-y-1">' +
         (tandaEkstrak ? '<div class="mb-1">' + tandaEkstrak + '</div>' : '') +
-        '<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-stone-500">' +
+        '<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-slate-500">' +
           '<label class="inline-flex items-center gap-1" title="Buffer cadangan untuk bahan ini (0-100%). Nilai disimpan ke master Bahan Baku dan dipakai di semua menu.">' +
             '<span>Buffer</span>' +
-            '<input id="b-buffer-' + i + '" type="number" min="0" max="100" step="0.1" value="' + v.bufferPersen + '" oninput="updateBuffer(' + i + ', this.value)" onchange="updateBuffer(' + i + ', this.value); this.value = window._menuBahan[' + i + '].buffer_persen" class="w-14 h-7 px-2 rounded-md border border-stone-200 bg-white text-right mono text-[11px] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
+            '<input id="b-buffer-' + i + '" type="number" min="0" max="100" step="0.1" value="' + v.bufferPersen + '" oninput="updateBuffer(' + i + ', this.value)" onchange="updateBuffer(' + i + ', this.value); this.value = window._menuBahan[' + i + '].buffer_persen" class="w-14 h-7 px-2 rounded-md border border-slate-200 bg-white text-right mono text-[11px] focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" />' +
             '<span>%</span>' +
           '</label>' +
-          '<span class="text-[10px] text-stone-400">buffer disimpan ke master bahan</span>' +
+          '<span class="text-[10px] text-slate-400">buffer disimpan ke master bahan</span>' +
         '</div>' +
-        '<div id="b-buffer-calc-' + i + '" class="text-[11px] leading-snug text-stone-600 bg-stone-50 border border-stone-100 rounded-md px-2.5 py-1.5">' + bufferCalcHtml(v) + '</div>' +
+        '<div id="b-buffer-calc-' + i + '" class="text-[11px] leading-snug text-slate-600 bg-slate-50 border border-slate-100 rounded-md px-2.5 py-1.5">' + bufferCalcHtml(v) + '</div>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -992,14 +992,14 @@ function onBahanSearch(i, el) {
   }
   if (!merged.length) { dropdown.classList.add('hidden'); return; }
   dropdown.innerHTML = merged.map(function(item) {
-    var badge = item.sumber === 'sp' ? '<span class="text-[9px] bg-blue-100 text-blue-700 px-1 py-0.5 rounded mr-1">SP</span>' : '<span class="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded mr-1">Baku</span>';
+    var badge = item.sumber === 'sp' ? '<span class="text-[9px] bg-slate-100 text-[#14326b] px-1 py-0.5 rounded mr-1">SP</span>' : '<span class="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded mr-1">Baku</span>';
     var satuanInfo = '';
     if (item.satuan && item.satuan.toLowerCase() !== 'g' && item.satuan.toLowerCase() !== 'gram') {
       satuanInfo = ' · Satuan: <span class="font-medium">' + item.satuan + '</span>';
     }
-    return '<div onclick="selectBahan(' + i + ", '" + item.nama.replace(/'/g, "\\'") + "')\" class=\"px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-stone-100 last:border-0\">" +
-      '<div class="font-medium text-stone-800">' + badge + ' ' + item.nama + '</div>' +
-      '<div class="text-[10px] text-stone-400">' + (item.kategori || '') + (item.berat ? ' · 1SP=' + item.berat + 'g' : '') + satuanInfo + (item.nutrisi ? ' · ' + item.nutrisi : '') + '</div>' +
+    return '<div onclick="selectBahan(' + i + ", '" + item.nama.replace(/'/g, "\\'") + "')\" class=\"px-3 py-2 hover:bg-slate-100 cursor-pointer border-b border-slate-100 last:border-0\">" +
+      '<div class="font-medium text-slate-800">' + badge + ' ' + item.nama + '</div>' +
+      '<div class="text-[10px] text-slate-400">' + (item.kategori || '') + (item.berat ? ' · 1SP=' + item.berat + 'g' : '') + satuanInfo + (item.nutrisi ? ' · ' + item.nutrisi : '') + '</div>' +
     '</div>';
   }).join('');
   dropdown.classList.remove('hidden');
@@ -1157,23 +1157,23 @@ function openSimpanTemplateMenu(menuId) {
   modal.id = 'simpan-template-menu-modal';
   modal.className = 'fixed inset-0 z-[75] flex items-center justify-center bg-black/40';
   modal.innerHTML =
-    '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">' +
-      '<div class="flex items-center justify-between px-5 py-3 border-b border-stone-200">' +
-        '<h3 class="font-bold text-stone-700 text-sm">💾 Simpan sebagai Template Siklus</h3>' +
-        '<button onclick="closeSimpanTemplateMenu()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-colors">&times;</button>' +
+    '<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden">' +
+      '<div class="flex items-center justify-between px-5 py-3 border-b border-slate-200">' +
+        '<h3 class="font-bold text-slate-700 text-sm">💾 Simpan sebagai Template Siklus</h3>' +
+        '<button onclick="closeSimpanTemplateMenu()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">&times;</button>' +
       '</div>' +
       '<div class="p-5 space-y-4">' +
-        '<div class="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">' +
+        '<div class="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 leading-relaxed">' +
           '<svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 7v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 11h6"/></svg>' +
           '<div>Resep <b>' + escHtml(m.nama) + '</b> akan disimpan sebagai template terpisah. Nanti bisa dipakai lewat tombol <b>🗂 Template</b> saat mengisi hari di form Siklus.</div>' +
         '</div>' +
         '<div>' +
-          '<label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Nama Template *</label>' +
-          '<input id="stm-nama" value="' + escHtml(m.nama || '') + '" placeholder="cth: Nasi Ayam Sayur" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" />' +
+          '<label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama Template *</label>' +
+          '<input id="stm-nama" value="' + escHtml(m.nama || '') + '" placeholder="cth: Nasi Ayam Sayur" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" />' +
         '</div>' +
         '<div class="flex gap-2 pt-1">' +
-          '<button onclick="closeSimpanTemplateMenu()" class="flex-1 h-10 rounded-lg border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 transition-colors">Batal</button>' +
-          '<button id="stm-submit" onclick="submitSimpanTemplateMenu(' + menuId + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition-colors inline-flex items-center justify-center gap-2">💾 Simpan Template</button>' +
+          '<button onclick="closeSimpanTemplateMenu()" class="flex-1 h-10 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors">Batal</button>' +
+          '<button id="stm-submit" onclick="submitSimpanTemplateMenu(' + menuId + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-[#14326b] hover:bg-[#0f2a5f] shadow-sm transition-colors inline-flex items-center justify-center gap-2">💾 Simpan Template</button>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -1260,43 +1260,43 @@ async function openSiklusMenuPicker() {
     for (var si = 0; si < data.length; si++) {
       var s = data[si];
       if (!s.names || !s.names.length) continue;
-      var statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-600';
-      html += '<div class="border border-stone-200 rounded-xl overflow-hidden">' +
-        '<div class="px-4 py-2.5 bg-stone-50 border-b border-stone-200 flex flex-wrap items-center justify-between gap-2">' +
-        '<div class="font-semibold text-sm text-stone-700">' + escHtml(s.nama) + '</div>' +
+      var statusColor = s.status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : s.status === 'Draft' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600';
+      html += '<div class="border border-slate-200 rounded-lg overflow-hidden">' +
+        '<div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">' +
+        '<div class="font-semibold text-sm text-slate-700">' + escHtml(s.nama) + '</div>' +
             '<div class="flex items-center gap-2">' +
-            (s.jumlah_porsi ? '<span class="text-[10px] text-stone-400">' + s.jumlah_porsi + ' porsi</span>' : '') +
+            (s.jumlah_porsi ? '<span class="text-[10px] text-slate-400">' + s.jumlah_porsi + ' porsi</span>' : '') +
             '<span class="text-[10px] px-2 py-0.5 rounded-full font-medium ' + statusColor + ' capitalize">' + s.status + '</span>' +
             '<button type="button" onclick="closeSiklusMenuPicker();navigate(\'total-kebutuhan?siklus_id=' + s.id + '\')" class="text-[10px] font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 px-2 py-1 rounded-lg whitespace-nowrap transition-colors" title="Lihat Total Kebutuhan siklus ini">Lihat Total Kebutuhan</button>' +
           '</div>' +
         '</div>' +
-        '<div class="divide-y divide-stone-100">';
+        '<div class="divide-y divide-slate-100">';
       for (var ni = 0; ni < s.names.length; ni++) {
         var n = s.names[ni];
         if (n.source === 'menu') {
           // Menu items — clickable, untuk import bahan
           var bahanJson = escHtml(JSON.stringify(n.bahan || []));
           var katPenerima = escHtml(s.kategori_penerima || '');
-    html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + "', '" + bahanJson + "', " + (Number(s.jumlah_porsi) || 0) + ", '" + katPenerima + "')\" class=\"w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors\">" +
+    html += '<button type="button" onclick="selectSiklusMenuName(\'' + escHtml(n.nama) + "', '" + bahanJson + "', " + (Number(s.jumlah_porsi) || 0) + ", '" + katPenerima + "')\" class=\"w-full text-left px-4 py-2 hover:bg-slate-100 transition-colors\">" +
             '<div class="flex items-center gap-2">' +
-            '<span class="text-xs text-stone-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
-            '<span class="text-xs text-stone-500 shrink-0 w-14">' + n.hari_nama + '</span>' +
-            '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-700 shrink-0">Menu</span>' +
-            '<span class="text-sm font-medium text-stone-800 truncate">' + escHtml(n.nama) + '</span>' +
-            (n.bahan && n.bahan.length ? '<span class="text-[10px] text-stone-400 shrink-0">' + n.bahan.length + ' bahan</span>' : '') +
-            '<svg class="w-4 h-4 text-stone-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>' +
+            '<span class="text-xs text-slate-400 shrink-0 w-8">H' + n.hari_ke + '</span>' +
+            '<span class="text-xs text-slate-500 shrink-0 w-14">' + n.hari_nama + '</span>' +
+            '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-slate-100 text-[#14326b] shrink-0">Menu</span>' +
+            '<span class="text-sm font-medium text-slate-800 truncate">' + escHtml(n.nama) + '</span>' +
+            (n.bahan && n.bahan.length ? '<span class="text-[10px] text-slate-400 shrink-0">' + n.bahan.length + ' bahan</span>' : '') +
+            '<svg class="w-4 h-4 text-slate-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>' +
             '</div>' +
           '</button>';
         } else {
           // Resep items — non-clickable, info saja
           html += '<div class="px-4 py-2">' +
-            '<div class="flex items-center gap-2 text-stone-500">' +
+            '<div class="flex items-center gap-2 text-slate-500">' +
             '<span class="text-xs shrink-0 w-8">H' + n.hari_ke + '</span>' +
             '<span class="text-xs shrink-0 w-14">' + n.hari_nama + '</span>' +
-            '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-stone-100 text-stone-500 shrink-0">Resep</span>' +
-            '<span class="text-sm font-medium text-stone-500 truncate">' + escHtml(n.nama) + '</span>' +
-            (n.kategori_sp ? '<span class="text-[10px] text-stone-400 shrink-0 hidden sm:inline">(' + escHtml(n.kategori_sp) + ')</span>' : '') +
-            (n.bahan && n.bahan.length ? '<span class="text-[10px] text-stone-400 shrink-0">· ' + escHtml(n.bahan[0].nama) + '</span>' : '') +
+            '<span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-slate-100 text-slate-500 shrink-0">Resep</span>' +
+            '<span class="text-sm font-medium text-slate-500 truncate">' + escHtml(n.nama) + '</span>' +
+            (n.kategori_sp ? '<span class="text-[10px] text-slate-400 shrink-0 hidden sm:inline">(' + escHtml(n.kategori_sp) + ')</span>' : '') +
+            (n.bahan && n.bahan.length ? '<span class="text-[10px] text-slate-400 shrink-0">· ' + escHtml(n.bahan[0].nama) + '</span>' : '') +
             '</div>' +
           '</div>';
         }
@@ -1311,10 +1311,10 @@ async function openSiklusMenuPicker() {
     var m = document.createElement('div');
     m.id = 'siklus-menu-picker';
     m.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-black/40';
-    m.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-hidden">' +
-      '<div class="flex items-center justify-between px-5 py-3 border-b border-stone-200">' +
-        '<h3 class="font-bold text-stone-700 text-sm">Pilih Nama dari Siklus Menu</h3>' +
-        '<button onclick="closeSiklusMenuPicker()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400">&times;</button>' +
+    m.innerHTML = '<div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-hidden">' +
+      '<div class="flex items-center justify-between px-5 py-3 border-b border-slate-200">' +
+        '<h3 class="font-bold text-slate-700 text-sm">Pilih Nama dari Siklus Menu</h3>' +
+        '<button onclick="closeSiklusMenuPicker()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400">&times;</button>' +
       '</div>' +
       '<div id="sk-picker-body">' + html + '</div>' +
     '</div>';
@@ -1342,7 +1342,7 @@ async function selectSiklusMenuName(nama, bahanJson, siklusPorsi, kategoriPeneri
         // Tampilkan di bawah baris input (bukan di samping tombol Siklus)
         document.getElementById('m-nama').parentNode.insertAdjacentElement('afterend', badgeContainer);
       }
-      badgeContainer.innerHTML = '<span class="inline-flex items-center gap-1 text-xs font-medium text-stone-600">' + kategoriBadge(kategoriPenerima) + '</span>';
+      badgeContainer.innerHTML = '<span class="inline-flex items-center gap-1 text-xs font-medium text-slate-600">' + kategoriBadge(kategoriPenerima) + '</span>';
     }
   
   // Auto-fill jumlah porsi jika > 0
@@ -1386,34 +1386,34 @@ function showMenuInfo() {
   var div = document.createElement('div');
   div.id = 'menu-info-popup';
   div.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-black/30';
-  div.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6" onclick="event.stopPropagation()">' +
+  div.innerHTML = '<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6" onclick="event.stopPropagation()">' +
     '<div class="flex items-center justify-between mb-4">' +
-      '<h3 class="font-bold text-stone-700">Form Menu</h3>' +
-      '<button onclick="document.getElementById(\'menu-info-popup\').remove()" class="text-stone-400 hover:text-stone-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+      '<h3 class="font-bold text-slate-700">Form Menu</h3>' +
+      '<button onclick="document.getElementById(\'menu-info-popup\').remove()" class="text-slate-400 hover:text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
     '</div>' +
-    '<div class="space-y-4 text-sm text-stone-600">' +
+    '<div class="space-y-4 text-sm text-slate-600">' +
       '<div class="flex gap-3 items-start">' +
-        '<span class="shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>' +
-        '<div><span class="font-semibold text-stone-700">Buat Resep</span><br>Tulis nama menu, deskripsi, dan tambahkan bahan-bahan. Jumlah gramasi per porsi auto terisi dari <strong>SP Referensi</strong> (berat_bersih).</div>' +
+        '<span class="shrink-0 w-7 h-7 rounded-full bg-slate-100 text-[#14326b] flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>' +
+        '<div><span class="font-semibold text-slate-700">Buat Resep</span><br>Tulis nama menu, deskripsi, dan tambahkan bahan-bahan. Jumlah gramasi per porsi auto terisi dari <strong>SP Referensi</strong> (berat_bersih).</div>' +
       '</div>' +
       '<div class="flex gap-3 items-start">' +
         '<span class="shrink-0 w-7 h-7 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>' +
-        '<div><span class="font-semibold text-stone-700">Gramasi 0?</span><br>Kolom Gramasi menunjukkan 0 jika menu belum punya bahan atau jumlah bahan belum diisi. <strong>Cara set default:</strong> buka <strong>SP Referensi</strong> → isi Berat Bersih (gram) → saat tambah bahan di form menu, jumlah auto terisi dari nilai tersebut.</div>' +
+        '<div><span class="font-semibold text-slate-700">Gramasi 0?</span><br>Kolom Gramasi menunjukkan 0 jika menu belum punya bahan atau jumlah bahan belum diisi. <strong>Cara set default:</strong> buka <strong>SP Referensi</strong> → isi Berat Bersih (gram) → saat tambah bahan di form menu, jumlah auto terisi dari nilai tersebut.</div>' +
       '</div>' +
       '<div class="flex gap-3 items-start">' +
         '<span class="shrink-0 w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>' +
-        '<div><span class="font-semibold text-stone-700">Gunakan di Siklus</span><br>Menu yang sudah dibuat bisa dipilih di modul <strong>Siklus</strong> → pilih menu per hari.</div>' +
+        '<div><span class="font-semibold text-slate-700">Gunakan di Siklus</span><br>Menu yang sudah dibuat bisa dipilih di modul <strong>Siklus</strong> → pilih menu per hari.</div>' +
       '</div>' +
       '<div class="flex gap-3 items-start">' +
         '<span class="shrink-0 w-7 h-7 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>' +
-        '<div><span class="font-semibold text-stone-700">Lihat Kebutuhan</span><br>Buka <strong>Perencanaan</strong> atau <strong>Total Kebutuhan</strong> untuk melihat total bahan yang harus dibeli.</div>' +
+        '<div><span class="font-semibold text-slate-700">Lihat Kebutuhan</span><br>Buka <strong>Perencanaan</strong> atau <strong>Total Kebutuhan</strong> untuk melihat total bahan yang harus dibeli.</div>' +
       '</div>' +
       '<div class="flex gap-3 items-start">' +
         '<span class="shrink-0 w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>' +
-        '<div><span class="font-semibold text-stone-700">Buat Pesanan</span><br>Dari Total Kebutuhan, buat PO di menu <strong>Pembelian</strong> untuk memesan ke pemasok.</div>' +
+        '<div><span class="font-semibold text-slate-700">Buat Pesanan</span><br>Dari Total Kebutuhan, buat PO di menu <strong>Pembelian</strong> untuk memesan ke pemasok.</div>' +
       '</div>' +
     '</div>' +
-    '<div class="mt-4 pt-3 border-t border-stone-100 text-xs text-stone-400 text-center">' +
+    '<div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-400 text-center">' +
       '<svg class="w-3.5 h-3.5 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg> Bisa juga ambil resep dari siklus yang sudah ada dengan tombol <strong>Siklus</strong>' +
     '</div>' +
   '</div>';
@@ -1467,25 +1467,25 @@ async function openMenuPoModal() {
   }
   
   var shortName = currentMenu.nama && currentMenu.nama.length > 50 ? currentMenu.nama.slice(0, 47) + '...' : currentMenu.nama;
-  document.getElementById('modal-title').innerHTML = 'Buat PO <span class="text-stone-400 font-normal">dari Menu</span>';
+  document.getElementById('modal-title').innerHTML = 'Buat PO <span class="text-slate-400 font-normal">dari Menu</span>';
   document.getElementById('modal-save').style.display = 'block';
   document.getElementById('modal-save').textContent = 'Buat PO';
   document.getElementById('modal-save').onclick = function() { createPoFromMenu(currentMenu.id); };
   document.getElementById('modal-body').innerHTML = `
-    <div class="flex items-start gap-2.5 p-3 mb-4 bg-stone-50 border border-stone-200 rounded-xl">
-      <svg class="w-4 h-4 mt-0.5 shrink-0 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
-      <div class="text-xs text-stone-600 leading-relaxed">
-        <span class="font-semibold text-stone-700 block truncate" title="${escHtml(currentMenu.nama || '')}">${escHtml(shortName || '')}</span>
+    <div class="flex items-start gap-2.5 p-3 mb-4 bg-slate-50 border border-slate-200 rounded-lg">
+      <svg class="w-4 h-4 mt-0.5 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+      <div class="text-xs text-slate-600 leading-relaxed">
+        <span class="font-semibold text-slate-700 block truncate" title="${escHtml(currentMenu.nama || '')}">${escHtml(shortName || '')}</span>
         <span>Buat Purchase Order dari seluruh bahan menu ini.</span>
       </div>
     </div>
-    <div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Supplier *</label>
-      <select id="po-supplier" class="w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+    <div><label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Supplier *</label>
+      <select id="po-supplier" class="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
         <option value="">Pilih Supplier...</option>
       </select></div>
-    <div class="mt-3"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Catatan (opsional)</label>
-      <textarea id="po-notes" rows="2" class="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="Catatan untuk supplier..."></textarea></div>
-    <div id="menu-po-preview" class="mt-4 text-xs text-stone-500"></div>
+    <div class="mt-3"><label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Catatan (opsional)</label>
+      <textarea id="po-notes" rows="2" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" placeholder="Catatan untuk supplier..."></textarea></div>
+    <div id="menu-po-preview" class="mt-4 text-xs text-slate-500"></div>
   `;
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
@@ -1602,25 +1602,25 @@ function openAIDialog() {
   }
   
   var shortName = currentMenu.nama && currentMenu.nama.length > 50 ? currentMenu.nama.slice(0, 47) + '...' : currentMenu.nama;
-  document.getElementById('modal-title').innerHTML = 'Buat PO <span class="text-stone-400 font-normal">dari Menu</span>';
+  document.getElementById('modal-title').innerHTML = 'Buat PO <span class="text-slate-400 font-normal">dari Menu</span>';
   document.getElementById('modal-save').style.display = 'block';
   document.getElementById('modal-save').textContent = 'Buat PO';
   document.getElementById('modal-save').onclick = function() { createPoFromMenu(currentMenu.id); };
   document.getElementById('modal-body').innerHTML = `
-    <div class="flex items-start gap-2.5 p-3 mb-4 bg-stone-50 border border-stone-200 rounded-xl">
-      <svg class="w-4 h-4 mt-0.5 shrink-0 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
-      <div class="text-xs text-stone-600 leading-relaxed">
-        <span class="font-semibold text-stone-700 block truncate" title="${escHtml(currentMenu.nama || '')}">${escHtml(shortName || '')}</span>
+    <div class="flex items-start gap-2.5 p-3 mb-4 bg-slate-50 border border-slate-200 rounded-lg">
+      <svg class="w-4 h-4 mt-0.5 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+      <div class="text-xs text-slate-600 leading-relaxed">
+        <span class="font-semibold text-slate-700 block truncate" title="${escHtml(currentMenu.nama || '')}">${escHtml(shortName || '')}</span>
         <span>Buat Purchase Order dari seluruh bahan menu ini.</span>
       </div>
     </div>
-    <div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Supplier *</label>
-      <select id="po-supplier" class="w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+    <div><label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Supplier *</label>
+      <select id="po-supplier" class="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
         <option value="">Pilih Supplier...</option>
       </select></div>
-    <div class="mt-3"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Catatan (opsional)</label>
-      <textarea id="po-notes" rows="2" class="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="Catatan untuk supplier..."></textarea></div>
-    <div id="menu-po-preview" class="mt-4 text-xs text-stone-500"></div>
+    <div class="mt-3"><label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Catatan (opsional)</label>
+      <textarea id="po-notes" rows="2" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" placeholder="Catatan untuk supplier..."></textarea></div>
+    <div id="menu-po-preview" class="mt-4 text-xs text-slate-500"></div>
   `;
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
@@ -1732,19 +1732,19 @@ async function createPoFromMenu(menuId) {
 function openAIDialog() {
   document.getElementById('modal-title').textContent = '✨ Saran Menu AI';
   document.getElementById('modal-body').innerHTML = `
-    <div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Kategori Penerima</label>
-      <select id="ai-kat" class="w-full h-11 px-3 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+    <div><label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Kategori Penerima</label>
+      <select id="ai-kat" class="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
         ${['TK/PAUD','SD 1-3','SD 4-6','SMP','SMA','Ibu Hamil','Ibu Menyusui','Balita','Posyandu'].map(o => `<option>${o}</option>`).join('')}
       </select></div>
-    <div class="mt-3"><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Catatan (opsional)</label>
-      <textarea id="ai-note" rows="2" class="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="Mis. hindari kacang, bahan lokal Jawa Tengah"></textarea></div>
+    <div class="mt-3"><label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Catatan (opsional)</label>
+      <textarea id="ai-note" rows="2" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all" placeholder="Mis. hindari kacang, bahan lokal Jawa Tengah"></textarea></div>
     <div id="ai-out" class="mt-4"></div>`;
   document.getElementById('modal-save').style.display = 'none';
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
 }
 async function runAI() {
-  document.getElementById('ai-out').innerHTML = '<div class="text-stone-500 text-sm">⏳ Membuat saran...</div>';
+  document.getElementById('ai-out').innerHTML = '<div class="text-slate-500 text-sm">⏳ Membuat saran...</div>';
   const r = await fetch('/api/ai/suggest-menu', { method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ kategori: document.getElementById('ai-kat').value, catatan: document.getElementById('ai-note').value }) });
   const data = await r.json();
@@ -1753,8 +1753,8 @@ async function runAI() {
   document.getElementById('ai-out').innerHTML = `
     <div class="bg-orange-50 border border-orange-200 rounded p-3">
       <div class="font-bold">${s.nama_menu}</div>
-      <div class="text-sm text-stone-700 mt-1">${s.deskripsi || ''}</div>
-      ${s.kandungan_gizi ? `<div class="grid grid-cols-5 gap-2 my-2 text-xs">${Object.entries(s.kandungan_gizi).map(([k,v]) => `<div class="bg-white p-2 rounded"><div class="text-stone-500 uppercase">${k}</div><div class="mono">${v}</div></div>`).join('')}</div>` : ''}
+      <div class="text-sm text-slate-700 mt-1">${s.deskripsi || ''}</div>
+      ${s.kandungan_gizi ? `<div class="grid grid-cols-5 gap-2 my-2 text-xs">${Object.entries(s.kandungan_gizi).map(([k,v]) => `<div class="bg-white p-2 rounded"><div class="text-slate-500 uppercase">${k}</div><div class="mono">${v}</div></div>`).join('')}</div>` : ''}
       ${s.bahan ? `<div class="text-xs mt-2"><div class="font-semibold mb-1">Bahan:</div><ul class="space-y-0.5">${s.bahan.map(b => `<li>• ${b.nama} — <span class="mono">${b.jumlah} ${b.satuan}</span></li>`).join('')}</ul></div>` : ''}
     </div>`;
 }

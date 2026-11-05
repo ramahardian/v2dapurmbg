@@ -1,61 +1,60 @@
 <div class="grid grid-cols-1 xl:grid-cols-4 gap-3 mb-4">
-  <div class="xl:col-span-3 bg-white rounded-2xl border border-stone-200 shadow-sm px-4 py-3 flex items-center">
+  <div class="xl:col-span-3 dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-4 py-3 flex items-center">
     <div class="flex flex-wrap items-center gap-x-4 gap-y-2 w-full">
       <div class="flex items-center gap-2">
-        <svg class="w-4 h-4 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
-        <select id="abs-filter-karyawan" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+        <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+        <select id="abs-filter-karyawan" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]">
           <option value="">Semua Karyawan</option>
         </select>
-        <input id="abs-filter-tanggal-awal" type="date" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
-        <span class="text-xs text-stone-400">s.d.</span>
-        <input id="abs-filter-tanggal-akhir" type="date" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
-        <select id="abs-filter-status" class="text-xs border border-stone-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+        <input id="abs-filter-tanggal-awal" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]" />
+        <span class="text-xs text-slate-400">s.d.</span>
+        <input id="abs-filter-tanggal-akhir" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]" />
+        <select id="abs-filter-status" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]">
           <option value="">Semua Status</option>
           <option>Hadir</option><option>Sakit</option><option>Izin</option><option>Cuti</option><option>Terlambat</option><option>Alpha</option>
         </select>
       </div>
     </div>
   </div>
-  <div class="bg-white rounded-2xl border border-stone-200 shadow-sm px-3 py-2.5 flex items-center">
+  <div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 flex items-center">
     <div class="flex items-center gap-2 w-full">
-      <button onclick="loadAbsensi()" class="flex-1 min-w-0 h-9 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-medium transition-colors shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap">
+      <button onclick="loadAbsensi()" class="flex-1 min-w-0 h-9 px-2 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-xs font-medium transition-colors shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap">
         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Filter
       </button>
-      <button onclick="openAbsensiForm()" class="flex-1 min-w-0 h-9 px-2 border border-stone-300 text-stone-700 hover:bg-stone-50 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap">
+      <button onclick="openAbsensiForm()" class="flex-1 min-w-0 h-9 px-2 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap">
         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>+ Input
       </button>
     </div>
   </div>
 </div>
-<div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-  <div class="overflow-x-auto">
-    <table class="w-full text-[11px]">
-      <thead class="bg-stone-50">
+<div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">      <table class="w-full text-[11px]">
+      <thead class="bg-slate-50">
         <tr>
-          <th class="text-left px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-r border-stone-200">Tanggal</th>
-          <th class="text-left px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-r border-stone-200">Nama Karyawan</th>
-          <th class="text-left px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-r border-stone-200">Jabatan</th>
-          <th class="text-center px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-r border-stone-200">Status</th>
-          <th class="text-center px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-r border-stone-200">Jam Masuk</th>
-          <th class="text-center px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-r border-stone-200">Jam Keluar</th>
-          <th class="text-center px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-r border-stone-200">Foto Masuk</th>
-          <th class="text-center px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-r border-stone-200">Foto Keluar</th>
-          <th class="text-left px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider border-r border-stone-200">Keterangan</th>
-          <th class="text-right px-3 py-2.5 font-bold text-stone-500 text-[10px] uppercase tracking-wider">Aksi</th>
+          <th class="text-left px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Tanggal</th>
+          <th class="text-left px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Nama Karyawan</th>
+          <th class="text-left px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Jabatan</th>
+          <th class="text-center px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Status</th>
+          <th class="text-center px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Jam Masuk</th>
+          <th class="text-center px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Jam Keluar</th>
+          <th class="text-center px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Foto Masuk</th>
+          <th class="text-center px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Foto Keluar</th>
+          <th class="text-left px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider border-r border-slate-200">Keterangan</th>
+          <th class="text-right px-3 py-2.5 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Aksi</th>
         </tr>
       </thead>
       <tbody>
-        <tr><td colspan="10" class="text-center py-12 text-stone-400">Memuat data absensi...</td></tr>
+        <tr><td colspan="10" class="text-center py-12 text-slate-400">Memuat data absensi...</td></tr>
       </tbody>
     </table>
   </div>
 </div>
-<div id="absensi-pagination" class="flex items-center justify-between mt-3 text-sm text-stone-500"></div>
+<div id="absensi-pagination" class="flex items-center justify-between mt-3 text-sm text-slate-500 px-1"></div>
 <div id="absensi-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
-  <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-    <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-stone-200 flex justify-between items-center">
-      <h3 id="absensi-modal-title" class="text-sm font-bold text-stone-800">Input Absensi</h3>
-      <button onclick="closeModal('absensi-modal')" class="w-7 h-7 rounded-lg hover:bg-stone-100 flex items-center justify-center text-stone-400 hover:text-stone-700 transition-colors">
+  <div class="dash-card-item bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+    <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex justify-between items-center">
+      <h3 id="absensi-modal-title" class="text-sm font-bold text-slate-800">Input Absensi</h3>
+      <button onclick="closeModal('absensi-modal')" class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Tutup">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
@@ -63,40 +62,38 @@
       <form id="absensi-form" class="space-y-4">
         <input type="hidden" id="absensi-id" />
         <div>
-          <label class="text-xs font-semibold text-stone-700">Karyawan <span class="text-red-500">*</span></label>
-          <select id="absensi-karyawan" required class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"></select>
+          <label class="text-xs font-semibold text-slate-700">Karyawan <span class="text-red-500">*</span></label>
+          <select id="absensi-karyawan" required class="mt-1 w-full h-10 px-3 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]"></select>
         </div>
         <div>
-          <label class="text-xs font-semibold text-stone-700">Tanggal <span class="text-red-500">*</span></label>
-          <input id="absensi-tanggal" type="date" required class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
+          <label class="text-xs font-semibold text-slate-700">Tanggal <span class="text-red-500">*</span></label>
+          <input id="absensi-tanggal" type="date" required class="mt-1 w-full h-10 px-3 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]" />
         </div>
         <div>
-          <label class="text-xs font-semibold text-stone-700">Status <span class="text-red-500">*</span></label>
-          <select id="absensi-status" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+          <label class="text-xs font-semibold text-slate-700">Status <span class="text-red-500">*</span></label>
+          <select id="absensi-status" class="mt-1 w-full h-10 px-3 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]">
             <option>Hadir</option><option>Sakit</option><option>Izin</option><option>Cuti</option><option>Terlambat</option><option>Alpha</option>
           </select>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <label class="text-xs font-semibold text-stone-700">Jam Masuk</label>
-            <input id="absensi-masuk" type="time" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
+            <label class="text-xs font-semibold text-slate-700">Jam Masuk</label>
+            <input id="absensi-masuk" type="time" class="mt-1 w-full h-10 px-3 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]" />
           </div>
           <div>
-            <label class="text-xs font-semibold text-stone-700">Jam Keluar</label>
-            <input id="absensi-keluar" type="time" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
-  </div>
-</div>
-
-
+            <label class="text-xs font-semibold text-slate-700">Jam Keluar</label>
+            <input id="absensi-keluar" type="time" class="mt-1 w-full h-10 px-3 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]" />
+          </div>
+        </div>
         <div>
-          <label class="text-xs font-semibold text-stone-700">Keterangan</label>
-          <textarea id="absensi-keterangan" class="mt-1 w-full px-3 py-2 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" rows="2"></textarea>
+          <label class="text-xs font-semibold text-slate-700">Keterangan</label>
+          <textarea id="absensi-keterangan" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]" rows="2"></textarea>
         </div>
       </form>
     </div>
-    <div class="px-4 sm:px-6 py-3 border-t border-stone-200 flex justify-end gap-2">
-      <button onclick="closeModal('absensi-modal')" class="px-4 py-2 text-xs text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">Batal</button>
-      <button id="absensi-save" class="px-4 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm">Simpan</button>
+    <div class="px-4 sm:px-6 py-3 border-t border-slate-200 flex justify-end gap-2">
+      <button onclick="closeModal('absensi-modal')" class="px-4 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Batal</button>
+      <button id="absensi-save" class="px-4 py-2 text-xs bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg font-medium transition-colors shadow-sm">Simpan</button>
     </div>
   </div>
 </div>

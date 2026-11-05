@@ -84,14 +84,14 @@ function renderPanduanAhliGizi() {
 
   // ===================== BAGIAN 3: DIAGRAM ALUR =====================
   const diagramHtml = `
-  <div class="bg-white border border-stone-200 rounded-xl p-6 mt-6">
+  <div class="bg-white border border-slate-200 rounded-lg p-6 mt-6">
     <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-      <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      <svg class="w-5 h-5 text-[#14326b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       Diagram Alur Lengkap
     </h3>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
       <!-- Kolom Ahli Gizi -->
-      <div class="border border-emerald-200 rounded-xl overflow-hidden">
+      <div class="border border-emerald-200 rounded-lg overflow-hidden">
         <div class="bg-emerald-50 px-4 py-2.5 font-semibold text-emerald-800 border-b border-emerald-200 flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           AHLI GIZI
@@ -108,24 +108,24 @@ function renderPanduanAhliGizi() {
       </div>
 
       <!-- Kolom Keuangan -->
-      <div class="border border-blue-200 rounded-xl overflow-hidden">
-        <div class="bg-blue-50 px-4 py-2.5 font-semibold text-blue-800 border-b border-blue-200 flex items-center gap-2">
+      <div class="border border-slate-200 rounded-lg overflow-hidden">
+        <div class="bg-slate-50 px-4 py-2.5 font-semibold text-slate-900 border-b border-slate-200 flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
           KEUANGAN
         </div>
         <div class="p-4 space-y-2">
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Atur harga_satuan di Bahan Baku</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Buat PO dari kebutuhan hasil perencanaan</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Buat PO</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Penerimaan Barang + QC</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Auto-Stok Masuk + <strong class="text-green-700">Auto-Jurnal</strong></div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Laporan Biaya Produksi per Siklus</div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Jurnal Buku Besar Neraca</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-500"></span> Atur harga_satuan di Bahan Baku</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-500"></span> Buat PO dari kebutuhan hasil perencanaan</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-500"></span> Buat PO</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-500"></span> Penerimaan Barang + QC</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-500"></span> Auto-Stok Masuk + <strong class="text-green-700">Auto-Jurnal</strong></div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-500"></span> Laporan Biaya Produksi per Siklus</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-500"></span> Jurnal Buku Besar Neraca</div>
         </div>
       </div>
 
       <!-- Kolom Gudang -->
-      <div class="border border-purple-200 rounded-xl overflow-hidden">
+      <div class="border border-purple-200 rounded-lg overflow-hidden">
         <div class="bg-purple-50 px-4 py-2.5 font-semibold text-purple-800 border-b border-purple-200 flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><path d="M12 6v12"/></svg>
           GUDANG & PRODUKSI
@@ -143,14 +143,14 @@ function renderPanduanAhliGizi() {
 
   // ===================== CONTOH PERHITUNGAN =====================
   const contohHtml = `
-  <div id="contoh-sp" class="hidden mt-6 bg-white border border-stone-200 rounded-xl overflow-hidden">
-    <div class="px-5 py-3 font-bold border-b border-stone-200 flex items-center justify-between">
+  <div id="contoh-sp" class="hidden mt-6 bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div class="px-5 py-3 font-bold border-b border-slate-200 flex items-center justify-between">
       <span>Contoh Perhitungan — Siklus Aktif Lintas Jenjang</span>
-      <button onclick="document.getElementById('contoh-sp').classList.add('hidden')" class="text-stone-400 hover:text-stone-600">&times;</button>
+      <button onclick="document.getElementById('contoh-sp').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">&times;</button>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full">
-        <thead class="bg-stone-50">
+        <thead class="bg-slate-50">
           <tr>
             <th class="text-left px-4 py-3 text-xs font-semibold uppercase">Bahan</th>
             <th class="text-right px-4 py-3 text-xs font-semibold uppercase">TK/PAUD</th>
@@ -165,13 +165,13 @@ function renderPanduanAhliGizi() {
           </tr>
         </thead>
         <tbody>
-          <tr class="border-t border-stone-100"><td class="px-4 py-3 text-sm font-medium">Beras</td><td class="px-4 py-3 text-sm text-right mono">24,50</td><td class="px-4 py-3 text-sm text-right mono">42,75</td><td class="px-4 py-3 text-sm text-right mono">59,78</td><td class="px-4 py-3 text-sm text-right mono">25,20</td><td class="px-4 py-3 text-sm text-right mono">18,13</td><td class="px-4 py-3 text-sm text-right mono">9,95</td><td class="px-4 py-3 text-sm text-right mono font-semibold">180,30</td><td class="px-4 py-3 text-sm text-right mono text-sky-700 font-semibold">198,33</td><td class="px-4 py-3 text-sm text-right mono font-bold">180 kg</td></tr>
-          <tr class="border-t border-stone-100"><td class="px-4 py-3 text-sm font-medium">Ayam Potong</td><td class="px-4 py-3 text-sm text-right mono">39,20</td><td class="px-4 py-3 text-sm text-right mono">54,72</td><td class="px-4 py-3 text-sm text-right mono">95,64</td><td class="px-4 py-3 text-sm text-right mono">30,24</td><td class="px-4 py-3 text-sm text-right mono">23,20</td><td class="px-4 py-3 text-sm text-right mono">15,92</td><td class="px-4 py-3 text-sm text-right mono font-semibold">258,92</td><td class="px-4 py-3 text-sm text-right mono text-sky-700 font-semibold">284,81</td><td class="px-4 py-3 text-sm text-right mono font-bold">259 kg</td></tr>
-          <tr class="border-t border-stone-100"><td class="px-4 py-3 text-sm font-medium">Tempe</td><td class="px-4 py-3 text-sm text-right mono">12,25</td><td class="px-4 py-3 text-sm text-right mono">17,10</td><td class="px-4 py-3 text-sm text-right mono">27,90</td><td class="px-4 py-3 text-sm text-right mono">12,60</td><td class="px-4 py-3 text-sm text-right mono">7,25</td><td class="px-4 py-3 text-sm text-right mono">4,98</td><td class="px-4 py-3 text-sm text-right mono font-semibold">82,07</td><td class="px-4 py-3 text-sm text-right mono text-sky-700 font-semibold">90,28</td><td class="px-4 py-3 text-sm text-right mono font-bold">85 kg</td></tr>
+          <tr class="border-t border-slate-100"><td class="px-4 py-3 text-sm font-medium">Beras</td><td class="px-4 py-3 text-sm text-right mono">24,50</td><td class="px-4 py-3 text-sm text-right mono">42,75</td><td class="px-4 py-3 text-sm text-right mono">59,78</td><td class="px-4 py-3 text-sm text-right mono">25,20</td><td class="px-4 py-3 text-sm text-right mono">18,13</td><td class="px-4 py-3 text-sm text-right mono">9,95</td><td class="px-4 py-3 text-sm text-right mono font-semibold">180,30</td><td class="px-4 py-3 text-sm text-right mono text-sky-700 font-semibold">198,33</td><td class="px-4 py-3 text-sm text-right mono font-bold">180 kg</td></tr>
+          <tr class="border-t border-slate-100"><td class="px-4 py-3 text-sm font-medium">Ayam Potong</td><td class="px-4 py-3 text-sm text-right mono">39,20</td><td class="px-4 py-3 text-sm text-right mono">54,72</td><td class="px-4 py-3 text-sm text-right mono">95,64</td><td class="px-4 py-3 text-sm text-right mono">30,24</td><td class="px-4 py-3 text-sm text-right mono">23,20</td><td class="px-4 py-3 text-sm text-right mono">15,92</td><td class="px-4 py-3 text-sm text-right mono font-semibold">258,92</td><td class="px-4 py-3 text-sm text-right mono text-sky-700 font-semibold">284,81</td><td class="px-4 py-3 text-sm text-right mono font-bold">259 kg</td></tr>
+          <tr class="border-t border-slate-100"><td class="px-4 py-3 text-sm font-medium">Tempe</td><td class="px-4 py-3 text-sm text-right mono">12,25</td><td class="px-4 py-3 text-sm text-right mono">17,10</td><td class="px-4 py-3 text-sm text-right mono">27,90</td><td class="px-4 py-3 text-sm text-right mono">12,60</td><td class="px-4 py-3 text-sm text-right mono">7,25</td><td class="px-4 py-3 text-sm text-right mono">4,98</td><td class="px-4 py-3 text-sm text-right mono font-semibold">82,07</td><td class="px-4 py-3 text-sm text-right mono text-sky-700 font-semibold">90,28</td><td class="px-4 py-3 text-sm text-right mono font-bold">85 kg</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="px-5 py-3 bg-stone-50 text-xs text-stone-500 border-t border-stone-200 space-y-1">
+    <div class="px-5 py-3 bg-slate-50 text-xs text-slate-500 border-t border-slate-200 space-y-1">
       <div><strong>Rumus:</strong></div>
       <div>Berat Bersih (g) = SP × Berat 1 SP &nbsp;|&nbsp; Berat Kotor (g) = round(Bersih ÷ (BDD/100))</div>
       <div>Kebutuhan (kg) = Berat Kotor × Jumlah Penerima ÷ 1000 &nbsp;|&nbsp; Buffer = total × 1,1 (10%)</div>
@@ -183,7 +183,7 @@ function renderPanduanAhliGizi() {
     <!-- SECTION: AHLI GIZI -->
     <div class="mb-4 flex items-center gap-2">
       <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">BAGIAN AHLI GIZI</span>
-      <span class="text-xs text-stone-400">Langkah 1-8 — fokus pada data gizi, tanpa harga</span>
+      <span class="text-xs text-slate-400">Langkah 1-8 — fokus pada data gizi, tanpa harga</span>
     </div>
     <div class="grid gap-3">
       ${stepsGizi.map(function(s) {
@@ -193,8 +193,8 @@ function renderPanduanAhliGizi() {
 
     <!-- SECTION: INTEGRASI KEUANGAN -->
     <div class="mt-8 mb-4 flex items-center gap-2">
-      <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">INTEGRASI KEUANGAN</span>
-      <span class="text-xs text-stone-400">Langkah 9-12 — otomatis, tidak perlu input manual</span>
+      <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-900">INTEGRASI KEUANGAN</span>
+      <span class="text-xs text-slate-400">Langkah 9-12 — otomatis, tidak perlu input manual</span>
     </div>
     <div class="grid gap-3">
       ${stepsFinance.map(function(s) {
@@ -207,7 +207,7 @@ function renderPanduanAhliGizi() {
 
     <!-- CONTOH -->
     <div class="mt-6">
-      <button onclick="showContohSp()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-2">
+      <button onclick="showContohSp()" class="px-4 py-2.5 bg-[#14326b] hover:bg-[#0f2a5f] text-white text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Lihat Contoh Perhitungan
       </button>
@@ -215,24 +215,24 @@ function renderPanduanAhliGizi() {
     ${contohHtml}
 
     <!-- FOOTER: RINGKASAN ROLE -->
-    <div class="mt-8 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-5 text-sm">
+    <div class="mt-8 bg-slate-50 border border-amber-200 rounded-lg p-5 text-sm">
       <div class="font-bold text-amber-800 mb-2">Ringkasan Pembagian Peran</div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="flex items-start gap-2">
           <span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-700 shrink-0 mt-0.5">GIZI</span>
-          <span class="text-stone-600"><strong>Ahli Gizi:</strong> input data gizi, BDD, menu, siklus, hitung kebutuhan (kg) — <strong class="text-amber-700">tanpa harga</strong></span>
+          <span class="text-slate-600"><strong>Ahli Gizi:</strong> input data gizi, BDD, menu, siklus, hitung kebutuhan (kg) — <strong class="text-amber-700">tanpa harga</strong></span>
         </div>
         <div class="flex items-start gap-2">
-          <span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-700 shrink-0 mt-0.5">DANA</span>
-          <span class="text-stone-600"><strong>Keuangan:</strong> atur harga bahan, buat & proses PO, QC Penerimaan, pembayaran, laporan keuangan</span>
+          <span class="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-[#14326b] shrink-0 mt-0.5">DANA</span>
+          <span class="text-slate-600"><strong>Keuangan:</strong> atur harga bahan, buat & proses PO, QC Penerimaan, pembayaran, laporan keuangan</span>
         </div>
         <div class="flex items-start gap-2">
           <span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-700 shrink-0 mt-0.5">STOK</span>
-          <span class="text-stone-600"><strong>Gudang:</strong> stok masuk (otomatis dari penerimaan), stok keluar (otomatis dari produksi), mutasi stok</span>
+          <span class="text-slate-600"><strong>Gudang:</strong> stok masuk (otomatis dari penerimaan), stok keluar (otomatis dari produksi), mutasi stok</span>
         </div>
         <div class="flex items-start gap-2">
           <span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 shrink-0 mt-0.5">SISTEM</span>
-          <span class="text-stone-600"><strong>Otomatis:</strong> auto-jurnal double-entry, buku besar, neraca, laba rugi — tanpa entry manual</span>
+          <span class="text-slate-600"><strong>Otomatis:</strong> auto-jurnal double-entry, buku besar, neraca, laba rugi — tanpa entry manual</span>
         </div>
       </div>
     </div>
@@ -241,12 +241,12 @@ function renderPanduanAhliGizi() {
 
 function renderStepCard(s) {
   const linkHtml = s.link
-    ? '<button onclick="' + s.link.action + '" class="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' + s.link.label + '</button>'
+    ? '<button onclick="' + s.link.action + '" class="mt-2 text-xs font-medium text-[#14326b] hover:text-[#0f2a5f] inline-flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>' + s.link.label + '</button>'
     : '';
-  return '<div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-md transition-shadow">' +
+  return '<div class="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-md transition-shadow">' +
     '<div class="flex-1 min-w-0">' +
       '<h3 class="font-bold text-sm mb-1">' + s.title + '</h3>' +
-      '<p class="text-sm text-stone-500 leading-relaxed">' + s.desc + '</p>' +
+      '<p class="text-sm text-slate-500 leading-relaxed">' + s.desc + '</p>' +
       linkHtml +
     '</div>' +
   '</div>';

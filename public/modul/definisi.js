@@ -46,7 +46,7 @@ const MODULES = {
       { k: 'realisasi', l: 'Realisasi (IDR)', type: 'number', fmt: 'idr', info: 'Terisi otomatis dari transaksi kas' },
     ], cols: ['periode','kategori_penerima','jumlah_penerima','harga_besar','harga_kecil','biaya_operasional','total_budget','realisasi'] },
     extraButtons: [
-      { label: 'Hitung Ulang Realisasi', onclick: 'recalculateRealisasi()', cls: 'border border-blue-400 text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-md text-sm font-medium' },
+      { label: 'Hitung Ulang Realisasi', onclick: 'recalculateRealisasi()', cls: 'border border-[#14326b] text-[#14326b] hover:bg-slate-100 px-4 py-2 rounded-md text-sm font-medium' },
       { label: 'Backfill Jurnal', onclick: 'backfillJournal()', cls: 'border border-amber-400 text-amber-700 hover:bg-amber-50 px-4 py-2 rounded-md text-sm font-medium' },
     ],
     helpContent: [

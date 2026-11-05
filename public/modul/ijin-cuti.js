@@ -6,7 +6,7 @@ let _cutiKaryawanList = [];
 
 async function renderIjinCuti() {
   const c = document.getElementById('content');
-  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
+  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#14326b]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
     const r = await fetch('/api/template/ijin-cuti', { credentials: 'include' });
     if (!r.ok) {
@@ -95,8 +95,8 @@ function renderIjinCutiTable(list) {
   if (!tb) return;
 
   if (!list.length) {
-    tb.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-stone-400">' +
-      '<svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+    tb.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-slate-400">' +
+      '<svg class="w-14 h-14 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
       '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
       '<div>Belum ada data ijin/cuti</div></td></tr>';
     return;
@@ -111,11 +111,11 @@ function renderIjinCutiTable(list) {
       : '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Ditolak</span>';
 
     const jenisBadge = c.jenis === 'Izin'
-      ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Izin</span>'
+      ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-[#14326b]">Izin</span>'
       : '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700">Cuti</span>';
 
     const dokumenLink = c.dokumen && c.jenis === 'Izin'
-      ? `<a href="${c.dokumen}" target="_blank" class="text-xs text-blue-600 hover:underline" title="Lihat dokumen">📄</a>`
+      ? `<a href="${c.dokumen}" target="_blank" class="text-xs text-[#14326b] hover:underline" title="Lihat dokumen">📄</a>`
       : '';
 
     const alasanDisplay = dokumenLink
@@ -127,21 +127,21 @@ function renderIjinCutiTable(list) {
         <button onclick="approveCuti(${c.id},'Ditolak')" class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Tolak"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`
       : '';
 
-    return `<tr class="border-t border-stone-100">
+    return `<tr class="border-t border-slate-100">
       <td class="px-4 py-3 text-sm font-medium">
         <div class="flex items-center gap-2">
-          <div class="w-7 h-7 rounded-full bg-stone-200 flex items-center justify-center text-xs font-bold shrink-0">${getInitials(c.nama_karyawan)}</div>
+          <div class="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold shrink-0">${getInitials(c.nama_karyawan)}</div>
           <div>
             <div class="font-medium">${c.nama_karyawan}</div>
-            <div class="text-[11px] text-stone-400">${c.jabatan_nama || '-'}</div>
+            <div class="text-[11px] text-slate-400">${c.jabatan_nama || '-'}</div>
           </div>
         </div>
       </td>
-      <td class="px-4 py-3 text-sm mono text-stone-500">${c.nik || '-'}</td>
+      <td class="px-4 py-3 text-sm mono text-slate-500">${c.nik || '-'}</td>
       <td class="px-4 py-3 text-sm text-center">${jenisBadge}</td>
       <td class="px-4 py-3 text-sm whitespace-nowrap">
         <div>${fmtDate(c.tanggal_mulai)}</div>
-        ${c.tanggal_selesai && c.tanggal_selesai !== c.tanggal_mulai ? `<div class="text-xs text-stone-400">s.d. ${fmtDate(c.tanggal_selesai)}</div>` : ''}
+        ${c.tanggal_selesai && c.tanggal_selesai !== c.tanggal_mulai ? `<div class="text-xs text-slate-400">s.d. ${fmtDate(c.tanggal_selesai)}</div>` : ''}
       </td>
       <td class="px-4 py-3 text-sm mono text-center">${durasi}</td>
       <td class="px-4 py-3 text-sm text-center">${statusBadge}</td>
@@ -149,7 +149,7 @@ function renderIjinCutiTable(list) {
       <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
         <div class="flex items-center justify-end gap-0.5">
           ${actions}
-          <button onclick="editCuti(${c.id})" class="text-stone-500 hover:text-stone-900 p-1.5 inline-flex items-center" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button onclick="editCuti(${c.id})" class="text-slate-500 hover:text-slate-900 p-1.5 inline-flex items-center" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button onclick="deleteCuti(${c.id})" class="text-red-600 hover:text-red-800 p-1.5 inline-flex items-center" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         </div>
       </td>
@@ -169,14 +169,14 @@ function renderCutiPagination() {
   const wrap = document.getElementById('cuti-pagination');
   if (!wrap) return;
   if (_cutiTotalPages <= 1) {
-    wrap.innerHTML = `<span class="text-sm text-stone-400">${_cutiTotal} data</span>`;
+    wrap.innerHTML = `<span class="text-sm text-slate-400">${_cutiTotal} data</span>`;
     return;
   }
   wrap.innerHTML = `
-    <span class="text-sm text-stone-500">${_cutiTotal} data — Hal ${_cutiPage} dari ${_cutiTotalPages}</span>
+    <span class="text-sm text-slate-500">${_cutiTotal} data — Hal ${_cutiPage} dari ${_cutiTotalPages}</span>
     <div class="flex gap-2">
-      ${_cutiPage > 1 ? `<button onclick="cutiGoToPage(${_cutiPage - 1})" class="px-3 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Prev</button>` : ''}
-      ${_cutiPage < _cutiTotalPages ? `<button onclick="cutiGoToPage(${_cutiPage + 1})" class="px-3 py-1 text-sm rounded border border-stone-200 hover:bg-stone-50">Next</button>` : ''}
+      ${_cutiPage > 1 ? `<button onclick="cutiGoToPage(${_cutiPage - 1})" class="px-3 py-1 text-sm rounded border border-slate-200 hover:bg-slate-50">Prev</button>` : ''}
+      ${_cutiPage < _cutiTotalPages ? `<button onclick="cutiGoToPage(${_cutiPage + 1})" class="px-3 py-1 text-sm rounded border border-slate-200 hover:bg-slate-50">Next</button>` : ''}
     </div>`;
 }
 
@@ -220,10 +220,10 @@ function previewDokumenName(input) {
     // Show preview for images
     if (file.type.startsWith('image/')) {
       document.getElementById('cuti-dokumen-preview').innerHTML = 
-        '<a href="' + e.target.result + '" target="_blank" class="text-xs text-blue-600 hover:underline">📄 Lihat preview</a>';
+        '<a href="' + e.target.result + '" target="_blank" class="text-xs text-[#14326b] hover:underline">📄 Lihat preview</a>';
     } else {
       document.getElementById('cuti-dokumen-preview').innerHTML = 
-        '<a href="' + e.target.result + '" target="_blank" class="text-xs text-blue-600 hover:underline">📄 Lihat dokumen</a>';
+        '<a href="' + e.target.result + '" target="_blank" class="text-xs text-[#14326b] hover:underline">📄 Lihat dokumen</a>';
     }
   };
   reader.readAsDataURL(file);
@@ -255,7 +255,7 @@ function openIjinCutiForm(c) {
     const isImg = c.dokumen.startsWith('data:image/');
     document.getElementById('cuti-dokumen-name').textContent = isImg ? '📷 Dokumen terupload' : '📄 Dokumen terupload';
     document.getElementById('cuti-dokumen-preview').innerHTML = 
-      '<a href="' + c.dokumen + '" target="_blank" class="text-xs text-blue-600 hover:underline">🔍 Lihat dokumen</a>';
+      '<a href="' + c.dokumen + '" target="_blank" class="text-xs text-[#14326b] hover:underline">🔍 Lihat dokumen</a>';
     document.getElementById('cuti-dokumen-hapus')?.classList.remove('hidden');
   } else {
     document.getElementById('cuti-dokumen').value = '';

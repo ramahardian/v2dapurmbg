@@ -448,7 +448,7 @@ function renderNotifList(stock, siklus) {
     html += `<div class="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider" style="opacity:0.5">Siklus Menu</div>`;
     html += siklus.items.slice(0, 5).map(it => {
       const pct = it.coverage;
-      const barColor = pct < 50 ? 'bg-red-500' : pct < 80 ? 'bg-amber-500' : 'bg-blue-500';
+      const barColor = pct < 50 ? 'bg-red-500' : pct < 80 ? 'bg-amber-500' : 'bg-slate-500';
       return `<div class="px-4 py-2.5 border-b cursor-pointer hover:opacity-80" style="border-color:var(--border)" onclick="bukaSiklusDariNotif(${it.id})">
         <div class="flex items-center justify-between">
           <div class="text-sm font-medium truncate flex-1">${escHtml(it.nama)}</div>

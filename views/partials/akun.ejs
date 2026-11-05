@@ -1,12 +1,12 @@
 <div class="max-w-100 mx-auto space-y-6">
-  <div class="bg-white border border-stone-200 rounded-xl overflow-hidden">
-    <div class="px-6 py-4 border-b border-stone-100">
+  <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100">
       <h3 class="font-bold text-base">Profil Saya</h3>
     </div>
     <div class="p-6 space-y-4">
       <!-- Foto -->
       <div class="flex items-center gap-5">
-        <div id="akun-foto-preview" class="w-16 h-16 rounded-full overflow-hidden bg-stone-100 flex items-center justify-center text-lg font-bold text-stone-500 shrink-0 ring-2 ring-stone-200" style="background-size:cover;background-position:center">
+        <div id="akun-foto-preview" class="w-16 h-16 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center text-lg font-bold text-slate-500 shrink-0 ring-2 ring-slate-200" style="background-size:cover;background-position:center">
           <% if (user.foto) { %>
             <img src="<%= user.foto %>" class="w-full h-full object-cover" id="akun-foto-img">
           <% } else { %>
@@ -14,48 +14,48 @@
           <% } %>
         </div>
         <div class="flex flex-col gap-1.5">
-          <label class="cursor-pointer inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
+          <label class="cursor-pointer inline-flex items-center gap-1.5 text-sm font-medium text-[#14326b] hover:text-[#0f2a5f] transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             Unggah Foto
             <input type="file" id="akun-foto-input" accept="image/png,image/jpeg,image/jpg,image/webp" class="hidden">
           </label>
           <button id="akun-foto-hapus" class="text-xs text-red-600 hover:text-red-700 text-left <%= user.foto ? '' : 'hidden' %> transition-colors">Hapus foto</button>
-          <span class="text-[10px] text-stone-400">Format: JPG, PNG, WEBP. Maks 2MB</span>
+          <span class="text-[10px] text-slate-400">Format: JPG, PNG, WEBP. Maks 2MB</span>
         </div>
       </div>
       <div>
-        <label class="text-sm font-medium text-stone-700">Nama Lengkap</label>
-        <input id="akun-nama" value="<%= user.nama %>" class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm" />
+        <label class="text-sm font-medium text-slate-700">Nama Lengkap</label>
+        <input id="akun-nama" value="<%= user.nama %>" class="mt-1 w-full h-11 px-4 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] text-sm" />
       </div>
       <div>
-        <label class="text-sm font-medium text-stone-700">Email</label>
-        <input id="akun-email" type="email" value="<%= user.email %>" class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm" />
+        <label class="text-sm font-medium text-slate-700">Email</label>
+        <input id="akun-email" type="email" value="<%= user.email %>" class="mt-1 w-full h-11 px-4 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] text-sm" />
       </div>
       <div>
-        <label class="text-sm font-medium text-stone-700">Role</label>
-        <input value="<%= user.role.replace('_', ' ') %>" disabled class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl bg-stone-50 text-stone-500 text-sm capitalize" />
+        <label class="text-sm font-medium text-slate-700">Role</label>
+        <input value="<%= user.role.replace('_', ' ') %>" disabled class="mt-1 w-full h-11 px-4 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 text-sm capitalize" />
       </div>
       <div class="pt-2">
-        <button id="btn-simpan-profil" class="bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors">Simpan Profil</button>
+        <button id="btn-simpan-profil" class="bg-[#14326b] hover:bg-[#0f2a5f] text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors">Simpan Profil</button>
       </div>
     </div>
   </div>
 
-  <div class="bg-white border border-stone-200 rounded-xl overflow-hidden">
-    <div class="px-6 py-4 border-b border-stone-100">
+  <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100">
       <h3 class="font-bold text-base">Ganti Kata Sandi</h3>
     </div>
     <div class="p-6 space-y-4">
       <div>
-        <label class="text-sm font-medium text-stone-700">Password Lama</label>
-        <input id="akun-pass-lama" type="password" placeholder="Masukkan password saat ini" class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm" />
+        <label class="text-sm font-medium text-slate-700">Password Lama</label>
+        <input id="akun-pass-lama" type="password" placeholder="Masukkan password saat ini" class="mt-1 w-full h-11 px-4 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] text-sm" />
       </div>
       <div>
-        <label class="text-sm font-medium text-stone-700">Password Baru</label>
-        <input id="akun-pass-baru" type="password" placeholder="Minimal 6 karakter" class="mt-1 w-full h-11 px-4 border border-stone-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-sm" />
+        <label class="text-sm font-medium text-slate-700">Password Baru</label>
+        <input id="akun-pass-baru" type="password" placeholder="Minimal 6 karakter" class="mt-1 w-full h-11 px-4 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] text-sm" />
       </div>
       <div class="pt-2">
-        <button id="btn-ganti-password" class="bg-stone-700 hover:bg-stone-800 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors">Ganti Password</button>
+        <button id="btn-ganti-password" class="bg-slate-700 hover:bg-slate-800 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors">Ganti Password</button>
       </div>
     </div>
   </div>

@@ -1,6 +1,5 @@
-async function renderPayroll() {
-  const c = document.getElementById('content');
-  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
+async function renderPayroll() {    const c = document.getElementById('content');
+  c.innerHTML = '<div class="dash-card-item flex items-center justify-center py-12"><svg class="animate-spin h-9 w-9 text-[#14326b]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
     const r = await fetch('/api/template/payroll', { credentials: 'include' });
     if (!r.ok) {
@@ -9,11 +8,12 @@ async function renderPayroll() {
     }
     c.innerHTML = await r.text();
     await loadKaryawanOptions();
-    document.getElementById('payroll-save') && (document.getElementById('payroll-save').onclick = savePayroll);
+    const saveBtn = document.getElementById('payroll-save');
+    if (saveBtn) saveBtn.onclick = savePayroll;
     loadPayroll();
   } catch (err) {
     console.error('Payroll error:', err);
-    c.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat payroll: ${err.message}</div>`;
+    c.innerHTML = '<div class="dash-card-item"><div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Gagal memuat payroll: ' + err.message + '</div></div>';
   }
 }
 
@@ -61,23 +61,23 @@ async function loadKaryawan() {
   } catch (e) {
     console.error('loadKaryawan error:', e);
     const tb = document.querySelector('#karyawan-modal')?.parentElement?.querySelector('tbody');
-    if (tb) tb.innerHTML = `<tr><td colspan="7" class="text-center py-12 text-red-600">Gagal memuat karyawan: ${e.message}</td></tr>`;
+    if (tb) tb.innerHTML = '<tr><td colspan="7" class="text-center py-12 text-red-600">Gagal memuat karyawan: ' + e.message + '</td></tr>';
   }
 }
 function renderKaryawanTable(list) {
-  const tb = document.querySelector('#karyawan-modal').parentElement.querySelector('tbody');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="text-center py-16 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg><div class="text-sm">Belum ada karyawan</div></td></tr>'; return; }
+  const tb = document.querySelector('#karyawan-modal')?.parentElement?.querySelector('tbody');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="text-center py-16 text-slate-400"><svg class="w-14 h-14 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg><div class="text-sm">Belum ada karyawan</div></td></tr>'; return; }
   tb.innerHTML = list.map(k => `
-    <tr class="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-      <td class="px-4 py-3 text-xs font-medium"><a href="/karyawan?id=${k.id}" onclick="event.preventDefault();navigate('karyawan?id=${k.id}')" class="text-blue-600 hover:text-blue-800 font-semibold">${k.nama}</a></td>
-      <td class="px-4 py-3 text-xs text-stone-600">${k.nik || '-'}</td>
-      <td class="px-4 py-3 text-xs text-stone-600">${k.jabatan_nama || k.jabatan || '-'}</td>
-      <td class="px-4 py-3 text-xs text-stone-600">${k.departemen || '-'}</td>
-      <td class="px-4 py-3 text-xs text-right mono text-stone-700 font-medium">${fmtIDR(k.gaji_pokok)}</td>
+    <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+      <td class="px-4 py-3 text-xs font-medium"><a href="/karyawan?id=${k.id}" onclick="event.preventDefault();navigate('karyawan?id=${k.id}')" class="text-[#14326b] hover:text-[#0f2a5f] font-semibold">${k.nama}</a></td>
+      <td class="px-4 py-3 text-xs text-slate-600">${k.nik || '-'}</td>
+      <td class="px-4 py-3 text-xs text-slate-600">${k.jabatan_nama || k.jabatan || '-'}</td>
+      <td class="px-4 py-3 text-xs text-slate-600">${k.departemen || '-'}</td>
+      <td class="px-4 py-3 text-xs text-right mono text-slate-700 font-medium">${fmtIDR(k.gaji_pokok)}</td>
       <td class="px-4 py-3 text-xs">${k.status}</td>
       <td class="px-4 py-3 text-xs text-right whitespace-nowrap">
-        <button onclick="openKaryawanForm(karyawanData.find(x => x.id == ${k.id}))" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button onclick="deleteKaryawan(${k.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        <button onclick="openKaryawanForm(karyawanData.find(x => x.id == ${k.id}))" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#14326b] hover:bg-slate-100 transition-all" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button onclick="deleteKaryawan(${k.id})" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
       </td>
     </tr>`).join('');
 }
@@ -95,14 +95,19 @@ function lihatAbsensiKaryawan(id) {
 
 async function showKaryawanDetail(id) {
   const c = document.getElementById('content');
-  c.innerHTML = '<div class="flex items-center justify-center py-24"><svg class="animate-spin h-10 w-10 text-[#1e40af]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
+  c.innerHTML = '<div class="dash-card-item flex items-center justify-center py-12"><svg class="animate-spin h-9 w-9 text-[#14326b]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg></div>';
   try {
-    const r = await fetch(`/api/template/karyawan/${id}`, { credentials: 'include' });
+    const r = await fetch('/api/template/karyawan/' + id, { credentials: 'include' });
     if (!r.ok) throw new Error((await r.json()).error || 'Gagal memuat detail');
     c.innerHTML = await r.text();
-    document.getElementById('karyawan-save') && (document.getElementById('karyawan-save').onclick = saveKaryawan);
+    var saveBtn = document.getElementById('karyawan-save');
+    if (saveBtn) saveBtn.onclick = saveKaryawan;
   } catch (e) {
-    c.innerHTML = `<div class="text-center py-24 text-stone-400"><svg class="w-20 h-20 mx-auto mb-4 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg><div class="text-lg font-medium">Karyawan tidak ditemukan</div><button onclick="navigate('karyawan')" class="mt-4 text-sm text-[#1e40af] hover:underline">&larr; Kembali ke daftar</button></div>`;
+    c.innerHTML = '<div class="dash-card-item text-center py-12 text-slate-400">' +
+      '<svg class="w-20 h-20 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>' +
+      '<div class="text-lg font-medium">Karyawan tidak ditemukan</div>' +
+      '<button onclick="navigate(\'karyawan\')" class="mt-4 text-sm text-[#14326b] hover:underline">&larr; Kembali ke daftar</button>' +
+      '</div>';
   }
 }
 
@@ -110,9 +115,9 @@ function renderKaryawanPagination() {
   const wrap = document.getElementById('karyawan-pagination');
   if (!wrap) return;
   if (karyawanState.totalPages <= 1) { wrap.innerHTML = ''; return; }
-  const prevBtn = karyawanState.page > 1 ? `<button onclick="kryGoToPage(${karyawanState.page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Prev</button>` : '';
-  const nextBtn = karyawanState.page < karyawanState.totalPages ? `<button onclick="kryGoToPage(${karyawanState.page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all">Next</button>` : '';
-  wrap.innerHTML = `<span class="text-sm text-stone-500">Hal ${karyawanState.page} dari ${karyawanState.totalPages}</span>
+  const prevBtn = karyawanState.page > 1 ? `<button onclick="kryGoToPage(${karyawanState.page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Prev</button>` : '';
+  const nextBtn = karyawanState.page < karyawanState.totalPages ? `<button onclick="kryGoToPage(${karyawanState.page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Next</button>` : '';
+  wrap.innerHTML = `<span class="text-sm text-slate-500">Hal ${karyawanState.page} dari ${karyawanState.totalPages}</span>
     <div class="flex gap-2">${prevBtn}${nextBtn}</div>`;
 }
 function kryGoToPage(p) {
@@ -164,7 +169,7 @@ function openKaryawanForm(k) {
       preview.innerHTML = '<img src="' + k.photo + '" class="w-full h-full object-cover" />';
       if (hapusBtn) hapusBtn.classList.remove('hidden');
     } else {
-      preview.innerHTML = '<svg class="w-6 h-6 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>';
+      preview.innerHTML = '<svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>';
       if (hapusBtn) hapusBtn.classList.add('hidden');
     }
   }
@@ -183,13 +188,16 @@ function openKaryawanForm(k) {
   if (hapusBtn) {
     hapusBtn.onclick = function() {
       if (photoInput) photoInput.value = '';
-      if (preview) preview.innerHTML = '<svg class="w-6 h-6 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>';
+      if (preview) preview.innerHTML = '<svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>';
       hapusBtn.classList.add('hidden');
       window._karyawanCurrentPhoto = null;
     };
   }
-  document.getElementById('karyawan-modal').classList.remove('hidden');
-  document.getElementById('karyawan-modal').classList.add('flex');
+  var modal = document.getElementById('karyawan-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.removeAttribute('hidden');
+  }
 }
 async function saveKaryawan() {
   let karyawanId = document.getElementById('karyawan-id').value;
@@ -226,10 +234,9 @@ async function saveKaryawan() {
   try {
     if (isEdit) await api.put('/karyawan/' + karyawanId, payload);
     else { const newRow = await api.post('/karyawan', payload); karyawanId = newRow.id; }
-  } catch (e) { showAlert('Gagal: ' + (e.message || ''), 'error'); return; }
-  document.getElementById('karyawan-modal').classList.add('hidden');
-  document.getElementById('karyawan-modal').classList.remove('flex');
-  showToast('Karyawan berhasil ' + (isEdit ? 'diperbarui' : 'disimpan'), 'success');
+  } catch (e) { showAlert('Gagal: ' + (e.message || ''), 'error'); return; }    document.getElementById('karyawan-modal').classList.add('hidden');
+    document.getElementById('karyawan-modal').classList.remove('flex');
+    showToast('Karyawan berhasil ' + (isEdit ? 'diperbarui' : 'disimpan'), 'success');
   if (new URLSearchParams(location.search).get('id')) {
     navigate('karyawan?id=' + karyawanId);
   } else {
@@ -272,31 +279,31 @@ async function loadAbsensi(page = 1) {
   renderAbsensiTable(res.data, res);
 }
 function openFoto(src) {
-  window.open(src, '_blank');
+  const win = window.open(src, '_blank', 'noopener');
+  if (!win) showAlert('Buka foto di tab baru diblokir. Coba klik kanan > buka di tab baru.', 'warning');
 }
 
 function renderAbsensiTable(list, pagination) {
-  const tb = document.querySelector('#absensi-modal').parentElement.querySelector('tbody');
-  function fotoCell(val) {
-    if (!val) return '<span class="text-stone-300 text-[10px]">—</span>';
-    const s = val.replace(/"/g,'&quot;');
-    return '<img src="'+s+'" onclick="openFoto(\''+s+'\')" class="w-9 h-9 rounded-lg object-cover cursor-pointer border border-stone-200 hover:border-blue-400 hover:shadow-md transition-all" title="Klik untuk lihat penuh">';
+  const tb = document.querySelector('#absensi-modal')?.parentElement?.querySelector('tbody');
+  function fotoCell(val, cls = 'w-9 h-9') {
+    if (!val) return '<span class="text-slate-300 text-[10px]">—</span>';
+    return `<img src="${val}" class="${cls} rounded-lg object-cover cursor-pointer border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all" onclick="openFoto('${val.replace(/'/g,'\\\'')}')" title="Klik untuk lihat penuh">`;
   }
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="10" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div>Belum ada data absensi</div></td></tr>'; } else {
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="10" class="text-center py-12 text-slate-400"><svg class="w-14 h-14 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div>Belum ada data absensi</div></td></tr>'; } else {
     tb.innerHTML = list.map(a => `
-      <tr class="border-t border-stone-100">
+      <tr class="border-t border-slate-100">
         <td class="px-4 py-3 text-sm whitespace-nowrap">${fmtDate(a.tanggal)}</td>
-        <td class="px-4 py-3 text-sm font-medium">${a.nama_karyawan}</td>
-        <td class="px-4 py-3 text-sm">${a.jabatan || '-'}</td>
+        <td class="px-4 py-3 text-sm font-medium text-slate-700">${a.nama_karyawan}</td>
+        <td class="px-4 py-3 text-sm text-slate-500">${a.jabatan || '-'}</td>
         <td class="px-4 py-3 text-sm text-center"><span class="badge ${a.status==='Hadir'?'badge-hadir':a.status==='Sakit'?'badge-sakit':a.status==='Izin'?'badge-izin':a.status==='Cuti'?'badge-cuti':a.status==='Alpha'?'badge-alpha':a.status==='Terlambat'?'badge-terlambat':'badge-hadir'}">${a.status}</span></td>
-        <td class="px-4 py-3 text-sm text-center mono">${a.jam_masuk || '-'}</td>
-        <td class="px-4 py-3 text-sm text-center mono">${a.jam_keluar || '-'}</td>
-        <td class="px-4 py-3 text-sm text-center">${fotoCell(a.foto_masuk)}</td>
-        <td class="px-4 py-3 text-sm text-center">${fotoCell(a.foto_keluar)}</td>
-        <td class="px-4 py-3 text-sm">${a.keterangan || '-'}</td>
+        <td class="px-4 py-3 text-sm text-center mono text-slate-600">${a.jam_masuk || '-'}</td>
+        <td class="px-4 py-3 text-sm text-center mono text-slate-600">${a.jam_keluar || '-'}</td>
+        <td class="px-4 py-3 text-center">${fotoCell(a.foto_masuk)}</td>
+        <td class="px-4 py-3 text-center">${fotoCell(a.foto_keluar)}</td>
+        <td class="px-4 py-3 text-sm text-slate-500 truncate max-w-[140px]">${a.keterangan || '-'}</td>
         <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-          <button data-id="${a.id}" class="edit-absensi text-stone-500 hover:text-stone-900 mr-2" title="Edit"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button data-id="${a.id}" class="delete-absensi text-red-600 hover:text-red-800" title="Hapus"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+          <button data-id="${a.id}" class="edit-absensi w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#14326b] hover:bg-slate-100 transition-all mr-1" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button data-id="${a.id}" class="delete-absensi w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Hapus"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         </td>
       </tr>`).join('');
     tb.querySelectorAll('.edit-absensi').forEach(b => b.onclick = () => openAbsensiForm(list.find(x => x.id == b.dataset.id)));
@@ -308,7 +315,17 @@ function renderAbsensiTable(list, pagination) {
   }
   const pg = document.getElementById('absensi-pagination');
   if (pg && pagination) {
-    pg.innerHTML = `<span>${pagination.total} data</span><div class="flex gap-1">${pagination.totalPages > 1 ? Array.from({ length: pagination.totalPages }, (_, i) => `<button onclick="loadAbsensi(${i + 1})" class="px-3 py-1 rounded ${i + 1 === pagination.page ? 'bg-[#1e40af] text-white' : 'bg-stone-100 hover:bg-stone-200'}">${i + 1}</button>`).join('') : ''}</div>`;
+    const pages = pagination.totalPages > 1
+      ? Array.from({ length: pagination.totalPages }, (_, i) => {
+          const page = i + 1;
+          const active = page === pagination.page;
+          return '<button onclick="loadAbsensi(' + page + ')" class="inline-flex items-center justify-center w-7 h-7 text-xs font-medium rounded-md transition-colors ' + (active ? 'bg-[#14326b] text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 shadow-sm') + '">' + page + '</button>';
+        }).join('')
+      : '';
+    pg.innerHTML = '<div class="flex items-center gap-2">' +
+      '<span class="text-xs font-medium text-slate-500">' + pagination.total + ' data</span>' +
+      '<div class="flex items-center gap-1">' + pages + '</div>' +
+      '</div>';
   }
 }
 function formatDateInput(val) {
@@ -344,7 +361,7 @@ function openAbsensiForm(a) {
     ? karyawanOptions
     : (window.karyawanOptions || []);
   sel.innerHTML = '<option value="">— Pilih —</option>' +
-    options.map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
+    options.map(k => '<option value="' + k.id + '">' + k.nama + ' - ' + (k.jabatan_nama || '-') + '</option>').join('');
   
   // Set value setelah options tersedia
   if (a && a.karyawan_id) {
@@ -406,50 +423,68 @@ async function loadPayroll() {
   if (fp) { const [tahun, bulan] = fp.split('-'); params.set('tahun', tahun); params.set('bulan', String(parseInt(bulan))); }
   if (fs) params.set('status', fs);
   payrollListGlobal = await api.get('/payroll?' + params);
-  renderPayrollTable(payrollListGlobal);
+  renderPayrollTable(payrollListGlobal, payrollListGlobal && payrollListGlobal.pagination ? payrollListGlobal.pagination : null);
 }
-function renderPayrollTable(list) {
-  const tb = document.querySelector('#payroll-modal').parentElement.querySelector('tbody');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="9" class="text-center py-12 text-stone-400"><svg class="w-14 h-14 mx-auto mb-3 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><div>Belum ada data payroll</div></td></tr>'; return; }
+function renderPayrollTable(list, pagination) {
+  const tb = document.querySelector('#payroll-modal')?.parentElement?.querySelector('tbody');
+  if (!Array.isArray(list) || !list.length) {
+    tb.innerHTML = '<tr><td colspan="9" class="text-center py-16 text-slate-400">' +
+      '<svg class="w-14 h-14 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' +
+      '<div class="text-sm">Belum ada data payroll</div>' +
+      '</td></tr>';
+    return;
+  }
   const BLN = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  tb.innerHTML = list.map(p => `
-    <tr class="border-t border-stone-100">
-      <td class="px-4 py-3 text-sm whitespace-nowrap">${BLN[p.bulan]} ${p.tahun}</td>
-      <td class="px-4 py-3 text-sm font-medium">${p.nama_karyawan}</td>
-      <td class="px-4 py-3 text-sm">${p.jabatan || '-'}</td>
-      <td class="px-4 py-3 text-sm text-right mono">${fmtIDR(p.gaji_pokok)}</td>
-      <td class="px-4 py-3 text-sm text-right mono">${fmtIDR(p.tunjangan)}</td>
-      <td class="px-4 py-3 text-sm text-right mono">${fmtIDR(p.potongan)}</td>
-      <td class="px-4 py-3 text-sm text-right mono font-medium">${fmtIDR(p.total_gaji)}</td>
-      <td class="px-4 py-3 text-sm text-center">${p.status}</td>
-      <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-        <button data-id="${p.id}" class="edit-payroll text-stone-500 hover:text-stone-900 mr-2">Edit</button>
-        <button data-id="${p.id}" class="text-red-600">Hapus</button>
-      </td>
-    </tr>`).join('');
-  tb.querySelectorAll('.edit-payroll').forEach(b => b.onclick = () => openPayrollForm(payrollListGlobal.find(x => x.id == b.dataset.id)));
-  tb.querySelectorAll('.text-red-600').forEach(b => b.onclick = async () => {
-    if (!await showConfirm('Hapus data payroll?')) return;
-    await api.del('/payroll/' + b.dataset.id);
-    loadPayroll();
-  });
+  tb.innerHTML = list.map(function(p) {
+    return '<tr class="border-t border-slate-100">' +
+      '<td class="px-4 py-3 text-sm whitespace-nowrap">' + BLN[p.bulan] + ' ' + p.tahun + '</td>' +
+      '<td class="px-4 py-3 text-sm font-medium">' + p.nama_karyawan + '</td>' +
+      '<td class="px-4 py-3 text-sm">' + (p.jabatan || '-') + '</td>' +
+      '<td class="px-4 py-3 text-sm text-right mono">' + fmtIDR(p.gaji_pokok) + '</td>' +
+      '<td class="px-4 py-3 text-sm text-right mono">' + fmtIDR(p.tunjangan) + '</td>' +
+      '<td class="px-4 py-3 text-sm text-right mono">' + fmtIDR(p.potongan) + '</td>' +
+      '<td class="px-4 py-3 text-sm text-right mono font-medium">' + fmtIDR(p.total_gaji) + '</td>' +
+      '<td class="px-4 py-3 text-sm text-center">' + p.status + '</td>' +
+      '<td class="px-4 py-3 text-sm text-right whitespace-nowrap">' +
+        '<button data-id="' + p.id + '" class="edit-payroll text-slate-500 hover:text-slate-900 mr-2">Edit</button>' +
+        '<button data-id="' + p.id + '" class="text-red-600">Hapus</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+  var tbm = tb.querySelectorAll('.edit-payroll');
+  for (var i = 0; i < tbm.length; i++) {
+    tbm[i].onclick = function() { openPayrollForm(payrollListGlobal.find(function(x) { return x.id == this.dataset.id; }), true); };
+  }
+  var dbm = tb.querySelectorAll('.text-red-600');
+  for (var j = 0; j < dbm.length; j++) {
+    dbm[j].onclick = async function() {
+      if (!await showConfirm('Hapus data payroll?')) return;
+      await api.del('/payroll/' + this.dataset.id);
+      loadPayroll();
+    };
+  }
 }
 function openPayrollForm(p) {
   document.getElementById('payroll-id').value = p ? p.id : '';
   document.getElementById('payroll-karyawan').value = p ? p.karyawan_id : '';
-  const now = new Date();
-  const tahun = p ? p.tahun : now.getFullYear();
-  const bulan = p ? String(p.bulan).padStart(2, '0') : String(now.getMonth() + 1).padStart(2, '0');
+  var now = new Date();
+  var tahun = p ? p.tahun : now.getFullYear();
+  var bulan = p ? String(p.bulan).padStart(2, '0') : String(now.getMonth() + 1).padStart(2, '0');
   document.getElementById('payroll-periode').value = tahun + '-' + bulan + '-01';
   document.getElementById('payroll-gaji').value = p ? p.gaji_pokok : '';
   document.getElementById('payroll-tunjangan').value = p ? p.tunjangan : '';
   document.getElementById('payroll-potongan').value = p ? p.potongan : '';
   document.getElementById('payroll-status').value = p ? p.status : 'Draft';
   document.getElementById('payroll-modal-title').textContent = p ? 'Edit Payroll' : 'Tambah Payroll';
-  const sel = document.getElementById('payroll-karyawan');
-  sel.innerHTML = (karyawanOptions || []).map(k => `<option value="${k.id}">${k.nama} - ${k.jabatan_nama || '-'}</option>`).join('');
-  document.getElementById('payroll-modal').classList.remove('hidden');
-  document.getElementById('payroll-modal').classList.add('flex');
+  var sel = document.getElementById('payroll-karyawan');
+  if (sel) {
+    sel.innerHTML = (karyawanOptions || []).map(function(k) { return '<option value="' + k.id + '">' + k.nama + ' - ' + (k.jabatan_nama || '-') + '</option>'; }).join('');
+  }
+  var modal = document.getElementById('payroll-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.removeAttribute('hidden');
+  }
 }
 function savePayroll() {
   const id = document.getElementById('payroll-id').value;
@@ -471,8 +506,11 @@ function savePayroll() {
   } else {
     api.post('/payroll', payload).then(() => loadPayroll());
   }
-  document.getElementById('payroll-modal').classList.add('hidden');
-  document.getElementById('payroll-modal').classList.remove('flex');
+  var modal = document.getElementById('payroll-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.removeAttribute('hidden');
+  }
 }
 
 // ===== Tab Switch (harus global karena dipanggil dari template via onclick) =====
@@ -507,7 +545,7 @@ async function loadPayrollMingguan() {
   } catch (e) {
     console.error('Payroll mingguan error:', e);
     const tb = document.getElementById('pm-tbody');
-    if (tb) tb.innerHTML = `<tr><td colspan="12" class="text-center py-12 text-red-600">Gagal memuat: ${e.message}</td></tr>`;
+    if (tb) tb.innerHTML = '<tr><td colspan="12" class="text-center py-12 text-red-600">Gagal memuat: ' + e.message + '</td></tr>';
   }
 }
 
@@ -522,7 +560,7 @@ function renderPayrollMingguanTable(data) {
   const footGaji = document.getElementById('pm-foot-gaji');
 
   if (!data || !data.karyawan || !data.minggu) {
-    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-12 text-stone-400">Tidak ada data</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-12 text-slate-400">Tidak ada data</td></tr>';
     info.classList.add('hidden');
     tfoot.classList.add('hidden');
     return;
@@ -545,44 +583,44 @@ function renderPayrollMingguanTable(data) {
     const d = new Date(tgl + 'T00:00:00');
     const hari = tglNama[d.getDay()];
     const tglNum = tgl.slice(8, 10);
-    return `<th class="text-center px-1 py-1 text-[10px] font-semibold uppercase border-l border-stone-200 min-w-[72px] ${[0,6].includes(d.getDay()) ? 'text-red-400' : ''}">${hari}<br><span class="text-xs">${tglNum}</span></th>`;
+    return `<th class="text-center px-1 py-1 text-[10px] font-semibold uppercase border-l border-slate-200 min-w-[72px] ${[0,6].includes(d.getDay()) ? 'text-red-400' : ''}">${hari}<br><span class="text-xs">${tglNum}</span></th>`;
   }).join('');
 
   // Body
   if (!karyawan.length) {
-    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-12 text-stone-400">Tidak ada karyawan aktif</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-12 text-slate-400">Tidak ada karyawan aktif</td></tr>';
     tfoot.classList.add('hidden');
     return;
   }
 
   tfoot.classList.remove('hidden');
-  footHadir.textContent = `${totals.total_hadir}`;
+  footHadir.textContent = totals.total_hadir;
   footGaji.textContent = fmtIDR(totals.total_gaji);
 
   tbody.innerHTML = karyawan.map(k => `
-    <tr class="border-t border-stone-100 hover:bg-stone-50">
+    <tr class="border-t border-slate-100 hover:bg-slate-50">
       <td class="px-3 py-2 text-sm font-medium whitespace-nowrap">${k.nama}</td>
-      <td class="px-2 py-2 text-xs text-stone-500 whitespace-nowrap border-r border-stone-200">${k.jabatan}</td>
+      <td class="px-2 py-2 text-xs text-slate-500 whitespace-nowrap border-r border-slate-200">${k.jabatan}</td>
       ${k.harian.map((h, i) => {
         const tgl = minggu.dates[i];
         const d = new Date(tgl + 'T00:00:00');
         const isWeekend = [0, 6].includes(d.getDay());
         if (!h) {
-          return `<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ${isWeekend ? 'bg-stone-50' : ''}">
-            <span class="text-stone-300">—</span>
+          return `<td class="text-center px-1 py-2 text-xs border-l border-slate-100 ${isWeekend ? 'bg-slate-50' : ''}">
+            <span class="text-slate-300">—</span>
           </td>`;
         }
         if (h.status === 'Hadir') {
-          return `<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ${isWeekend ? 'bg-stone-50' : ''}">
+          return `<td class="text-center px-1 py-2 text-xs border-l border-slate-100 ${isWeekend ? 'bg-slate-50' : ''}">
             <div class="text-emerald-600 font-medium">${h.masuk || '?'}</div>
-            <div class="text-stone-400">${h.keluar || '?'}</div>
+            <div class="text-slate-400">${h.keluar || '?'}</div>
           </td>`;
         }
-        return `<td class="text-center px-1 py-2 text-xs border-l border-stone-100 ${isWeekend ? 'bg-stone-50' : ''}">
+        return `<td class="text-center px-1 py-2 text-xs border-l border-slate-100 ${isWeekend ? 'bg-slate-50' : ''}">
           <span class="text-${h.status === 'Sakit' ? 'amber' : h.status === 'Izin' ? 'blue' : h.status === 'Cuti' ? 'violet' : 'red'}-600">${h.status}</span>
         </td>`;
       }).join('')}
-      <td class="text-center px-2 py-2 text-sm font-bold border-l border-stone-200">${k.total_hadir}x</td>
+      <td class="text-center px-2 py-2 text-sm font-bold border-l border-slate-200">${k.total_hadir}x</td>
       <td class="text-right px-2 py-2 text-xs mono whitespace-nowrap">${fmtIDR(k.upah_per_hari)}</td>
       <td class="text-right px-2 py-2 text-sm font-bold mono whitespace-nowrap">${fmtIDR(k.total_gaji)}</td>
     </tr>
