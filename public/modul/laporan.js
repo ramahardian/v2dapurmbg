@@ -2537,7 +2537,7 @@ function editSaldoAwal(current) {
       '</div>' +
       // Footer
       '<div class="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-2.5">' +
-        '<button onclick="tutupModalSaldoAwal()" class="px-4 py-2.5 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">Batal</button>' +
+        '<button onclick="tutupModalSaldoAwal()" class="h-10 px-4 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">Batal</button>' +
         '<button id="saldo-awal-simpan" onclick="simpanSaldoAwal()" class="px-5 py-2.5 text-xs font-medium text-white bg-[#14326b] hover:bg-[#0f2a5f] rounded-lg transition-colors shadow-sm flex items-center gap-1.5">' +
           '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' +
           'Simpan' +

@@ -201,7 +201,7 @@ function showSpRefNutrisi(nama) {
     + '<div class="flex justify-between py-2 border-b border-slate-100"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Karbohidrat</span><span class="text-sm font-medium mono text-slate-800">' + (ref.karbohidrat ? fmtNum(ref.karbohidrat) + ' g' : '-') + '</span></div>'
     + '<div class="flex justify-between py-2"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Serat</span><span class="text-sm font-medium mono text-slate-800">' + (ref.serat ? fmtNum(ref.serat) + ' g' : '-') + '</span></div>'
     + '</div>'
-    + '<button onclick="this.closest(\'.fixed\').remove()" class="mt-5 w-full py-2.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium text-slate-700 transition-all">Tutup</button>'
+    + '<button onclick="this.closest(\'.fixed\').remove()" class="mt-5 w-full h-10 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium text-slate-700 transition-colors">Tutup</button>'
     + '</div>';
   document.body.appendChild(o);
   document.getElementById('spref-nama').textContent = ref.nama;
@@ -212,8 +212,8 @@ function renderBahanPagination() {
   if (!wrap) return;
   if (bahanBakuState.totalPages <= 1) { wrap.innerHTML = ''; return; }
 
-  const prevBtn = bahanBakuState.page > 1 ? `<button onclick="bahanGoToPage(${bahanBakuState.page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Prev</button>` : '';
-  const nextBtn = bahanBakuState.page < bahanBakuState.totalPages ? `<button onclick="bahanGoToPage(${bahanBakuState.page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Next</button>` : '';
+  const prevBtn = bahanBakuState.page > 1 ? `<button onclick="bahanGoToPage(${bahanBakuState.page - 1})" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Prev</button>` : '';
+  const nextBtn = bahanBakuState.page < bahanBakuState.totalPages ? `<button onclick="bahanGoToPage(${bahanBakuState.page + 1})" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Next</button>` : '';
   wrap.innerHTML = `<span class="text-sm text-slate-500">Hal ${bahanBakuState.page} dari ${bahanBakuState.totalPages}</span>
     <div class="flex gap-2">${prevBtn}${nextBtn}</div>`;
 }

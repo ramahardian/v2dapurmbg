@@ -81,8 +81,8 @@ async function loadHariLibur(page) {
     var pgHtml = '<span class="text-sm text-slate-500">' + total + ' data</span>';
     if (totalPages > 1) {
       pgHtml += '<div class="flex gap-2">';
-      if (page > 1) pgHtml += '<button onclick="loadHariLibur(' + (page - 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Prev</button>';
-      if (page < totalPages) pgHtml += '<button onclick="loadHariLibur(' + (page + 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Next</button>';
+      if (page > 1) pgHtml += '<button onclick="loadHariLibur(' + (page - 1) + ')" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Prev</button>';
+      if (page < totalPages) pgHtml += '<button onclick="loadHariLibur(' + (page + 1) + ')" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Next</button>';
       pgHtml += '</div>';
     }
     document.getElementById('hl-pagination').innerHTML = pgHtml;
@@ -124,7 +124,7 @@ function openHariLiburForm(data) {
       </div>
       <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
         <button onclick="closeHariLiburForm()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Batal</button>
-        <button onclick="simpanHariLibur(` + (isEdit ? data.id : 'null') + `)" class="px-4 py-2 text-sm font-medium bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg">Simpan</button>
+        <button onclick="simpanHariLibur(` + (isEdit ? data.id : 'null') + `)" class="h-10 px-4 text-sm font-semibold bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg shadow-sm transition-colors">Simpan</button>
       </div>
     </div>
   </div>`;

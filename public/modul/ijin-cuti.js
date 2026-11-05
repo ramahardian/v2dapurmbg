@@ -175,8 +175,8 @@ function renderCutiPagination() {
   wrap.innerHTML = `
     <span class="text-sm text-slate-500">${_cutiTotal} data — Hal ${_cutiPage} dari ${_cutiTotalPages}</span>
     <div class="flex gap-2">
-      ${_cutiPage > 1 ? `<button onclick="cutiGoToPage(${_cutiPage - 1})" class="px-3 py-1 text-sm rounded border border-slate-200 hover:bg-slate-50">Prev</button>` : ''}
-      ${_cutiPage < _cutiTotalPages ? `<button onclick="cutiGoToPage(${_cutiPage + 1})" class="px-3 py-1 text-sm rounded border border-slate-200 hover:bg-slate-50">Next</button>` : ''}
+      ${_cutiPage > 1 ? `<button onclick="cutiGoToPage(${_cutiPage - 1})" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Prev</button>` : ''}
+      ${_cutiPage < _cutiTotalPages ? `<button onclick="cutiGoToPage(${_cutiPage + 1})" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Next</button>` : ''}
     </div>`;
 }
 

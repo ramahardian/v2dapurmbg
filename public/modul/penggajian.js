@@ -115,8 +115,8 @@ function renderKaryawanPagination() {
   const wrap = document.getElementById('karyawan-pagination');
   if (!wrap) return;
   if (karyawanState.totalPages <= 1) { wrap.innerHTML = ''; return; }
-  const prevBtn = karyawanState.page > 1 ? `<button onclick="kryGoToPage(${karyawanState.page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Prev</button>` : '';
-  const nextBtn = karyawanState.page < karyawanState.totalPages ? `<button onclick="kryGoToPage(${karyawanState.page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Next</button>` : '';
+  const prevBtn = karyawanState.page > 1 ? `<button onclick="kryGoToPage(${karyawanState.page - 1})" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Prev</button>` : '';
+  const nextBtn = karyawanState.page < karyawanState.totalPages ? `<button onclick="kryGoToPage(${karyawanState.page + 1})" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Next</button>` : '';
   wrap.innerHTML = `<span class="text-sm text-slate-500">Hal ${karyawanState.page} dari ${karyawanState.totalPages}</span>
     <div class="flex gap-2">${prevBtn}${nextBtn}</div>`;
 }

@@ -16,16 +16,16 @@ async function renderCrud(cfg) {
   // Tombol Tambah + Export dipakai di dua tempat: di search tile (halaman tanpa
   // statistik) atau di action tile (saat kartu statistik tampil), supaya tombol
   // tetap ada walau blok stats ditampilkan.
-  const addExportBtns = '<div class="flex items-center gap-2"><button id="add-btn" class="h-10 px-5 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-[13px] font-semibold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap"><svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah</button><button onclick="exportXlsx()" class="h-10 px-4 border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">Export XLSX</button></div>';
-  const searchTile = `<div class="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 ${cfg.stats ? 'md:col-span-4' : 'md:col-span-2'} flex items-center gap-2"><div class="relative w-full"><input id="crud-search" placeholder="Cari..." class="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-slate-50/60 text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all"><svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div>${(cfg.stats || actionsOutside) ? '' : addExportBtns}</div>`;
-  const actionTile = `<div class="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center"><div class="flex flex-wrap items-center gap-4 w-full">
+  const addExportBtns = '<div class="flex flex-wrap items-center gap-2"><button id="add-btn" class="inline-flex items-center gap-1.5 h-9 px-4 bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg text-xs font-medium shadow-sm transition-colors whitespace-nowrap"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah</button><button onclick="exportXlsx()" class="inline-flex items-center gap-1.5 h-9 px-4 border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">Export XLSX</button></div>';
+  const searchTile = `<div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 ${cfg.stats ? 'md:col-span-4' : 'md:col-span-2'} flex items-center gap-2"><div class="relative w-full"><input id="crud-search" placeholder="Cari..." class="w-full h-9 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all"><svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div>${(cfg.stats || actionsOutside) ? '' : addExportBtns}</div>`;
+  const actionTile = `<div class="dash-card-item bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2.5 md:col-span-2 flex items-center"><div class="flex flex-wrap items-center gap-2 w-full">
       ${(cfg.stats && !actionsOutside) ? addExportBtns : ''}
       ${cfg.helpContent ? `<button onclick="showCrudInfo()" class="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:bg-slate-50 shadow-sm transition-all shrink-0" title="Info halaman ini">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       </button>` : ''}
-      ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="h-10 px-4 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-lg text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${cfg.sync.label}</button>` : ''}
-      ${cfg.extraButtons ? cfg.extraButtons.filter(b => !b.adminOnly || currentUser?.role === 'admin').map(b => `<button onclick="${b.onclick}" class="h-10 px-4 border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-[13px] font-medium shadow-sm transition-all whitespace-nowrap">${b.label}</button>`).join('') : ''}
-      <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden h-10 px-5 text-[13px] font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg items-center gap-2 shadow-sm transition-all whitespace-nowrap">
+      ${cfg.sync ? `<button id="sync-btn" onclick="syncCrudData()" class="h-9 px-4 border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">${cfg.sync.label}</button>` : ''}
+      ${cfg.extraButtons ? cfg.extraButtons.filter(b => !b.adminOnly || currentUser?.role === 'admin').map(b => `<button onclick="${b.onclick}" class="h-9 px-4 border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">${b.label}</button>`).join('') : ''}
+      <button id="crud-delete-selected" onclick="deleteSelectedCrud()" class="hidden h-9 px-4 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg items-center gap-1.5 transition-colors whitespace-nowrap">
         Hapus Terpilih <span id="crud-selected-count" class="font-bold">0</span>
       </button>
     </div>
@@ -37,15 +37,15 @@ async function renderCrud(cfg) {
   // di luar kotak bento, tepat di atas tabel.
   const actionsRow = actionsOutside ? `<div class="mb-4 flex flex-wrap items-center gap-2">
       <div class="relative flex-1 min-w-[200px]">
-        <input id="crud-search" placeholder="Cari..." class="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
-        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input id="crud-search" placeholder="Cari..." class="w-full h-9 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-sm shadow-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b] transition-all">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
       </div>
       ${addExportBtns}
     </div>` : '';
   const bentoGrid = headerTiles ? `<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">${headerTiles}</div>` : '';
   c.innerHTML = `${actionsRow}${bentoGrid}
   ${cfg.filters && cfg.filters.length ? `<div id="crud-filters" class="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg border border-slate-200 bg-slate-50/60">` : ''}
-  <div id="table-wrap" class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden"></div>
+  <div id="table-wrap" class="dash-panel bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden"></div>
   <div id="crud-pagination" class="flex items-center justify-between mt-3"></div>`;
   window._crudInfoCfg = cfg;
   const addBtnEl = document.getElementById('add-btn');
@@ -159,8 +159,8 @@ function renderCrudPagination() {
   const wrap = document.getElementById('crud-pagination');
   const { page, totalPages, total } = _crudState;
   if (totalPages <= 1) { wrap.innerHTML = total > 0 ? `<span class="text-sm text-slate-400">${total} data</span>` : ''; return; }
-  const prev = page > 1 ? `<button onclick="crudGoToPage(${page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Prev</button>` : '';
-  const next = page < totalPages ? `<button onclick="crudGoToPage(${page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Next</button>` : '';
+  const prev = page > 1 ? `<button onclick="crudGoToPage(${page - 1})" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Prev</button>` : '';
+  const next = page < totalPages ? `<button onclick="crudGoToPage(${page + 1})" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Next</button>` : '';
   wrap.innerHTML = `<span class="text-sm text-slate-500">${total} data — Hal ${page} dari ${totalPages}</span><div class="flex gap-2">${prev}${next}</div>`;
 }
 

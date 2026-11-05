@@ -484,9 +484,9 @@ function renderPagination() {
   wrap.innerHTML = `<div class="flex items-center justify-between mt-3">
     <span class="text-sm text-slate-500">${total} data</span>
     <div class="flex gap-2">
-      ${menuState.page > 1 ? '<button onclick="goToPage(' + (menuState.page - 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Prev</button>' : ''}
+      ${menuState.page > 1 ? '<button onclick="goToPage(' + (menuState.page - 1) + ')" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Prev</button>' : ''}
       <span class="text-sm text-slate-500">Hal ${menuState.page} dari ${menuState.totalPages}</span>
-      ${menuState.page < menuState.totalPages ? '<button onclick="goToPage(' + (menuState.page + 1) + ')" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Next</button>' : ''}
+      ${menuState.page < menuState.totalPages ? '<button onclick="goToPage(' + (menuState.page + 1) + ')" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Next</button>' : ''}
     </div>
   </div>`;
 }
@@ -1172,7 +1172,7 @@ function openSimpanTemplateMenu(menuId) {
           '<input id="stm-nama" value="' + escHtml(m.nama || '') + '" placeholder="cth: Nasi Ayam Sayur" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" />' +
         '</div>' +
         '<div class="flex gap-2 pt-1">' +
-          '<button onclick="closeSimpanTemplateMenu()" class="flex-1 h-10 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors">Batal</button>' +
+          '<button onclick="closeSimpanTemplateMenu()" class="flex-1 h-10 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Batal</button>' +
           '<button id="stm-submit" onclick="submitSimpanTemplateMenu(' + menuId + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-[#14326b] hover:bg-[#0f2a5f] shadow-sm transition-colors inline-flex items-center justify-center gap-2">💾 Simpan Template</button>' +
         '</div>' +
       '</div>' +

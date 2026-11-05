@@ -108,7 +108,7 @@ async function loadPerencanaanData(siklusId) {
       html += '<div class="text-xs text-' + c + '-600 mt-1">' + escHtml(vl.detail || '') + '</div>';
       // Link ke halaman siklus jika tidak ada siklus
       if (vl.level === 'no_siklus') {
-        html += '<a href="/siklus" onclick="return loadPage(\'siklus\')" class="inline-flex items-center gap-1.5 mt-3 px-4 py-2 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700 transition-colors shadow-sm">';
+        html += '<a href="/siklus" onclick="return loadPage(\'siklus\')" class="inline-flex items-center justify-center gap-1.5 mt-3 h-9 px-4 text-xs font-medium rounded-lg bg-[#14326b] text-white hover:bg-[#0f2a5f] transition-colors shadow-sm">';
         html += '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>';
         html += 'Buat Siklus Baru';
         html += '</a>';
@@ -126,7 +126,7 @@ async function loadPerencanaanData(siklusId) {
       html += '<div>';
       html += '<div class="font-semibold text-sm text-amber-800">Data siklus belum lengkap</div>';
       html += '<div class="text-xs text-amber-600 mt-1">Siklus aktif sudah ada, namun menu dan bahan pangan belum diisi. Isi menu harian di halaman siklus terlebih dahulu.</div>';
-      html += '<a href="/siklus" onclick="return loadPage(\'siklus\')" class="inline-flex items-center gap-1.5 mt-3 px-4 py-2 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700 transition-colors shadow-sm">';
+      html += '<a href="/siklus" onclick="return loadPage(\'siklus\')" class="inline-flex items-center justify-center gap-1.5 mt-3 h-9 px-4 text-xs font-medium rounded-lg bg-[#14326b] text-white hover:bg-[#0f2a5f] transition-colors shadow-sm">';
       html += '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>';
       html += 'Isi Menu Siklus';
       html += '</a>';

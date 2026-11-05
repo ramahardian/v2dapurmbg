@@ -227,6 +227,61 @@
     html.dark .text-\[\#0f2a5f\] { color: #93c5fd; }
     html.dark .bg-\[\#14326b\] { background-color: #1e3a8a !important; }
     html.dark .bg-\[\#0f2a5f\] { background-color: #1e3a8a !important; }
+
+    /* ═══ Judul di atas kartu navy tetap putih (light & dark) ═══ */
+    #content :is(h1,h2,h3)[class~="text-white"],
+    #content [class~="text-white"] :is(h1,h2,h3),
+    #modal-body :is(h1,h2,h3)[class~="text-white"],
+    #modal-body [class~="text-white"] :is(h1,h2,h3) { color: #fff !important; }
+
+    /* ═══ Tombol korporat navy — aksen aksi diseragamkan ═══ */
+
+    /* 1. Latar aksen lembut → navy lembut */
+    #content :is(button,a):is([class~="bg-emerald-50"],[class~="bg-emerald-100"],[class~="bg-emerald-200"],[class~="bg-teal-50"],[class~="bg-teal-100"],[class~="bg-sky-50"],[class~="bg-sky-100"],[class~="bg-cyan-50"],[class~="bg-cyan-100"],[class~="bg-indigo-50"],[class~="bg-indigo-100"],[class~="bg-violet-50"],[class~="bg-violet-100"],[class~="bg-purple-50"],[class~="bg-purple-100"],[class~="bg-blue-50"],[class~="bg-blue-100"],[class~="bg-amber-50"],[class~="bg-amber-100"],[class~="bg-orange-50"],[class~="bg-orange-100"]),
+    #modal-body :is(button,a):is([class~="bg-emerald-50"],[class~="bg-emerald-100"],[class~="bg-emerald-200"],[class~="bg-teal-50"],[class~="bg-teal-100"],[class~="bg-sky-50"],[class~="bg-sky-100"],[class~="bg-cyan-50"],[class~="bg-cyan-100"],[class~="bg-indigo-50"],[class~="bg-indigo-100"],[class~="bg-violet-50"],[class~="bg-violet-100"],[class~="bg-purple-50"],[class~="bg-purple-100"],[class~="bg-blue-50"],[class~="bg-blue-100"],[class~="bg-amber-50"],[class~="bg-amber-100"],[class~="bg-orange-50"],[class~="bg-orange-100"]) {
+      background-color: #eef2f9;
+      border-color: #c9d6ea;
+      color: #14326b;
+    }
+    #content :is(button,a):is([class~="hover:bg-emerald-50"],[class~="hover:bg-emerald-100"],[class~="hover:bg-emerald-200"],[class~="hover:bg-teal-50"],[class~="hover:bg-teal-100"],[class~="hover:bg-sky-50"],[class~="hover:bg-cyan-50"],[class~="hover:bg-indigo-50"],[class~="hover:bg-violet-50"],[class~="hover:bg-violet-100"],[class~="hover:bg-purple-50"],[class~="hover:bg-blue-50"],[class~="hover:bg-amber-50"],[class~="hover:bg-amber-100"],[class~="hover:bg-orange-50"],[class~="hover:bg-orange-100"]):hover,
+    #modal-body :is(button,a):is([class~="hover:bg-emerald-50"],[class~="hover:bg-emerald-100"],[class~="hover:bg-emerald-200"],[class~="hover:bg-teal-50"],[class~="hover:bg-teal-100"],[class~="hover:bg-sky-50"],[class~="hover:bg-cyan-50"],[class~="hover:bg-indigo-50"],[class~="hover:bg-violet-50"],[class~="hover:bg-violet-100"],[class~="hover:bg-purple-50"],[class~="hover:bg-blue-50"],[class~="hover:bg-amber-50"],[class~="hover:bg-amber-100"],[class~="hover:bg-orange-50"],[class~="hover:bg-orange-100"]):hover { background-color: #e3eaf5; }
+
+    /* 1b. Garis tepi aksen → navy lembut */
+    #content :is(button,a):is([class~="border-emerald-200"],[class~="border-emerald-300"],[class~="border-teal-200"],[class~="border-teal-300"],[class~="border-sky-200"],[class~="border-cyan-200"],[class~="border-indigo-200"],[class~="border-violet-200"],[class~="border-purple-200"],[class~="border-blue-200"],[class~="border-amber-200"],[class~="border-amber-300"],[class~="border-orange-200"],[class~="border-orange-300"]),
+    #modal-body :is(button,a):is([class~="border-emerald-200"],[class~="border-emerald-300"],[class~="border-teal-200"],[class~="border-teal-300"],[class~="border-sky-200"],[class~="border-cyan-200"],[class~="border-indigo-200"],[class~="border-violet-200"],[class~="border-purple-200"],[class~="border-blue-200"],[class~="border-amber-200"],[class~="border-amber-300"],[class~="border-orange-200"],[class~="border-orange-300"]) { border-color: #c9d6ea; }
+
+    /* 2. Teks aksen → navy */
+    #content button:is([class~="text-emerald-600"],[class~="text-emerald-700"],[class~="text-emerald-800"],[class~="text-teal-600"],[class~="text-teal-700"],[class~="text-sky-600"],[class~="text-sky-700"],[class~="text-cyan-600"],[class~="text-cyan-700"],[class~="text-indigo-600"],[class~="text-indigo-700"],[class~="text-violet-600"],[class~="text-violet-700"],[class~="text-purple-600"],[class~="text-purple-700"],[class~="text-blue-600"],[class~="text-blue-700"],[class~="text-amber-600"],[class~="text-amber-700"],[class~="text-orange-600"],[class~="text-orange-700"]),
+    #modal-body button:is([class~="text-emerald-600"],[class~="text-emerald-700"],[class~="text-emerald-800"],[class~="text-teal-600"],[class~="text-teal-700"],[class~="text-sky-600"],[class~="text-sky-700"],[class~="text-cyan-600"],[class~="text-cyan-700"],[class~="text-indigo-600"],[class~="text-indigo-700"],[class~="text-violet-600"],[class~="text-violet-700"],[class~="text-purple-600"],[class~="text-purple-700"],[class~="text-blue-600"],[class~="text-blue-700"],[class~="text-amber-600"],[class~="text-amber-700"],[class~="text-orange-600"],[class~="text-orange-700"]) { color: #14326b; }
+    /* 3. Aksi utama berwarna solid → navy penuh */
+    #content :is(button,a):is([class~="bg-emerald-500"],[class~="bg-emerald-600"],[class~="bg-emerald-700"],[class~="bg-teal-500"],[class~="bg-teal-600"],[class~="bg-sky-500"],[class~="bg-sky-600"],[class~="bg-cyan-500"],[class~="bg-cyan-600"],[class~="bg-indigo-500"],[class~="bg-indigo-600"],[class~="bg-violet-500"],[class~="bg-violet-600"],[class~="bg-purple-500"],[class~="bg-purple-600"],[class~="bg-blue-500"],[class~="bg-blue-600"],[class~="bg-slate-600"],[class~="bg-slate-700"]),
+    #modal-body :is(button,a):is([class~="bg-emerald-500"],[class~="bg-emerald-600"],[class~="bg-emerald-700"],[class~="bg-teal-500"],[class~="bg-teal-600"],[class~="bg-sky-500"],[class~="bg-sky-600"],[class~="bg-cyan-500"],[class~="bg-cyan-600"],[class~="bg-indigo-500"],[class~="bg-indigo-600"],[class~="bg-violet-500"],[class~="bg-violet-600"],[class~="bg-purple-500"],[class~="bg-purple-600"],[class~="bg-blue-500"],[class~="bg-blue-600"],[class~="bg-slate-600"],[class~="bg-slate-700"]) {
+      background-color: #14326b;
+      border-color: #14326b;
+      color: #fff;
+    }
+    #content :is(button,a):is([class~="hover:bg-emerald-600"],[class~="hover:bg-emerald-700"],[class~="hover:bg-teal-600"],[class~="hover:bg-sky-600"],[class~="hover:bg-cyan-600"],[class~="hover:bg-indigo-600"],[class~="hover:bg-violet-600"],[class~="hover:bg-purple-600"],[class~="hover:bg-blue-600"],[class~="hover:bg-slate-700"]):hover,
+    #modal-body :is(button,a):is([class~="hover:bg-emerald-600"],[class~="hover:bg-emerald-700"],[class~="hover:bg-teal-600"],[class~="hover:bg-sky-600"],[class~="hover:bg-cyan-600"],[class~="hover:bg-indigo-600"],[class~="hover:bg-violet-600"],[class~="hover:bg-purple-600"],[class~="hover:bg-blue-600"],[class~="hover:bg-slate-700"]):hover { background-color: #0f2a5f; }
+
+    /* 4. Hover teks/border aksen → navy */
+    #content button:is([class~="hover:text-emerald-600"],[class~="hover:text-emerald-700"],[class~="hover:text-emerald-800"],[class~="hover:text-teal-700"],[class~="hover:text-sky-700"],[class~="hover:text-cyan-800"],[class~="hover:text-indigo-700"],[class~="hover:text-violet-700"],[class~="hover:text-purple-700"],[class~="hover:text-amber-600"],[class~="hover:text-amber-800"],[class~="hover:text-orange-700"]):hover { color: #14326b; }
+    #content :is(button,a):is([class~="hover:border-emerald-300"],[class~="hover:border-emerald-400"],[class~="hover:border-teal-300"],[class~="hover:border-sky-400"],[class~="hover:border-amber-300"]):hover { border-color: #c9d6ea; }
+
+    /* Mode gelap: tombol aksen tetap terbaca di atas navy */
+    html.dark #content :is(button,a):is([class~="bg-emerald-50"],[class~="bg-emerald-100"],[class~="bg-emerald-200"],[class~="bg-teal-50"],[class~="bg-teal-100"],[class~="bg-sky-50"],[class~="bg-sky-100"],[class~="bg-cyan-50"],[class~="bg-cyan-100"],[class~="bg-indigo-50"],[class~="bg-indigo-100"],[class~="bg-violet-50"],[class~="bg-violet-100"],[class~="bg-purple-50"],[class~="bg-purple-100"],[class~="bg-blue-50"],[class~="bg-blue-100"],[class~="bg-amber-50"],[class~="bg-amber-100"],[class~="bg-orange-50"],[class~="bg-orange-100"]),
+    html.dark #modal-body :is(button,a):is([class~="bg-emerald-50"],[class~="bg-emerald-100"],[class~="bg-emerald-200"],[class~="bg-teal-50"],[class~="bg-teal-100"],[class~="bg-sky-50"],[class~="bg-sky-100"],[class~="bg-cyan-50"],[class~="bg-cyan-100"],[class~="bg-indigo-50"],[class~="bg-indigo-100"],[class~="bg-violet-50"],[class~="bg-violet-100"],[class~="bg-purple-50"],[class~="bg-purple-100"],[class~="bg-blue-50"],[class~="bg-blue-100"],[class~="bg-amber-50"],[class~="bg-amber-100"],[class~="bg-orange-50"],[class~="bg-orange-100"]) {
+      background-color: rgba(147,197,253,.10);
+      border-color: rgba(147,197,253,.28);
+      color: #bfdbfe;
+    }
+    html.dark #content button:is([class~="text-emerald-600"],[class~="text-emerald-700"],[class~="text-emerald-800"],[class~="text-teal-600"],[class~="text-teal-700"],[class~="text-sky-600"],[class~="text-sky-700"],[class~="text-cyan-600"],[class~="text-cyan-700"],[class~="text-indigo-600"],[class~="text-indigo-700"],[class~="text-violet-600"],[class~="text-violet-700"],[class~="text-purple-600"],[class~="text-purple-700"],[class~="text-blue-600"],[class~="text-blue-700"],[class~="text-amber-600"],[class~="text-amber-700"],[class~="text-orange-600"],[class~="text-orange-700"]),
+    html.dark #modal-body button:is([class~="text-emerald-600"],[class~="text-emerald-700"],[class~="text-emerald-800"],[class~="text-teal-600"],[class~="text-teal-700"],[class~="text-sky-600"],[class~="text-sky-700"],[class~="text-cyan-600"],[class~="text-cyan-700"],[class~="text-indigo-600"],[class~="text-indigo-700"],[class~="text-violet-600"],[class~="text-violet-700"],[class~="text-purple-600"],[class~="text-purple-700"],[class~="text-blue-600"],[class~="text-blue-700"],[class~="text-amber-600"],[class~="text-amber-700"],[class~="text-orange-600"],[class~="text-orange-700"]) { color: #bfdbfe; }
+    html.dark #content :is(button,a):is([class~="border-emerald-200"],[class~="border-emerald-300"],[class~="border-teal-200"],[class~="border-teal-300"],[class~="border-sky-200"],[class~="border-cyan-200"],[class~="border-indigo-200"],[class~="border-violet-200"],[class~="border-purple-200"],[class~="border-blue-200"],[class~="border-amber-200"],[class~="border-amber-300"],[class~="border-orange-200"],[class~="border-orange-300"]),
+    html.dark #modal-body :is(button,a):is([class~="border-emerald-200"],[class~="border-emerald-300"],[class~="border-teal-200"],[class~="border-teal-300"],[class~="border-sky-200"],[class~="border-cyan-200"],[class~="border-indigo-200"],[class~="border-violet-200"],[class~="border-purple-200"],[class~="border-blue-200"],[class~="border-amber-200"],[class~="border-amber-300"],[class~="border-orange-200"],[class~="border-orange-300"]) { border-color: rgba(147,197,253,.28); }
+    html.dark #content button:is([class~="hover:text-emerald-600"],[class~="hover:text-emerald-700"],[class~="hover:text-emerald-800"],[class~="hover:text-teal-700"],[class~="hover:text-sky-700"],[class~="hover:text-cyan-800"],[class~="hover:text-indigo-700"],[class~="hover:text-violet-700"],[class~="hover:text-purple-700"],[class~="hover:text-amber-600"],[class~="hover:text-amber-800"],[class~="hover:text-orange-700"]):hover,
+    html.dark #content button[class~="hover:text-emerald-300"]:hover { color: #bfdbfe; }
+    html.dark #content :is(button,a):is([class~="hover:bg-emerald-50"],[class~="hover:bg-emerald-100"],[class~="hover:bg-emerald-200"],[class~="hover:bg-teal-50"],[class~="hover:bg-teal-100"],[class~="hover:bg-sky-50"],[class~="hover:bg-cyan-50"],[class~="hover:bg-indigo-50"],[class~="hover:bg-violet-50"],[class~="hover:bg-violet-100"],[class~="hover:bg-purple-50"],[class~="hover:bg-blue-50"],[class~="hover:bg-amber-50"],[class~="hover:bg-amber-100"],[class~="hover:bg-orange-50"],[class~="hover:bg-orange-100"]):hover { background-color: rgba(147,197,253,.18); }
+    html.dark #content :is(button,a):is([class~="bg-emerald-500"],[class~="bg-emerald-600"],[class~="bg-emerald-700"],[class~="bg-teal-500"],[class~="bg-teal-600"],[class~="bg-sky-500"],[class~="bg-sky-600"],[class~="bg-cyan-500"],[class~="bg-cyan-600"],[class~="bg-indigo-500"],[class~="bg-indigo-600"],[class~="bg-violet-500"],[class~="bg-violet-600"],[class~="bg-purple-500"],[class~="bg-purple-600"],[class~="bg-blue-500"],[class~="bg-blue-600"],[class~="bg-slate-600"],[class~="bg-slate-700"]) { background-color: #1e3a8a; border-color: #1e3a8a; color: #fff; }
   </style>
 </head>
 <body>
@@ -421,8 +476,8 @@
       </div>
       <div id="modal-body" class="p-4 lg:p-6 overflow-y-auto flex-1"></div>
       <div class="px-4 lg:px-6 py-3 flex justify-end gap-2" style="border-top:1px solid var(--border)">
-        <button id="modal-cancel-btn" class="px-4 py-2 text-sm btn-ghost rounded">Batal</button>
-        <button id="modal-save" class="px-4 py-2 text-sm bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded font-medium">Simpan</button>
+        <button id="modal-cancel-btn" class="h-10 px-4 text-sm font-medium btn-ghost rounded-lg transition-colors">Batal</button>
+        <button id="modal-save" class="h-10 px-4 text-sm font-semibold bg-[#14326b] hover:bg-[#0f2a5f] text-white rounded-lg shadow-sm transition-colors">Simpan</button>
       </div>
     </div>
   </div>

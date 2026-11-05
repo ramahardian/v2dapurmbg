@@ -1063,7 +1063,7 @@ function openProduksiModal(siklusId, mode) {
         '<div class="px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between gap-3">' +
           '<div class="text-xs text-slate-500 dark:text-slate-400"><span id="pm-summary" class="font-semibold text-slate-700 dark:text-slate-200"></span></div>' +
           '<div class="flex items-center gap-2">' +
-            '<button onclick="closeProduksiModal()" class="h-11 px-4 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Batal</button>' +
+            '<button onclick="closeProduksiModal()" class="h-10 px-4 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Batal</button>' +
             '<button id="pm-submit" onclick="pmSubmit(' + siklusId + ')" class="h-11 px-5 rounded-lg text-sm font-semibold text-white bg-[#14326b] hover:bg-[#0f2a5f] shadow-sm transition-colors inline-flex items-center gap-2">' +
               '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Buat Produksi' +
             '</button>' +
@@ -1291,7 +1291,7 @@ function openBudgetModal(siklusId, mode) {
         '</div>' +
       '</div>' +
       '<div class="px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-end gap-2">' +
-        '<button onclick="closeBudgetModal()" class="h-11 px-4 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Batal</button>' +
+        '<button onclick="closeBudgetModal()" class="h-10 px-4 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Batal</button>' +
         '<button id="bd-submit" onclick="bdSubmit(' + (siklusId || 'null') + ', \'' + mode + '\')" class="h-11 px-5 rounded-lg text-sm font-semibold text-white shadow-sm transition-colors inline-flex items-center gap-2 bg-[#14326b] hover:bg-[#0f2a5f]">' +
           header.icon + header.label +
         '</button>' +
@@ -1439,7 +1439,7 @@ function openBudgetHarianModal(siklusId, nama, totalHari, periodeAwal, porsi) {
         '<label class="flex items-start gap-2 text-xs text-slate-500 cursor-pointer select-none"><input type="checkbox" id="bh-ganti" checked class="mt-0.5 cb-modern"><span>Ganti semua budget periode ini (hapus baris kategori lain agar anggaran per hari persis)</span></label>' +
       '</div>' +
       '<div class="px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-end gap-2">' +
-        '<button onclick="closeBudgetHarianModal()" class="h-11 px-4 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Batal</button>' +
+        '<button onclick="closeBudgetHarianModal()" class="h-10 px-4 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Batal</button>' +
         '<button id="bh-submit" onclick="bhSubmit(' + (siklusId || 'null') + ')" class="h-11 px-5 rounded-lg text-sm font-semibold text-white bg-[#14326b] hover:bg-[#0f2a5f] shadow-sm transition-colors inline-flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Simpan Budget</button>' +
       '</div>' +
     '</div>';
@@ -1718,7 +1718,7 @@ async function openSiklusForm(editing) {
         </div>
         <div class="flex gap-3">
           <button onclick="renderSiklus()" class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition-all">Kembali</button>
-          <button id="sk-btn-save" class="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-[#14326b] to-[#0f2a5f] hover:from-[#0f2a5f] hover:to-[#14326b] rounded-lg shadow-sm transition-all">${isEdit ? 'Update' : 'Simpan'}</button>
+          <button id="sk-btn-save" class="px-5 h-10 text-sm font-semibold text-white bg-[#14326b] hover:bg-[#0f2a5f] rounded-lg shadow-sm transition-colors">${isEdit ? 'Update' : 'Simpan'}</button>
         </div>
       </div>
 
@@ -2068,7 +2068,7 @@ function openGridPicker(hk, rk) {
         '<button onclick="tambahBahanGrid(\'' + rk + '\',' + hk + ')" class="shrink-0 px-3 h-9 text-xs font-medium text-white bg-[#14326b] hover:bg-[#0f2a5f] rounded-lg">Tambah</button>' +
       '</div>' +
     '</div>' +
-    '<div class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100"><button onclick="closeGridPicker()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Batal</button><button onclick="saveGridPicker(' + hk + ',\'' + rk + '\')" class="px-4 py-2 text-sm text-white bg-[#14326b] hover:bg-[#0f2a5f] rounded-lg">Simpan</button></div>' +
+    '<div class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100"><button onclick="closeGridPicker()" class="h-10 px-4 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Batal</button><button onclick="saveGridPicker(' + hk + ',\'' + rk + '\')" class="h-10 px-4 text-sm font-semibold text-white bg-[#14326b] hover:bg-[#0f2a5f] rounded-lg shadow-sm transition-colors">Simpan</button></div>' +
   '</div>';
   showModal('Pilih Bahan', html, 'max-w-sm');
 }
@@ -2542,7 +2542,7 @@ function jadikanResep(siklusId, hariKe, namaDefault) {
           '<input id="jr-nama" value="' + escHtml(namaDefault || '') + '" placeholder="cth: Nasi Ayam Sayur" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all" />' +
         '</div>' +
         '<div class="flex gap-2 pt-1">' +
-          '<button onclick="closeJadikanResep()" class="flex-1 h-10 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors">Batal</button>' +
+          '<button onclick="closeJadikanResep()" class="flex-1 h-10 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Batal</button>' +
           '<button id="jr-submit" onclick="submitJadikanResep(' + siklusId + ', ' + hariKe + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-[#14326b] hover:bg-[#0f2a5f] shadow-sm transition-colors inline-flex items-center justify-center gap-2">💾 Simpan Resep</button>' +
         '</div>' +
       '</div>' +
@@ -2660,7 +2660,7 @@ function reaktivasiSiklus(id, totalHari, nama) {
           '<div id="rk-tgl-selesai" class="mt-1.5 h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm flex items-center text-slate-600 mono">' + defSelesai + '</div>' +
         '</div>' +
         '<div class="flex gap-2 pt-1">' +
-          '<button onclick="closeReaktivasiSiklus()" class="flex-1 h-10 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors">Batal</button>' +
+          '<button onclick="closeReaktivasiSiklus()" class="flex-1 h-10 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Batal</button>' +
           '<button id="rk-submit" onclick="submitReaktivasiSiklus(' + id + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-[#14326b] hover:bg-[#0f2a5f] shadow-sm transition-colors inline-flex items-center justify-center gap-2">↻ Aktifkan</button>' +
         '</div>' +
       '</div>' +
@@ -2736,7 +2736,7 @@ async function openMenuPickerHari(hk) {
       '<div class="mb-3"><input id="mph-search" placeholder="Cari menu..." oninput="filterMenuPickerHari()" class="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#14326b]/20 focus:border-[#14326b]" /></div>' +
       '<div id="mph-list" class="max-h-[340px] overflow-y-auto space-y-1"></div>' +
       '<div class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">' +
-        '<button onclick="closeMenuPickerHari()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Tutup</button>' +
+        '<button onclick="closeMenuPickerHari()" class="h-10 px-4 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Tutup</button>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -2846,7 +2846,7 @@ function simpanTemplateHari(siklusId, hariKe, namaDefault) {
           '<input id="st-nama" value="' + escHtml(namaDefault || '') + '" placeholder="cth: Nasi Ayam Sayur" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" />' +
         '</div>' +
         '<div class="flex gap-2 pt-1">' +
-          '<button onclick="closeSimpanTemplate()" class="flex-1 h-10 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors">Batal</button>' +
+          '<button onclick="closeSimpanTemplate()" class="flex-1 h-10 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Batal</button>' +
           '<button id="st-submit" onclick="submitSimpanTemplate(' + siklusId + ', ' + hariKe + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-[#14326b] hover:bg-[#0f2a5f] shadow-sm transition-colors inline-flex items-center justify-center gap-2">🗂 Simpan Template</button>' +
         '</div>' +
       '</div>' +
@@ -2929,7 +2929,7 @@ async function bukaTemplatePickerHari(hk) {
       '<div id="tpl-list" class="max-h-[340px] overflow-y-auto space-y-1"></div>' +
       '<div class="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-100">' +
         '<button onclick="simpanTemplateDariForm(' + hk + ')" title="Simpan menu manual (bahan grid) Hari ' + hk + ' sebagai template" class="inline-flex items-center gap-1 px-3 py-2 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Simpan Hari Ini</button>' +
-        '<button onclick="closeTemplatePickerHari()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Tutup</button>' +
+        '<button onclick="closeTemplatePickerHari()" class="h-10 px-4 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Tutup</button>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -2973,7 +2973,7 @@ function simpanTemplateDariForm(hk) {
           '<input id="stf-nama" value="' + escHtml(gd[hk].menu_nama || '') + '" placeholder="cth: Nasi Ayam Sayur" class="mt-1.5 w-full h-11 px-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" />' +
         '</div>' +
         '<div class="flex gap-2 pt-1">' +
-          '<button onclick="closeSimpanTemplateForm()" class="flex-1 h-10 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors">Batal</button>' +
+          '<button onclick="closeSimpanTemplateForm()" class="flex-1 h-10 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Batal</button>' +
           '<button id="stf-submit" onclick="submitSimpanTemplateForm(' + hk + ')" class="flex-1 h-10 rounded-lg text-sm font-semibold text-white bg-[#14326b] hover:bg-[#0f2a5f] shadow-sm transition-colors inline-flex items-center justify-center gap-2">💾 Simpan Template</button>' +
         '</div>' +
       '</div>' +

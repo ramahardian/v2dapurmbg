@@ -132,8 +132,8 @@ function renderGudangPagination() {
   const wrap = document.getElementById('gudang-pagination');
   if (!wrap) return;
   if (gudangState.totalPages <= 1) { wrap.innerHTML = ''; return; }
-  const prevBtn = gudangState.page > 1 ? `<button onclick="gudangGoToPage(${gudangState.page - 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Prev</button>` : '';
-  const nextBtn = gudangState.page < gudangState.totalPages ? `<button onclick="gudangGoToPage(${gudangState.page + 1})" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all">Next</button>` : '';
+  const prevBtn = gudangState.page > 1 ? `<button onclick="gudangGoToPage(${gudangState.page - 1})" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Prev</button>` : '';
+  const nextBtn = gudangState.page < gudangState.totalPages ? `<button onclick="gudangGoToPage(${gudangState.page + 1})" class="h-8 px-3 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">Next</button>` : '';
   wrap.innerHTML = `<span class="text-sm text-slate-500">Hal ${gudangState.page} dari ${gudangState.totalPages}</span>
     <div class="flex gap-2">${prevBtn}${nextBtn}</div>`;
 }
