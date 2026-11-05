@@ -368,11 +368,15 @@ function renderBahanCell(bahan) {
     return '<span class="text-stone-300">-</span>';
   }
   const count = names.length;
+  // Bahan hasil Ekstrak Gambar ditandai terpisah: tampil di Data Menu, tetapi
+  // tidak dihitung di tabel halaman /perencanaan.
+  const jmlEkstrak = bahan.filter(function(b) { return b && b.hanya_tampil; }).length;
   var display = names.slice(0, 2).join(', ');
   if (count > 2) display += ', ...';
   return '<span class="inline-flex items-center gap-1.5" title="' + escHtml(names.join(', ')) + '">' +
     '<span class="truncate max-w-[140px] block text-stone-600">' + escHtml(display) + '</span>' +
     '<span class="shrink-0 bg-stone-100 text-stone-500 text-[10px] font-medium px-1.5 py-0.5 rounded-full">' + count + '</span>' +
+    (jmlEkstrak ? '<span class="shrink-0 bg-amber-100 text-amber-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full" title="' + jmlEkstrak + ' bahan hasil Ekstrak Gambar — tampil di Data Menu, tidak dihitung di Perencanaan">' + jmlEkstrak + ' ekstrak</span>' : '') +
   '</span>';
 }
 
@@ -900,7 +904,14 @@ function renderBahanList() {
     var kecilValue = v.kecilValue;
     var besarTitle = 'Gramasi per 1 porsi besar (' + displaySatuan + ')' + (porsiBesar > 0 ? ' — kebutuhan total ' + fmtNum(v.besarKebutuhan) + ' ' + displaySatuan + ' untuk ' + porsiBesar + ' porsi besar' : '');
     var kecilTitle = 'Gramasi per 1 porsi kecil (' + displaySatuan + ')' + (porsiKecil > 0 ? ' — kebutuhan total ' + fmtNum(v.kecilKebutuhan) + ' ' + displaySatuan + ' untuk ' + porsiKecil + ' porsi kecil' : '');
-    return '<div class="mb-1.5">' +
+    // Baris bahan hasil Ekstrak Gambar ditandai agar jelas bahwa bahannya
+    // hanya tampil di Data Menu dan tidak dihitung di halaman /perencanaan.
+    var tandaEkstrak = b.hanya_tampil
+      ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 font-semibold text-[10px]" title="Bahan dari hasil Ekstrak Gambar: tampil di Data Menu, tidak dihitung di tabel Perencanaan">' +
+          '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>' +
+          'Ekstrak gambar · tidak dihitung di Perencanaan</span>'
+      : '';
+    return '<div class="mb-1.5' + (b.hanya_tampil ? ' rounded-lg border border-amber-200 bg-amber-50/40 p-1.5' : '') + '">' +
       '<div class="grid grid-cols-12 gap-1.5 items-center">' +
         '<div class="order-1 col-span-12 sm:col-span-4 relative">' +
           '<input id="b-input-' + i + '" autocomplete="off" value="' + displayNama + '" placeholder="Cari bahan..." oninput="onBahanSearch(' + i + ', this)" onfocus="onBahanSearch(' + i + ', this)" onblur="setTimeout(function(){closeBahanDropdown(' + i + ')},200)" class="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />' +
@@ -917,6 +928,7 @@ function renderBahanList() {
         '<button type="button" onclick="removeBahanRow(' + i + ')" class="order-4 sm:order-5 col-span-2 sm:col-span-1 inline-flex items-center justify-center h-10 w-full text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Hapus bahan"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
       '</div>' +
       '<div class="mt-1.5 px-1 space-y-1">' +
+        (tandaEkstrak ? '<div class="mb-1">' + tandaEkstrak + '</div>' : '') +
         '<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-stone-500">' +
           '<label class="inline-flex items-center gap-1" title="Buffer cadangan untuk bahan ini (0-100%). Nilai disimpan ke master Bahan Baku dan dipakai di semua menu.">' +
             '<span>Buffer</span>' +

@@ -155,6 +155,8 @@ async function loadPerencanaanData(siklusId) {
 
 // ── Tabel Perencanaan Final (format matriks, sama seperti halaman Total Kebutuhan) ──
 var _pncMatriksReq = 0;
+var _pncMatriksHari = [];   // data hari terakhir yang dirender (dipakai modal edit bahan)
+var _pncBahanCache = null;  // cache daftar bahan baku untuk pilihan ganti bahan
 
 function onSiklusFilterChange(selectEl) {
   const siklusId = selectEl.value || '';
@@ -179,6 +181,7 @@ async function loadPncMatriksPerencanaan(siklusId) {
     const res = await api.get('/siklus/laporan/perencanaan' + qs);
     if (reqId !== _pncMatriksReq) return; // respons basi, ada filter baru
     const { hari, pm_map, _validation, sync } = res;
+    _pncMatriksHari = hari || [];
 
     if (_validation || !hari || !hari.length) {
       container.innerHTML = '';
@@ -274,7 +277,7 @@ function renderPncMatriksFinal(hari, totalSiswaSemuaJenjang) {
     html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Total Porsi</th>';
     html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Kebutuhan Pangan (kg)</th>';
     html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap" title="Kebutuhan + buffer per bahan (1-10%)">1-10%</th>';
-    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Rincian</th>';
+    html += '<th class="px-3 py-2 text-right font-semibold text-stone-600 whitespace-nowrap">Aksi</th>';
     html += '</tr></thead><tbody>';
 
     var colTotal = {};
@@ -288,25 +291,45 @@ function renderPncMatriksFinal(hari, totalSiswaSemuaJenjang) {
       var rowKg = 0;
       var bufferPersen = Number(b.buffer_persen) || 0;
       var cells = '';
+      var ovCount = 0;
       for (var jc3 = 0; jc3 < tkJenjangOrder.length; jc3++) {
         var jn = tkJenjangOrder[jc3];
         var pj = b.per_jenjang[jn];
         var v = pj ? (Number(pj.kebutuhan_kg) || 0) : 0;
+        if (pj && pj.override_id) ovCount++;
         rowKg += v;
         colTotal[jn] += v;
-        cells += '<td class="px-3 py-1.5 text-sm text-right mono">' + (v ? fmtPncPecahan(v) : '-') + '</td>';
+        // Data atribut dipakai tombol Edit untuk mengisi modal (jumlah per porsi, BDD, dsb).
+        var cellAttr = '';
+        if (pj && pj.siklus_id) {
+          cellAttr = ' data-siklus="' + pj.siklus_id + '" data-hari="' + pj.hari_ke + '" data-jenjang="' + escHtml(jn) + '"' +
+            ' data-jumlah="' + (Number(pj.berat_bersih) || 0) + '" data-bdd="' + (Number(pj.persen_bdd) || 100) + '"' +
+            ' data-ov="' + (pj.override_id || '') + '"';
+        }
+        cells += '<td class="px-3 py-1.5 text-sm text-right mono' + (pj && pj.override_id ? ' bg-amber-50 text-amber-800 font-semibold' : '') + '"' + cellAttr + '>' + (v ? fmtPncPecahan(v) : '-') + '</td>';
       }
       var bufferKg = Math.round(rowKg * (1 + bufferPersen / 100) * 100) / 100;
       grandTotalKg += rowKg;
       grandBufferKg += bufferKg;
 
       html += '<tr class="border-b border-stone-100 hover:bg-emerald-50/30 transition-colors">';
-      html += '<td class="px-3 py-1.5 text-sm font-medium text-stone-800">' + (b.nama_display || b.nama) + '</td>';
+      html += '<td class="px-3 py-1.5 text-sm font-medium text-stone-800">' + (b.nama_display || b.nama) +
+        (ovCount ? ' <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700" title="Diubah manual untuk ' + ovCount + ' jenjang">diubah</span>' : '') +
+        '</td>';
       html += cells;
       html += '<td class="px-3 py-1.5 text-sm text-right mono text-stone-600">' + fmtPncNum(totalPorsiDay) + '</td>';
       html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold text-emerald-700">' + fmtPncPecahan(rowKg) + '</td>';
       html += '<td class="px-3 py-1.5 text-sm text-right mono font-bold ' + (bufferPersen > 0 ? 'text-sky-700' : 'text-stone-500') + '" title="Buffer ' + bufferPersen + '%">' + fmtPncPecahan(bufferKg) + '</td>';
-      html += '<td class="px-3 py-1.5 text-sm text-right text-stone-400"></td>';
+      html += '<td class="px-3 py-1.5 text-right whitespace-nowrap">';
+      html += '<button onclick="pncEditBahan(' + d + ',' + bi + ')" class="inline-flex items-center justify-center w-6 h-6 rounded-lg text-sky-600 hover:bg-sky-50 align-middle" title="Edit bahan/jumlah untuk hari ini">';
+      html += '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+      html += '</button>';
+      if (ovCount) {
+        html += '<button onclick="pncDeleteBahan(' + d + ',' + bi + ')" class="ml-1 inline-flex items-center justify-center w-6 h-6 rounded-lg text-red-600 hover:bg-red-50 align-middle" title="Hapus perubahan, kembalikan ke resep asli">';
+        html += '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>';
+        html += '</button>';
+      }
+      html += '</td>';
       html += '</tr>';
     }
 
@@ -332,6 +355,155 @@ function renderPncMatriksFinal(hari, totalSiswaSemuaJenjang) {
   }
 
   return html;
+}
+
+// ── Edit & hapus bahan di tabel Perencanaan Final (perencanaan_override) ──
+var _pncJenjangOrder = ['TK/PAUD', 'SD/MI (1-3)', 'SD/MI (4-6)', 'SMP/MTs, SMA/SMK', 'Bumil/Busui', 'Balita'];
+
+async function pncLoadBahanList() {
+  if (_pncBahanCache) return _pncBahanCache;
+  const res = await api.get('/bahan_baku?page=1&limit=9999');
+  const rows = Array.isArray(res) ? res : (res.data || []);
+  const map = {};
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var key = String(r.nama || '').trim().toLowerCase();
+    if (key) map[key] = { id: Number(r.id), nama: r.nama };
+  }
+  _pncBahanCache = { rows: rows, map: map };
+  return _pncBahanCache;
+}
+
+async function pncEditBahan(dayIdx, rowIdx) {
+  var day = (_pncMatriksHari || [])[dayIdx];
+  var row = day && day.bahan && day.bahan[rowIdx];
+  if (!row) return;
+
+  var cells = row.per_jenjang || {};
+  var jenjangList = _pncJenjangOrder.filter(function (j) { return cells[j]; });
+  if (!jenjangList.length) return showAlert('Bahan ini tidak punya rincian jenjang untuk diedit.', 'warning');
+
+  var cache = null;
+  try { cache = await pncLoadBahanList(); } catch (e) { /* tanpa daftar bahan, tetap bisa ubah jumlah */ }
+
+  var datalist = '';
+  if (cache) {
+    for (var bi2 = 0; bi2 < cache.rows.length; bi2++) {
+      var nm = String(cache.rows[bi2].nama || '').trim();
+      if (nm) datalist += '<option value="' + escHtml(nm) + '"></option>';
+    }
+  }
+
+  var body = '<div class="space-y-4">';
+  body += '<div class="rounded-xl border border-stone-200 bg-stone-50 p-3">';
+  body += '<div class="text-[11px] uppercase tracking-wider font-semibold text-stone-500">Bahan saat ini</div>';
+  body += '<div class="text-sm font-semibold text-stone-800">' + escHtml(row.nama_display || row.nama) + '</div>';
+  body += '<div class="text-xs text-stone-500 mt-1 leading-relaxed">Perubahan hanya berlaku untuk hari ini dan jenjang yang dicentang. Resep menu dan siklus tidak diubah.</div>';
+  body += '</div>';
+
+  body += '<div><label class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Ganti bahan (opsional)</label>';
+  body += '<input id="pnc-ov-bahan" list="pnc-ov-bahan-list" autocomplete="off" placeholder="Kosongkan bila hanya mengubah jumlah" class="mt-1 w-full h-10 px-3 border border-stone-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400">';
+  body += '<datalist id="pnc-ov-bahan-list">' + datalist + '</datalist></div>';
+
+  body += '<div class="border border-stone-200 rounded-xl overflow-hidden"><table class="w-full text-xs"><thead><tr class="bg-stone-50 border-b border-stone-200">';
+  body += '<th class="px-3 py-2 text-left font-semibold text-stone-600">Jenjang</th>';
+  body += '<th class="px-3 py-2 text-right font-semibold text-stone-600">Jumlah (g/porsi)</th>';
+  body += '<th class="px-3 py-2 text-right font-semibold text-stone-600">BDD %</th>';
+  body += '</tr></thead><tbody>';
+  for (var ji = 0; ji < jenjangList.length; ji++) {
+    var jn = jenjangList[ji];
+    var pj = cells[jn];
+    body += '<tr class="border-b border-stone-100">';
+    body += '<td class="px-3 py-2"><label class="inline-flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pnc-ov-on-' + ji + '" checked class="rounded border-stone-300"><span class="font-medium text-stone-700">' + escHtml(jn) + '</span></label>' +
+      (pj.override_id ? '<span class="ml-1 text-[10px] font-semibold text-amber-700">diubah</span>' : '') + '</td>';
+    body += '<td class="px-3 py-2 text-right"><input type="number" min="0" step="0.01" id="pnc-ov-jml-' + ji + '" value="' + (Number(pj.berat_bersih) || 0) + '" class="w-24 h-9 px-2 text-right border border-stone-200 rounded-lg mono"></td>';
+    body += '<td class="px-3 py-2 text-right"><input type="number" min="1" max="100" step="0.1" id="pnc-ov-bdd-' + ji + '" value="' + (Number(pj.persen_bdd) || 100) + '" class="w-20 h-9 px-2 text-right border border-stone-200 rounded-lg mono"></td>';
+    body += '</tr>';
+  }
+  body += '</tbody></table></div>';
+  body += '<div class="text-[11px] text-stone-400 leading-relaxed">Jumlah = gram bahan per porsi untuk satu siswa. Kebutuhan kg dihitung ulang = jumlah × porsi ÷ BDD.</div>';
+  body += '</div>';
+
+  document.getElementById('modal-title').innerHTML = 'Edit Bahan <span class="text-stone-400 font-normal">· ' + escHtml(day.hari_nama || '') + ', ' + escHtml(day.tanggal || '') + '</span>';
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-save').style.display = 'block';
+  document.getElementById('modal-save').textContent = 'Simpan';
+  document.getElementById('modal-save').onclick = async function () {
+    var namaBaru = String((document.getElementById('pnc-ov-bahan') || {}).value || '').trim();
+    // Bahan pengganti: dari input bila diisi, kalau kosong pakai bahan yang
+    // sedang tampil di sel (agar edit jumlah tidak membatalkan ganti bahan lama).
+    var gantiId = 0;
+    if (namaBaru) {
+      if (!cache) return showAlert('Daftar bahan belum termuat. Muat ulang halaman lalu coba lagi.', 'warning');
+      var found = cache.map[namaBaru.toLowerCase()];
+      if (!found) return showAlert('Bahan "' + namaBaru + '" tidak ditemukan di Master Bahan Baku.', 'warning');
+      gantiId = found.id;
+    }
+
+    var target = [];
+    for (var i = 0; i < jenjangList.length; i++) {
+      var on = document.getElementById('pnc-ov-on-' + i);
+      if (!on || !on.checked) continue;
+      var jumlah = Number((document.getElementById('pnc-ov-jml-' + i) || {}).value);
+      var bdd = Number((document.getElementById('pnc-ov-bdd-' + i) || {}).value);
+      if (!(jumlah > 0)) return showAlert('Jumlah untuk ' + jenjangList[i] + ' harus lebih dari 0.', 'warning');
+      if (!(bdd > 0 && bdd <= 100)) return showAlert('BDD untuk ' + jenjangList[i] + ' harus antara 1 dan 100.', 'warning');
+      target.push({ jenjang: jenjangList[i], jumlah: jumlah, bdd: bdd });
+    }
+    if (!target.length) return showAlert('Centang minimal satu jenjang.', 'warning');
+
+    var btn = document.getElementById('modal-save');
+    btn.disabled = true;
+    try {
+      for (var t = 0; t < target.length; t++) {
+        var cell = cells[target[t].jenjang];
+        var newId = gantiId || Number(cell.bahan_baku_id) || Number(row.bahan_baku_id) || 0;
+        if (!newId) throw new Error('Bahan untuk ' + target[t].jenjang + ' tidak valid');
+        await api.post('/siklus/laporan/override', {
+          siklus_id: cell.siklus_id,
+          hari_ke: cell.hari_ke,
+          jenjang: target[t].jenjang,
+          original_bahan_baku_id: Number(row.bahan_baku_id) || null,
+          new_bahan_baku_id: newId,
+          jumlah: target[t].jumlah,
+          persen_bdd: target[t].bdd,
+        });
+      }
+      closeModal();
+      showToast('Perubahan bahan tersimpan (' + target.length + ' jenjang)', 'success');
+      loadPerencanaanData(_pncSiklusId);
+    } catch (e) {
+      showAlert('Gagal menyimpan: ' + (e.message || 'Unknown error'), 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modal').classList.add('flex');
+}
+
+async function pncDeleteBahan(dayIdx, rowIdx) {
+  var day = (_pncMatriksHari || [])[dayIdx];
+  var row = day && day.bahan && day.bahan[rowIdx];
+  if (!row) return;
+
+  var cells = row.per_jenjang || {};
+  var ids = [];
+  for (var j in cells) {
+    if (cells[j] && cells[j].override_id) ids.push(cells[j].override_id);
+  }
+  if (!ids.length) return showAlert('Tidak ada perubahan manual pada bahan ini.', 'warning');
+
+  if (!await showConfirm('Hapus perubahan manual bahan "' + (row.nama_display || row.nama) + '" untuk ' + ids.length + ' jenjang? Nilainya akan kembali ke resep asli.', 'Ya, Hapus')) return;
+
+  try {
+    for (var i = 0; i < ids.length; i++) await api.del('/siklus/laporan/override/' + ids[i]);
+    showToast('Perubahan bahan dihapus', 'success');
+    loadPerencanaanData(_pncSiklusId);
+  } catch (e) {
+    showAlert('Gagal menghapus: ' + (e.message || 'Unknown error'), 'error');
+  }
 }
 
 // ── Rekap Porsi Besar & Kecil (aggregate across all jenjang) ──

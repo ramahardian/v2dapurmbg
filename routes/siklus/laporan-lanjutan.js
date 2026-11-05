@@ -513,7 +513,9 @@ async function buildPerencanaanData({ tenant_id, query }) {
               const keyNama = ov ? (namaDisplay + '__ov') : br.nama;
               if (!bahanMap[keyNama]) bahanMap[keyNama] = { nama: namaDisplay, nama_display: namaDisplay, bahan_baku_id: Number(br.bahan_baku_id) || 0, per_jenjang: {}, buffer_persen: Number(br.buffer_persen) || 0, satuan: br.satuan || '', kategori_sp: br.kategori_sp || '', keterangan: br.keterangan || '', berat_per_satuan: Number(br.berat_per_satuan) || 0, harga_satuan: Number(br.harga_satuan) || 0 };
               if (!bahanMap[keyNama].per_jenjang[b]) {
-                bahanMap[keyNama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100 };
+                // siklus_id/hari_ke/override_id dipakai UI untuk edit & hapus
+                // override bahan langsung dari tabel /perencanaan.
+                bahanMap[keyNama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100, siklus_id: s.id, hari_ke: hariKe, override_id: ov ? ov.id : null, bahan_baku_id: ov ? Number(ov.new_bahan_baku_id) : (Number(br.bahan_baku_id) || 0) };
               }
               bahanMap[keyNama].per_jenjang[b].kebutuhan_kg += kebutuhanKg;
             }
@@ -563,7 +565,7 @@ async function buildPerencanaanData({ tenant_id, query }) {
           const keyNama = ov ? (namaDisplay + '__ov') : g.nama;
           if (!bahanMap[keyNama]) bahanMap[keyNama] = { nama: namaDisplay, nama_display: namaDisplay, bahan_baku_id: Number(g.bahan_baku_id) || 0, per_jenjang: {}, buffer_persen: Number(g.buffer_persen) || 0, satuan: g.satuan || '', kategori_sp: g.kategori_sp || '', keterangan: '', berat_per_satuan: Number(g.berat_per_satuan) || 0, harga_satuan: Number(g.harga_satuan) || 0 };
           if (!bahanMap[keyNama].per_jenjang[b]) {
-            bahanMap[keyNama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100 };
+            bahanMap[keyNama].per_jenjang[b] = { kebutuhan_kg: 0, jumlah_siswa: jmlPm, berat_bersih: Math.round(beratPerSiswa * 100) / 100, persen_bdd: persenBdd, berat_kotor: Math.round(beratKotorPerSiswa * 100) / 100, siklus_id: s.id, hari_ke: hariKe, override_id: ov ? ov.id : null, bahan_baku_id: ov ? Number(ov.new_bahan_baku_id) : (Number(g.bahan_baku_id) || 0) };
           }
           bahanMap[keyNama].per_jenjang[b].kebutuhan_kg += kebutuhanKg;
         }
@@ -1062,8 +1064,17 @@ router.post('/siklus/laporan/override', async (req, res) => {
   );
   if (!bahan) return res.status(404).json({ error: 'Bahan tidak ditemukan' });
 
-  const jumlah = Number(bahan.berat_1_sp) || 0;
-  const persenBdd = Number(bahan.persen_bdd) || 100;
+  // jumlah (gram per porsi) dan persen_bdd boleh dikirim eksplisit dari UI
+  // edit /perencanaan; bila kosong pakai nilai master bahan.
+  const adaIsi = (v) => v !== undefined && v !== null && String(v).trim() !== '';
+  const jumlah = adaIsi(req.body.jumlah) ? Number(req.body.jumlah) : (Number(bahan.berat_1_sp) || 0);
+  const persenBdd = adaIsi(req.body.persen_bdd) ? Number(req.body.persen_bdd) : (Number(bahan.persen_bdd) || 100);
+  if (!isFinite(jumlah) || jumlah <= 0) {
+    return res.status(400).json({ error: 'Jumlah per porsi harus lebih dari 0' });
+  }
+  if (!isFinite(persenBdd) || persenBdd <= 0 || persenBdd > 100) {
+    return res.status(400).json({ error: 'Persen BDD harus di antara 1 dan 100' });
+  }
 
   // Upsert override
   const origId = original_bahan_baku_id || null;

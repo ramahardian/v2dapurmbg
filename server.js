@@ -1266,6 +1266,28 @@ CREATE TABLE menu_bahan (
       } catch (e) {
         console.error('Migrasi menu_bahan.hanya_tampil:', e.message);
       }
+      // Idempotent: tabel perencanaan_override — dipakai tombol Edit/Hapus bahan
+      // di tabel /perencanaan (koreksi bahan/jumlah per hari + jenjang).
+      try {
+        await db.query(`CREATE TABLE IF NOT EXISTS perencanaan_override (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          tenant_id INT NOT NULL,
+          siklus_id INT NOT NULL,
+          hari_ke INT NOT NULL,
+          jenjang VARCHAR(50) NOT NULL,
+          original_bahan_baku_id INT DEFAULT NULL,
+          original_nama VARCHAR(200) DEFAULT NULL,
+          new_bahan_baku_id INT NOT NULL,
+          jumlah DECIMAL(10,2) NOT NULL DEFAULT 0,
+          persen_bdd DECIMAL(5,1) NOT NULL DEFAULT 100,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY uq_override (tenant_id, siklus_id, hari_ke, jenjang, original_bahan_baku_id, original_nama),
+          INDEX idx_override_lookup (tenant_id, siklus_id, hari_ke, jenjang)
+        ) ENGINE=InnoDB`);
+      } catch (e) {
+        console.error('Migrasi perencanaan_override:', e.message);
+      }
       // Idempotent: kolom jumlah porsi besar & porsi kecil di menu — diisi dari
       // form Edit Menu /menu dan dipakai baris perhitungan kebutuhan.
       try {
