@@ -29,4 +29,50 @@ async function renderKaryawan() {
   }
 }
 
+// Export seluruh data karyawan (mengikuti kata kunci pencarian) ke file XLSX.
+async function exportKaryawanXlsx() {
+  try {
+    const search = (typeof karyawanState !== 'undefined' && karyawanState.search) || '';
+    const res = await api.get('/karyawan' + (search ? '?search=' + encodeURIComponent(search) : ''));
+    const rows = Array.isArray(res) ? res : (res.data || []);
+    if (!rows.length) {
+      showAlert('Tidak ada data karyawan untuk diexport', 'warning');
+      return;
+    }
+
+    const headers = ['Nama', 'NIK', 'Jabatan', 'Departemen', 'Gaji Pokok', 'Status', 'Tanggal Masuk', 'Email', 'Telepon', 'Alamat'];
+    const data = rows.map(k => [
+      k.nama || '',
+      k.nik || '',
+      k.jabatan_nama || k.jabatan || '',
+      k.departemen || '',
+      Number(k.gaji_pokok || 0),
+      k.status || '',
+      k.tanggal_masuk ? String(k.tanggal_masuk).slice(0, 10) : '',
+      k.email || '',
+      k.phone || '',
+      k.address || ''
+    ]);
+    data.unshift(headers);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [
+      { wch: 28 }, { wch: 16 }, { wch: 20 }, { wch: 20 }, { wch: 14 },
+      { wch: 10 }, { wch: 14 }, { wch: 26 }, { wch: 16 }, { wch: 36 }
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Karyawan');
+
+    const now = new Date();
+    const stamp = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0');
+    XLSX.writeFile(wb, 'data-karyawan-' + stamp + '.xlsx');
+    showToast(rows.length + ' data karyawan berhasil diexport', 'success');
+  } catch (e) {
+    console.error('exportKaryawanXlsx error:', e);
+    showAlert('Gagal export karyawan: ' + (e.message || 'Unknown error'), 'error');
+  }
+}
+
 // ===== Absensi =====
